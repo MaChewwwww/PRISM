@@ -2,16 +2,17 @@ import { AlertTriangle, ArrowRight, FlaskConical, LockKeyhole } from "lucide-rea
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { Provenance } from "@/features/story/story-data";
+import type { Provenance } from "@/features/story/presentation-api";
 
 export function DemoDataNotice() {
   return (
     <div className="demo-notice" role="note">
       <FlaskConical aria-hidden="true" />
       <div>
-        <strong>Illustrative story</strong>
+        <strong>Active Portfolio view</strong>
         <span>
-          Fixed fictional market, portfolio, agent, and usage data. No provider request was made.
+          Current backend portfolio snapshot. Provenance remains explicitly labeled as an
+          illustrative fixture; no provider request was made.
         </span>
       </div>
     </div>
@@ -73,12 +74,12 @@ export function StateBadge({ state }: { state: string }) {
 }
 
 const provenanceLabels: Record<Provenance, string> = {
-  "active-portfolio": "Active Portfolio",
-  "shadow-portfolio": "Shadow Portfolio",
-  "market-benchmark": "Market Benchmark",
-  "illustrative-paper": "Active Portfolio",
-  simulated: "Shadow Portfolio",
-  "planned-integration": "Planned Integration",
+  illustrative_fixture: "Illustrative fixture",
+  alpaca_paper: "Alpaca paper",
+  shadow: "ShadowFund",
+  benchmark: "Benchmark",
+  simulated: "Simulated",
+  planned_integration: "Planned integration",
 };
 
 export function ProvenanceLabel({ provenance }: { provenance: Provenance }) {

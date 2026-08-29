@@ -11,6 +11,8 @@ WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/app ./app
+COPY backend/alembic ./alembic
+COPY backend/alembic.ini ./alembic.ini
 RUN uv sync --frozen --no-dev
 
 FROM python:3.12.12-slim-bookworm AS runtime

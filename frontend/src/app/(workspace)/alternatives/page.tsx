@@ -4,11 +4,12 @@ import Link from "next/link";
 import { DateRangeControl } from "@/components/product/date-range-control";
 import { DemoDataNotice, PageHeader, StateBadge } from "@/components/product/workspace-ui";
 import { formatDate } from "@/features/story/formatters";
-import {
-  listAlternativeSessions,
-  readDateRange,
-  type SearchValues,
-} from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { listAlternativeSessions } from "@/features/story/presentation-api";
+
+function displayBranchLabel(label: string) {
+  return label === "Illustrative governed path" ? "Active Portfolio" : label;
+}
 
 export default async function AlternativesPage({
   searchParams,
@@ -16,7 +17,7 @@ export default async function AlternativesPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const sessions = listAlternativeSessions(range);
+  const sessions = await listAlternativeSessions(range);
   return (
     <>
       <PageHeader
@@ -31,7 +32,7 @@ export default async function AlternativesPage({
           <span className="text-[#818CF8] font-mono text-xs">Layer 01</span>
           <h2 className="text-white font-semibold mt-1">Decision Counterfactuals</h2>
           <p className="text-slate-300 text-xs mt-1">
-            Active path, Cash baseline, Reduced sizing (50%), and Unhedged alternatives.
+            Active Portfolio path, Cash baseline, Reduced sizing (50%), and Unhedged alternatives.
           </p>
         </div>
         <div className="prism-glass-card p-4">
@@ -78,14 +79,16 @@ export default async function AlternativesPage({
               </div>
               <dl>
                 <div>
-                  <dt>Active Outcome</dt>
+                  <dt>Chosen Path</dt>
                   <dd className="font-mono tabular-nums font-semibold text-[#00D084]">
-                    {session.actualPnl}
+                    {session.chosenPathPnl}
                   </dd>
                 </div>
                 <div>
                   <dt>Best Shadow Path</dt>
-                  <dd className="font-mono tabular-nums text-[#818CF8]">{session.bestBranch}</dd>
+                  <dd className="font-mono tabular-nums text-[#818CF8]">
+                    {displayBranchLabel(session.bestBranch)}
+                  </dd>
                 </div>
                 <div>
                   <dt>Shadow Delta</dt>

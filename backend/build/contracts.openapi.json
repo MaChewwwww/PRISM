@@ -4,15 +4,40 @@
       "AIProfile": {
         "additionalProperties": false,
         "properties": {
-          "active": {
-            "default": false,
-            "title": "Active",
-            "type": "boolean"
+          "activation_mode": {
+            "$ref": "#/components/schemas/ActivationMode",
+            "default": "manual"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Effective At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expires At"
           },
           "id": {
             "format": "uuid",
@@ -20,36 +45,17 @@
             "type": "string"
           },
           "parameters": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "anyOf": [
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                      "type": "string"
-                    }
-                  ],
-                  "format": "decimal-string"
-                },
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            },
-            "title": "Parameters",
-            "type": "object"
+            "$ref": "#/components/schemas/AIProfileParameters"
           },
           "profile_key": {
-            "title": "Profile Key",
+            "$ref": "#/components/schemas/AIProfileKind"
+          },
+          "ruleset_id": {
+            "title": "Ruleset Id",
+            "type": "string"
+          },
+          "ruleset_version": {
+            "title": "Ruleset Version",
             "type": "string"
           },
           "schema_version": {
@@ -57,6 +63,9 @@
             "default": "1.0",
             "title": "Schema Version",
             "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIProfileStatus"
           },
           "trace_id": {
             "format": "uuid",
@@ -73,9 +82,94 @@
           "trace_id",
           "profile_key",
           "version",
+          "status",
+          "ruleset_id",
+          "ruleset_version",
           "parameters"
         ],
         "title": "AIProfile",
+        "type": "object"
+      },
+      "AIProfileKind": {
+        "enum": [
+          "conservative",
+          "balanced",
+          "aggressive"
+        ],
+        "title": "AIProfileKind",
+        "type": "string"
+      },
+      "AIProfileParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "opportunity_score_threshold": {
+            "anyOf": [
+              {
+                "maximum": 95.0,
+                "minimum": 75.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Opportunity Score Threshold"
+          },
+          "stop_loss_pct": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 50.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Stop Loss Pct"
+          },
+          "take_profit_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 75.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Take Profit Pct"
+          },
+          "target_position_size_pct": {
+            "anyOf": [
+              {
+                "maximum": 2.5,
+                "minimum": 1.5,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Target Position Size Pct"
+          }
+        },
+        "required": [
+          "target_position_size_pct",
+          "opportunity_score_threshold",
+          "take_profit_pct",
+          "stop_loss_pct"
+        ],
+        "title": "AIProfileParameters",
         "type": "object"
       },
       "AIProfileRecommendation": {
@@ -99,6 +193,12 @@
             "title": "Id",
             "type": "string"
           },
+          "manual_review_required": {
+            "const": true,
+            "default": true,
+            "title": "Manual Review Required",
+            "type": "boolean"
+          },
           "profile_id": {
             "format": "uuid",
             "title": "Profile Id",
@@ -109,33 +209,15 @@
             "type": "string"
           },
           "recommended_parameters": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "anyOf": [
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                      "type": "string"
-                    }
-                  ],
-                  "format": "decimal-string"
-                },
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            },
-            "title": "Recommended Parameters",
-            "type": "object"
+            "$ref": "#/components/schemas/AIProfileParameters"
+          },
+          "ruleset_id": {
+            "title": "Ruleset Id",
+            "type": "string"
+          },
+          "ruleset_version": {
+            "title": "Ruleset Version",
+            "type": "string"
           },
           "schema_version": {
             "const": "1.0",
@@ -151,16 +233,444 @@
             "format": "uuid",
             "title": "Trace Id",
             "type": "string"
+          },
+          "validation_reason_codes": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCode"
+            },
+            "title": "Validation Reason Codes",
+            "type": "array"
           }
         },
         "required": [
           "trace_id",
           "profile_id",
+          "ruleset_id",
+          "ruleset_version",
           "recommended_parameters",
           "evidence_session_ids",
           "rationale"
         ],
         "title": "AIProfileRecommendation",
+        "type": "object"
+      },
+      "AIProfileStatus": {
+        "enum": [
+          "draft",
+          "active",
+          "superseded",
+          "rejected"
+        ],
+        "title": "AIProfileStatus",
+        "type": "string"
+      },
+      "ActivationMode": {
+        "enum": [
+          "manual"
+        ],
+        "title": "ActivationMode",
+        "type": "string"
+      },
+      "Activity": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance",
+            "default": "illustrative_fixture"
+          }
+        },
+        "required": [
+          "occurredAt",
+          "label",
+          "detail",
+          "amount"
+        ],
+        "title": "Activity",
+        "type": "object"
+      },
+      "AgentObservability": {
+        "additionalProperties": false,
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRecord"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/SystemComponent"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolRecord"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agents",
+          "tools",
+          "components"
+        ],
+        "title": "AgentObservability",
+        "type": "object"
+      },
+      "AgentRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "string"
+          },
+          "authority": {
+            "enum": [
+              "research",
+              "proposal",
+              "risk",
+              "recommendation"
+            ],
+            "title": "Authority",
+            "type": "string"
+          },
+          "cadence": {
+            "title": "Cadence",
+            "type": "string"
+          },
+          "dependencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "promptVersion": {
+            "title": "Promptversion",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "stage": {
+            "minimum": 1.0,
+            "title": "Stage",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "cadence",
+          "model",
+          "promptVersion",
+          "description",
+          "dependencies",
+          "stage",
+          "authority",
+          "accent",
+          "runs"
+        ],
+        "title": "AgentRecord",
+        "type": "object"
+      },
+      "AgentRun": {
+        "additionalProperties": false,
+        "properties": {
+          "cachedTokens": {
+            "minimum": 0.0,
+            "title": "Cachedtokens",
+            "type": "integer"
+          },
+          "durationMs": {
+            "minimum": 0.0,
+            "title": "Durationms",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inputTokens": {
+            "minimum": 0.0,
+            "title": "Inputtokens",
+            "type": "integer"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "outputTokens": {
+            "minimum": 0.0,
+            "title": "Outputtokens",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "complete",
+              "degraded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurredAt",
+          "status",
+          "trigger",
+          "durationMs",
+          "inputTokens",
+          "outputTokens",
+          "cachedTokens",
+          "summary"
+        ],
+        "title": "AgentRun",
+        "type": "object"
+      },
+      "AllowedOrderPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "quantity": {
+            "minimum": 1,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/OptionStrategy"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "strategy",
+          "quantity"
+        ],
+        "title": "AllowedOrderPayload",
+        "type": "object"
+      },
+      "AlternativeBranch": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "title": "Coverage",
+            "type": "string"
+          },
+          "deltaVsChosen": {
+            "title": "Deltavschosen",
+            "type": "string"
+          },
+          "drawdown": {
+            "title": "Drawdown",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "pnl": {
+            "title": "Pnl",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "complete",
+              "incomplete"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "variation": {
+            "title": "Variation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "variation",
+          "pnl",
+          "deltaVsChosen",
+          "drawdown",
+          "coverage",
+          "status"
+        ],
+        "title": "AlternativeBranch",
+        "type": "object"
+      },
+      "AlternativeCollection": {
+        "additionalProperties": false,
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/AlternativeSession"
+            },
+            "title": "Sessions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sessions"
+        ],
+        "title": "AlternativeCollection",
+        "type": "object"
+      },
+      "AlternativeSession": {
+        "additionalProperties": false,
+        "properties": {
+          "alternativeLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternativelabel"
+          },
+          "bestBranch": {
+            "title": "Bestbranch",
+            "type": "string"
+          },
+          "bestDelta": {
+            "title": "Bestdelta",
+            "type": "string"
+          },
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/AlternativeBranch"
+            },
+            "title": "Branches",
+            "type": "array"
+          },
+          "chosenPathPnl": {
+            "title": "Chosenpathpnl",
+            "type": "string"
+          },
+          "coverage": {
+            "title": "Coverage",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/ChartPoint"
+            },
+            "title": "Path",
+            "type": "array"
+          },
+          "storyId": {
+            "title": "Storyid",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "storyId",
+          "occurredAt",
+          "symbol",
+          "title",
+          "summary",
+          "chosenPathPnl",
+          "bestBranch",
+          "bestDelta",
+          "coverage",
+          "branches",
+          "path",
+          "limitations"
+        ],
+        "title": "AlternativeSession",
         "type": "object"
       },
       "AuditEvent": {
@@ -258,9 +768,38 @@
             "title": "Account Verified",
             "type": "boolean"
           },
+          "allowed_order_payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AllowedOrderPayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "allowed_order_payload_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allowed Order Payload Digest"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "decision_at": {
+            "format": "date-time",
+            "title": "Decision At",
             "type": "string"
           },
           "expires_at": {
@@ -273,6 +812,35 @@
             "title": "Id",
             "type": "string"
           },
+          "market_regime": {
+            "$ref": "#/components/schemas/MarketRegime"
+          },
+          "market_snapshot_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Market Snapshot Digest",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/AuthorizationOutcome"
+          },
+          "portfolio_risk_state": {
+            "$ref": "#/components/schemas/PortfolioRiskState"
+          },
+          "portfolio_snapshot_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Portfolio Snapshot Digest",
+            "type": "string"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "minimum": 1,
+            "title": "Profile Version",
+            "type": "integer"
+          },
           "proposal_digest": {
             "pattern": "^[a-f0-9]{64}$",
             "title": "Proposal Digest",
@@ -281,6 +849,22 @@
           "proposal_id": {
             "format": "uuid",
             "title": "Proposal Id",
+            "type": "string"
+          },
+          "proposal_version": {
+            "minimum": 1,
+            "title": "Proposal Version",
+            "type": "integer"
+          },
+          "rule_trace": {
+            "items": {
+              "$ref": "#/components/schemas/RuleEvaluation"
+            },
+            "title": "Rule Trace",
+            "type": "array"
+          },
+          "ruleset_id": {
+            "title": "Ruleset Id",
             "type": "string"
           },
           "ruleset_version": {
@@ -292,9 +876,6 @@
             "default": "1.0",
             "title": "Schema Version",
             "type": "string"
-          },
-          "state": {
-            "$ref": "#/components/schemas/AuthorizationState"
           },
           "supported_options_level": {
             "minimum": 0,
@@ -310,9 +891,17 @@
         "required": [
           "trace_id",
           "proposal_id",
+          "proposal_version",
           "proposal_digest",
+          "ruleset_id",
           "ruleset_version",
-          "state",
+          "profile_id",
+          "profile_version",
+          "outcome",
+          "market_snapshot_digest",
+          "portfolio_snapshot_digest",
+          "market_regime",
+          "portfolio_risk_state",
           "expires_at",
           "account_observed_at",
           "supported_options_level",
@@ -321,14 +910,362 @@
         "title": "AuthorizationDecision",
         "type": "object"
       },
-      "AuthorizationState": {
+      "AuthorizationOutcome": {
         "enum": [
-          "accepted",
-          "rejected",
-          "modified_pending_acceptance"
+          "APPROVE",
+          "REJECT",
+          "MODIFIED_PENDING_ACCEPTANCE"
         ],
-        "title": "AuthorizationState",
+        "title": "AuthorizationOutcome",
         "type": "string"
+      },
+      "BollingerBands": {
+        "additionalProperties": false,
+        "properties": {
+          "bandwidth_pct": {
+            "format": "decimal-string",
+            "title": "Bandwidth Pct",
+            "type": "string"
+          },
+          "lower": {
+            "format": "decimal-string",
+            "title": "Lower",
+            "type": "string"
+          },
+          "middle": {
+            "format": "decimal-string",
+            "title": "Middle",
+            "type": "string"
+          },
+          "percent_b": {
+            "format": "decimal-string",
+            "title": "Percent B",
+            "type": "string"
+          },
+          "upper": {
+            "format": "decimal-string",
+            "title": "Upper",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upper",
+          "middle",
+          "lower",
+          "bandwidth_pct",
+          "percent_b"
+        ],
+        "title": "BollingerBands",
+        "type": "object"
+      },
+      "Catalyst": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "title": "Classification",
+            "type": "string"
+          },
+          "expectedMove": {
+            "title": "Expectedmove",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "observedMove": {
+            "title": "Observedmove",
+            "type": "string"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "title": "Publishedat",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "headline",
+          "source",
+          "publishedAt",
+          "classification",
+          "observedMove",
+          "expectedMove"
+        ],
+        "title": "Catalyst",
+        "type": "object"
+      },
+      "ChartPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "agentAlternative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentalternative"
+          },
+          "alternative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternative"
+          },
+          "benchmark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark"
+          },
+          "cashBaseline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cashbaseline"
+          },
+          "chosenPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosenpath"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "drawdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drawdown"
+          },
+          "pnl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl"
+          },
+          "reducedSize": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reducedsize"
+          },
+          "unhedged": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unhedged"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "ChartPoint",
+        "type": "object"
+      },
+      "DataMode": {
+        "enum": [
+          "illustrative_fixture"
+        ],
+        "title": "DataMode",
+        "type": "string"
+      },
+      "DateRange": {
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "title": "From",
+            "type": "string"
+          },
+          "preset": {
+            "enum": [
+              "7d",
+              "1m",
+              "3m",
+              "ytd",
+              "custom"
+            ],
+            "title": "Preset",
+            "type": "string"
+          },
+          "timezone": {
+            "const": "UTC",
+            "default": "UTC",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preset",
+          "from",
+          "to"
+        ],
+        "title": "DateRange",
+        "type": "object"
+      },
+      "DecisionCollection": {
+        "additionalProperties": false,
+        "properties": {
+          "stories": {
+            "items": {
+              "$ref": "#/components/schemas/StorySummary"
+            },
+            "title": "Stories",
+            "type": "array"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stories",
+          "symbols"
+        ],
+        "title": "DecisionCollection",
+        "type": "object"
+      },
+      "DecisionNode": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "componentKind": {
+            "enum": [
+              "ai_specialist",
+              "risk_ai",
+              "deterministic",
+              "paper",
+              "shadow"
+            ],
+            "title": "Componentkind",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentid"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "parentId",
+          "label",
+          "actor",
+          "componentKind",
+          "status",
+          "detail"
+        ],
+        "title": "DecisionNode",
+        "type": "object"
+      },
+      "Evidence": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "title": "Observedat",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "source",
+          "observedAt",
+          "provenance"
+        ],
+        "title": "Evidence",
+        "type": "object"
       },
       "EvidenceItem": {
         "additionalProperties": false,
@@ -527,20 +1464,23 @@
         "properties": {
           "dte_threshold": {
             "default": 7,
-            "minimum": 1,
+            "maximum": 14,
+            "minimum": 2,
             "title": "Dte Threshold",
             "type": "integer"
           },
           "max_hold_days": {
             "default": 14,
-            "minimum": 1,
+            "maximum": 45,
+            "minimum": 3,
             "title": "Max Hold Days",
             "type": "integer"
           },
           "stop_loss_pct": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
+                "maximum": 50.0,
+                "minimum": 50.0,
                 "type": "number"
               },
               {
@@ -555,7 +1495,8 @@
           "take_profit_pct": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "minimum": 75.0,
                 "type": "number"
               },
               {
@@ -563,12 +1504,240 @@
                 "type": "string"
               }
             ],
-            "default": "50.0",
+            "default": "75.0",
             "format": "decimal-string",
             "title": "Take Profit Pct"
           }
         },
         "title": "ExitPolicy",
+        "type": "object"
+      },
+      "ExposureItem": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "ExposureItem",
+        "type": "object"
+      },
+      "Governance": {
+        "additionalProperties": false,
+        "properties": {
+          "activeProfile": {
+            "const": "balanced",
+            "title": "Activeprofile",
+            "type": "string"
+          },
+          "decisionSemantics": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Decisionsemantics",
+            "type": "object"
+          },
+          "hackathonWindow": {
+            "$ref": "#/components/schemas/HackathonWindow"
+          },
+          "hardRules": {
+            "items": {
+              "$ref": "#/components/schemas/HardRule"
+            },
+            "title": "Hardrules",
+            "type": "array"
+          },
+          "profileParameters": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileParameter"
+            },
+            "title": "Profileparameters",
+            "type": "array"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileSummary"
+            },
+            "title": "Profiles",
+            "type": "array"
+          },
+          "rulesetId": {
+            "title": "Rulesetid",
+            "type": "string"
+          },
+          "rulesetStatus": {
+            "const": "active",
+            "title": "Rulesetstatus",
+            "type": "string"
+          },
+          "rulesetVersion": {
+            "title": "Rulesetversion",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceVersion"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rulesetId",
+          "rulesetVersion",
+          "rulesetStatus",
+          "activeProfile",
+          "decisionSemantics",
+          "hardRules",
+          "profileParameters",
+          "profiles",
+          "versions",
+          "hackathonWindow"
+        ],
+        "title": "Governance",
+        "type": "object"
+      },
+      "GovernanceVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "active",
+              "superseded"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "state",
+          "summary"
+        ],
+        "title": "GovernanceVersion",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HackathonWindow": {
+        "additionalProperties": false,
+        "properties": {
+          "effectiveMaxHoldTradingDays": {
+            "minimum": 1.0,
+            "title": "Effectivemaxholdtradingdays",
+            "type": "integer"
+          },
+          "forceFlattenBy": {
+            "format": "date-time",
+            "title": "Forceflattenby",
+            "type": "string"
+          },
+          "newEntryCutoffAt": {
+            "format": "date-time",
+            "title": "Newentrycutoffat",
+            "type": "string"
+          },
+          "officialScoringAt": {
+            "format": "date-time",
+            "title": "Officialscoringat",
+            "type": "string"
+          },
+          "scoringBasis": {
+            "const": "total_account_equity",
+            "title": "Scoringbasis",
+            "type": "string"
+          },
+          "tradingStartAt": {
+            "format": "date-time",
+            "title": "Tradingstartat",
+            "type": "string"
+          },
+          "windowOuterBoundaryAt": {
+            "format": "date-time",
+            "title": "Windowouterboundaryat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tradingStartAt",
+          "officialScoringAt",
+          "windowOuterBoundaryAt",
+          "forceFlattenBy",
+          "newEntryCutoffAt",
+          "effectiveMaxHoldTradingDays",
+          "scoringBasis"
+        ],
+        "title": "HackathonWindow",
+        "type": "object"
+      },
+      "HardRule": {
+        "additionalProperties": false,
+        "properties": {
+          "activeValue": {
+            "title": "Activevalue",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3",
+              "P4",
+              "P5"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "ruleId": {
+            "title": "Ruleid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ruleId",
+          "priority",
+          "name",
+          "activeValue",
+          "explanation"
+        ],
+        "title": "HardRule",
         "type": "object"
       },
       "HealthResponse": {
@@ -797,6 +1966,36 @@
         "title": "HistoricalMarketDataRecord",
         "type": "object"
       },
+      "IllustrativeOutcome": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "title": "Observedat",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "status",
+          "rationale",
+          "observedAt"
+        ],
+        "title": "IllustrativeOutcome",
+        "type": "object"
+      },
       "LLMEventAnalysis": {
         "additionalProperties": false,
         "properties": {
@@ -940,14 +2139,9 @@
           "expires_at": {
             "title": "Expires At",
             "type": "string"
-          },
-          "token": {
-            "title": "Token",
-            "type": "string"
           }
         },
         "required": [
-          "token",
           "email",
           "expires_at"
         ],
@@ -969,6 +2163,46 @@
         "title": "LogoutResponse",
         "type": "object"
       },
+      "MACDCrossover": {
+        "enum": [
+          "bullish_cross",
+          "bearish_cross",
+          "none"
+        ],
+        "title": "MACDCrossover",
+        "type": "string"
+      },
+      "MACDSignal": {
+        "additionalProperties": false,
+        "properties": {
+          "crossover": {
+            "$ref": "#/components/schemas/MACDCrossover"
+          },
+          "histogram": {
+            "format": "decimal-string",
+            "title": "Histogram",
+            "type": "string"
+          },
+          "macd": {
+            "format": "decimal-string",
+            "title": "Macd",
+            "type": "string"
+          },
+          "signal": {
+            "format": "decimal-string",
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "macd",
+          "signal",
+          "histogram",
+          "crossover"
+        ],
+        "title": "MACDSignal",
+        "type": "object"
+      },
       "MarketDataType": {
         "enum": [
           "bars",
@@ -978,6 +2212,280 @@
         ],
         "title": "MarketDataType",
         "type": "string"
+      },
+      "MarketReactionRequest": {
+        "properties": {
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional article ID for caching linkage with News Agent",
+            "title": "Article Id"
+          },
+          "bar_limit": {
+            "default": 30,
+            "description": "Number of recent price bars to retrieve for baseline calculation",
+            "maximum": 100.0,
+            "minimum": 2.0,
+            "title": "Bar Limit",
+            "type": "integer"
+          },
+          "catalyst_summary": {
+            "description": "Summary of the catalyst or news event to compare market reaction against",
+            "minLength": 1,
+            "title": "Catalyst Summary",
+            "type": "string"
+          },
+          "expected_reaction_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected price reaction percentage (e.g. 3.5 for +3.5%), or null if unknown",
+            "title": "Expected Reaction Pct"
+          },
+          "symbol": {
+            "description": "Ticker symbol, e.g. AAPL",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "catalyst_summary"
+        ],
+        "title": "MarketReactionRequest",
+        "type": "object"
+      },
+      "MarketRegime": {
+        "enum": [
+          "normal",
+          "volatile",
+          "event",
+          "crisis"
+        ],
+        "title": "MarketRegime",
+        "type": "string"
+      },
+      "MovingAverages": {
+        "additionalProperties": false,
+        "properties": {
+          "price_vs_sma200_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Vs Sma200 Pct"
+          },
+          "price_vs_sma20_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Vs Sma20 Pct"
+          },
+          "price_vs_sma50_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Vs Sma50 Pct"
+          },
+          "sma_20": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 20"
+          },
+          "sma_200": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 200"
+          },
+          "sma_50": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 50"
+          }
+        },
+        "title": "MovingAverages",
+        "type": "object"
+      },
+      "NewsAnalysisRequest": {
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "Number of news articles to retrieve and analyze",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Ticker symbol to query news for, e.g. AAPL",
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "NewsAnalysisRequest",
+        "type": "object"
+      },
+      "NewsCollection": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NewsRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "symbols"
+        ],
+        "title": "NewsCollection",
+        "type": "object"
+      },
+      "NewsRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance",
+            "default": "illustrative_fixture"
+          },
+          "provider": {
+            "const": "illustrative_fixture",
+            "default": "illustrative_fixture",
+            "title": "Provider",
+            "type": "string"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "title": "Publishedat",
+            "type": "string"
+          },
+          "significance": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Significance",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "storyId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storyid"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "publishedAt",
+          "source",
+          "symbols",
+          "headline",
+          "summary",
+          "category",
+          "storyId",
+          "significance"
+        ],
+        "title": "NewsRecord",
+        "type": "object"
       },
       "OptionLeg": {
         "additionalProperties": false,
@@ -1108,10 +2616,712 @@
         "title": "OptionType",
         "type": "string"
       },
+      "OutcomeCount": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "OutcomeCount",
+        "type": "object"
+      },
+      "Overview": {
+        "additionalProperties": false,
+        "properties": {
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/OutcomeCount"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "portfolio": {
+            "$ref": "#/components/schemas/Portfolio"
+          },
+          "recommendations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "stories": {
+            "items": {
+              "$ref": "#/components/schemas/StorySummary"
+            },
+            "title": "Stories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stories",
+          "portfolio",
+          "outcomes",
+          "recommendations"
+        ],
+        "title": "Overview",
+        "type": "object"
+      },
+      "Portfolio": {
+        "additionalProperties": false,
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "exposure": {
+            "items": {
+              "$ref": "#/components/schemas/ExposureItem"
+            },
+            "title": "Exposure",
+            "type": "array"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ChartPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            },
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "points",
+          "positions",
+          "activities",
+          "exposure"
+        ],
+        "title": "Portfolio",
+        "type": "object"
+      },
+      "PortfolioRiskState": {
+        "enum": [
+          "normal",
+          "caution",
+          "defensive",
+          "halt"
+        ],
+        "title": "PortfolioRiskState",
+        "type": "string"
+      },
+      "Position": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation": {
+            "title": "Allocation",
+            "type": "string"
+          },
+          "pnl": {
+            "title": "Pnl",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "allocation",
+          "value",
+          "pnl",
+          "provenance"
+        ],
+        "title": "Position",
+        "type": "object"
+      },
+      "PresentationEnvelope_AgentObservability_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentObservability"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[AgentObservability]",
+        "type": "object"
+      },
+      "PresentationEnvelope_AgentRecord_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentRecord"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[AgentRecord]",
+        "type": "object"
+      },
+      "PresentationEnvelope_AlternativeCollection_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AlternativeCollection"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[AlternativeCollection]",
+        "type": "object"
+      },
+      "PresentationEnvelope_AlternativeSession_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AlternativeSession"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[AlternativeSession]",
+        "type": "object"
+      },
+      "PresentationEnvelope_DecisionCollection_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DecisionCollection"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[DecisionCollection]",
+        "type": "object"
+      },
+      "PresentationEnvelope_Governance_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Governance"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[Governance]",
+        "type": "object"
+      },
+      "PresentationEnvelope_NewsCollection_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/NewsCollection"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[NewsCollection]",
+        "type": "object"
+      },
+      "PresentationEnvelope_Overview_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Overview"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[Overview]",
+        "type": "object"
+      },
+      "PresentationEnvelope_Portfolio_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Portfolio"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[Portfolio]",
+        "type": "object"
+      },
+      "PresentationEnvelope_StoryDetail_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StoryDetail"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[StoryDetail]",
+        "type": "object"
+      },
+      "PresentationEnvelope_WeeklySummary_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WeeklySummary"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PresentationMeta"
+          }
+        },
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "PresentationEnvelope[WeeklySummary]",
+        "type": "object"
+      },
+      "PresentationMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "asOf": {
+            "format": "date-time",
+            "title": "Asof",
+            "type": "string"
+          },
+          "dataMode": {
+            "$ref": "#/components/schemas/DataMode",
+            "default": "illustrative_fixture"
+          },
+          "fixtureVersion": {
+            "const": "prism-demo-v1",
+            "default": "prism-demo-v1",
+            "title": "Fixtureversion",
+            "type": "string"
+          },
+          "generatedAt": {
+            "format": "date-time",
+            "title": "Generatedat",
+            "type": "string"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "generatedAt",
+          "asOf"
+        ],
+        "title": "PresentationMeta",
+        "type": "object"
+      },
+      "ProfileParameter": {
+        "additionalProperties": false,
+        "properties": {
+          "activeValue": {
+            "title": "Activevalue",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "maximum": {
+            "title": "Maximum",
+            "type": "string"
+          },
+          "minimum": {
+            "title": "Minimum",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "activeValue",
+          "minimum",
+          "maximum",
+          "unit",
+          "description"
+        ],
+        "title": "ProfileParameter",
+        "type": "object"
+      },
+      "ProfileSuggestion": {
+        "additionalProperties": false,
+        "properties": {
+          "allowedMaximum": {
+            "title": "Allowedmaximum",
+            "type": "string"
+          },
+          "allowedMinimum": {
+            "title": "Allowedminimum",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "currentValue": {
+            "title": "Currentvalue",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "manualReviewRequired": {
+            "const": true,
+            "default": true,
+            "title": "Manualreviewrequired",
+            "type": "boolean"
+          },
+          "parameterId": {
+            "title": "Parameterid",
+            "type": "string"
+          },
+          "parameterName": {
+            "title": "Parametername",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "suggestedValue": {
+            "title": "Suggestedvalue",
+            "type": "string"
+          },
+          "validationState": {
+            "const": "within_authorized_bounds",
+            "title": "Validationstate",
+            "type": "string"
+          },
+          "weekOf": {
+            "title": "Weekof",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "parameterId",
+          "parameterName",
+          "currentValue",
+          "suggestedValue",
+          "allowedMinimum",
+          "allowedMaximum",
+          "confidence",
+          "rationale",
+          "weekOf",
+          "validationState"
+        ],
+        "title": "ProfileSuggestion",
+        "type": "object"
+      },
+      "ProfileSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "enum": [
+              "conservative",
+              "balanced",
+              "aggressive"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Parameters",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "available"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "status",
+          "parameters"
+        ],
+        "title": "ProfileSummary",
+        "type": "object"
+      },
+      "Provenance": {
+        "enum": [
+          "illustrative_fixture",
+          "alpaca_paper",
+          "shadow",
+          "benchmark",
+          "simulated",
+          "planned_integration"
+        ],
+        "title": "Provenance",
+        "type": "string"
+      },
+      "QuantitativeAnalysisReport": {
+        "additionalProperties": false,
+        "properties": {
+          "atr_14": {
+            "format": "decimal-string",
+            "title": "Atr 14",
+            "type": "string"
+          },
+          "bollinger_bands": {
+            "$ref": "#/components/schemas/BollingerBands"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_price": {
+            "format": "decimal-string",
+            "title": "Current Price",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "macd": {
+            "$ref": "#/components/schemas/MACDSignal"
+          },
+          "momentum_score": {
+            "format": "decimal-string",
+            "title": "Momentum Score",
+            "type": "string"
+          },
+          "moving_averages": {
+            "$ref": "#/components/schemas/MovingAverages"
+          },
+          "rsi_14": {
+            "format": "decimal-string",
+            "title": "Rsi 14",
+            "type": "string"
+          },
+          "rsi_condition": {
+            "$ref": "#/components/schemas/RSICondition"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbol": {
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/TrendDirection"
+          },
+          "volatility_annualized_pct": {
+            "format": "decimal-string",
+            "title": "Volatility Annualized Pct",
+            "type": "string"
+          },
+          "volume_surge_ratio": {
+            "format": "decimal-string",
+            "title": "Volume Surge Ratio",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "current_price",
+          "trend",
+          "momentum_score",
+          "rsi_14",
+          "rsi_condition",
+          "macd",
+          "moving_averages",
+          "bollinger_bands",
+          "atr_14",
+          "volatility_annualized_pct",
+          "volume_surge_ratio",
+          "summary"
+        ],
+        "title": "QuantitativeAnalysisReport",
+        "type": "object"
+      },
+      "QuantitativeAnalysisRequest": {
+        "properties": {
+          "bar_limit": {
+            "default": 250,
+            "description": "Number of historical bars to retrieve (default 250 for 200-day SMA)",
+            "maximum": 500.0,
+            "minimum": 20.0,
+            "title": "Bar Limit",
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Ticker symbol to quantitatively analyze, e.g. AAPL",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "QuantitativeAnalysisRequest",
+        "type": "object"
+      },
+      "RSICondition": {
+        "enum": [
+          "oversold",
+          "overbought",
+          "neutral"
+        ],
+        "title": "RSICondition",
+        "type": "string"
+      },
+      "ReactionClassification": {
+        "enum": [
+          "UNDERREACTION",
+          "OVERREACTION",
+          "FAIR_REACTION"
+        ],
+        "title": "ReactionClassification",
+        "type": "string"
+      },
+      "ReasonCode": {
+        "enum": [
+          "RULESET_NOT_CONFIGURED",
+          "STALE_DATA",
+          "OUTSIDE_TRADING_WINDOW",
+          "HACKATHON_ENTRY_CUTOFF",
+          "HACKATHON_FORCE_FLATTEN",
+          "HACKATHON_SCORING_WINDOW",
+          "EXPIRY_ASSIGNMENT_RISK",
+          "DRAWDOWN_CAUTION",
+          "DRAWDOWN_DEFENSIVE",
+          "DRAWDOWN_HALT",
+          "CASH_BUFFER_BREACH",
+          "TICKER_CONCENTRATION_BREACH",
+          "HIGH_IV_SINGLE_LEG_PROHIBITED",
+          "RISK_LIMIT_BREACH",
+          "LIQUIDITY_LIMIT_BREACH",
+          "NEGATIVE_EXPECTED_VALUE",
+          "REWARD_RISK_BELOW_FLOOR",
+          "PAYLOAD_MISMATCH",
+          "PROFILE_OUT_OF_BOUNDS",
+          "UNSUPPORTED_INSTRUMENT"
+        ],
+        "title": "ReasonCode",
+        "type": "string"
+      },
       "RecommendationState": {
         "enum": [
           "proposed",
-          "accepted",
+          "validated",
+          "applied",
           "rejected"
         ],
         "title": "RecommendationState",
@@ -1120,6 +3330,38 @@
       "ResearchReport": {
         "additionalProperties": false,
         "properties": {
+          "actual_reaction_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Reaction Pct"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReactionClassification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "confidence": {
             "anyOf": [
               {
@@ -1147,6 +3389,27 @@
             "title": "Evidence",
             "type": "array"
           },
+          "expected_reaction_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected Reaction Pct"
+          },
           "freshness_seconds": {
             "minimum": 0,
             "title": "Freshness Seconds",
@@ -1163,6 +3426,50 @@
             },
             "title": "Limitations",
             "type": "array"
+          },
+          "opportunity_score": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "maximum": 100.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Opportunity Score"
+          },
+          "reaction_gap_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reaction Gap Pct"
           },
           "schema_version": {
             "const": "1.0",
@@ -1182,6 +3489,28 @@
             "format": "uuid",
             "title": "Trace Id",
             "type": "string"
+          },
+          "volume_ratio": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Volume Ratio"
           }
         },
         "required": [
@@ -1273,6 +3602,59 @@
         "title": "RiskVerdict",
         "type": "string"
       },
+      "RuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3",
+              "P4",
+              "P5"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "reasonCode": {
+            "title": "Reasoncode",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "PASS",
+              "MODIFY",
+              "FAIL",
+              "NOT_EVALUATED"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "ruleId": {
+            "title": "Ruleid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ruleId",
+          "priority",
+          "name",
+          "result",
+          "reasonCode",
+          "explanation"
+        ],
+        "title": "RuleCheck",
+        "type": "object"
+      },
       "RuleEvaluation": {
         "additionalProperties": false,
         "properties": {
@@ -1281,9 +3663,18 @@
             "title": "Created At",
             "type": "string"
           },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "input_snapshot_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Snapshot Digest",
             "type": "string"
           },
           "modified_proposal_digest": {
@@ -1302,17 +3693,24 @@
           "outcome": {
             "$ref": "#/components/schemas/RuleOutcome"
           },
+          "priority": {
+            "$ref": "#/components/schemas/RulePriority"
+          },
           "proposal_id": {
             "format": "uuid",
             "title": "Proposal Id",
             "type": "string"
           },
-          "reasons": {
+          "reason_codes": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ReasonCode"
             },
-            "title": "Reasons",
+            "title": "Reason Codes",
             "type": "array"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
           },
           "ruleset_version": {
             "title": "Ruleset Version",
@@ -1332,21 +3730,37 @@
         },
         "required": [
           "trace_id",
+          "rule_id",
           "proposal_id",
+          "priority",
           "ruleset_version",
           "outcome",
-          "reasons"
+          "reason_codes",
+          "explanation",
+          "input_snapshot_digest"
         ],
         "title": "RuleEvaluation",
         "type": "object"
       },
       "RuleOutcome": {
         "enum": [
-          "pass",
-          "modify",
-          "fail"
+          "PASS",
+          "MODIFY",
+          "FAIL"
         ],
         "title": "RuleOutcome",
+        "type": "string"
+      },
+      "RulePriority": {
+        "enum": [
+          "P0",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5"
+        ],
+        "title": "RulePriority",
         "type": "string"
       },
       "ShadowCandidate": {
@@ -1491,6 +3905,221 @@
         "title": "ShadowState",
         "type": "string"
       },
+      "StoryDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "alternatives": {
+            "items": {
+              "$ref": "#/components/schemas/AlternativeBranch"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "bestAlternativeImpact": {
+            "title": "Bestalternativeimpact",
+            "type": "string"
+          },
+          "catalyst": {
+            "$ref": "#/components/schemas/Catalyst"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "chosenPathImpact": {
+            "title": "Chosenpathimpact",
+            "type": "string"
+          },
+          "decisionTree": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionNode"
+            },
+            "title": "Decisiontree",
+            "type": "array"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "illustrativeOutcome": {
+            "$ref": "#/components/schemas/IllustrativeOutcome"
+          },
+          "lesson": {
+            "title": "Lesson",
+            "type": "string"
+          },
+          "lessons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lessons",
+            "type": "array"
+          },
+          "marketPath": {
+            "items": {
+              "$ref": "#/components/schemas/ChartPoint"
+            },
+            "title": "Marketpath",
+            "type": "array"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/StoryOutcome"
+          },
+          "ruleChecks": {
+            "items": {
+              "$ref": "#/components/schemas/RuleCheck"
+            },
+            "title": "Rulechecks",
+            "type": "array"
+          },
+          "ruleResult": {
+            "enum": [
+              "PASS",
+              "MODIFY",
+              "FAIL",
+              "NOT_EVALUATED"
+            ],
+            "title": "Ruleresult",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "transcript": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptStep"
+            },
+            "title": "Transcript",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "occurredAt",
+          "symbol",
+          "category",
+          "title",
+          "summary",
+          "outcome",
+          "ruleResult",
+          "chosenPathImpact",
+          "bestAlternativeImpact",
+          "lesson",
+          "catalyst",
+          "marketPath",
+          "decisionTree",
+          "transcript",
+          "ruleChecks",
+          "illustrativeOutcome",
+          "alternatives",
+          "lessons",
+          "evidence"
+        ],
+        "title": "StoryDetail",
+        "type": "object"
+      },
+      "StoryOutcome": {
+        "enum": [
+          "pass",
+          "modify",
+          "fail",
+          "no_trade",
+          "degraded"
+        ],
+        "title": "StoryOutcome",
+        "type": "string"
+      },
+      "StorySummary": {
+        "additionalProperties": false,
+        "properties": {
+          "bestAlternativeImpact": {
+            "title": "Bestalternativeimpact",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "chosenPathImpact": {
+            "title": "Chosenpathimpact",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lesson": {
+            "title": "Lesson",
+            "type": "string"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/StoryOutcome"
+          },
+          "ruleResult": {
+            "enum": [
+              "PASS",
+              "MODIFY",
+              "FAIL",
+              "NOT_EVALUATED"
+            ],
+            "title": "Ruleresult",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurredAt",
+          "symbol",
+          "category",
+          "title",
+          "summary",
+          "outcome",
+          "ruleResult",
+          "chosenPathImpact",
+          "bestAlternativeImpact",
+          "lesson"
+        ],
+        "title": "StorySummary",
+        "type": "object"
+      },
       "StrategyKind": {
         "enum": [
           "long_call",
@@ -1500,6 +4129,53 @@
         ],
         "title": "StrategyKind",
         "type": "string"
+      },
+      "SystemComponent": {
+        "additionalProperties": false,
+        "properties": {
+          "authority": {
+            "title": "Authority",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "risk_ai",
+              "deterministic",
+              "paper_execution",
+              "shadowfund",
+              "post_analysis"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "stage": {
+            "minimum": 1.0,
+            "title": "Stage",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "authority",
+          "description",
+          "stage"
+        ],
+        "title": "SystemComponent",
+        "type": "object"
       },
       "SystemStatus": {
         "additionalProperties": false,
@@ -1586,6 +4262,66 @@
         "title": "TimeFrameKind",
         "type": "string"
       },
+      "ToolRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "calls": {
+            "minimum": 0.0,
+            "title": "Calls",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "SDK",
+              "Internal",
+              "MCP",
+              "LLM"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "medianLatency": {
+            "title": "Medianlatency",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "used",
+              "planned"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "successRate": {
+            "title": "Successrate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "state",
+          "calls",
+          "successRate",
+          "medianLatency",
+          "purpose"
+        ],
+        "title": "ToolRecord",
+        "type": "object"
+      },
       "TradeProposal": {
         "additionalProperties": false,
         "properties": {
@@ -1606,6 +4342,12 @@
             "pattern": "^[a-f0-9]{64}$",
             "title": "Proposal Digest",
             "type": "string"
+          },
+          "proposal_version": {
+            "default": 1,
+            "minimum": 1,
+            "title": "Proposal Version",
+            "type": "integer"
           },
           "quantity": {
             "minimum": 1,
@@ -1658,13 +4400,1600 @@
         ],
         "title": "TradeProposal",
         "type": "object"
+      },
+      "TranscriptStep": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidencerefs",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inputTokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputtokens"
+          },
+          "kind": {
+            "enum": [
+              "agent_summary",
+              "tool_call",
+              "rule_gate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "latencyMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latencyms"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "outputTokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputtokens"
+          },
+          "promptVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promptversion"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurredAt",
+          "kind",
+          "actor",
+          "title",
+          "summary",
+          "evidenceRefs"
+        ],
+        "title": "TranscriptStep",
+        "type": "object"
+      },
+      "TrendDirection": {
+        "enum": [
+          "bullish",
+          "bearish",
+          "neutral"
+        ],
+        "title": "TrendDirection",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WeeklySummary": {
+        "additionalProperties": false,
+        "properties": {
+          "illustrativeNetPnl": {
+            "title": "Illustrativenetpnl",
+            "type": "string"
+          },
+          "keyFindings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keyfindings",
+            "type": "array"
+          },
+          "shadowBeatChosen": {
+            "title": "Shadowbeatchosen",
+            "type": "integer"
+          },
+          "storiesAnalyzed": {
+            "title": "Storiesanalyzed",
+            "type": "integer"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          },
+          "weekOf": {
+            "title": "Weekof",
+            "type": "string"
+          }
+        },
+        "required": [
+          "weekOf",
+          "storiesAnalyzed",
+          "illustrativeNetPnl",
+          "shadowBeatChosen",
+          "keyFindings",
+          "suggestions"
+        ],
+        "title": "WeeklySummary",
+        "type": "object"
       }
     }
   },
   "info": {
-    "title": "PRISM Governed Market-Reaction Contracts",
+    "description": "PRISM: One signal. Multiple perspectives. Better decisions. Paper-only infrastructure API; execution is disabled by default.",
+    "title": "PRISM API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
-  "paths": {}
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me_api_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "live_api_v1_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live"
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "ready_api_v1_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready"
+      }
+    },
+    "/api/v1/presentation/agents": {
+      "get": {
+        "operationId": "agents_api_v1_presentation_agents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_AgentObservability_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Agents",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/agents/{agent_id}": {
+      "get": {
+        "operationId": "agent_api_v1_presentation_agents__agent_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_AgentRecord_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Agent",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/alternatives": {
+      "get": {
+        "operationId": "alternatives_api_v1_presentation_alternatives_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_AlternativeCollection_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alternatives",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/alternatives/{session_id}": {
+      "get": {
+        "operationId": "alternative_api_v1_presentation_alternatives__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_AlternativeSession_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alternative",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/decisions": {
+      "get": {
+        "operationId": "decisions_api_v1_presentation_decisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "outcome",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_DecisionCollection_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decisions",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/decisions/{decision_id}": {
+      "get": {
+        "operationId": "decision_api_v1_presentation_decisions__decision_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "title": "Decision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_StoryDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decision",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/governance": {
+      "get": {
+        "operationId": "governance_api_v1_presentation_governance_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_Governance_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Governance",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/news": {
+      "get": {
+        "operationId": "news_api_v1_presentation_news_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "in": "query",
+            "name": "significance",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Significance"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_NewsCollection_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "News",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/overview": {
+      "get": {
+        "operationId": "overview_api_v1_presentation_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_Overview_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/portfolio": {
+      "get": {
+        "operationId": "portfolio_api_v1_presentation_portfolio_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_Portfolio_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portfolio",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/presentation/weekly-summary": {
+      "get": {
+        "operationId": "weekly_summary_api_v1_presentation_weekly_summary_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_WeeklySummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Weekly Summary",
+        "tags": [
+          "presentation"
+        ]
+      }
+    },
+    "/api/v1/research/news/analyze": {
+      "post": {
+        "description": "Retrieve news articles for a symbol and run LLM sentiment and significance analysis.",
+        "operationId": "analyze_news_api_v1_research_news_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LLMEventAnalysis"
+                  },
+                  "title": "Response Analyze News Api V1 Research News Analyze Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze News",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/quant/analyze": {
+      "post": {
+        "description": "Perform 100% deterministic quantitative and technical momentum analysis.",
+        "operationId": "analyze_quantitative_api_v1_research_quant_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantitativeAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuantitativeAnalysisReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Quantitative",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/reaction/analyze": {
+      "post": {
+        "description": "Retrieve market bars for a symbol and run Market Reaction / Mispricing analysis.",
+        "operationId": "analyze_reaction_api_v1_research_reaction_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketReactionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Reaction",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/system/status": {
+      "get": {
+        "operationId": "system_status_api_v1_system_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "System Status"
+      }
+    }
+  }
 }

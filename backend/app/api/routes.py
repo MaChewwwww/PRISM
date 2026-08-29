@@ -10,9 +10,14 @@ from app.api.auth import router as auth_router
 from app.api.models import HealthResponse, SystemStatus
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
+from app.core.database import check_database
+from app.presentation.routes import router as presentation_router
+from app.research.routes import router as research_router
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth_router)
+router.include_router(research_router)
+router.include_router(presentation_router)
 
 
 def cli_status(settings: Settings) -> tuple[bool, str | None]:
@@ -41,11 +46,17 @@ def live() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
+async def get_database_readiness() -> bool:
+    return await check_database()
+
+
 @router.get("/health/ready", response_model=HealthResponse)
-def ready(
-    response: Response, settings: Annotated[Settings, Depends(get_settings)]
+async def ready(
+    response: Response,
+    settings: Annotated[Settings, Depends(get_settings)],
+    database_ready: Annotated[bool, Depends(get_database_readiness)],
 ) -> HealthResponse:
-    configured = settings.alpaca_paper and not settings.alpaca_live_trade
+    configured = settings.alpaca_paper and not settings.alpaca_live_trade and database_ready
     if not configured:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return HealthResponse(status="not_ready")

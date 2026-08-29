@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from app.contracts.models import (
     AuthorizationDecision,
-    AuthorizationState,
+    AuthorizationOutcome,
     OptionSide,
     OptionStrategy,
     OptionType,
@@ -69,16 +69,34 @@ def validate_authorization(
     now: datetime | None = None,
 ) -> None:
     current_time = now or datetime.now(UTC)
+    if current_time.tzinfo is None or current_time.utcoffset() is None:
+        raise ExecutionRejected("Execution timestamp must be timezone-aware")
+    current_time = current_time.astimezone(UTC)
     if not settings.alpaca_paper or settings.alpaca_live_trade:
         raise ExecutionRejected("Live trading is prohibited")
     if not settings.execution_enabled or settings.execution_kill_switch:
         raise ExecutionRejected("Paper execution is disabled or kill-switched")
+    if settings.autonomous_trading_enabled and not settings.autonomous_trading_window_active(
+        current_time
+    ):
+        raise ExecutionRejected("Autonomous trading window is not active")
     if not settings.active_ruleset_version:
         raise ExecutionRejected("No active ruleset")
-    if decision.state != AuthorizationState.ACCEPTED:
-        raise ExecutionRejected("Authorization is not accepted")
+    if decision.outcome != AuthorizationOutcome.APPROVE:
+        raise ExecutionRejected("Authorization is not approved")
     if decision.proposal_id != proposal.id or decision.proposal_digest != proposal.proposal_digest:
         raise ExecutionRejected("Authorization does not match the proposal")
+    if decision.allowed_order_payload_digest != proposal.proposal_digest:
+        raise ExecutionRejected("Authorized payload does not match the proposal digest")
+    payload = decision.allowed_order_payload
+    if payload is None:
+        raise ExecutionRejected("Authorized payload is missing")
+    if (
+        payload.symbol != proposal.symbol
+        or payload.quantity != proposal.quantity
+        or payload.strategy != proposal.strategy
+    ):
+        raise ExecutionRejected("Authorized payload does not match the proposal")
     if decision.trace_id != proposal.trace_id:
         raise ExecutionRejected("Authorization trace does not match the proposal")
     if decision.ruleset_version != settings.active_ruleset_version:

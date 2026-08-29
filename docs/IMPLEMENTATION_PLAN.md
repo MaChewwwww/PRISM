@@ -1,31 +1,35 @@
-# PRISM — Implementation Plan
+# PRISM implementation plan
 
-**One signal. Multiple perspectives. Better decisions.**
+## Consolidated skeleton: implemented in this pass
 
-## Phase 0 — Governed foundation
+- Versioned BA ruleset/profile registry and typed governance contracts.
+- FastAPI-derived OpenAPI with real paths and generated TypeScript transport types.
+- Authenticated backend-owned illustrative presentation APIs for every story-first frontend surface.
+- Canonical seven-specialist roster followed by Risk Management, deterministic Rules Engine, paper Execution boundary, ShadowFund, and asynchronous Post-Analysis.
+- Server-side frontend API adapter, truthful fixture provenance, read-only governance, and manual profile-recommendation review.
+- Removed browser password disclosure and strengthened non-development authentication validation.
+- Alembic baseline, one-shot Compose migration, dependency-aware readiness, configurable CORS, and aligned ports/deployment documentation.
+- Governance/document semantic checks and synchronized Markdown/DOCX concept deliverables.
+- BA-authorized hackathon window is registry-backed: start Aug 31 09:30 ET, new-entry cutoff Sep 2 16:00 ET, total-equity scoring and force-flatten at Sep 3 close, and Sep 4 09:30 ET outer boundary.
 
-Deliver repository rules, source-of-truth documentation, pinned tooling, contract generation, story-first PRISM frontend prototype, redacted status API, Docker topology, governed feature-to-staging-to-main CI/CD, and deployment skeleton. The authenticated decision journal uses explicitly fictional data to cover overview, stories, portfolio/ShadowFund comparison, news, agent/tool observability, and browser-local rule drafting. It is not final designer-owned visual authority. Acceptance is a clean checkout that installs, verifies, builds, and starts without Alpaca credentials.
+This remains a skeleton. The demonstration dataset is always `illustrative_fixture` and does not represent provider, Alpaca account, paper order, fill, holding, or P&L activity.
 
-## Phase 1 — Research and market context
+## Market Tracker skeleton: implemented, provider integration deferred
 
-Implement provider-normalized market/news ingestion, freshness policy, `ResearchReport`, observability, and deterministic test fixtures. No execution path is enabled.
+The `/market-tracker` route and Inspect navigation entry reserve a chart/watchlist workspace, shared UTC date-range URLs, a default `1Day` timeframe, and six independently filterable activity kinds (`fill`, `order`, `proposal`, `decision`, `no_trade`, `shadow`). The page makes no provider or backend request and renders no fake market/account values. Only confirmed `fill` activity will count as a verified trade when the planned endpoint is implemented. The endpoint contract, server-owned Alpaca flow, entitlement caveats, and deferred milestones are recorded in `MARKET_TRACKER.md` and `ALPACA_INTEGRATION.md`.
 
-## Phase 2 — Proposal, risk, and rules
+## Next: specialist orchestration
 
-Implement structured proposal generation, options-strategy validation, risk assessment, versioned BA rules, PASS/MODIFY/FAIL evaluation, profile governance, and operator review surfaces. The BA governance thresholds are authorized (see `BUSINESS_RULES.md` and `AI_PROFILES.md`); implement them as versioned ruleset configuration and route any future change through a versioned ruleset/profile update.
+Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. The News, deterministic Quantitative, and Market Reaction/Mispricing slices are now implemented without granting them authority; expand them behind the same boundaries.
 
-## Phase 3 — Paper execution
+## Next: proposal, risk, and deterministic authorization
 
-Complete account verification, CLI schema pinning, durable authorization, kill switch, idempotent submission, reconciliation, audit persistence, and paper-only integration tests. Execution activation requires an explicit security review and remains manual.
+Implement persisted TradeProposal versioning, AI-assisted Risk Management, the complete deterministic evaluator, manual modification acceptance through proposal revision, and immutable authorization decisions bound to all required digests and versions.
 
-## Phase 4 — ShadowFund
+## Next: portfolio, ShadowFund, and paper execution
 
-Add immutable counterfactual branches, valuation policies, evaluation windows, limitations, comparison metrics, and recommendation review. Recommendations cannot activate profiles automatically.
+Implement persisted portfolio snapshots, exposure calculations, counterfactual valuation, autonomous orchestration, and paper-order execution/reconciliation behind the disabled-by-default gate. The server-side `AUTONOMOUS_TRADING_*` schedule settings and fail-closed execution gate are configuration groundwork only; no scheduler is active. Networked tests remain opt-in and must not place an order without explicit user authorization.
 
-## Phase 5 — Production readiness
+## Later: operations and evaluation
 
-Implement user authentication/authorization, migrations and backup restore drills, dashboards/alerts, rate/capacity testing, incident runbooks, threat modeling, and protected production rollout. Live brokerage execution is outside current scope.
-
-## Definition of done
-
-Each phase requires accepted FRS/NFRS traceability, updated architecture/security/contracts, passing unit/failure-path tests, reproducible generated artifacts, operator documentation, and no unresolved high-severity security finding.
+Add restore drills, SLOs after owner approval, full observability, threat modeling, profile activation persistence, and post-analysis evaluation. Automatic profile switching and live trading remain outside scope.

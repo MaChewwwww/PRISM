@@ -11,11 +11,13 @@ import pytest
 
 from app.contracts.models import (
     AuthorizationDecision,
-    AuthorizationState,
+    AuthorizationOutcome,
+    MarketRegime,
     OptionLeg,
     OptionSide,
     OptionStrategy,
     OptionType,
+    PortfolioRiskState,
     StrategyKind,
     TradeProposal,
 )
@@ -25,7 +27,7 @@ from app.execution.cli_gateway import (
     CommandResult,
     InMemoryReceiptRepository,
 )
-from app.execution.validation import ExecutionRejected, validate_strategy
+from app.execution.validation import ExecutionRejected, validate_authorization, validate_strategy
 
 
 class RecordingRunner:
@@ -89,9 +91,23 @@ def build_decision(proposal: TradeProposal, **updates: object) -> AuthorizationD
     values: dict[str, object] = {
         "trace_id": proposal.trace_id,
         "proposal_id": proposal.id,
+        "proposal_version": proposal.proposal_version,
         "proposal_digest": proposal.proposal_digest,
+        "ruleset_id": "prism-authorized-baseline",
         "ruleset_version": "rules-v1",
-        "state": AuthorizationState.ACCEPTED,
+        "profile_id": uuid4(),
+        "profile_version": 1,
+        "outcome": AuthorizationOutcome.APPROVE,
+        "allowed_order_payload_digest": proposal.proposal_digest,
+        "allowed_order_payload": {
+            "symbol": proposal.symbol,
+            "strategy": proposal.strategy,
+            "quantity": proposal.quantity,
+        },
+        "market_snapshot_digest": "1" * 64,
+        "portfolio_snapshot_digest": "2" * 64,
+        "market_regime": MarketRegime.NORMAL,
+        "portfolio_risk_state": PortfolioRiskState.NORMAL,
         "expires_at": datetime.now(UTC) + timedelta(minutes=1),
         "account_observed_at": datetime.now(UTC),
         "supported_options_level": 3,
@@ -117,9 +133,22 @@ def execution_settings(**updates: Any) -> Settings:
 @pytest.mark.parametrize(
     ("decision_updates", "message"),
     [
-        ({"state": AuthorizationState.REJECTED}, "not accepted"),
-        ({"state": AuthorizationState.MODIFIED_PENDING_ACCEPTANCE}, "not accepted"),
+        ({"outcome": AuthorizationOutcome.REJECT}, "not approved"),
+        (
+            {"outcome": AuthorizationOutcome.MODIFIED_PENDING_ACCEPTANCE},
+            "not approved",
+        ),
         ({"proposal_digest": "0" * 64}, "does not match"),
+        (
+            {
+                "allowed_order_payload": {
+                    "symbol": "SPY",
+                    "strategy": build_proposal().strategy,
+                    "quantity": 2,
+                }
+            },
+            "Authorized payload does not match",
+        ),
         ({"expires_at": datetime.now(UTC) - timedelta(seconds=1)}, "expired"),
         ({"account_observed_at": datetime.now(UTC) - timedelta(minutes=5)}, "not fresh"),
         ({"supported_options_level": 1}, "insufficient"),
@@ -186,6 +215,36 @@ def test_frs_014_kill_switch_prevents_invocation() -> None:
     with pytest.raises(ExecutionRejected, match="kill-switched"):
         gateway.submit(proposal, build_decision(proposal))
     assert not runner.calls
+
+
+def test_frs_009_autonomous_trading_window_blocks_out_of_window_authorization() -> None:
+    proposal = build_proposal()
+    window_now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
+    decision = build_decision(
+        proposal,
+        expires_at=window_now + timedelta(minutes=1),
+        account_observed_at=window_now,
+    )
+    settings = execution_settings(
+        autonomous_trading_enabled=True,
+        autonomous_trading_start_at="2026-08-31T13:30:00Z",
+        autonomous_trading_end_at="2026-09-03T20:00:00Z",
+    )
+
+    with pytest.raises(ExecutionRejected, match="Autonomous trading window is not active"):
+        validate_authorization(
+            proposal,
+            decision,
+            settings,
+            now=datetime(2026, 8, 31, 13, 29, 59, tzinfo=UTC),
+        )
+
+    validate_authorization(
+        proposal,
+        decision,
+        settings,
+        now=window_now,
+    )
 
 
 def test_frs_007_rejects_uncovered_short() -> None:

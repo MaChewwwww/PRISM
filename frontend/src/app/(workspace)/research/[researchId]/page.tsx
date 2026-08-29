@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { legacyStoryLookup } from "@/features/story/story-data";
+import { legacyStoryLookup } from "@/features/story/presentation-api";
 
 export default async function LegacyResearchDetail({
   params,
