@@ -20,7 +20,7 @@ docker compose -f compose.yml -f compose.production.yml up -d --build
 
 The override adds Nginx as the only published service, removes database/cache host exposure, enables persistent volumes and restart policies, and routes `/api/` and `/openapi.json` to the backend. TLS should terminate at Nginx or an upstream trusted reverse proxy.
 
-For the isolated staging deployment, append `-f compose.staging.yml`; it overrides Nginx to `${STAGING_HTTP_PORT:-8080}` and runs under a separate Compose project name and VPS path.
+For the isolated staging deployment, append `-f compose.staging.yml`; it overrides Nginx to `${STAGING_HTTP_PORT:-3005}` and runs under a separate Compose project name and VPS path.
 
 ## Images
 

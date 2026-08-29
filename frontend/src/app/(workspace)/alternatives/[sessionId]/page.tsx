@@ -26,7 +26,7 @@ export default async function AlternativeDetailPage({
         <ArrowLeft aria-hidden="true" /> All alternatives
       </Link>
       <PageHeader
-        eyebrow={`${session.symbol} · ShadowFund session`}
+        eyebrow={`${session.symbol} · ShadowFund Multiverse Session`}
         title={session.title}
         description={session.summary}
       >
@@ -35,47 +35,55 @@ export default async function AlternativeDetailPage({
       <DemoDataNotice />
       <MetricStrip
         metrics={[
-          { label: "Paper result", value: session.actualPnl, detail: "Illustrative" },
-          { label: "Best branch", value: session.bestBranch, detail: "Simulated" },
-          { label: "Comparison delta", value: session.bestDelta, detail: "Review signal only" },
-          { label: "Data coverage", value: session.coverage, detail: "Fixture observations" },
+          { label: "Active Outcome", value: session.actualPnl, detail: "Paper execution P&L" },
+          { label: "Best Shadow Path", value: session.bestBranch, detail: "Simulated alternative" },
+          {
+            label: "Counterfactual Delta",
+            value: session.bestDelta,
+            detail: "Active vs. Shadow delta",
+          },
+          {
+            label: "Data Coverage",
+            value: session.coverage,
+            detail: "Fixture observation density",
+          },
         ]}
       />
       <Section
         id="branch-path"
-        title="How the branches separated"
-        description="The solid path is paper-shaped; the dashed path is simulated and cannot execute."
+        title="How the Alternative Trajectories Diverged"
+        description="Solid mineral teal is our Active Portfolio; dashed amethyst is the leading Shadow counterfactual; dashed slate is Cash Baseline."
       >
         <StoryLineChart
-          title="Cumulative branch result"
-          description="Synthetic P&amp;L observations across one fixed evaluation window."
-          summary={`${session.bestBranch} finished ${session.bestDelta} ahead`}
+          title="Cumulative Decision Trajectories"
+          description="P&amp;L progression across identical market conditions and timestamps."
+          summary={`${session.bestBranch} finished ${session.bestDelta} relative to active path`}
           data={session.path}
           valuePrefix="$"
           series={[
-            { key: "actual", label: "Illustrative paper", color: "var(--primary)" },
+            { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
             {
               key: "alternative",
               label: session.bestBranch,
-              color: "var(--alternative)",
+              color: "#818CF8",
               dashed: true,
             },
-            { key: "benchmark", label: "No action", color: "var(--benchmark)", dashed: true },
+            { key: "benchmark", label: "Shadow: Cash Baseline", color: "#64748B", dashed: true },
           ]}
         />
       </Section>
       <Section
         id="branch-matrix"
-        title="Branch comparison"
-        description="One controlled variation per row keeps the lesson interpretable."
+        title="Shadow Portfolio Decision Matrix"
+        description="Each branch isolates one controlled parameter to attribute alpha and risk."
       >
-        <div className="table-wrap">
+        <div className="table-wrap prism-glass-card">
           <table>
-            <caption>ShadowFund branch metrics</caption>
+            <caption>ShadowFund Branch Metrics &amp; Comparison</caption>
             <thead>
               <tr>
                 <th>Branch</th>
-                <th>Variation</th>
+                <th>Variation Tested</th>
                 <th>P&amp;L</th>
                 <th>Drawdown</th>
                 <th>Coverage</th>
@@ -84,12 +92,17 @@ export default async function AlternativeDetailPage({
             </thead>
             <tbody>
               {session.branches.map((branch) => (
-                <tr key={branch.id}>
+                <tr
+                  key={branch.id}
+                  className={branch.id === "actual" ? "bg-[#547D83]/10 font-semibold" : ""}
+                >
                   <th scope="row">{branch.label}</th>
                   <td>{branch.variation}</td>
-                  <td>{branch.pnl}</td>
-                  <td>{branch.drawdown}</td>
-                  <td>{branch.coverage}</td>
+                  <td className="font-mono tabular-nums font-semibold text-[#00D084]">
+                    {branch.pnl}
+                  </td>
+                  <td className="font-mono tabular-nums text-[#FF6B6B]">{branch.drawdown}</td>
+                  <td className="font-mono tabular-nums">{branch.coverage}</td>
                   <td>
                     <StateBadge state={branch.status} />
                   </td>
@@ -101,14 +114,14 @@ export default async function AlternativeDetailPage({
       </Section>
       <Section
         id="limitations"
-        title="Simulation limitations"
-        description="Missing or optimistic assumptions stay visible beside the result."
+        title="Simulation Constraints & Model Boundaries"
+        description="Explicit assumptions and limitations preserved for audit integrity."
       >
-        <ul className="limitation-list">
+        <ul className="limitation-list space-y-2">
           {session.limitations.map((limitation) => (
-            <li key={limitation}>
-              <ShieldCheck aria-hidden="true" />
-              <span>{limitation}</span>
+            <li key={limitation} className="prism-glass-card p-3 flex items-center gap-3">
+              <ShieldCheck aria-hidden="true" className="text-[#818CF8]" />
+              <span className="text-sm text-slate-200">{limitation}</span>
             </li>
           ))}
         </ul>

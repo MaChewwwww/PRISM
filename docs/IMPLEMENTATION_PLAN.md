@@ -12,7 +12,7 @@ Implement provider-normalized market/news ingestion, freshness policy, `Research
 
 ## Phase 2 — Proposal, risk, and rules
 
-Implement structured proposal generation, options-strategy validation, risk assessment, versioned BA rules, PASS/MODIFY/FAIL evaluation, profile governance, and operator review surfaces. Resolve BA threshold TBDs through approved requirements changes.
+Implement structured proposal generation, options-strategy validation, risk assessment, versioned BA rules, PASS/MODIFY/FAIL evaluation, profile governance, and operator review surfaces. The BA governance thresholds are authorized (see `BUSINESS_RULES.md` and `AI_PROFILES.md`); implement them as versioned ruleset configuration and route any future change through a versioned ruleset/profile update.
 
 ## Phase 3 — Paper execution
 

@@ -15,7 +15,7 @@ Before changing code or documentation, read the applicable rules in order:
 7. `.agents/rules/60-documentation.md`
 8. `.agents/rules/70-commits-pull-requests.md` for commits, branches, and pull requests
 
-Read `docs/README.md` and the documents it identifies for the subsystem being changed. Treat `docs/conceptual/PROJECT_CONCEPT.md` as the conceptual source of truth. The application name is confirmed as **PRISM**; BA-owned numerical thresholds remain intentionally unresolved.
+Read `docs/README.md` and the documents it identifies for the subsystem being changed. Treat `docs/conceptual/PROJECT_CONCEPT.md` as the conceptual source of truth. The application name is confirmed as **PRISM**. The BA-owned numerical governance thresholds are now authorized in `docs/BUSINESS_RULES.md` (Active baseline parameter register) and `docs/AI_PROFILES.md`; implement them as versioned ruleset configuration. Thresholds not covered there (for example SLOs and backup RPO/RTO) remain unresolved and must not be guessed.
 
 ## Non-negotiable repository invariants
 
@@ -24,9 +24,10 @@ Read `docs/README.md` and the documents it identifies for the subsystem being ch
 - The frontend never receives Alpaca or LLM credentials and never calls Alpaca directly.
 - Execution is disabled by default and fails closed without a valid active ruleset and authorization.
 - Financial values use decimal-safe representations, never binary floating point at trust boundaries.
-- Do not invent BA thresholds, product names, API behavior, or Alpaca capabilities.
+- Do not invent thresholds, product names, API behavior, or Alpaca capabilities. Use the BA-authorized governance values from the source-of-truth docs; anything still unresolved stays unresolved until authorized.
 - Preserve generated/source boundaries. Regenerate contract output instead of hand-editing it.
 - Vendored Alpaca skills are upstream references. These root rules take precedence over them.
+- Format communication and documentation in standard Markdown. Never use LaTeX syntax or math-mode markers (such as `$\rightarrow$`, `\to`, or `$...$` delimiters for plain text); always use plain ASCII arrows (`->`) or standard Markdown.
 
 ## Normal verification
 

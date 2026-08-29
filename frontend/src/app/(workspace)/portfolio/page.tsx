@@ -29,60 +29,66 @@ export default async function PortfolioPage({
   return (
     <>
       <PageHeader
-        eyebrow="Portfolio"
-        title="One paper path, several ways to learn from it"
-        description="Compare the illustrative paper account with ShadowFund alternatives over a shared date range."
+        eyebrow="Active Portfolio & Shadow Analytics"
+        title="Active Paper Account vs. Shadow Multiverse"
+        description="Monitor active Alpaca paper trading positions, capital utilization, and counterfactual branch performance over shared date ranges."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <MetricStrip
         metrics={[
           {
-            label: "Illustrative equity",
-            value: last ? `$${last.actual}` : "No observations",
-            detail: "Not a live account",
+            label: "Active Equity",
+            value: last ? `$${last.actual}` : "No data",
+            detail: "Alpaca paper trading",
           },
           {
-            label: "Period change",
-            value: paperChange === null ? "—" : `$${paperChange.toFixed(2)}`,
+            label: "Active Period P&L",
+            value:
+              paperChange === null
+                ? "—"
+                : `${paperChange >= 0 ? "+" : ""}$${paperChange.toFixed(2)}`,
             detail: `${range.from} to ${range.to}`,
           },
           {
-            label: "Best branch delta",
-            value: alternativeDelta === null ? "—" : `$${alternativeDelta.toFixed(2)}`,
-            detail: "Simulated versus paper-shaped",
+            label: "Best Shadow Delta",
+            value:
+              alternativeDelta === null
+                ? "—"
+                : `${alternativeDelta >= 0 ? "+" : ""}$${alternativeDelta.toFixed(2)}`,
+            detail: "Shadow vs. Active",
           },
-          { label: "Cash allocation", value: "94.7%", detail: "Fictional snapshot" },
+          { label: "Cash Buffer", value: "94.7%", detail: "$98,352.48 available" },
         ]}
       />
 
       <Section
         id="equity-comparison"
-        title="Equity comparison"
-        description="Is the difference persistent, or concentrated around a few decisions?"
+        title="Active Equity vs. Shadow Performance"
+        description="Is the performance advantage persistent or concentrated around specific news catalyst events?"
       >
         <StoryLineChart
-          title="Portfolio equity"
-          description="Exact values are fixed decimal strings; plotting conversion is presentation-only."
+          title="Portfolio Equity Trajectory"
+          description="Solid teal is Active Paper Trading; dashed amethyst is ShadowFund simulation; dashed slate is Benchmark."
           summary={
             alternativeDelta !== null && alternativeDelta > 0
-              ? `Best branch ahead by $${alternativeDelta.toFixed(2)}`
-              : "No alternative lead in this range"
+              ? `Shadow Portfolio ahead by +$${alternativeDelta.toFixed(2)}`
+              : "Active Portfolio leads in this period"
           }
           data={portfolio.points}
           valuePrefix="$"
           series={[
-            { key: "actual", label: "Illustrative paper", color: "var(--primary)" },
+            { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
             {
               key: "alternative",
-              label: "Best ShadowFund",
-              color: "var(--alternative)",
+              label: "Best Shadow Portfolio",
+              color: "#818CF8",
               dashed: true,
             },
             {
               key: "benchmark",
-              label: "Synthetic benchmark",
-              color: "var(--benchmark)",
+              label: "Market Benchmark",
+              color: "#64748B",
               dashed: true,
             },
           ]}
@@ -92,28 +98,37 @@ export default async function PortfolioPage({
       <div className="dashboard-pair portfolio-pair">
         <Section
           id="holdings"
-          title="Illustrative holdings"
-          description="Fictional positions reserve the structure for future normalized portfolio data."
+          title="Active Paper Holdings"
+          description="Open contract positions, option spreads, and cash reserves in the active paper account."
         >
           <div className="holding-list">
             {portfolio.positions.map((position) => (
-              <div key={position.symbol}>
+              <div
+                key={position.symbol}
+                className="prism-glass-card p-4 transition-all hover:border-[#547D83]/40"
+              >
                 <div>
-                  <strong>{position.symbol}</strong>
-                  <span>{position.provenance}</span>
+                  <strong className="text-white font-medium">{position.symbol}</strong>
+                  <span className="text-xs text-[#547D83] font-semibold">
+                    {position.provenance}
+                  </span>
                 </div>
                 <dl>
                   <div>
                     <dt>Allocation</dt>
-                    <dd>{position.allocation}</dd>
+                    <dd className="font-mono tabular-nums">{position.allocation}</dd>
                   </div>
                   <div>
                     <dt>Value</dt>
-                    <dd>{position.value}</dd>
+                    <dd className="font-mono tabular-nums">{position.value}</dd>
                   </div>
                   <div>
                     <dt>P&amp;L</dt>
-                    <dd>{position.pnl}</dd>
+                    <dd
+                      className={`font-mono tabular-nums font-semibold ${position.pnl.startsWith("+") ? "text-[#00D084]" : position.pnl.startsWith("-") ? "text-[#FF6B6B]" : "text-slate-300"}`}
+                    >
+                      {position.pnl}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -122,18 +137,21 @@ export default async function PortfolioPage({
         </Section>
         <Section
           id="allocation"
-          title="Exposure mix"
-          description="A proportional view without presenting demo numbers as policy thresholds."
+          title="Capital Allocation & Exposure"
+          description="Proportional capital exposure across cash buffer and defined-risk option debit spreads."
         >
           <div className="exposure-list">
             {portfolio.exposure.map((item) => (
               <div key={item.label}>
                 <div>
-                  <span>{item.label}</span>
-                  <strong>{item.value}%</strong>
+                  <span className="text-slate-300">{item.label}</span>
+                  <strong className="font-mono tabular-nums text-white">{item.value}%</strong>
                 </div>
                 <span className="exposure-track">
-                  <span style={{ width: `${item.value}%` }} />
+                  <span
+                    style={{ width: `${item.value}%` }}
+                    className="bg-[#547D83] transition-all duration-500"
+                  />
                 </span>
               </div>
             ))}
@@ -142,33 +160,40 @@ export default async function PortfolioPage({
             className="text-link"
             href={`/alternatives?range=${range.preset}&from=${range.from}&to=${range.to}`}
           >
-            Open ShadowFund comparisons <ArrowRight aria-hidden="true" />
+            Explore ShadowFund Alternative Sessions <ArrowRight aria-hidden="true" />
           </Link>
         </Section>
       </div>
 
       <Section
         id="portfolio-activity"
-        title="What changed in the period"
-        description="Decision-linked activity is more useful here than an undifferentiated order log."
+        title="Governed Execution Activity"
+        description="Decision-linked events and paper order fills during the selected period."
       >
         {portfolio.activities.length > 0 ? (
           <ol className="activity-list">
             {portfolio.activities.map((activity) => (
-              <li key={activity.occurredAt}>
-                <time dateTime={activity.occurredAt}>{formatDateTime(activity.occurredAt)}</time>
+              <li
+                key={activity.occurredAt}
+                className="prism-glass-card p-3 my-2 flex items-center justify-between"
+              >
+                <time dateTime={activity.occurredAt} className="text-xs text-slate-400 font-mono">
+                  {formatDateTime(activity.occurredAt)}
+                </time>
                 <div>
-                  <strong>{activity.label}</strong>
-                  <span>{activity.detail}</span>
+                  <strong className="text-sm text-white block">{activity.label}</strong>
+                  <span className="text-xs text-slate-300">{activity.detail}</span>
                 </div>
-                <b>{activity.amount}</b>
+                <b
+                  className={`font-mono tabular-nums text-sm ${activity.amount.startsWith("+") ? "text-[#00D084]" : "text-slate-300"}`}
+                >
+                  {activity.amount}
+                </b>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="inline-empty">
-            No illustrative portfolio activity falls inside this range.
-          </p>
+          <p className="inline-empty">No active portfolio activity falls inside this date range.</p>
         )}
       </Section>
     </>

@@ -15,9 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PRISM — Governed Market-Reaction Decision Journal",
-  description:
-    "One signal. Multiple perspectives. Better decisions. PRISM autonomous multi-perspective market intelligence governed by deterministic risk rules.",
+  title: "PRISM — One signal. Multiple perspectives. Better decisions.",
+  description: "One signal. Multiple perspectives. Better decisions.",
+  openGraph: {
+    title: "PRISM — One signal. Multiple perspectives. Better decisions.",
+    description: "One signal. Multiple perspectives. Better decisions.",
+    siteName: "PRISM",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PRISM — One signal. Multiple perspectives. Better decisions.",
+    description: "One signal. Multiple perspectives. Better decisions.",
+  },
 };
 
 type RootLayoutProps = {

@@ -49,9 +49,35 @@ ShadowFund organizes counterfactual analysis into three complementary tiers:
 
 At minimum, a completed branch records gross and net P&L, maximum adverse/favorable excursion, drawdown, exposure duration, fill confidence, data completeness, and comparison delta against its parent. Options branches additionally retain intrinsic/extrinsic value assumptions, spread width, and expiration proximity.
 
+## Authorized counterfactual branches
+
+For every authorized execution, ShadowFund generates and tracks the following parallel branches alongside the actual execution:
+
+| Branch | Logic / configuration | Purpose |
+| :--- | :--- | :--- |
+| 100% Cash (baseline) | Take no action; hold capital in cash ($0 P&L). | Determines whether the AI intervention added value (alpha) versus doing nothing. |
+| 0.5× sizing | Same option structure at exactly half the capital allocation. | Analyzes whether the AI Profile systematically over-allocates capital in the current regime. |
+| Unhedged / Contrarian | The inverse position (e.g. a put debit spread when the AI bought a call debit spread). | Measures decision regret and highlights consistent directional bias errors. |
+
+For significant rejected or modified opportunities, ShadowFund also retains a no-action baseline where feasible, so the team can distinguish useful restraint from excessive rule tightness. Counterfactuals are evidence for future tuning, never permission to bypass deterministic rules.
+
+Derived counterfactual metrics include:
+
+- **Counterfactual Alpha:** actual chosen-branch return minus the 100% cash baseline return.
+- **Decision Regret:** best tracked alternative outcome minus the actual chosen-branch return.
+- **Protection Value:** loss avoided by the chosen branch relative to a more-exposed alternative (e.g. full-size or unhedged), quantifying the benefit of restraint or hedging.
+- **Risk-Adjusted Outcome:** branch return evaluated jointly with its drawdown, volatility, capital-at-risk, and holding period, not gross return alone.
+- **Rule Quality Signal:** whether trades rejected or modified by deterministic rules would have been profitable or disastrous, validating whether rules are too tight or too loose.
+- **Research Calibration:** how well the Research Agent's `opportunity_score` and directional thesis matched realized outcomes across branches.
+
 ## Evaluation windows
 
-The proposal selects a versioned evaluation policy such as end-of-session, fixed elapsed time, event-resolution window, or option expiration. The policy must define calendar treatment, observation cadence, terminal price selection, and behavior when the terminal observation is unavailable. Exact BA-owned horizons remain **TBD**.
+The proposal selects a versioned evaluation policy such as end-of-session, fixed elapsed time, event-resolution window, or option expiration. The policy must define calendar treatment, observation cadence, terminal price selection, and behavior when the terminal observation is unavailable.
+
+The BA has authorized two evaluation horizons to capture both immediate reaction dynamics and multi-day thesis playouts:
+
+- **Intraday horizon:** P&L difference from the execution timestamp to the market close of that same trading day.
+- **1-week horizon:** P&L difference from the execution timestamp to the market close exactly 5 trading days later (or until a deterministic exit is triggered).
 
 ## Limitations and disclosures
 
