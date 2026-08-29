@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import re
+import zipfile
 from pathlib import Path
+from xml.etree import ElementTree
 
 from check_branch_flow import validate_branch_flow
 
@@ -22,6 +25,7 @@ REQUIRED_DOCS = {
     "FRS_NFRS.md",
     "CI_CD.md",
     "DESIGN.md",
+    "GOVERNANCE_TRACEABILITY.md",
 }
 REQUIRED_RULES = {
     f"{number}-{name}.md"
@@ -37,9 +41,157 @@ REQUIRED_RULES = {
     ]
 }
 
+PRESENTATION_PATHS = {
+    "/api/v1/presentation/overview",
+    "/api/v1/presentation/decisions",
+    "/api/v1/presentation/decisions/{decision_id}",
+    "/api/v1/presentation/portfolio",
+    "/api/v1/presentation/alternatives",
+    "/api/v1/presentation/news",
+    "/api/v1/presentation/agents",
+    "/api/v1/presentation/governance",
+    "/api/v1/presentation/weekly-summary",
+}
+SPECIALIST_NAMES = (
+    "News Agent",
+    "Quantitative Agent",
+    "Industry Agent",
+    "Fundamental Agent",
+    "Macroeconomic Agent",
+    "Market Reaction/Mispricing Agent",
+    "Trading Decision Agent",
+)
+CONCEPT_REVISION = "2026-08-29 / ecosystem-consolidation-v1"
+
+
+def _docx_text(path: Path) -> str:
+    with zipfile.ZipFile(path) as package:
+        root = ElementTree.fromstring(package.read("word/document.xml"))
+    return " ".join(node.text or "" for node in root.iter() if node.tag.endswith("}t"))
+
+
+def _check_governance(failures: list[str]) -> None:
+    registry_path = ROOT / "backend" / "app" / "rules" / "authorized_baseline.v1.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    expected = {
+        "take_profit_default_pct": "75.00",
+        "stop_loss_pct": "50.00",
+        "data_freshness_seconds": 30,
+        "balanced_opportunity_score": "84",
+        "max_hold_default_days": 14,
+        "hackathon_max_hold_trading_days": 4,
+    }
+    for key, value in expected.items():
+        if registry["parameters"].get(key) != value:
+            failures.append(f"Authorized registry mismatch for {key}: expected {value}")
+    if (
+        registry.get("version") != "1.0.0"
+        or registry.get("default_profile") != "balanced"
+    ):
+        failures.append("Authorized registry identity/default profile drifted")
+    window = registry.get("parameters", {}).get("hackathon_window", {})
+    expected_window = {
+        "trading_start_at": "2026-08-31T13:30:00Z",
+        "new_entry_cutoff_at": "2026-09-02T20:00:00Z",
+        "official_scoring_at": "2026-09-03T20:00:00Z",
+        "force_flatten_by": "2026-09-03T20:00:00Z",
+        "window_outer_boundary_at": "2026-09-04T13:30:00Z",
+        "scoring_basis": "total_account_equity",
+    }
+    for key, value in expected_window.items():
+        if window.get(key) != value:
+            failures.append(
+                f"Authorized hackathon window mismatch for {key}: expected {value}"
+            )
+
+    first_party_markdown = [ROOT / "README.md", ROOT / "AGENTS.md"]
+    first_party_markdown.extend((ROOT / "docs").rglob("*.md"))
+    first_party_markdown.extend((ROOT / ".agents" / "rules").glob("*.md"))
+    first_party_markdown.append(
+        ROOT / ".agents" / "skills" / "prism-design" / "SKILL.md"
+    )
+    prohibited_patterns = {
+        "LaTeX command": re.compile(
+            r"\\(?:text|le|ge|ne|approx|times|Delta|Gamma|Theta|rightarrow|to)\b"
+        ),
+        "LaTeX display delimiter": re.compile(r"\$\$"),
+        "Unicode arrow": re.compile(r"[→←]"),
+        "stale BA status": re.compile(
+            r"BA pending|THRESHOLD TBD|RULE TBD|product-name TBD", re.IGNORECASE
+        ),
+        "stale authorization vocabulary": re.compile(
+            r"APPROVE\s*/\s*MODIFY\s*/\s*REJECT|accepted authorization",
+            re.IGNORECASE,
+        ),
+    }
+    for path in first_party_markdown:
+        content = path.read_text(encoding="utf-8")
+        for label, pattern in prohibited_patterns.items():
+            if pattern.search(content):
+                failures.append(f"{label} found in {path.relative_to(ROOT)}")
+
+    concept_paths = (
+        ROOT / "docs" / "conceptual" / "PROJECT_CONCEPT.md",
+        ROOT / "docs" / "conceptual" / "Project_Concept.docx",
+    )
+    concept_texts = (
+        concept_paths[0].read_text(encoding="utf-8"),
+        _docx_text(concept_paths[1]),
+    )
+    critical_terms = (
+        CONCEPT_REVISION,
+        *SPECIALIST_NAMES,
+        "75.00%",
+        "50.00%",
+        "14 days",
+        "4 trading days",
+        "illustrative_fixture",
+        "MODIFIED_PENDING_ACCEPTANCE",
+        "total account equity",
+        "Sep 3",
+        "new-entry cutoff",
+        "force-flatten",
+    )
+    for path, content in zip(concept_paths, concept_texts, strict=True):
+        missing = [term for term in critical_terms if term not in content]
+        if missing:
+            failures.append(
+                f"Concept synchronization drift in {path.relative_to(ROOT)}: {missing}"
+            )
+
+    openapi = json.loads(
+        (ROOT / "backend" / "build" / "contracts.openapi.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    missing_paths = PRESENTATION_PATHS - set(openapi.get("paths", {}))
+    if missing_paths:
+        failures.append(
+            f"OpenAPI is missing presentation paths: {sorted(missing_paths)}"
+        )
+    api_catalog = (ROOT / "docs" / "DATA_API_CONTRACTS.md").read_text(encoding="utf-8")
+    uncatalogued = [
+        path for path in PRESENTATION_PATHS if f"`{path}`" not in api_catalog
+    ]
+    if uncatalogued:
+        failures.append(
+            f"API catalog is missing presentation paths: {sorted(uncatalogued)}"
+        )
+
+    frontend_root = ROOT / "frontend" / "src"
+    frontend_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in frontend_root.rglob("*")
+        if path.suffix in {".ts", ".tsx"}
+    )
+    for stale in ("story-data", "demo-credentials", "Active paper"):
+        if stale in frontend_text:
+            failures.append(f"Stale frontend fixture/auth phrase remains: {stale}")
+
 
 def main() -> None:
     failures: list[str] = []
+    _check_governance(failures)
     for pointer in ("CLAUDE.md", "GEMINI.md"):
         content = (ROOT / pointer).read_text(encoding="utf-8")
         if "AGENTS.md" not in content:

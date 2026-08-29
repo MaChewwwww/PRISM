@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <FlaskConical aria-hidden="true" /> Demo narrative
           </div>
           <div className="environment-tag">
-            <span aria-hidden="true" className="animate-prism-pulse" /> Active Paper
+            <span aria-hidden="true" className="animate-prism-pulse" /> Illustrative API
           </div>
           <SignOutButton />
           <button
@@ -126,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="rail-safety">
             <ShieldCheck aria-hidden="true" />
-            <span>Active Paper Only · Shadow Portfolios Never Execute</span>
+            <span>Paper-only platform · current workspace data is illustrative</span>
           </div>
         </aside>
         <main id="main-content" className="workspace">

@@ -130,29 +130,31 @@ def test_frs_027_exit_policy_validation() -> None:
     from app.contracts import ExitPolicy
 
     policy = ExitPolicy()
-    assert policy.take_profit_pct == Decimal("50.0")
+    assert policy.take_profit_pct == Decimal("75.0")
     assert policy.stop_loss_pct == Decimal("50.0")
     assert policy.dte_threshold == 7
     assert policy.max_hold_days == 14
 
     custom_policy = ExitPolicy(
-        take_profit_pct=Decimal("75.0"),
-        stop_loss_pct=Decimal("40.0"),
+        take_profit_pct=Decimal("85.0"),
+        stop_loss_pct=Decimal("50.0"),
         dte_threshold=5,
         max_hold_days=10,
     )
-    assert custom_policy.take_profit_pct == Decimal("75.0")
-    assert custom_policy.stop_loss_pct == Decimal("40.0")
+    assert custom_policy.take_profit_pct == Decimal("85.0")
+    assert custom_policy.stop_loss_pct == Decimal("50.0")
     assert custom_policy.dte_threshold == 5
     assert custom_policy.max_hold_days == 10
 
-    # Non-positive take-profit fails
+    # Values outside the BA-authorized bounds fail.
     with pytest.raises(ValidationError):
-        ExitPolicy(take_profit_pct=Decimal("0.0"))
+        ExitPolicy(take_profit_pct=Decimal("74.9"))
+    with pytest.raises(ValidationError):
+        ExitPolicy(stop_loss_pct=Decimal("49.9"))
 
-    # DTE threshold < 1 fails
+    # DTE threshold below the authorized two-day floor fails.
     with pytest.raises(ValidationError):
-        ExitPolicy(dte_threshold=0)
+        ExitPolicy(dte_threshold=1)
 
 
 def test_frs_028_shadow_candidate_validation() -> None:

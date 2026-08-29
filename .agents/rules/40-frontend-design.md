@@ -30,15 +30,16 @@ Write down:
 ## Story model
 
 - Organize user-facing work around decision stories, not backend module names or infrastructure entities.
-- Preserve the authority order: catalyst and market context, research, proposal or NO_TRADE, risk critique, deterministic rule gate, paper-shaped outcome, ShadowFund alternatives, and lessons.
+- Preserve the authority order: catalyst and market context; seven specialist perspectives; Trading Decision proposal or NO_TRADE; AI-assisted Risk Management; deterministic rule gate; paper-only execution when genuinely recorded; ShadowFund alternatives; and asynchronous Post-Analysis.
 - Keep the same validated UTC date range across related dashboard, story, portfolio, news, and agent views. Store filter state in the URL so a view can be revisited and shared.
-- Label all data provenance. Illustrative paper results, simulated alternatives, planned integrations, degraded evidence, and live authenticated data must never be visually interchangeable.
+- Show the registry-backed hackathon window in governance surfaces: new-entry cutoff, total-equity scoring point, force-flatten deadline, and outer boundary must be explicit and read-only.
+- Label all data provenance. Use `Illustrative fixture` for the backend demonstration snapshot. Reserve `Alpaca paper`, `ShadowFund`, `Benchmark`, and `Simulated` for data that genuinely came from those sources.
 - Treat NO_TRADE, FAIL, and incomplete evidence as meaningful terminal stories rather than missing content.
 
 ## Charts and metrics
 
 - Every chart answers a question stated in its heading or summary and has an accessible exact-value table or equivalent textual fallback.
-- Use solid-versus-dashed lines, labels, and shapes in addition to color when comparing paper-shaped and simulated data.
+- Use solid-versus-dashed lines, labels, and shapes in addition to color when comparing genuinely sourced paper data with simulations or illustrative paths.
 - Keep decimal strings authoritative. Conversion to binary numbers is allowed only in presentation adapters used for plotting.
 - Synchronize charts and supporting tables to the same filter range; empty ranges render an explicit empty state rather than fabricated continuity.
 

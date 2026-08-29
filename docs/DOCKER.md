@@ -2,15 +2,11 @@
 
 ## Local stack
 
-Copy `.env.example` to an untracked `.env`, then run:
+Copy `.env.example` to an untracked `.env`, replace the development-only authentication values, and run `pnpm docker:up`. Direct development through `pnpm dev` uses frontend port 3000 and backend port 8000. The base Compose stack defaults to frontend port 3005, backend port 8005, PostgreSQL port 5439, and optional Redis port 6385.
 
-```bash
-pnpm docker:up
-```
+Compose starts PostgreSQL, runs `alembic upgrade head` in a one-shot `migrate` service, then starts FastAPI after migration succeeds. The frontend starts after backend readiness. FastAPI startup does not create tables.
 
-The base Compose file starts frontend, backend, PostgreSQL 17, and the optional Redis profile. Seeded credentials (`AUTH_EMAIL`, `AUTH_PASSWORD`, `AUTH_SECRET_KEY`) configured in `.env` protect the console interface. Execution remains disabled and no Alpaca credentials are required for baseline health/status operation.
-
-Inspect the resolved configuration with `pnpm docker:config` and stop it with `pnpm docker:down`.
+Readiness validates required configuration and database connectivity. Liveness only proves that the process can answer. `/api/v1/system/status` is authenticated and is not a Compose health-check target.
 
 ## Production override
 
@@ -18,16 +14,8 @@ Inspect the resolved configuration with `pnpm docker:config` and stop it with `p
 docker compose -f compose.yml -f compose.production.yml up -d --build
 ```
 
-The override adds Nginx as the only published service, removes database/cache host exposure, enables persistent volumes and restart policies, and routes `/api/` and `/openapi.json` to the backend. TLS should terminate at Nginx or an upstream trusted reverse proxy.
+The production override publishes only Nginx on `{PRISM_HTTP_PORT:-80}`. Application and data services use private networks, and PostgreSQL/Redis have no host ports. Staging adds `compose.staging.yml` and publishes Nginx on `{STAGING_HTTP_PORT:-3005}` under a distinct Compose project.
 
-For the isolated staging deployment, append `-f compose.staging.yml`; it overrides Nginx to `${STAGING_HTTP_PORT:-3005}` and runs under a separate Compose project name and VPS path.
+Validate the resolved production topology with `pnpm docker:config`. Execution remains disabled by default and fails closed without valid paper configuration, an active ruleset, and a current authorization.
 
-## Images
-
-Both application images use multi-stage builds. The backend image builds Alpaca CLI v0.0.13 in a dedicated Go stage and copies only the executable into the Python runtime. Build images and OS packages are pinned; lockfiles are copied before source to maximize deterministic cache reuse.
-
-## Health and operations
-
-Liveness proves a process can answer. Readiness additionally reflects safe configuration and required dependencies. Compose health checks use the corresponding endpoints. Operators should treat `degraded` and `misconfigured` as non-ready and must not infer broker availability from container health alone.
-
-Never bake `.env`, credentials, local databases, build caches, or MCP configuration into images.
+Never bake environment files, credentials, local data, build caches, or MCP configuration into images.

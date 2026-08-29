@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { StoryLineChart } from "@/components/product/story-charts";
 import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/product/workspace-ui";
-import { getAlternativeSession } from "@/features/story/story-data";
+import { getAlternativeSession } from "@/features/story/presentation-api";
 
 function DeltaBadge({ delta }: { delta: string }) {
   const isPositive = delta.startsWith("+");
@@ -31,10 +31,10 @@ export default async function AlternativeDetailPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = await params;
-  const session = getAlternativeSession(sessionId);
+  const session = await getAlternativeSession(sessionId);
   if (!session) notFound();
 
-  const shadowBranches = session.branches.filter((b) => b.id !== "actual");
+  const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
 
   return (
     <>
@@ -53,11 +53,14 @@ export default async function AlternativeDetailPage({
       {/* Outcome comparison header */}
       <div className="alt-outcome-grid">
         <div className="alt-outcome-actual prism-glass-card">
-          <span className="alt-outcome-label">Active Portfolio (Paper)</span>
-          <span className="alt-outcome-pnl" aria-label={`Active outcome: ${session.actualPnl}`}>
-            {session.actualPnl}
+          <span className="alt-outcome-label">Illustrative governed path</span>
+          <span
+            className="alt-outcome-pnl"
+            aria-label={`Chosen illustrative outcome: ${session.chosenPathPnl}`}
+          >
+            {session.chosenPathPnl}
           </span>
-          <span className="alt-outcome-sub">Governed paper execution · recorded outcome</span>
+          <span className="alt-outcome-sub">Versioned fixture · no broker submission</span>
         </div>
         {shadowBranches.map((branch) => (
           <div key={branch.id} className="alt-outcome-shadow prism-glass-card">
@@ -65,7 +68,7 @@ export default async function AlternativeDetailPage({
             <span className="alt-outcome-pnl alt-outcome-pnl--shadow">{branch.pnl}</span>
             <div className="alt-outcome-delta-row">
               <span className="alt-outcome-sub">vs Active:</span>
-              <DeltaBadge delta={branch.deltaVsActual} />
+              <DeltaBadge delta={branch.deltaVsChosen} />
             </div>
           </div>
         ))}
@@ -73,26 +76,26 @@ export default async function AlternativeDetailPage({
 
       <Section
         id="branch-path"
-        title="Trajectory Comparison vs. Active Portfolio"
-        description="Each line shows the cumulative P&L of one shadow branch relative to the same timeline. The teal Active Portfolio line is the reference you are comparing against."
+        title="Trajectory Comparison vs. Chosen Path"
+        description="Each line shows a non-executable branch relative to the same fixture timeline. The teal chosen path is the comparison reference."
       >
         <StoryLineChart
           title="Cumulative Decision Trajectories"
           description="Interactive trajectory view. Toggle shadow branches on or off to isolate any comparison."
           summary={
-            session.bestBranch === "Active Portfolio (Paper)"
-              ? `Active Portfolio finished ${session.bestDelta} ahead of all shadow alternatives`
-              : `${session.bestBranch} finished ${session.bestDelta} relative to active path`
+            session.bestBranch === "Illustrative governed path"
+              ? `Chosen path finished ${session.bestDelta} ahead of all shadow alternatives`
+              : `${session.bestBranch} finished ${session.bestDelta} relative to the chosen path`
           }
           data={session.path}
           valuePrefix="$"
           series={[
-            { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
+            { key: "chosenPath", label: "Illustrative governed path", color: "#547D83" },
             {
               key: "alternative",
               label:
                 session.alternativeLabel ??
-                (session.bestBranch === "Active Portfolio (Paper)"
+                (session.bestBranch === "Illustrative governed path"
                   ? "Shadow: Unhedged Alternative"
                   : session.bestBranch),
               color: "#818CF8",
@@ -105,12 +108,12 @@ export default async function AlternativeDetailPage({
 
       <Section
         id="branch-matrix"
-        title="Shadow Branch Results vs. Active Portfolio"
-        description="Every branch ran under identical market conditions. The delta column shows directly how each outcome differed from what actually happened."
+        title="Shadow Branch Results vs. Chosen Path"
+        description="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the chosen illustrative path."
       >
         <div className="table-wrap prism-glass-card">
           <table>
-            <caption>ShadowFund Branch Comparison vs. Active Portfolio</caption>
+            <caption>ShadowFund branch comparison vs. chosen illustrative path</caption>
             <thead>
               <tr>
                 <th>Branch</th>
@@ -126,7 +129,7 @@ export default async function AlternativeDetailPage({
               {session.branches.map((branch) => (
                 <tr
                   key={branch.id}
-                  className={branch.id === "actual" ? "bg-[#547D83]/10 font-semibold" : ""}
+                  className={branch.id === "chosen" ? "bg-[#547D83]/10 font-semibold" : ""}
                 >
                   <th scope="row">{branch.label}</th>
                   <td>{branch.variation}</td>
@@ -134,7 +137,7 @@ export default async function AlternativeDetailPage({
                     {branch.pnl}
                   </td>
                   <td className="font-mono tabular-nums">
-                    <DeltaBadge delta={branch.deltaVsActual} />
+                    <DeltaBadge delta={branch.deltaVsChosen} />
                   </td>
                   <td className="font-mono tabular-nums text-[#FF6B6B]">{branch.drawdown}</td>
                   <td className="font-mono tabular-nums">{branch.coverage}</td>

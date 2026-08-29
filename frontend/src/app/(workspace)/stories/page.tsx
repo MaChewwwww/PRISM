@@ -3,12 +3,8 @@ import Link from "next/link";
 
 import { DateRangeControl } from "@/components/product/date-range-control";
 import { DemoDataNotice, PageHeader } from "@/components/product/workspace-ui";
-import {
-  listStories,
-  rangeQuery,
-  readDateRange,
-  type SearchValues,
-} from "@/features/story/story-data";
+import { rangeQuery, readDateRange, type SearchValues } from "@/features/story/date-range";
+import { listStories } from "@/features/story/presentation-api";
 import { StoryList } from "@/features/story/story-list";
 
 function value(values: SearchValues, key: string) {
@@ -25,14 +21,15 @@ export default async function StoriesPage({
   const range = readDateRange(values);
   const outcome = value(values, "outcome") ?? "all";
   const symbol = value(values, "symbol") ?? "all";
-  const stories = listStories(range, { outcome, symbol });
+  const collection = await listStories(range, { outcome, symbol });
+  const stories = collection.stories;
 
   return (
     <>
       <PageHeader
         eyebrow="Decision stories"
         title="The full history, told as decisions"
-        description="Browse catalysts, agent debate, deterministic gates, paper-shaped outcomes, and counterfactual lessons without jumping between domain tables."
+        description="Browse catalysts, agent debate, deterministic gates, illustrative outcomes, and counterfactual lessons without jumping between domain tables."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
@@ -56,7 +53,7 @@ export default async function StoriesPage({
           <span>Symbol</span>
           <select name="symbol" defaultValue={symbol}>
             <option value="all">All symbols</option>
-            {["ACME", "NOVA", "ORBT", "VELA", "KITE", "HELI"].map((item) => (
+            {collection.symbols.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>

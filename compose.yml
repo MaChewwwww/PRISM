@@ -1,4 +1,4 @@
-name: governed-market-system
+name: prism
 services:
   frontend:
     build:
@@ -36,6 +36,24 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        ALPACA_CLI_VERSION: v0.0.13
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://shadowfund:shadowfund@postgres:5432/shadowfund
+      ALPACA_PAPER: "true"
+      ALPACA_LIVE_TRADE: "false"
     depends_on:
       postgres:
         condition: service_healthy

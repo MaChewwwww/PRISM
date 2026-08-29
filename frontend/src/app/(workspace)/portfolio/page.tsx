@@ -7,10 +7,12 @@ import {
   DemoDataNotice,
   MetricStrip,
   PageHeader,
+  ProvenanceLabel,
   Section,
 } from "@/components/product/workspace-ui";
 import { formatDateTime } from "@/features/story/formatters";
-import { loadPortfolio, readDateRange, type SearchValues } from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { loadPortfolio } from "@/features/story/presentation-api";
 
 export default async function PortfolioPage({
   searchParams,
@@ -18,36 +20,36 @@ export default async function PortfolioPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const portfolio = loadPortfolio(range);
+  const portfolio = await loadPortfolio(range);
   const first = portfolio.points[0];
   const last = portfolio.points.at(-1);
-  const paperChange = first && last ? Number(last.actual) - Number(first.actual) : null;
+  const chosenChange = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
   const alternativeDelta = last
-    ? Number(last.alternative ?? last.actual) - Number(last.actual)
+    ? Number(last.alternative ?? last.chosenPath) - Number(last.chosenPath)
     : null;
 
   return (
     <>
       <PageHeader
-        eyebrow="Active Portfolio & Shadow Analytics"
-        title="Active Paper Account vs. Shadow Multiverse"
-        description="Monitor active Alpaca paper trading positions, capital utilization, and counterfactual branch performance over shared date ranges."
+        eyebrow="Illustrative Portfolio & Shadow Analytics"
+        title="Chosen Fixture Path vs. Shadow Multiverse"
+        description="Inspect a versioned demonstration snapshot and non-executable counterfactual branches over the shared UTC date range."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <MetricStrip
         metrics={[
           {
-            label: "Active Equity",
-            value: last ? `$${last.actual}` : "No data",
-            detail: "Alpaca paper trading",
+            label: "Illustrative Equity",
+            value: last ? `$${last.chosenPath}` : "No data",
+            detail: "Versioned backend fixture",
           },
           {
-            label: "Active Period P&L",
+            label: "Illustrative Period P&L",
             value:
-              paperChange === null
+              chosenChange === null
                 ? "—"
-                : `${paperChange >= 0 ? "+" : ""}$${paperChange.toFixed(2)}`,
+                : `${chosenChange >= 0 ? "+" : ""}$${chosenChange.toFixed(2)}`,
             detail: `${range.from} to ${range.to}`,
           },
           {
@@ -64,7 +66,7 @@ export default async function PortfolioPage({
 
       <Section
         id="equity-comparison"
-        title="Active Equity vs. Shadow Performance"
+        title="Chosen Path vs. Shadow Performance"
         description="Is the performance advantage persistent or concentrated around specific news catalyst events?"
       >
         <StoryLineChart
@@ -73,12 +75,12 @@ export default async function PortfolioPage({
           summary={
             alternativeDelta !== null && alternativeDelta > 0
               ? `Shadow Portfolio ahead by +$${alternativeDelta.toFixed(2)}`
-              : "Active Portfolio leads in this period"
+              : "Chosen illustrative path leads in this period"
           }
           data={portfolio.points}
           valuePrefix="$"
           series={[
-            { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
+            { key: "chosenPath", label: "Illustrative governed path", color: "#547D83" },
             {
               key: "agentAlternative",
               label: "Shadow: Agent Counterfactual",
@@ -116,8 +118,8 @@ export default async function PortfolioPage({
       <div className="dashboard-pair portfolio-pair">
         <Section
           id="holdings"
-          title="Active Paper Holdings"
-          description="Open contract positions, option spreads, and cash reserves in the active paper account."
+          title="Illustrative Holdings"
+          description="Demonstration contract positions, option spreads, and cash reserve. No account was contacted."
         >
           <div className="holding-list">
             {portfolio.positions.map((position) => (
@@ -127,9 +129,7 @@ export default async function PortfolioPage({
               >
                 <div>
                   <strong className="text-white font-medium">{position.symbol}</strong>
-                  <span className="text-xs text-[#547D83] font-semibold">
-                    {position.provenance}
-                  </span>
+                  <ProvenanceLabel provenance={position.provenance} />
                 </div>
                 <dl>
                   <div>
@@ -185,8 +185,8 @@ export default async function PortfolioPage({
 
       <Section
         id="portfolio-activity"
-        title="Governed Execution Activity"
-        description="Decision-linked events and paper order fills during the selected period."
+        title="Illustrative Decision Activity"
+        description="Decision-linked fixture events during the selected period; these are not broker fills."
       >
         {portfolio.activities.length > 0 ? (
           <ol className="activity-list">
@@ -211,7 +211,7 @@ export default async function PortfolioPage({
             ))}
           </ol>
         ) : (
-          <p className="inline-empty">No active portfolio activity falls inside this date range.</p>
+          <p className="inline-empty">No illustrative activity falls inside this date range.</p>
         )}
       </Section>
     </>

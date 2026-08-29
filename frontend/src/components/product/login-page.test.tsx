@@ -16,7 +16,9 @@ vi.mock("next/navigation", () => ({
 
 describe("Login page", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    pushMock.mockReset();
+    refreshMock.mockReset();
   });
 
   it("renders the login form with required fields", () => {
@@ -29,26 +31,10 @@ describe("Login page", () => {
 
   it("handles failed login and displays error alert", async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, "fetch").mockImplementation(async (url) => {
-      const urlStr = String(url);
-      if (urlStr.includes("/api/auth/demo-credentials")) {
-        return {
-          ok: true,
-          json: async () => ({
-            email: "operator@prism.local",
-            password: "prism-staging-2026!",
-            environment: "staging",
-          }),
-        } as Response;
-      }
-      if (urlStr.includes("/api/auth/login")) {
-        return {
-          ok: false,
-          json: async () => ({ error: "Invalid credentials" }),
-        } as Response;
-      }
-      return { ok: false } as Response;
-    });
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Invalid credentials" }),
+    } as Response);
 
     render(<LoginPage />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "wrong@test.com" } });
@@ -61,30 +47,26 @@ describe("Login page", () => {
 
   it("handles successful login and navigates to home", async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, "fetch").mockImplementation(async (url) => {
-      const urlStr = String(url);
-      if (urlStr.includes("/api/auth/demo-credentials")) {
-        return {
-          ok: true,
-          json: async () => ({
-            email: "operator@prism.local",
-            password: "prism-staging-2026!",
-            environment: "staging",
-          }),
-        } as Response;
-      }
-      if (urlStr.includes("/api/auth/login")) {
-        return {
-          ok: true,
-          json: async () => ({ ok: true, email: "operator@prism.local" }),
-        } as Response;
-      }
-      return { ok: false } as Response;
-    });
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, email: "operator@prism.local" }),
+    } as Response);
 
     render(<LoginPage />);
+    await user.type(screen.getByLabelText("Email"), "operator@prism.local");
+    await user.type(screen.getByLabelText("Password"), "operator-password");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(pushMock).toHaveBeenCalledWith("/");
+  });
+
+  it("does not fetch, display, or prefill configured credentials", () => {
+    const fetchMock = vi.spyOn(global, "fetch");
+    render(<LoginPage />);
+
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
+    expect(screen.getByText(/never displays or pre-fills configured passwords/i)).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

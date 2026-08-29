@@ -25,6 +25,10 @@ services:
     restart: unless-stopped
     networks: [application, data]
 
+  migrate:
+    restart: "no"
+    networks: [data]
+
   postgres:
     ports: !reset []
     restart: unless-stopped

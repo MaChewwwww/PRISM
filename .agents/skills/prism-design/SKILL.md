@@ -72,7 +72,7 @@ Use this skill to guide the construction, styling, and composition of frontend i
    - **Plus Jakarta Sans** across all H1–H6, navigation, buttons, forms, tables, and narrative summaries.
    - Weights: Regular (400), Medium (500), SemiBold (600), Bold (700).
 3. **Financial Figures, Timestamps, Greeks & Hashes** (`font-mono tabular-nums`):
-   - JetBrains Mono / Geist Mono for currency decimals, strike prices, option Greeks ($\Delta$, $\Gamma$, $\Theta$, $\text{IV}$), execution receipts, trace IDs, and digests.
+   - JetBrains Mono / Geist Mono for currency decimals, strike prices, option Greeks (Delta, Gamma, Theta, IV), execution receipts, trace IDs, and digests.
 
 ---
 

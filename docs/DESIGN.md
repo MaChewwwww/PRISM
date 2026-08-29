@@ -11,12 +11,7 @@ This document establishes the canonical visual identity, design tokens, typograp
 ### 1.1 The Optical Dispersion Metaphor
 In physics, an optical prism refracts a single beam of white light into its constituent spectral wavelengths, revealing depth and structure that are invisible in the aggregate. 
 
-In the same way, **PRISM takes a single market signal (catalyst, news, price anomaly) and autonomously breaks it down into multiple perspectives**:
-- **Catalyst & Reaction Analysis** (Market Reaction / Mispricing Agent)
-- **Candidate Options Strategies** (Trading Decision Agent)
-- **Risk Critiques & Downside Stress-Tests** (Risk Management Layer)
-- **Deterministic Boundary Enforcement** (Business Rules Gate)
-- **Counterfactual Audits & Alternate Realities** (ShadowFund Intelligence)
+In the same way, **PRISM takes a single market signal (catalyst, news, price anomaly) and breaks it into multiple perspectives**: News, Quantitative, Industry, Fundamental, Macroeconomic, Market Reaction/Mispricing, and Trading Decision. Those specialists are followed by AI-assisted Risk Management, a deterministic Rules Engine, paper-only Execution, ShadowFund, and asynchronous Post-Analysis.
 
 ### 1.2 Visual Thesis: Dark Cyber-Crystalline
 The visual environment expresses institutional precision, intelligence, and depth through a **Dark Cyber-Crystalline** aesthetic:
@@ -79,15 +74,20 @@ The brand uses mineral sage teal (`#547D83`) as its primary interactive accent.
 | `--color-brand-accent-glow` | `rgba(84, 125, 131, 0.35)` | Ambient highlights, active tab glows, drop glows |
 
 ### 3.3 Prismatic Spectral Perspective Tokens
-Each agent in the PRISM authority chain possesses a dedicated spectral accent:
+Each canonical specialist and downstream authority has a stable spectral accent:
 
-| Agent Perspective | Accent Color | Tinted Background | Border Stroke | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| **Research (Catalyst)** | `#38BDF8` (Ice Cyan) | `rgba(56, 189, 248, 0.12)` | `rgba(56, 189, 248, 0.30)` | Catalyst detection, analog match, news analysis |
-| **Proposal (Strategy)** | `#10B981` (Mint Green)| `rgba(16, 185, 129, 0.12)` | `rgba(16, 185, 129, 0.30)` | Proposed options strategy, strike selection |
-| **Risk (Critique)** | `#F59E0B` (Amber Gold)| `rgba(245, 158, 11, 0.12)` | `rgba(245, 158, 11, 0.30)` | Risk challenge, tail-risk critique, modifications |
-| **Rules Engine (Gate)** | `#547D83` (Mineral Teal)| `rgba(84, 125, 131, 0.15)` | `rgba(84, 125, 131, 0.35)` | Deterministic PASS/FAIL, hard boundary enforcement |
-| **ShadowFund (Audit)** | `#818CF8` (Amethyst) | `rgba(129, 140, 248, 0.12)` | `rgba(129, 140, 248, 0.30)` | Counterfactual simulations, post-trade lessons |
+| Agent Perspective | Accent Color | Purpose |
+| :--- | :--- | :--- |
+| **News Agent** | `#38BDF8` (Ice Cyan) | Catalyst evidence and provenance |
+| **Quantitative Agent** | `#22D3EE` (Cyan) | Market, options, and analog statistics |
+| **Industry Agent** | `#60A5FA` (Blue) | Sector and peer context |
+| **Fundamental Agent** | `#A78BFA` (Violet) | Issuer economics and quality |
+| **Macroeconomic Agent** | `#F472B6` (Pink) | Macro regime and cross-asset context |
+| **Market Reaction/Mispricing Agent** | `#10B981` (Emerald) | Reaction-gap synthesis |
+| **Trading Decision Agent** | `#34D399` (Mint) | Proposal or `NO_TRADE` |
+| **Risk Management** | `#F59E0B` (Amber) | AI-assisted critique |
+| **Rules Engine** | `#547D83` (Mineral Teal) | Deterministic authority |
+| **ShadowFund / Post-Analysis** | `#818CF8` (Amethyst) | Counterfactual evidence and bounded recommendations |
 
 ### 3.4 Glassmorphism Tokens
 
@@ -137,7 +137,7 @@ Financial Data / Greeks / Hashes: Tabular Monospace (tabular-nums font-mono)
 - **Primary Interface Font**: **Plus Jakarta Sans** (`font-sans`).
   - Used for all interface headings (H1–H6), navigation, cards, form controls, and body text.
 - **Monospace Font**: JetBrains Mono or Geist Mono (`font-mono`).
-  - Used for contract digests, strike prices, option Greeks ($\Delta$, $\Gamma$, $\Theta$, $\text{IV}$), client order IDs, execution trace IDs, and timestamps.
+  - Used for contract digests, strike prices, option Greeks (Delta, Gamma, Theta, IV), client order IDs, execution trace IDs, and timestamps.
 
 ### 4.2 Type Scale & Hierarchy
 
@@ -203,7 +203,7 @@ PRISM balances sharp technical precision with comfortable pill-shaped affordance
 
 ### 6.1 Buttons
 
-#### Active Primary Button ("Explore PRISM →")
+#### Active Primary Button ("Explore PRISM ->")
 - **Shape**: Pill (`rounded-full`)
 - **Background**: `bg-gradient-to-r from-[#547D83] via-[#5D8B91] to-[#547D83]`
 - **Text Color**: Crisp White (`#FFFFFF`), `font-sans`, Medium (500)
@@ -255,19 +255,25 @@ PRISM balances sharp technical precision with comfortable pill-shaped affordance
 PRISM's operator interface presents each trading decision as an auditable, narrative decision story:
 
 ```text
-1. Catalyst & Reaction  → News headline, price move, analog comparison [Research: Cyan]
-2. Research Evidence    → Overreaction/underreaction hypothesis, thesis score
-3. Proposed Strategy    → Selected contract, debit spread, or NO_TRADE [Proposal: Mint]
-4. Risk AI Critique     → Downside stress-test, tail-risk challenge [Risk: Amber]
-5. Deterministic Gate   → Rules engine verdict (PASS / MODIFY / FAIL) [Gate: Teal]
-6. Paper Outcome        → Live paper fill, P&L progression, exit [Paper: Emerald/Rose]
-7. ShadowFund Audit     → Counterfactual alternative paths & learned lessons [Audit: Indigo]
+1. Catalyst -> normalized illustrative or genuine-source signal
+2. News -> catalyst classification and provenance
+3. Quantitative -> market/options statistics and analogs
+4. Industry -> sector and peer context
+5. Fundamental -> issuer economics and quality
+6. Macroeconomic -> regime and cross-asset context
+7. Market Reaction/Mispricing -> reaction-gap synthesis
+8. Trading Decision -> typed proposal or `NO_TRADE`
+9. Risk Management -> AI-assisted adversarial critique
+10. Deterministic Gate -> rule trace and aggregate authorization
+11. Outcome and ShadowFund -> only label genuine sources as paper or simulated
+12. Post-Analysis -> bounded recommendation pending manual review
 ```
 
 ### 7.2 Authority & Provenance Labelling
-- **Paper Trading**: Solid border, primary teal indicators, explicit `[PAPER]` tag.
-- **ShadowFund Simulation**: Dashed border, secondary muted badge, explicit `[SIMULATED]` tag.
-- **Historical Analogs**: Dotted reference line, `[ANALOG]` indicator.
+- **Illustrative fixture**: Explicit label on every current demonstration surface; does not imply a provider, account, order, fill, holding, or P&L record.
+- **Alpaca paper**: Reserved for authenticated data genuinely produced by an Alpaca paper account.
+- **ShadowFund**: Reserved for future engine-produced counterfactuals; use **Simulated** for other simulations and **Benchmark** for declared reference series.
+- **Historical analogs**: Dotted reference line and explicit source/coverage indicator.
 - **NO_TRADE / Reject**: Treated as first-class, intentional terminal decision cards with full reasoning traces.
 
 ---

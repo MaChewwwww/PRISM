@@ -40,7 +40,7 @@ def login(
     expires_at_str = expires_at.isoformat()
 
     response.set_cookie(
-        key="shadowfund_session",
+        key="prism_session",
         value=token,
         max_age=settings.auth_session_expire_hours * 3600,
         httponly=True,
@@ -50,7 +50,6 @@ def login(
     )
 
     return LoginResponse(
-        token=token,
         email=settings.auth_email,
         expires_at=expires_at_str,
     )
@@ -64,7 +63,7 @@ def me(current_user: Annotated[str, Depends(get_current_user)]) -> AuthMeRespons
 @router.post("/logout", response_model=LogoutResponse)
 def logout(response: Response) -> LogoutResponse:
     response.delete_cookie(
-        key="shadowfund_session",
+        key="prism_session",
         path="/",
         httponly=True,
         samesite="lax",

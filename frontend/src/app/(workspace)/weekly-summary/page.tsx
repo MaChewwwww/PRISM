@@ -7,19 +7,19 @@ import {
   PageHeader,
   Section,
 } from "@/components/product/workspace-ui";
-import { getWeeklySummary } from "@/features/story/story-data";
+import { getWeeklySummary } from "@/features/story/presentation-api";
 
 import { WeeklySummaryClient } from "./weekly-summary-client";
 
-export default function WeeklySummaryPage() {
-  const summary = getWeeklySummary();
+export default async function WeeklySummaryPage() {
+  const summary = await getWeeklySummary();
 
   return (
     <>
       <PageHeader
         eyebrow={`Week of ${summary.weekOf}`}
         title="Weekly Post-Analysis"
-        description="AI reviews the week's decision stories, shadow-fund branch outcomes, and rule performance — then surfaces calibration suggestions for your next draft ruleset."
+        description="Post-Analysis reviews illustrative decision and ShadowFund outcomes, then recommends bounded AI Profile changes for manual review."
       >
         <div className="mode-stamp">
           <TrendingUp aria-hidden="true" /> Post-analysis
@@ -32,23 +32,23 @@ export default function WeeklySummaryPage() {
         metrics={[
           {
             label: "Stories analysed",
-            value: String(summary.storiesAnalysed),
+            value: String(summary.storiesAnalyzed),
             detail: `Week of ${summary.weekOf}`,
           },
           {
-            label: "Net active P&L",
-            value: summary.netPnl,
-            detail: "Governed paper execution",
+            label: "Illustrative net P&L",
+            value: summary.illustrativeNetPnl,
+            detail: "Versioned fixture",
           },
           {
-            label: "Shadow beat active",
-            value: `${summary.shadowBeatActive} / ${summary.storiesAnalysed}`,
+            label: "Shadow beat chosen path",
+            value: `${summary.shadowBeatChosen} / ${summary.storiesAnalyzed}`,
             detail: "Branches that outperformed",
           },
           {
             label: "Suggestions pending",
             value: String(summary.suggestions.length),
-            detail: "AI rule calibrations",
+            detail: "AI Profile fields only",
           },
         ]}
       />
@@ -81,8 +81,8 @@ export default function WeeklySummaryPage() {
       {/* Interactive calibration section */}
       <Section
         id="calibration"
-        title="Rule Calibration Suggestions"
-        description="Each suggestion targets a specific configurable rule. Review the rationale, then accept or dismiss individually (Manual), or stage all at once (Auto-calibration)."
+        title="AI Profile Recommendations"
+        description="Every recommendation is inside an authorized profile bound and still requires deterministic validation plus explicit manual review."
       >
         <WeeklySummaryClient summary={summary} />
       </Section>
@@ -93,12 +93,12 @@ export default function WeeklySummaryPage() {
         <div>
           <strong>Ready to configure?</strong>
           <p>
-            Staged suggestions become draft fields in the Rules page. No suggestion can activate
-            without an explicit approval.
+            The Rules page shows the active version and approved bounds. Recommendations cannot
+            activate until persistence, validation, and approval APIs are implemented.
           </p>
         </div>
         <Link href="/rules" className="primary-action">
-          Go to Business Rules →
+          Go to Business Rules {"->"}
         </Link>
       </div>
     </>

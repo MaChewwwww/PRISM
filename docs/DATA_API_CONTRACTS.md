@@ -1,70 +1,82 @@
-# Data and API Contracts
+# Data and API contracts
 
-The canonical runtime models live in `backend/app/contracts`. Generated artifacts are committed at `backend/build/contracts.openapi.json` and `frontend/src/types/api.generated.ts`.
+Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
-## Conventions
+Runtime models live in `backend/app/contracts` and `backend/app/presentation`. `backend/scripts/export_contracts.py` starts from `FastAPI.app.openapi()`, then merges exported domain schemas. Committed outputs are `backend/build/contracts.openapi.json` and `frontend/src/types/api.generated.ts`.
 
-- Every domain record has `schema_version`, a UUID identifier, and `trace_id`.
+## Contract conventions
+
+- Identifiers are stable UUID strings where domain identity requires them.
 - Timestamps are timezone-aware UTC RFC3339 values.
-- Decimal values cross JSON boundaries as strings; binary floating point is not authoritative.
-- Enums are closed and explicit. Unknown enum members fail validation until the contract is deliberately evolved.
-- Additive compatible changes keep the schema version. Breaking semantic or structural changes increment it and require migration notes.
-- Sensitive broker/account data is internal and absent from public status contracts.
+- Financial, ratio, and percentage values cross trust boundaries as decimal strings.
+- Enums are closed and typed; unknown members fail validation.
+- Breaking shapes use a clean contract break; stale fixture aliases are not supported.
+- Generated artifacts are regenerated, never edited by hand.
+- Sensitive provider, account, credential, and raw error data is absent from presentation responses.
 
-## Domain schemas
+## Governance contracts
 
-The domain and API contracts define `HealthResponse`, `SystemStatus`, `LoginRequest`, `LoginResponse`, `AuthMeResponse`, `LogoutResponse`, `ResearchReport`, `TradeProposal`, `OptionLeg`, `OptionStrategy`, `RiskAssessment`, `RuleEvaluation`, `AuthorizationDecision`, `ExecutionReceipt`, `ShadowSession`, `AuditEvent`, `AIProfile`, `AIProfileRecommendation`, `HistoricalBar`, `HistoricalMarketDataRecord`, and `LLMEventAnalysis`. Their relationships follow the authority chain documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+The BA registry is `backend/app/rules/authorized_baseline.v1.json`. Typed contracts cover ruleset identity, lifecycle, effective period, parameters, profile identity and compatibility, authorized profile ranges, rule priority, typed reason codes, rule traces, market regime, portfolio risk, and authorization bindings.
 
-## Historical market data and AI query caching
+`ExitPolicy` requires a take-profit from 75% through 100%, a fixed 50% stop-loss, a DTE threshold from 2 through 14 days, and a holding limit from 3 through 45 days. The active Balanced defaults are 75% take-profit, 50% stop-loss, 7 DTE, and 14 days. The four-trading-day hackathon override is a separate active operating constraint.
 
-To optimize API throughput, avoid redundant token spend, and guarantee deterministic historical replays, historical market data queries and LLM event analysis results are persisted:
+The governance read model also exposes the registry-backed hackathon window as UTC timestamps: trading start, new-entry cutoff, official scoring point, force-flatten deadline, and outer boundary. `scoring_basis` is the closed value `total_account_equity`; the effective maximum hold is four trading days bounded by the scoring point.
 
-- **Historical Query Digest:** `HistoricalMarketDataRecord` uses a deterministic SHA-256 digest computed across `(symbol, data_type, timeframe, start_time, end_time)`.
-- **Immutability & TTL Policy:**
-  - *Completed historical intervals* (`end_time` prior to current session close) are marked `is_immutable = True` and cached indefinitely in PostgreSQL.
-  - *Intraday / active quotes* respect `freshness_seconds` (ephemeral TTL in Redis / in-memory cache).
-- **LLM Event Analysis Cache:** `LLMEventAnalysis` persists structured event classifications, sentiment, and significance scores keyed by `article_id` and raw text digest, preventing duplicate LLM evaluations of identical historical news items.
+## Decision semantics
 
+| Scope | Values |
+| --- | --- |
+| Per-rule result | `PASS`, `MODIFY`, `FAIL` |
+| Aggregate authorization | `APPROVE`, `REJECT`, `MODIFIED_PENDING_ACCEPTANCE` |
+
+Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carries no authority. Accepting a modification creates a revised proposal and digest that must be authorized again.
 
 ## Endpoint catalog
 
-| Method | Path | Purpose | Auth Required |
+| Method | Path | Purpose | Authentication |
 | --- | --- | --- | --- |
-| GET | `/api/v1/health/live` | Process liveness only | No |
-| GET | `/api/v1/health/ready` | Dependency/configuration readiness | No |
-| POST | `/api/v1/auth/login` | Seeded credentials authentication | No |
-| GET | `/api/v1/auth/me` | Current authenticated operator session | Yes |
-| POST | `/api/v1/auth/logout` | Terminate session and clear cookie | No |
-| GET | `/api/v1/system/status` | Redacted operator status | Yes |
-| GET | `/openapi.json` | Public OpenAPI document | No |
+| GET | `/api/v1/health/live` | Process liveness | No |
+| GET | `/api/v1/health/ready` | Required configuration and database readiness | No |
+| POST | `/api/v1/auth/login` | Seeded operator authentication; sets HTTP-only session cookie | No |
+| GET | `/api/v1/auth/me` | Current operator session | Yes |
+| POST | `/api/v1/auth/logout` | Clears session cookie | No |
+| GET | `/api/v1/system/status` | Redacted operational state | Yes |
+| POST | `/api/v1/research/news-analysis` | Non-authoritative structured news research | Yes |
+| GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
+| GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
+| GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
+| GET | `/api/v1/presentation/portfolio` | Illustrative chosen path and comparisons | Yes |
+| GET | `/api/v1/presentation/alternatives` | Shadow/simulated alternative collection | Yes |
+| GET | `/api/v1/presentation/alternatives/{session_id}` | Alternative detail | Yes |
+| GET | `/api/v1/presentation/news` | Illustrative news collection | Yes |
+| GET | `/api/v1/presentation/agents` | Canonical agent and authority roster | Yes |
+| GET | `/api/v1/presentation/agents/{agent_id}` | Agent detail | Yes |
+| GET | `/api/v1/presentation/governance` | Active ruleset, profile, and semantics | Yes |
+| GET | `/api/v1/presentation/weekly-summary` | Manual-review profile recommendations | Yes |
+| GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
-The status endpoint may expose readiness, paper mode, execution-enabled state, CLI availability/version, credential-presence booleans, account-verification state, and supported options level. It must never expose keys, account numbers, buying power, positions, orders, or raw provider errors.
+Collection endpoints require `from` and `to` query parameters. Both must be timezone-aware UTC timestamps, and `from` must not be later than `to`.
 
-## Error envelope
+## Presentation metadata and provenance
 
-Application errors use:
+Every presentation response includes metadata with:
 
-```json
-{
-  "error": {
-    "code": "stable_machine_code",
-    "message": "safe operator-facing summary",
-    "trace_id": "uuid",
-    "details": {}
-  }
-}
-```
+- `generated_at`;
+- `as_of`;
+- requested UTC `from` and `to` calendar-date range derived from the validated timestamps;
+- `data_mode`;
+- `fixture_version`.
 
-`details` is optional, structured, and redacted. Validation errors retain field paths but never echo secrets.
+The current adapter always returns `data_mode=illustrative_fixture` and `fixture_version=prism-demo-v1`. No response implies an Alpaca account request, paper order, fill, holding, P&L record, or provider/model invocation.
 
-## Idempotency and execution
+## News-analysis endpoint
 
-Each executable proposal has a canonical payload digest. Every submission receives a persisted `client_order_id` before broker invocation. Retried or ambiguous submissions reconcile by that identifier and do not create a second order. Authorization binds the proposal digest, ruleset version, account snapshot, expiry, and decision state.
+The implemented news endpoint is non-authoritative research. It uses authenticated access, structured response validation, cached analysis records, classified transient retries in a worker thread, and redacted provider errors. Retries never block the event loop and never turn an AI result into execution authority.
 
-## Pagination and freshness
+## Error and authorization boundaries
 
-Future collections use opaque cursor pagination with stable ordering. Responses return `next_cursor` only when another page exists. Provider-derived records carry `observed_at`, `received_at`, source, and a freshness classification. Callers must not infer freshness from request time.
+Errors expose stable, safe machine codes and redacted summaries. Provider response bodies, credentials, account details, and raw exception strings are not returned. Authorization binds proposal and payload digests, ruleset/profile versions, snapshot digests, rule trace, decision time, and allowed payload.
 
-## Contract workflow
+## Generation workflow
 
-Run `pnpm contracts` after changing backend contracts. CI runs `pnpm contracts:check` and fails if regeneration changes committed output. Contract changes must update tests, this document, and any affected FRS/NFRS traceability.
+Run `pnpm contracts` after contract changes. CI runs `pnpm contracts:check`; any generated diff fails the check. Repository governance checks compare the presentation catalog with OpenAPI paths and verify registry/document consistency.

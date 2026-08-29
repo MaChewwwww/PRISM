@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-geist-mono);
   --color-card: var(--surface-strong);
   --color-card-foreground: var(--foreground);
@@ -25,9 +25,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: 0.1rem;
-  --radius-md: 0.15rem;
-  --radius-lg: 0.2rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.75rem;
 }
 
 :root {
@@ -1096,25 +1096,25 @@ tbody th span {
   letter-spacing: 0.04em;
   transition: all 0.2s ease;
 }
-.provenance-label[data-provenance="active-portfolio"],
-.provenance-label[data-provenance="illustrative-paper"] {
+.provenance-label[data-provenance="illustrative_fixture"],
+.provenance-label[data-provenance="alpaca_paper"] {
   color: #b2d8dc;
   border: 1px solid rgba(84, 125, 131, 0.45);
   background: rgba(84, 125, 131, 0.18);
   box-shadow: 0 0 12px rgba(84, 125, 131, 0.15);
 }
-.provenance-label[data-provenance="shadow-portfolio"],
+.provenance-label[data-provenance="shadow"],
 .provenance-label[data-provenance="simulated"] {
   color: #c7d2fe;
   border: 1px dashed rgba(129, 140, 248, 0.45);
   background: rgba(129, 140, 248, 0.1);
 }
-.provenance-label[data-provenance="market-benchmark"] {
+.provenance-label[data-provenance="benchmark"] {
   color: #94a3b8;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(148, 163, 184, 0.08);
 }
-.provenance-label[data-provenance="planned-integration"] {
+.provenance-label[data-provenance="planned_integration"] {
   color: #64748b;
   border: 1px solid rgba(100, 116, 139, 0.25);
   background: rgba(15, 23, 42, 0.4);

@@ -151,22 +151,20 @@ class LLMGateway:
                         endpoint, json=payload, headers=headers, timeout=timeout_seconds
                     )
         except httpx.TimeoutException as exc:
-            raise LLMNetworkError(f"LLM request timed out after {timeout_seconds}s: {exc}") from exc
+            raise LLMNetworkError(f"LLM request timed out after {timeout_seconds}s") from exc
         except httpx.RequestError as exc:
-            raise LLMNetworkError(f"LLM network communication failed: {exc}") from exc
+            raise LLMNetworkError("LLM network communication failed") from exc
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
 
         if response.status_code != 200:
-            raise LLMError(
-                f"LLM provider '{provider}' returned HTTP {response.status_code}: {response.text}"
-            )
+            raise LLMError(f"LLM provider '{provider}' returned HTTP {response.status_code}")
 
         resp_json = response.json()
         try:
             raw_content = resp_json["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as exc:
-            raise LLMValidationError(f"Malformed LLM response structure: {resp_json}") from exc
+            raise LLMValidationError("Malformed LLM response structure") from exc
 
         # Calculate immutable SHA256 digest of raw output
         raw_digest = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()

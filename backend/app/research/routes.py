@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,11 +53,15 @@ async def analyze_news(
     trace_id = uuid4()
 
     try:
-        articles = gateway.get_news(symbol=request.symbol.strip().upper(), limit=request.limit)
+        articles = await run_in_threadpool(
+            gateway.get_news,
+            symbol=request.symbol.strip().upper(),
+            limit=request.limit,
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch news from Alpaca: {exc!s}",
+            detail="Alpaca news provider is temporarily unavailable",
         ) from exc
 
     if not articles:
@@ -75,11 +80,14 @@ async def analyze_news(
                 db_session=db_session,
             )
             analyses.append(analysis)
-        except Exception as exc:
+        except Exception:
             # Continue analyzing other articles, logging the error
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.error(f"Failed to analyze article {article.get('id')}: {exc}", exc_info=True)
+            logger.error(
+                "News analysis failed for article_id=%s",
+                article.get("id"),
+            )
 
     return analyses

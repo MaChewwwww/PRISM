@@ -9,7 +9,8 @@ import {
   StateBadge,
 } from "@/components/product/workspace-ui";
 import { formatDateTime } from "@/features/story/formatters";
-import { listNews, readDateRange, type SearchValues } from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { listNews } from "@/features/story/presentation-api";
 
 function value(values: SearchValues, key: string) {
   const found = values[key];
@@ -21,26 +22,27 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
   const range = readDateRange(values);
   const symbol = value(values, "symbol") ?? "all";
   const significance = value(values, "significance") ?? "all";
-  const news = listNews(range, { symbol, significance });
+  const collection = await listNews(range, { symbol, significance });
+  const news = collection.items;
   return (
     <>
       <PageHeader
         eyebrow="News and catalysts"
         title="See the evidence before the interpretation"
-        description="An illustrative Alpaca-shaped feed connects source timestamps and symbols to the decision stories they influenced."
+        description="A backend-owned illustrative feed connects source timestamps and symbols to the decision stories they influenced."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <div className="source-contract">
         <Newspaper aria-hidden="true" />
         <div>
-          <strong>Planned source boundary</strong>
+          <strong>Illustrative source boundary</strong>
           <p>
-            Fields mirror the intended read-only Alpaca News adapter. No browser or server request
-            is made in this prototype.
+            Fields mirror the intended read-only adapter, but this response came only from the
+            versioned PRISM fixture.
           </p>
         </div>
-        <ProvenanceLabel provenance="planned-integration" />
+        <ProvenanceLabel provenance="illustrative_fixture" />
       </div>
       <form className="filter-bar" method="get">
         <Filter aria-hidden="true" />
@@ -51,7 +53,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
           <span>Symbol</span>
           <select name="symbol" defaultValue={symbol}>
             <option value="all">All symbols</option>
-            {["ACME", "NOVA", "ORBT", "VELA", "KITE", "HELI"].map((item) => (
+            {collection.symbols.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
@@ -86,7 +88,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
                 <h2>{item.headline}</h2>
                 <p>{item.summary}</p>
                 <div className="news-footer">
-                  <ProvenanceLabel provenance="planned-integration" />
+                  <ProvenanceLabel provenance={item.provenance} />
                   {item.storyId && (
                     <Link href={`/stories/${item.storyId}`}>
                       Read linked decision story <ArrowRight aria-hidden="true" />

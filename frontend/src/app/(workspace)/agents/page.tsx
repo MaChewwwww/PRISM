@@ -11,11 +11,8 @@ import {
   StateBadge,
 } from "@/components/product/workspace-ui";
 import { formatTokens } from "@/features/story/formatters";
-import {
-  loadAgentObservability,
-  readDateRange,
-  type SearchValues,
-} from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { loadAgentObservability } from "@/features/story/presentation-api";
 
 export default async function AgentsPage({
   searchParams,
@@ -23,7 +20,7 @@ export default async function AgentsPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const observability = loadAgentObservability(range);
+  const observability = await loadAgentObservability(range);
   const allRuns = observability.agents.flatMap((agent) => agent.runs);
   const totalTokens = allRuns.reduce(
     (total, run) => total + run.inputTokens + run.outputTokens + run.cachedTokens,
@@ -84,9 +81,36 @@ export default async function AgentsPage({
         />
       </Section>
       <Section
+        id="authority-pipeline"
+        title="Authority pipeline"
+        description="AI contributions stop before deterministic authorization; execution remains paper-only and disabled by default."
+      >
+        <ol className="agent-list">
+          {observability.components.map((component) => (
+            <li key={component.id}>
+              <div>
+                <p className="record-kicker">Stage {component.stage}</p>
+                <h3>{component.name}</h3>
+                <p>{component.description}</p>
+              </div>
+              <dl>
+                <div>
+                  <dt>Authority</dt>
+                  <dd>{component.authority}</dd>
+                </div>
+                <div>
+                  <dt>Kind</dt>
+                  <dd>{component.kind.replaceAll("_", " ")}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ol>
+      </Section>
+      <Section
         id="agent-registry"
-        title="Agent registry"
-        description="Each role has a bounded responsibility and a visible handoff to the next authority layer."
+        title="Seven specialists, risk, and post-analysis"
+        description="Each AI role has bounded research, proposal, risk, or recommendation authority."
       >
         <ol className="agent-list">
           {observability.agents.map((agent) => {
