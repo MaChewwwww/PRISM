@@ -1,201 +1,306 @@
 <div align="center">
 
-<img src="frontend/public/logo.png" alt="PRISM logo" width="112" />
+<img src="frontend/public/logo.png" alt="PRISM Logo" width="128" />
 
 # PRISM
 
 **One signal. Multiple perspectives. Better decisions.**
 
-AI-powered market intelligence with deterministic risk governance and Alpaca paper execution.
+### Autonomous Multi-Agent Market Intelligence with Deterministic Risk Governance & Alpaca Paper Execution
 
-[![CI](https://github.com/MaChewwwww/Alpaca_AI_Hackaton/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MaChewwwww/Alpaca_AI_Hackaton/actions/workflows/ci.yml)
-[![Paper trading only](https://img.shields.io/badge/trading-paper--only-547D83)](docs/SECURITY.md)
-[![Deterministic authority](https://img.shields.io/badge/authorization-deterministic-111827)](docs/BUSINESS_RULES.md)
-[![WCAG 2.2 AA](https://img.shields.io/badge/accessibility-WCAG%202.2%20AA-6B8E93)](docs/DESIGN.md)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-prism--ai.japanwest.cloudapp.azure.com-547D83?style=for-the-badge&logo=azure&logoColor=white)](https://prism-ai.japanwest.cloudapp.azure.com)
+[![Hackathon](https://img.shields.io/badge/Alpaca%20Hackathon-lablab.ai-111827?style=for-the-badge)](https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon)
+[![Trading Environment](https://img.shields.io/badge/trading-Alpaca%20Paper%20Only-547D83?style=for-the-badge)](docs/SECURITY.md)
+[![Governance](https://img.shields.io/badge/governance-deterministic-0F172A?style=for-the-badge)](docs/BUSINESS_RULES.md)
+[![Accessibility](https://img.shields.io/badge/accessibility-WCAG%202.2%20AA-6B8E93?style=for-the-badge)](docs/DESIGN.md)
+[![CI](https://img.shields.io/github/actions/workflow/status/MaChewwwww/Alpaca_AI_Hackaton/ci.yml?branch=main&label=CI&style=for-the-badge)](https://github.com/MaChewwwww/Alpaca_AI_Hackaton/actions/workflows/ci.yml)
 
-[Project concept](docs/conceptual/PROJECT_CONCEPT.md) · [Architecture](docs/ARCHITECTURE.md) · [Business rules](docs/BUSINESS_RULES.md) · [Run locally](#run-prism)
+<p align="center">
+  <a href="https://prism-ai.japanwest.cloudapp.azure.com"><strong>Explore Live Platform</strong></a> ·
+  <a href="docs/conceptual/PROJECT_CONCEPT.md"><strong>Project Concept</strong></a> ·
+  <a href="docs/ARCHITECTURE.md"><strong>Architecture</strong></a> ·
+  <a href="docs/TECH_STACK.md"><strong>Tech Stack & Alpaca Tools</strong></a> ·
+  <a href="docs/BUSINESS_RULES.md"><strong>Business Rules</strong></a> ·
+  <a href="#quickstart"><strong>Quickstart</strong></a>
+</p>
 
 </div>
 
+---
+
 > [!IMPORTANT]
-> PRISM is paper-trading only. AI can research, challenge, and propose; deterministic code alone authorizes an order. Live trading is prohibited, execution is disabled by default, and uncertainty always fails closed.
+> **Governed Paper Trading:** PRISM operates exclusively in paper-trading mode against Alpaca's paper endpoints. AI specialists generate research, debate theses, and structure proposals; mathematical deterministic rules alone authorize execution. Live trading is prohibited, and all ambiguous conditions fail closed.
 
-## The idea
+---
 
-A market headline is not a trade thesis. Before acting, a decision-maker still needs to ask whether the event matters, whether the market has already priced it in, whether the economics justify the risk, and whether the position fits the portfolio.
+## What is PRISM?
 
-PRISM connects that entire reasoning chain. Seven AI specialists examine the same opportunity from different angles, a risk specialist attacks the resulting proposal, and a deterministic Rules Engine decides what is actually permitted. The outcome becomes an auditable **Decision Story**: the evidence, debate, proposal, rule checks, paper action, alternatives, and lesson in one place.
+A breaking headline or market spike is never a complete trade thesis. Before taking risk, an intelligent trading system must answer crucial questions:
+- *Is the catalyst genuine or noise?*
+- *Has the market already priced it in?*
+- *Do quantitative momentum, volume, and volatility validate the move?*
+- *How does the sector and macro regime impact the thesis?*
+- *Are the options economics favorable after spreads and execution friction?*
+- *Does the trade comply with hard portfolio risk, concentration, and drawdown limits?*
 
-The result is not a black-box trading bot. It is a governed decision system that makes action, restraint, and `NO_TRADE` equally explainable.
+**PRISM** connects this entire analytical and operational chain into an autonomous, institutional-grade decision platform. **Seven specialized AI agents** analyze market catalysts from independent perspectives, an **adversarial Risk Management agent** stress-tests the trade, and a **deterministic Rules Engine** enforces hard mathematical guardrails before submitting paper orders to **Alpaca**.
 
-## From signal to decision
+Every trade, modification, rejection, or `NO_TRADE` decision is permanently recorded as an auditable **Decision Story**—linking raw evidence, multi-agent debate, risk critique, mathematical rule traces, paper execution, and counterfactual simulation in one unified interface.
+
+---
+
+## End-to-End Autonomous Decision Pipeline
 
 ```mermaid
 flowchart LR
-    A[Market signal] --> B[Seven specialist perspectives]
-    B --> C{TradeProposal or NO_TRADE}
-    C --> D[AI-assisted risk challenge]
-    D --> E[Deterministic Rules Engine]
-    E --> F{APPROVE, REJECT, or MODIFIED_PENDING_ACCEPTANCE}
-    F -->|APPROVE only| G[Alpaca paper execution]
-    F --> H[Decision Story]
+    A["Market Catalyst & Alpaca News"] --> B["Seven Specialist AI Perspectives"]
+    B --> C{"TradeProposal or NO_TRADE"}
+    C --> D["Adversarial Risk Management Critique"]
+    D --> E["Deterministic Rules Engine"]
+    E --> F{"APPROVE, REJECT, or MODIFIED_PENDING_ACCEPTANCE"}
+    F -->|APPROVE only| G["Alpaca Paper Order Execution"]
+    F --> H["Immutable Decision Story"]
     G --> H
-    H --> I[ShadowFund alternatives]
-    I --> J[Post-Analysis and manual review]
+    H --> I["ShadowFund Counterfactual Simulator"]
+    I --> J["Post-Analysis & Weekly Review"]
 ```
 
-Every stage uses structured, versioned records. Stale evidence, invalid model output, changed order details, missing authorization, or uncertain provider state stops the workflow; none of them creates permission to trade.
+Every stage produces typed, versioned records. Stale market data (>30s), invalid structured outputs, changed order parameters, missing authorization, or elevated spread costs immediately stop execution—ensuring total safety and auditability.
 
-## Seven perspectives, one accountable outcome
+---
 
-| Specialist | The question it answers |
-| --- | --- |
-| **News Agent** | What happened, when, from which source, and with what uncertainty? |
-| **Quantitative Agent** | What do price, volume, volatility, liquidity, options data, and history show? |
-| **Industry Agent** | How does the event compare with peers, competitors, and the wider sector? |
-| **Fundamental Agent** | What does it mean for earnings, valuation, balance-sheet quality, and outlook? |
-| **Macroeconomic Agent** | How do rates, policy, indexes, volatility, and the market regime affect it? |
-| **Market Reaction/Mispricing Agent** | Is the reaction justified, excessive, insufficient, or simply unclear? |
-| **Trading Decision Agent** | Is there a supported paper options proposal, or should PRISM choose `NO_TRADE`? |
+## Seven Specialist Perspectives, One Accountable Outcome
 
-Risk Management may critique or recommend a safer change, but it cannot approve. `MODIFIED_PENDING_ACCEPTANCE` is never treated as authorization: an accepted change becomes a new proposal and goes through the Rules Engine again.
+| Specialist Agent | Domain & Focus Question | Authoritative Role |
+| --- | --- | --- |
+| **News Agent** | *What happened, when, from which source, and with what credibility?* | Analyzes news catalysts via Alpaca News API; outputs structured sentiment, significance, and confidence. |
+| **Quantitative Agent** | *What do price action, momentum, volatility, and volume trends show?* | 100% deterministic technical computation (RSI, MACD, Bollinger Bands, ATR, annualized volatility, volume surge). |
+| **Industry Agent** | *How does this event affect sector peers, competitors, and supply chains?* | Benchmarks sector dynamics, competitor sympathy moves, and industry-level catalysts. |
+| **Fundamental Agent** | *What are the implications for earnings, valuation, balance sheet, and outlook?* | Evaluates financial health, valuation multiples, and fundamental resilience. |
+| **Macroeconomic Agent** | *How do interest rates, monetary policy, market regimes, and VIX influence risk?* | Assesses macro regime, yields, index trends, and systemic volatility. |
+| **Market Reaction / Mispricing Agent** | *Is the market reaction justified, overdone, underdone, or uncertain?* | Measures expected vs. observed price delta; calculates the quantitative **Opportunity Score**. |
+| **Trading Decision Agent** | *Is there a viable options trade with positive net EV, or should we choose `NO_TRADE`?* | Formulates structured `TradeProposal` (structure, strikes, DTE, limit prices, and exit policy) or emits `NO_TRADE`. |
 
-## What judges can explore
+### Downstream Governance & Learning Stages
 
-| Experience | What it reveals |
-| --- | --- |
-| **Overview** | Decision activity, portfolio context, outcomes, and recommendations at a glance |
-| **Decision Stories** | Catalyst -> perspectives -> proposal -> risk -> rule outcome -> lesson |
-| **Portfolio & Alternatives** | The chosen path beside ShadowFund counterfactuals on the same market path |
-| **News & Market Tracker** | Evidence, price action, orders, fills, decisions, and `NO_TRADE` events in context |
-| **Agents & Tools** | Each specialist's role, concise rationale, version, latency, and recorded tool use |
-| **Rules** | The active ruleset, decision meanings, AI Profiles, and hackathon window |
-| **Weekly Summary** | Post-Analysis findings and bounded profile suggestions for human review |
+- **Adversarial Risk Management Agent:** Challenges trade proposals against portfolio concentration, drawdown levels, liquidity constraints, and contradictory evidence. Suggests safer parameters but cannot approve execution.
+- **Deterministic Rules Engine:** Evaluates proposals against mathematical rules (`PASS`, `MODIFY`, `FAIL`). Aggregates results into `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
+- **Alpaca Paper Execution Gate:** Re-validates paper mode, kill switch, freshness, and payload integrity before submitting orders via the Alpaca API and CLI.
+- **ShadowFund Counterfactual Simulator:** Continuously simulates alternative decisions (e.g., No Action, Half Size, Contrarian/Inverse) on the identical market path without capital risk.
+- **Post-Analysis Learning Engine:** Asynchronously analyzes closed trades and ShadowFund outcomes to recommend bounded AI Profile adjustments for human review.
 
-Demo and presentation records are explicitly labeled `illustrative_fixture`. They are not represented as an Alpaca account, paper order, fill, holding, profit-and-loss record, or model invocation. Genuine provider, Alpaca paper, ShadowFund, benchmark, and simulated data keep distinct provenance labels throughout the product.
+---
 
-## Safety is part of the product
+## Alpaca Ecosystem Integration
 
-- **Paper-only boundary:** server-side adapters reject live mode; the browser never calls Alpaca directly.
-- **Deterministic authority:** AI provides research, proposals, critiques, and recommendations, never execution permission.
-- **Exact authorization binding:** approval is tied to the proposal, ruleset, AI Profile, market snapshot, portfolio snapshot, allowed order payload, decision time, and expiry.
-- **Last-moment protection:** execution rechecks paper mode, kill switch, freshness, permissions, buying power, contract activity, and payload integrity.
-- **Fail-closed behavior:** missing, stale, contradictory, invalid, or uncertain inputs result in no order.
-- **Server-side secrets:** Alpaca and LLM credentials never enter browser code or responses.
-- **Safe reconciliation:** ambiguous submissions are reconciled by client order ID instead of being blindly retried.
-- **Controlled learning:** Post-Analysis can suggest bounded AI Profile changes, but deterministic validation and manual review are required.
-
-### Governed operating envelope
-
-The versioned baseline is `prism-authorized-baseline@1.0.0`; Balanced is the default AI Profile.
-
-| Control | Authorized baseline |
-| --- | --- |
-| Reference capital | `100,000.00 USD`, a sizing baseline rather than an account-balance claim |
-| Target allocation | `2.00%` of equity in NORMAL conditions; `1.50%` maximum in VOLATILE conditions |
-| Risk per trade | `1.00%` of current equity in NORMAL; `0.75%` in VOLATILE |
-| Portfolio protection | At least `5.00%` cash; no more than `6` positions; modeled hard-stop risk no more than `3.00%` |
-| Opportunity quality | Absolute floor `75`; Balanced threshold `84` |
-| Trade economics | Net expected value at least `+0.15R`; realistic reward/risk at least `1.50:1` |
-| Evidence and execution | Evidence no older than `30 seconds`; spread no more than `10.00%` of premium |
-| Standard exit | `75.00%` take-profit; `50.00%` fixed stop-loss; default DTE exit at `7 days` |
-| Holding period | Reusable baseline `14 days`; hackathon override `4 trading days` |
-
-The supported options envelope is intentionally narrow: long calls, long puts, and two-leg 1:1 long call or put debit spreads. Naked shorts, credit spreads, equity legs, rolls, extended-hours orders, unsupported permissions, and unverified account capabilities are rejected. When IV Rank is above `50%`, policy requires a defined-risk debit spread and the tighter volatile caps.
-
-### Fixed hackathon window
-
-| Control | Authorized time |
-| --- | --- |
-| Trading starts | Monday, Aug 31, 2026 at 09:30 ET |
-| New entries stop | Wednesday, Sep 2, 2026 at 16:00 ET |
-| Scoring and force-flatten | End of day Thursday, Sep 3, 2026, using total account equity |
-| Outer boundary | Friday, Sep 4, 2026 at 09:30 ET; not extra holding or scoring time |
-
-## Architecture
+PRISM deeply leverages Alpaca's developer platform across research, market data, paper execution, and agent exploration:
 
 ```mermaid
-flowchart LR
-    U[Authenticated browser] --> W[Next.js web server]
-    W --> A[FastAPI modular monolith]
-    A --> P[(PostgreSQL)]
-    A --> R[(Optional Redis)]
-    A --> L[Provider-neutral AI adapters]
-    A --> B[Server-only Alpaca paper adapters]
+flowchart TD
+    subgraph MarketData["1. Market Intelligence - alpaca-py 0.44.0"]
+        A1["News Stream (/v2/news)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
+        A2["Historical Bars (/v2/stocks/bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
+        A3["Multi-Symbol Snapshots (/v2/stocks/snapshots)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
+    end
+
+    subgraph PaperExecution["2. Governed Options Execution - Paper API & CLI"]
+        C1["Deterministic Rules Engine (APPROVE Verdict)"] -->|Authorized Payload| C2["Alpaca Execution Gate"]
+        C2 -->|Level 2 Single Options| D1["Long Calls & Long Puts"]
+        C2 -->|Level 3 Multi-Leg Debit Spreads| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
+        C2 -->|Subprocess JSON stdin| D3["Alpaca CLI Idempotent Order Gateway"]
+    end
+
+    subgraph Exploration["3. Agent Discovery - Alpaca MCP Server"]
+        E1["Read-Only MCP Toolsets (account, assets, stock/options data)"] -->|Context Enrichment| E2["Agent Context & Developer Tooling"]
+    end
 ```
 
-The trust boundary is deliberate: the frontend receives presentation data, never brokerage or model credentials. Financial values cross API boundaries as decimal strings, timestamps are UTC, and generated OpenAPI types keep the backend and frontend aligned.
+| Alpaca Component | Endpoints & Scope | PRISM Architectural Role | Safety & Governance Envelope |
+| --- | --- | --- | --- |
+| **`alpaca-py` Market Data API** | `/v2/news`<br>`/v2/stocks/bars`<br>`/v2/stocks/snapshots` | Ingests real-time catalysts for **News Agent**; feeds OHLCV bars into **Quantitative Engine** (RSI, MACD, Bollinger Bands, ATR); provides live spreads to **Reaction Agent**. | Read-only market intelligence; freshness strictly checked (<= 30s) before any trade proposal. |
+| **Alpaca Paper Trading API** | `/v2/orders`<br>`/v2/positions`<br>`/v2/account` | Executes approved option contracts (Level 2 Long Calls/Puts and Level 3 Multi-Leg 1:1 Debit Spreads via `order_class=mleg`). | Restricted to paper endpoints (`paper-api.alpaca.markets`); limit pricing within <= 10% spread; day TIF. |
+| **Alpaca CLI (v0.0.13)** | Subprocess order gateway | Secure server-side order submission receiving typed JSON over standard input; handles client-order-id idempotency and disconnect reconciliation. | Prevents shell injection; keeps credentials strictly isolated in backend memory (never exposed to browser or LLMs). |
+| **Alpaca MCP Server** | `account`, `assets`, `stock-data`, `options-data`, `news` | Provides structured market and asset discovery tools for developer workflows and research agents. | Read-only tools only; mutating trading tools are excluded to prevent LLMs from bypassing deterministic rules. |
 
-| Layer | Technology |
+---
+
+## Institutional Risk Governance & Safety
+
+In PRISM, safety is an architectural core, not an afterthought. AI models produce research and proposals, but **deterministic mathematical code controls authorization**.
+
+### Fail-Safe Execution Architecture
+
+- **Paper-Only Invariant:** Execution is restricted to Alpaca's paper trading environment (`https://paper-api.alpaca.markets/v2`). Any live-trading configuration causes an immediate startup halt.
+- **Fail-Closed Execution Gate:** Orders require an active ruleset, complete paper credentials, fresh market data (<= 30s), and a valid `APPROVE` verdict. If data is stale, unparseable, or contradictory, execution safely halts.
+- **Autonomous Schedule Bounding:** Autonomous trading is bounded by half-open UTC scheduling windows (`AUTONOMOUS_TRADING_START_AT` to `AUTONOMOUS_TRADING_END_AT`) strictly contained within authorized hackathon market hours.
+- **Global Kill Switch:** Instantly suspends all new paper order submissions while preserving real-time portfolio monitoring, telemetry, and audit logging.
+- **Zero Client Credentials:** Alpaca keys and LLM tokens remain strictly on the backend server—never exposed to the browser.
+
+### Governed Operating Envelope (`prism-authorized-baseline@1.0.0`)
+
+| Parameter | Authorized Baseline | Operational Description |
+| --- | ---: | --- |
+| **Reference Capital** | `100,000.00 USD` | Standard sizing reference baseline |
+| **Target Allocation** | `2.00%` | Normal target position sizing (max `1.50%` in Volatile regime) |
+| **Risk per Trade** | `1.00%` | Max equity risk per trade (max `0.75%` in Volatile regime) |
+| **Cash Reserve** | `5.00%` | Minimum unallocated buying-power floor |
+| **Position Limit** | `6` | Maximum simultaneous active positions |
+| **Concentration Limits** | `5.00%` / `10.00%` / `7.50%` | Maximum Ticker / Sector / Correlated Cluster exposure |
+| **Drawdown Controls** | `1.50%` / `2.25%` / `3.00%` | Circuit breakers: CAUTION -> DEFENSIVE -> HALT |
+| **Data Freshness** | `<= 30 seconds` | Max allowable age for market quotes and catalyst evidence |
+| **Bid/Ask Spread Cap** | `<= 10.00%` | Maximum allowable spread width relative to option premium |
+| **Opportunity Score Floor** | `75` min / `84` Balanced | Minimum research score required for proposal generation |
+| **Trade Economics** | Net EV `>= +0.15R`, R:R `>= 1.50:1` | Mandatory mathematical edge and reward-to-risk ratio |
+| **Exit Strategy** | `75.00%` TP / `50.00%` SL | Fixed take-profit and stop-loss targets |
+| **DTE Exit** | `7 days` | Default expiration exit to mitigate extreme gamma risk |
+| **Baseline Maximum Hold** | `14 days` | Standard multi-day position holding cap |
+| **Hackathon Hold Override** | `4 trading days` | Tightened holding cap tailored to the hackathon window |
+
+### Fixed Hackathon Operating Window
+
+| Milestone | Authorized Schedule (ET) | Operational Rule |
+| --- | --- | --- |
+| **Trading Opens** | Monday, Aug 31, 2026 at 09:30 ET | First eligible entry time |
+| **New Entries Stop** | Wednesday, Sep 2, 2026 at 16:00 ET | Entry cutoff; existing positions managed/exited only |
+| **Official Scoring & Force-Flatten** | Thursday, Sep 3, 2026 (Market Close) | All positions force-flattened; total account equity scored |
+| **Outer Window Boundary** | Friday, Sep 4, 2026 at 09:30 ET | Outer boundary edge; not extra trading or holding time |
+
+---
+
+## ShadowFund: Counterfactual Simulation
+
+One of the greatest challenges in quantitative trading is counterfactual validation: *"What would have happened if we took a different path?"*
+
+**ShadowFund** is PRISM's simulation engine. For every evaluated catalyst, ShadowFund tracks alternative strategies along the exact same subsequent market timeline without placing orders:
+
+- **Cash / No Action:** Benchmarks opportunity cost against holding cash.
+- **Half Size:** Measures volatility and drawdown reduction at 0.5x sizing.
+- **Contrarian / Inverse:** Evaluates the opposite market thesis.
+- **Specialist Alternative:** Tracks secondary options structures generated during agent debate.
+
+ShadowFund calculates counterfactual P&L, Maximum Adverse Excursion (MAE), Maximum Favorable Excursion (MFE), and Sharpe tracking—feeding actionable data into the Weekly Summary for continuous learning.
+
+---
+
+## What Judges Can Explore in the Live Platform
+
+Visit the live production deployment at **[https://prism-ai.japanwest.cloudapp.azure.com](https://prism-ai.japanwest.cloudapp.azure.com)** to experience PRISM's full suite of interactive workspaces:
+
+| Workspace Surface | Interactive Features & Capabilities |
 | --- | --- |
-| Web | Next.js 16, React 19, TypeScript, Tailwind, Radix/shadcn primitives |
-| API | FastAPI, Python 3.12, Pydantic |
-| Data | PostgreSQL 17, SQLAlchemy 2, Alembic; optional Redis |
-| Integrations | Server-side Alpaca and provider-neutral LLM adapters |
-| Contracts | FastAPI OpenAPI with generated TypeScript transport types |
-| Operations | Docker Compose, Nginx, GitHub Actions, protected environments |
+| 🌟 **Overview Dashboard** | Real-time portfolio equity, active decision stream, win rates, and AI recommendations at a glance. |
+| 📖 **Decision Stories** | Step-by-step interactive inspection of every trade: Catalyst -> 7 Perspectives -> Proposal -> Risk Critique -> Deterministic Rule Trace -> Paper Execution -> Lessons Learned. |
+| 📈 **Market Tracker** | Interactive financial charts synchronized with filterable activity overlays (Orders, Fills, Proposals, Decisions, `NO_TRADE`, and Shadow events). |
+| 👥 **Agents & Observability** | Real-time observability into all 7 AI specialists: rationale, prompt versions, latency, token consumption, and tool invocations. |
+| 💼 **Portfolio & Positions** | Active Alpaca paper holdings, allocation breakdowns, Greeks, and P&L performance. |
+| 🧪 **ShadowFund & Alternatives** | Interactive counterfactual comparison trees showing chosen trades vs. alternative paths on identical market data. |
+| 📰 **News & Market Catalysts** | Live catalyst stream with sentiment classification, credibility scoring, and direct links to resulting decision stories. |
+| 🛡️ **Rules & Governance** | Transparent inspection of the active baseline ruleset, AI Profile configurations (Conservative, Balanced, Aggressive), and hackathon controls. |
+| 📊 **Weekly Summary** | Post-Analysis performance attribution and bounded AI Profile parameter suggestions for human review. |
 
-## Run PRISM
+---
 
-Prerequisites: Node.js 24, Corepack/pnpm 11.24.0, Python 3.12 with `uv`, and optionally Docker Compose v2.
+## Technology Stack
+
+PRISM is built with a modern, high-performance, and type-safe architecture:
+
+```mermaid
+flowchart TD
+    Client["Authenticated Operator Browser"] -->|HTTPS / WSS| Proxy["Nginx Reverse Proxy (SSL/TLS 1.3)"]
+    Proxy -->|UI Routes & SSR| Next["Next.js 16 Web App (React 19, Tailwind 4)"]
+    Proxy -->|API Routing| API["FastAPI Modular Monolith (Python 3.12, SQLAlchemy 2)"]
+    
+    API --> DB[("PostgreSQL 17 Database")]
+    API --> Cache[("Redis Coordination Cache")]
+    API --> LLM["Provider-Neutral AI Gateway (DeepSeek, Claude, Gemini)"]
+    API --> Alpaca["Alpaca Paper Gateway & CLI (alpaca-py 0.44.0)"]
+```
+
+- **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, Radix UI primitives, Lucide Icons, WCAG 2.2 AA Dark Cyber-Crystalline theme.
+- **Backend:** FastAPI, Python 3.12, Pydantic 2, SQLAlchemy 2 (asyncpg), Alembic migrations, PostgreSQL 17.
+- **Alpaca Platform:** `alpaca-py` 0.44.0 (Market Data & Trading APIs), Alpaca CLI v0.0.13, Alpaca MCP server.
+- **AI Gateway:** Provider-neutral adapter supporting DeepSeek-V4, Anthropic Claude 3.5, Google Gemini, OpenAI GPT-4o, Featherless AI, and Ollama.
+- **Deployment:** Docker Compose, Nginx, Azure VM, GitHub Actions CI/CD with automated quality, linting, contract synchronization, and test gates.
+
+---
+
+## Quickstart
+
+### Prerequisites
+
+- **Node.js**: v24.x
+- **pnpm**: v11.24.0 (`corepack enable`)
+- **Python**: v3.12+ with `uv`
+- **Docker & Docker Compose** (optional for containerized run)
+
+### 1. Local Development Setup
 
 ```bash
+# Clone repository
+git clone https://github.com/MaChewwwww/Alpaca_AI_Hackaton.git
+cd Alpaca_AI_Hackaton
+
+# Enable package manager and configure environment
 corepack enable
 cp .env.example .env
+
+# Install frontend and backend dependencies
 pnpm setup
+
+# Generate typed OpenAPI contracts
 pnpm contracts
+
+# Launch development servers (Frontend: http://localhost:3000 | API: http://localhost:8000)
 pnpm dev
 ```
 
-Open the web app at `http://localhost:3000` and the API at `http://localhost:8000`. Replace the development authentication examples in `.env`; judge access is configured server-side. Keep these safeguards in place unless running an explicitly authorized paper workflow:
-
-```text
-EXECUTION_ENABLED=false
-ALPACA_PAPER=true
-ALPACA_LIVE_TRADE=false
-```
-
-For the containerized stack:
+### 2. Running via Docker Compose
 
 ```bash
+# Start all services (PostgreSQL, FastAPI Backend, Next.js Frontend, Nginx)
 pnpm docker:up
+
+# View running container status
+pnpm docker:status
+
+# Stop containers
+pnpm docker:down
 ```
 
-## Essential commands
+### Essential Commands
 
-| Command | Purpose |
+| Command | Description |
 | --- | --- |
-| `pnpm dev` | Run the web and API development servers |
-| `pnpm contracts` | Regenerate OpenAPI and frontend transport types |
-| `pnpm test` | Run frontend and backend tests |
-| `pnpm verify` | Run the complete governance, quality, contract, test, and build gate |
-| `pnpm docker:config` | Validate the production Compose configuration |
+| `pnpm dev` | Run Next.js frontend and FastAPI backend concurrently |
+| `pnpm test` | Run complete unit and component test suites (Vitest & Pytest) |
+| `pnpm contracts` | Regenerate FastAPI OpenAPI schema and TypeScript transport types |
+| `pnpm verify` | Run full governance, linting, contract, and test verification gate |
+| `pnpm docker:up` | Build and launch containerized stack via Docker Compose |
 
-## Repository map
+---
 
-```text
-frontend/                 Next.js product experience
-backend/app/              FastAPI application and domain modules
-backend/tests/            Backend behavior and contract tests
-backend/app/rules/        Versioned machine-readable governance
-docs/                     Product, architecture, rules, security, and operations
-scripts/                  Repository checks and document synchronization
-.agents/rules/            Canonical contributor and agent instructions
-```
+## Documentation & Architecture Deep Dives
 
-## Read the source of truth
+For detailed engineering specifications, explore the authoritative documentation:
 
-Start with the [documentation index](docs/README.md), then follow the authority chain:
+- 📖 **[Project Concept](docs/conceptual/PROJECT_CONCEPT.md)** — Comprehensive product vision and market thesis.
+- 🏛️ **[System Architecture](docs/ARCHITECTURE.md)** — Detailed component boundaries and dependency flows.
+- ⚡ **[Tech Stack & Alpaca Tools](docs/TECH_STACK.md)** — Technology matrix and Alpaca integration breakdown.
+- 🛡️ **[Business Rules](docs/BUSINESS_RULES.md)** — Complete mathematical specification of active baseline parameters.
+- 👥 **[AI Agents Topology](docs/AI_AGENTS.md)** — Specialist responsibilities, prompt structure, and structured outputs.
+- ⚙️ **[AI Profiles](docs/AI_PROFILES.md)** — Configurable risk profiles (Conservative, Balanced, Aggressive).
+- 🧪 **[ShadowFund Specification](docs/SHADOWFUND.md)** — Counterfactual simulation mechanics and evaluation horizons.
+- 🦙 **[Alpaca Integration Guide](docs/ALPACA_INTEGRATION.md)** — Official SDK, CLI, and MCP gateway specifications.
+- 🔒 **[Security & Safety Controls](docs/SECURITY.md)** — Credential handling, fail-safe gates, and paper-trading safeguards.
+- 🎨 **[Design System](docs/DESIGN.md)** — Dark Cyber-Crystalline aesthetic, color tokens, and accessibility standards.
+- 📋 **[Governance Traceability](docs/GOVERNANCE_TRACEABILITY.md)** — Requirements mapping and parameter register.
 
-```text
-repository invariants
-  -> BA requirements and versioned parameter register
-  -> AI architecture
-  -> API contracts
-  -> implementation and tests
-  -> explanatory concept documents
-```
+---
 
-Key references: [Project Concept](docs/conceptual/PROJECT_CONCEPT.md) · [Business Rules](docs/BUSINESS_RULES.md) · [AI Agents](docs/AI_AGENTS.md) · [AI Profiles](docs/AI_PROFILES.md) · [Architecture](docs/ARCHITECTURE.md) · [Data/API Contracts](docs/DATA_API_CONTRACTS.md) · [Security](docs/SECURITY.md) · [Design](docs/DESIGN.md) · [Governance Traceability](docs/GOVERNANCE_TRACEABILITY.md)
+<div align="center">
 
-The numerical register lives in [`backend/app/rules/authorized_baseline.v1.json`](backend/app/rules/authorized_baseline.v1.json). Values that are not authorized there, including unresolved availability SLOs and backup RPO/RTO, are not guessed or presented as commitments.
+**Built with precision for the Alpaca AI Trading Agents Hackathon.**
+
+<a href="https://prism-ai.japanwest.cloudapp.azure.com"><strong>🚀 Access the Live PRISM Platform</strong></a>
+
+</div>
