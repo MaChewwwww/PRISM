@@ -4,11 +4,11 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    env_file:
-      - path: .env
-        required: false
     environment:
       API_INTERNAL_URL: http://backend:8000/api/v1
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      AUTH_EMAIL: ${AUTH_EMAIL:-operator@prism.local}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-}
     ports:
       - "${FRONTEND_PORT:-3005}:3000"
     depends_on:

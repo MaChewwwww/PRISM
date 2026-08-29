@@ -2,14 +2,35 @@
 
 import { Lock, ShieldCheck, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [judgeLoginAvailable, setJudgeLoginAvailable] = useState(false);
+  const [judgeEmail, setJudgeEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/judge-login")
+      .then(async (response) => {
+        if (!response.ok) return;
+        return (await response.json()) as { enabled?: boolean; email?: string | null };
+      })
+      .then((hint) => {
+        if (!active || !hint?.enabled || !hint.email) return;
+        setJudgeLoginAvailable(true);
+        setJudgeEmail(hint.email);
+        setEmail((current) => current || hint.email || "");
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,9 +60,28 @@ export default function LoginPage() {
     }
   }
 
+  async function handleJudgeLogin() {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/judge-login", { method: "POST" });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? "Judge sign-in is unavailable.");
+        setLoading(false);
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("An unexpected network error occurred. Please try again.");
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="app-shell flex min-h-screen flex-col">
-      <header className="topbar">
+      <header className="login-header">
         <div className="wordmark">
           <span aria-hidden="true">PR</span>
           <strong>PRISM</strong>
@@ -116,9 +156,22 @@ export default function LoginPage() {
             </div>
 
             <p className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)]/60 p-3 text-xs text-[var(--muted-foreground)]">
-              Use the operator credentials supplied through the environment owner. PRISM never
-              displays or pre-fills configured passwords.
+              {judgeLoginAvailable
+                ? `Judge access is ready for ${judgeEmail}. The password stays server-side.`
+                : "Use the operator credentials supplied through the environment owner. Passwords stay server-side."}
             </p>
+
+            {judgeLoginAvailable && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleJudgeLogin}
+                className="flex w-full items-center justify-center gap-2 border border-[var(--primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/10 disabled:opacity-50"
+              >
+                <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                Sign in as judge
+              </button>
+            )}
 
             <button
               type="submit"
@@ -143,8 +196,8 @@ export default function LoginPage() {
             <div className="flex items-center gap-2 text-[0.7rem] text-[var(--muted-foreground)]">
               <UserCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
-                Authentication is live. All product stories beyond sign-in use illustrative demo
-                data.
+                Authentication is live. Active Portfolio views retain an explicit backend data
+                provenance label.
               </span>
             </div>
           </div>

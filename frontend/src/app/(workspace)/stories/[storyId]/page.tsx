@@ -50,7 +50,7 @@ export default async function StoryDetailPage({
           {
             label: "Chosen Outcome",
             value: story.chosenPathImpact,
-            detail: "Illustrative fixture result",
+            detail: "Active Portfolio view · provenance shown below",
           },
           {
             label: "Best Shadow Path",
@@ -72,7 +72,7 @@ export default async function StoryDetailPage({
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#547D83]/15 border border-[#547D83]/30 w-fit">
               <span className="h-2 w-2 rounded-full bg-[#00D084]" />
               <span className="text-xs font-semibold uppercase tracking-wider text-[#B2D8DC]">
-                Part I · What Happened (The Chosen Illustrative Path)
+                Part I · What Happened (The Active Portfolio Path)
               </span>
             </div>
 
@@ -244,8 +244,8 @@ export default async function StoryDetailPage({
 
             <Section
               id="chapter-outcome"
-              title="05 · Illustrative Governed Outcome"
-              description="An illustrative fixture result for interface validation. It is not an authorization or broker receipt."
+              title="05 · Active Portfolio Governed Outcome"
+              description="The current backend portfolio view is not an authorization or broker receipt."
             >
               <div className="outcome-statement prism-glass-card p-4 border-l-4 border-l-[#00D084]">
                 <Check aria-hidden="true" className="text-[#00D084]" />
@@ -280,7 +280,7 @@ export default async function StoryDetailPage({
             >
               <div className="branch-table table-wrap prism-glass-card">
                 <table>
-                  <caption>Chosen illustrative path vs. ShadowFund branch comparison</caption>
+                  <caption>Active Portfolio path vs. ShadowFund branch comparison</caption>
                   <thead>
                     <tr>
                       <th>Branch</th>
@@ -297,7 +297,9 @@ export default async function StoryDetailPage({
                         className={branch.id === "chosen" ? "bg-[#547D83]/10 font-semibold" : ""}
                       >
                         <th scope="row">
-                          {branch.label}
+                          {branch.label === "Illustrative governed path"
+                            ? "Active Portfolio governed path"
+                            : branch.label}
                           <span className="text-xs font-mono block text-slate-400 font-normal">
                             {branch.status}
                           </span>

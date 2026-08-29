@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,13 +60,33 @@ describe("Login page", () => {
     expect(pushMock).toHaveBeenCalledWith("/");
   });
 
-  it("does not fetch, display, or prefill configured credentials", () => {
-    const fetchMock = vi.spyOn(global, "fetch");
+  it("prefills the non-secret judge email without exposing the password", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true, email: "judge@prism.local" }),
+    } as Response);
     render(<LoginPage />);
 
-    expect(screen.getByLabelText("Email")).toHaveValue("");
+    await waitFor(() => expect(screen.getByLabelText("Email")).toHaveValue("judge@prism.local"));
     expect(screen.getByLabelText("Password")).toHaveValue("");
-    expect(screen.getByText(/never displays or pre-fills configured passwords/i)).toBeVisible();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/password stays server-side/i)).toBeVisible();
+  });
+
+  it("uses server-side judge credentials without sending them through the browser", async () => {
+    const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/auth/judge-login") && init?.method !== "POST") {
+        return {
+          ok: true,
+          json: async () => ({ enabled: true, email: "judge@prism.local" }),
+        } as Response;
+      }
+      return { ok: true, json: async () => ({ ok: true }) } as Response;
+    });
+    const user = userEvent.setup();
+    render(<LoginPage />);
+    await user.click(await screen.findByRole("button", { name: "Sign in as judge" }));
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/judge-login", { method: "POST" });
+    expect(pushMock).toHaveBeenCalledWith("/");
   });
 });

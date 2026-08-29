@@ -19,7 +19,7 @@ export default async function WeeklySummaryPage() {
       <PageHeader
         eyebrow={`Week of ${summary.weekOf}`}
         title="Weekly Post-Analysis"
-        description="Post-Analysis reviews illustrative decision and ShadowFund outcomes, then recommends bounded AI Profile changes for manual review."
+        description="Post-Analysis reviews Active Portfolio decisions and ShadowFund outcomes, then recommends bounded AI Profile changes for manual review."
       >
         <div className="mode-stamp">
           <TrendingUp aria-hidden="true" /> Post-analysis
@@ -36,7 +36,7 @@ export default async function WeeklySummaryPage() {
             detail: `Week of ${summary.weekOf}`,
           },
           {
-            label: "Illustrative net P&L",
+            label: "Active Portfolio net P&L",
             value: summary.illustrativeNetPnl,
             detail: "Versioned fixture",
           },
