@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,14 +29,30 @@ describe("Login page", () => {
 
   it("handles failed login and displays error alert", async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: "Invalid credentials" }),
-    } as Response);
+    vi.spyOn(global, "fetch").mockImplementation(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("/api/auth/demo-credentials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            email: "operator@prism.local",
+            password: "prism-staging-2026!",
+            environment: "staging",
+          }),
+        } as Response;
+      }
+      if (urlStr.includes("/api/auth/login")) {
+        return {
+          ok: false,
+          json: async () => ({ error: "Invalid credentials" }),
+        } as Response;
+      }
+      return { ok: false } as Response;
+    });
 
     render(<LoginPage />);
-    await user.type(screen.getByLabelText("Email"), "wrong@test.com");
-    await user.type(screen.getByLabelText("Password"), "badpass");
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "wrong@test.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "badpass" } });
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid credentials");
@@ -45,14 +61,28 @@ describe("Login page", () => {
 
   it("handles successful login and navigates to home", async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ ok: true, email: "operator@shadowfund.local" }),
-    } as Response);
+    vi.spyOn(global, "fetch").mockImplementation(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("/api/auth/demo-credentials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            email: "operator@prism.local",
+            password: "prism-staging-2026!",
+            environment: "staging",
+          }),
+        } as Response;
+      }
+      if (urlStr.includes("/api/auth/login")) {
+        return {
+          ok: true,
+          json: async () => ({ ok: true, email: "operator@prism.local" }),
+        } as Response;
+      }
+      return { ok: false } as Response;
+    });
 
     render(<LoginPage />);
-    await user.type(screen.getByLabelText("Email"), "operator@shadowfund.local");
-    await user.type(screen.getByLabelText("Password"), "shadowfund2026!");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(pushMock).toHaveBeenCalledWith("/");
