@@ -53,16 +53,16 @@ Every trade, modification, rejection, or `NO_TRADE` decision is permanently reco
 
 ```mermaid
 flowchart LR
-    A[Market Catalyst & Alpaca News] --> B[Seven Specialist AI Perspectives]
-    B --> C{TradeProposal or NO_TRADE}
-    C --> D[Adversarial Risk Management Critique]
-    D --> E[Deterministic Rules Engine]
-    E --> F{APPROVE, REJECT, or MODIFIED_PENDING_ACCEPTANCE}
-    F -->|APPROVE only| G[Alpaca Paper Order Execution]
-    F --> H[Immutable Decision Story]
+    A["Market Catalyst & Alpaca News"] --> B["Seven Specialist AI Perspectives"]
+    B --> C{"TradeProposal or NO_TRADE"}
+    C --> D["Adversarial Risk Management Critique"]
+    D --> E["Deterministic Rules Engine"]
+    E --> F{"APPROVE, REJECT, or MODIFIED_PENDING_ACCEPTANCE"}
+    F -->|APPROVE only| G["Alpaca Paper Order Execution"]
+    F --> H["Immutable Decision Story"]
     G --> H
-    H --> I[ShadowFund Counterfactual Simulator]
-    I --> J[Post-Analysis & Weekly Review]
+    H --> I["ShadowFund Counterfactual Simulator"]
+    I --> J["Post-Analysis & Weekly Review"]
 ```
 
 Every stage produces typed, versioned records. Stale market data (>30s), invalid structured outputs, changed order parameters, missing authorization, or elevated spread costs immediately stop execution—ensuring total safety and auditability.
@@ -97,20 +97,20 @@ PRISM deeply leverages Alpaca's developer platform across research, market data,
 
 ```mermaid
 flowchart TD
-    subgraph MarketData["1. Market Intelligence (alpaca-py 0.44.0)"]
-        A1["/v2/news (News Stream)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
-        A2["/v2/stocks/bars (Historical Bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
-        A3["/v2/stocks/snapshots (Multi-Symbol)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
+    subgraph MarketData["1. Market Intelligence - alpaca-py 0.44.0"]
+        A1["News Stream (/v2/news)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
+        A2["Historical Bars (/v2/stocks/bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
+        A3["Multi-Symbol Snapshots (/v2/stocks/snapshots)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
     end
 
-    subgraph PaperExecution["2. Governed Options Execution (Alpaca Paper API & CLI)"]
+    subgraph PaperExecution["2. Governed Options Execution - Paper API & CLI"]
         C1["Deterministic Rules Engine (APPROVE Verdict)"] -->|Authorized Payload| C2["Alpaca Execution Gate"]
-        C2 -->|Level 2 Options| D1["Long Calls & Long Puts"]
-        C2 -->|Level 3 Options (order_class=mleg)| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
+        C2 -->|Level 2 Single Options| D1["Long Calls & Long Puts"]
+        C2 -->|Level 3 Multi-Leg Debit Spreads| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
         C2 -->|Subprocess JSON stdin| D3["Alpaca CLI Idempotent Order Gateway"]
     end
 
-    subgraph Exploration["3. Agent Discovery (Alpaca MCP Server)"]
+    subgraph Exploration["3. Agent Discovery - Alpaca MCP Server"]
         E1["Read-Only MCP Toolsets (account, assets, stock/options data)"] -->|Context Enrichment| E2["Agent Context & Developer Tooling"]
     end
 ```
@@ -206,14 +206,14 @@ PRISM is built with a modern, high-performance, and type-safe architecture:
 
 ```mermaid
 flowchart TD
-    Client["Authenticated Operator Browser"] -->|HTTPS / WSS| Proxy["Nginx Reverse Proxy\n(SSL/TLS 1.3 · Security Headers)"]
-    Proxy -->|UI Routes & SSR| Next["Next.js 16 Web Application\n(React 19 · TypeScript · Tailwind 4 · Specular Glass UI)"]
-    Proxy -->|/api/v1/*| API["FastAPI Modular Monolith\n(Python 3.12 · Pydantic 2 · SQLAlchemy 2 · Alembic)"]
+    Client["Authenticated Operator Browser"] -->|HTTPS / WSS| Proxy["Nginx Reverse Proxy (SSL/TLS 1.3)"]
+    Proxy -->|UI Routes & SSR| Next["Next.js 16 Web App (React 19, Tailwind 4)"]
+    Proxy -->|API Routing| API["FastAPI Modular Monolith (Python 3.12, SQLAlchemy 2)"]
     
-    API --> DB[("PostgreSQL 17\n(Transactional Audit & Decision Logs)")]
-    API --> Cache[("Redis\n(Ephemeral Coordination)")]
-    API --> LLM["Provider-Neutral AI Gateway\n(DeepSeek · Claude · Gemini · OpenAI · Featherless)"]
-    API --> Alpaca["Alpaca Paper Gateway & CLI\n(alpaca-py 0.44.0 · Alpaca CLI v0.0.13)"]
+    API --> DB[("PostgreSQL 17 Database")]
+    API --> Cache[("Redis Coordination Cache")]
+    API --> LLM["Provider-Neutral AI Gateway (DeepSeek, Claude, Gemini)"]
+    API --> Alpaca["Alpaca Paper Gateway & CLI (alpaca-py 0.44.0)"]
 ```
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, Radix UI primitives, Lucide Icons, WCAG 2.2 AA Dark Cyber-Crystalline theme.
