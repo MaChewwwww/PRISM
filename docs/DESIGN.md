@@ -12,9 +12,9 @@ This document establishes the canonical visual identity, design tokens, typograp
 In physics, an optical prism refracts a single beam of white light into its constituent spectral wavelengths, revealing depth and structure that are invisible in the aggregate. 
 
 In the same way, **PRISM takes a single market signal (catalyst, news, price anomaly) and autonomously breaks it down into multiple perspectives**:
-- **Catalyst & Reaction Analysis** (Research Agent)
-- **Candidate Options Strategies** (Proposal Agent)
-- **Risk Critiques & Downside Stress-Tests** (Risk Agent)
+- **Catalyst & Reaction Analysis** (Market Reaction / Mispricing Agent)
+- **Candidate Options Strategies** (Trading Decision Agent)
+- **Risk Critiques & Downside Stress-Tests** (Risk Management Layer)
 - **Deterministic Boundary Enforcement** (Business Rules Gate)
 - **Counterfactual Audits & Alternate Realities** (ShadowFund Intelligence)
 
@@ -227,9 +227,9 @@ PRISM balances sharp technical precision with comfortable pill-shaped affordance
 ### 6.3 Agent Perspective Chips & Status Tags
 - **Shape**: Pill (`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5`)
 - **Variants**:
-  - **Research Agent**: `bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/30`
-  - **Proposal Agent**: `bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30`
-  - **Risk Agent**: `bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30`
+  - **Market Reaction / Mispricing Agent**: `bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/30`
+  - **Trading Decision Agent**: `bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30`
+  - **Risk Management Layer**: `bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30`
   - **Rules Gate**: `bg-[#547D83]/20 text-[#B2D8DC] border border-[#547D83]/40`
   - **ShadowFund**: `bg-[#818CF8]/15 text-[#818CF8] border border-[#818CF8]/30`
 

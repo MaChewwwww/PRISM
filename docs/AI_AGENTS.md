@@ -2,26 +2,41 @@
 
 **One signal. Multiple perspectives. Better decisions.**
 
-## The PRISM Multi-Perspective Collective
+## The PRISM Multi-Agent Pipeline and Decision Layers
 
-Just as an optical prism separates a single beam of light into its constituent spectral bands, **PRISM** takes a single market signal and autonomously breaks it down into multiple perspectives:
-1. **Catalyst & Reaction Perspective (Market Reaction Research Agent):** Analyzes the catalyst, measures price/volume response, and compares with historical analog patterns to detect overreaction/underreaction gaps.
-2. **Strategy Perspective (Trade Proposal Agent):** Converts research findings into defined-risk option strategies while exploring parallel shadow candidates.
-3. **Risk & Adversarial Perspective (Risk Agent):** Critiques proposed sizing, challenges assumptions, tests regime vulnerabilities, and proposes risk mitigations.
-4. **Counterfactual Learning Perspective (Post-Analysis Agent):** Audits realized outcomes against ShadowFund counterfactuals to recommend continuous profile optimizations.
+Just as an optical prism separates a single beam of light into its constituent spectral bands, **PRISM** takes a single market signal and autonomously breaks it down through a sequential pipeline of **7 specialist AI agents**, each contributing a unique perspective, followed by **2 decision and execution layers** before deterministic rules govern whether a trade may proceed.
 
 > **One signal → Autonomous perspectives → Governed decisions → Clearer outcomes**
 
+## Pipeline and Layer Roster
+
+| AI Agent / Decision Layer | Component Type | Primary Function | Key Inputs |
+| --- | --- | --- | --- |
+| **News Intelligence Agent** | AI Agent | Analyzes financial news, announcements, earnings releases, and market events to determine their relevance, sentiment, significance, and potential impact on an asset. | Financial news, headlines, timestamps, company/ticker, event type, sentiment |
+| **Quantitative Analysis Agent** | AI Agent | Interprets quantitative market indicators to evaluate price trends, momentum, volatility, trading volume, and other technical signals. | Historical/current prices, OHLCV, RSI, MACD, ATR, volatility, momentum, volume |
+| **Industry Intelligence Agent** | AI Agent | Evaluates the company's industry and competitive environment, including sector performance, competitors, supply/demand conditions, and industry-specific developments. | Sector data, competitor performance, industry news, company/sector relationships |
+| **Fundamental Analysis Agent** | AI Agent | Evaluates the company's financial health and valuation to determine whether its underlying fundamentals support the current market price or movement. | Revenue, earnings, EPS, growth, margins, valuation ratios, debt, cash flow, guidance |
+| **Macroeconomic Analysis Agent** | AI Agent | Evaluates broader economic and financial conditions that may influence an asset or sector, such as interest rates, inflation, market indexes, and economic events. | Interest rates, inflation, major indexes, economic indicators, macroeconomic news |
+| **Market Reaction / Mispricing Agent** | AI Agent | Compares the significance of new information with the market's actual response to identify potential underreaction, fair reaction, or overreaction. This is the system's primary analytical innovation. | Outputs from all specialist agents, price reaction, volume, historical reactions to similar events, expected vs. actual movement |
+| **Trading Decision Agent** | AI Agent | Synthesizes the outputs of all specialist agents and determines whether the available evidence provides sufficient justification to BUY, SELL, or HOLD an asset. | All agent reports, confidence, expected return, downside, market conditions, mispricing signal |
+| **Risk Management Layer** | Decision Layer | Applies predefined risk constraints before a trade is executed, including position limits, portfolio exposure, volatility, and maximum acceptable loss. | Portfolio, positions, volatility, exposure, position size, risk/reward |
+| **Execution Layer** | Decision Layer | Executes an approved trading decision through Alpaca's paper-trading environment and records the resulting order and position information. | Approved trade, ticker, order type, quantity, price, account/portfolio |
+
 ## Authority model
 
-AI components are untrusted decision-support components. They never own broker credentials, deterministic rule definitions, or execution authority.
+AI components and decision layers are untrusted decision-support structures. They never own broker credentials, deterministic rule definitions, or execution authority. The Execution Layer invokes Alpaca only after all deterministic checks pass.
 
-| Agent | Inputs | Output | Prohibited behavior |
+| AI Agent / Decision Layer | Component Type | Output | Prohibited behavior |
 | --- | --- | --- | --- |
-| Market Reaction Research | News/event, bars, volume, volatility, analogs | `ResearchReport` | Proposing or placing an order |
-| Trade Proposal | Research, portfolio snapshot, active profile | `TradeProposal` or `NO_TRADE` | Claiming authorization |
-| Risk | Proposal, portfolio, regime, contradictory evidence | `RiskAssessment` | Overriding hard rules |
-| Post-Analysis | Audit, executions, ShadowFund outcomes | `AIProfileRecommendation` | Activating unvalidated parameters or editing rule logic |
+| News Intelligence Agent | AI Agent | Structured news/event analysis with sentiment and significance | Proposing or placing an order |
+| Quantitative Analysis Agent | AI Agent | Technical signal assessment with trend, momentum, and volatility metrics | Proposing or placing an order |
+| Industry Intelligence Agent | AI Agent | Sector/competitive landscape evaluation | Proposing or placing an order |
+| Fundamental Analysis Agent | AI Agent | Financial health and valuation assessment | Proposing or placing an order |
+| Macroeconomic Analysis Agent | AI Agent | Macro condition assessment with economic context | Proposing or placing an order |
+| Market Reaction / Mispricing Agent | AI Agent | `ResearchReport` with reaction gap, analog evidence, and mispricing signal | Proposing or placing an order |
+| Trading Decision Agent | AI Agent | `TradeProposal` or `NO_TRADE` with rationale and shadow candidates | Claiming authorization |
+| Risk Management Layer | Decision Layer | `RiskAssessment` with exposure, constraints, and critique | Overriding hard rules |
+| Execution Layer | Decision Layer | `ExecutionReceipt` via Alpaca paper CLI | Executing without a valid `AuthorizationDecision` |
 
 ## Output contract
 
@@ -31,27 +46,27 @@ Invalid JSON, missing required fields, unknown enums, out-of-range values, unsup
 
 ## Strategy synthesis and volatility regime conditioning
 
-The Proposal and Risk Agents operate under strict quantitative volatility filters:
+The Trading Decision Agent and Risk Management Layer operate under strict quantitative volatility filters:
 
 1. **Deterministic IV Conditioning:**
-   - The Proposal Agent receives market volatility metrics (`iv_rank`, `iv_to_hv_ratio`, `atm_iv`).
-   - When $\text{IV Rank} > 50\%$ or post-earnings volatility is elevated, the Proposal Agent is restricted to **Defined-Risk Debit Spreads** (`call_debit_spread`, `put_debit_spread`). This offsets post-event implied volatility collapse (IV crush) by selling an out-of-the-money leg.
+   - The Trading Decision Agent receives market volatility metrics (`iv_rank`, `iv_to_hv_ratio`, `atm_iv`).
+   - When $\text{IV Rank} > 50\%$ or post-earnings volatility is elevated, the Trading Decision Agent is restricted to **Defined-Risk Debit Spreads** (`call_debit_spread`, `put_debit_spread`). This offsets post-event implied volatility collapse (IV crush) by selling an out-of-the-money leg.
    - When $\text{IV Rank} \le 50\%$, single-leg long options (`long_call`, `long_put`) are permitted to exploit potential volatility expansion.
 
 2. **Deterministic Contract Selection (Anti-Hallucination):**
-   - The Proposal Agent selects the strategic thesis, target delta ($\approx 0.50\text{ Delta}$ long leg / $0.30\text{ Delta}$ short leg), and target DTE window ($21\text{ to }45\text{ days}$).
+   - The Trading Decision Agent selects the strategic thesis, target delta ($\approx 0.50\text{ Delta}$ long leg / $0.30\text{ Delta}$ short leg), and target DTE window ($21\text{ to }45\text{ days}$).
    - A deterministic Option Chain Resolver queries Alpaca's active option chain to bind exact, tradable OCC contract symbols and strikes, preventing LLM strike hallucination.
 
-3. **Risk AI Critique:**
-   - Risk AI evaluates whether the proposed strategy introduces adverse vega exposure or tail risk relative to the active regime and portfolio concentration.
+3. **Risk Management Critique:**
+   - The Risk Management Layer evaluates whether the proposed strategy introduces adverse vega exposure or tail risk relative to the active regime and portfolio concentration.
 
 4. **Exit Policy Formulation:**
    - Every candidate `TradeProposal` incorporates a structured `ExitPolicy` specifying take-profit targets (Balanced default $75\%$, up to $100\%$; must satisfy $1.5{:}1$ realistic reward/risk), a fixed $50\%$ stop-loss, DTE pin-risk boundaries ($\le 7\text{d}$), and maximum holding duration.
 
 5. **Single-Prompt Multi-Perspective Extraction:**
-   - In the same inference pass that creates the primary candidate action, the Proposal Agent extracts structured `shadow_candidates` (e.g. contrarian reversal thesis, conservative sizing multiplier, or alternate delta candidate). This provides rich multiverse inputs for ShadowFund with zero extra API latency or token overhead.
+   - In the same inference pass that creates the primary candidate action, the Trading Decision Agent extracts structured `shadow_candidates` (e.g. contrarian reversal thesis, conservative sizing multiplier, or alternate delta candidate). This provides rich multiverse inputs for ShadowFund with zero extra API latency or token overhead.
 
-## Post-Analysis AI and adaptive profile tuning
+## Post-Analysis and adaptive profile tuning
 
 
 Post-Analysis AI acts as an asynchronous, self-auditing intelligence loop:

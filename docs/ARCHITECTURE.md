@@ -4,7 +4,7 @@
 
 ## Purpose
 
-**PRISM** takes a single market signal and autonomously breaks it down into multiple perspectives: catalyst analysis, price reaction, historical analog patterns, candidate option strategies, and risk critiques. Deterministic business rules govern whether a trade can actually proceed, paper orders execute via Alpaca, and ShadowFund audits counterfactual alternatives against subsequent market data. Process integrity, auditability, and clear decision traces take priority over unconstrained speed.
+**PRISM** takes a single market signal and autonomously breaks it down through a pipeline of **7 specialist AI agents** (news intelligence, quantitative analysis, industry intelligence, fundamental analysis, macroeconomic analysis, market reaction and mispricing detection, and trading decision synthesis) followed by **2 decision and execution layers** (risk management and execution). Deterministic business rules govern whether a trade can actually proceed, paper orders execute via Alpaca, and ShadowFund audits counterfactual alternatives against subsequent market data. Process integrity, auditability, and clear decision traces take priority over unconstrained speed.
 
 > **One signal → Autonomous perspectives → Governed decisions → Clearer outcomes**
 
@@ -28,18 +28,32 @@ Only FastAPI crosses the Alpaca and LLM trust boundaries. Browser code receives 
 ```mermaid
 sequenceDiagram
     participant M as Market/News
-    participant R as Research Agent
-    participant P as Proposal Agent
-    participant K as Risk Agent
+    participant NI as News Intelligence
+    participant QA as Quant Analysis
+    participant II as Industry Intelligence
+    participant FA as Fundamental Analysis
+    participant ME as Macro Analysis
+    participant MR as Market Reaction / Mispricing
+    participant TD as Trading Decision
+    participant RM as Risk Management
     participant B as Rules Engine
-    participant E as Execution Service
+    participant E as Execution Layer
     participant A as Alpaca Paper
     participant S as ShadowFund
 
-    M->>R: Event and normalized market context
-    R-->>P: Validated ResearchReport
-    P-->>K: Candidate TradeProposal or NO_TRADE
-    K-->>B: RiskAssessment
+    M->>NI: Financial news and market events
+    M->>QA: Price/volume/technical data
+    M->>II: Sector and competitor data
+    M->>FA: Fundamentals and financials
+    M->>ME: Macro indicators and indexes
+    NI-->>MR: News analysis
+    QA-->>MR: Quantitative signals
+    II-->>MR: Industry context
+    FA-->>MR: Fundamental assessment
+    ME-->>MR: Macro context
+    MR-->>TD: Validated ResearchReport with mispricing signal
+    TD-->>RM: Candidate TradeProposal or NO_TRADE
+    RM-->>B: RiskAssessment
     B-->>E: AuthorizationDecision + payload digest
     alt approved and current
         E->>E: Recheck state, permissions, freshness, kill switch
@@ -55,14 +69,14 @@ sequenceDiagram
 
 | Module | Owns | Must not own |
 | --- | --- | --- |
-| `research` | Event understanding, analog evidence, reaction gap | Trade authorization or execution |
-| `proposal` | Candidate action, option structure, NO_TRADE | Final risk policy |
-| `risk` | Contextual critique and modifications | Authoritative permission |
+| `research` | Multi-agent analysis pipeline output (news, quant, industry, fundamental, macro, mispricing) and `ResearchReport` | Trade authorization or execution |
+| `proposal` | Trading decision synthesis, candidate option structure, `TradeProposal`, and `NO_TRADE` | Final risk policy |
+| `risk` | Risk management constraints, contextual critique, and modifications | Authoritative permission |
 | `rules` | Versioned deterministic evaluation and authorization | LLM judgment |
 | `profiles` | Versioned tunable parameters and activation history | Hard rule mutation |
 | `market` | Alpaca news/data adapters and normalization | Order placement |
 | `portfolio` | Account snapshots and normalized exposure | Strategy invention |
-| `execution` | Final checks, CLI translation, reconciliation | Changing approved intent |
+| `execution` | Final checks, CLI translation, reconciliation, and `ExecutionReceipt` | Changing approved intent |
 | `shadowfund` | Counterfactual branches and outcome metrics | Live account mutation |
 | `audit` | Append-oriented trace events | Editable business state |
 | `auth` | Seeded credential authentication, session tokens, route guards | Broker access or strategy decisions |
