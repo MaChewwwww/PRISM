@@ -296,6 +296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/quant/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Quantitative
+         * @description Perform 100% deterministic quantitative and technical momentum analysis.
+         */
+        post: operations["analyze_quantitative_api_v1_research_quant_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/reaction/analyze": {
         parameters: {
             query?: never;
@@ -751,6 +771,34 @@ export interface components {
          * @enum {string}
          */
         AuthorizationOutcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+        /** BollingerBands */
+        BollingerBands: {
+            /**
+             * Bandwidth Pct
+             * Format: decimal-string
+             */
+            bandwidth_pct: string;
+            /**
+             * Lower
+             * Format: decimal-string
+             */
+            lower: string;
+            /**
+             * Middle
+             * Format: decimal-string
+             */
+            middle: string;
+            /**
+             * Percent B
+             * Format: decimal-string
+             */
+            percent_b: string;
+            /**
+             * Upper
+             * Format: decimal-string
+             */
+            upper: string;
+        };
         /** Catalyst */
         Catalyst: {
             /** Classification */
@@ -1268,6 +1316,30 @@ export interface components {
             status: "logged_out";
         };
         /**
+         * MACDCrossover
+         * @enum {string}
+         */
+        MACDCrossover: "bullish_cross" | "bearish_cross" | "none";
+        /** MACDSignal */
+        MACDSignal: {
+            crossover: components["schemas"]["MACDCrossover"];
+            /**
+             * Histogram
+             * Format: decimal-string
+             */
+            histogram: string;
+            /**
+             * Macd
+             * Format: decimal-string
+             */
+            macd: string;
+            /**
+             * Signal
+             * Format: decimal-string
+             */
+            signal: string;
+        };
+        /**
          * MarketDataType
          * @enum {string}
          */
@@ -1306,6 +1378,21 @@ export interface components {
          * @enum {string}
          */
         MarketRegime: "normal" | "volatile" | "event" | "crisis";
+        /** MovingAverages */
+        MovingAverages: {
+            /** Price Vs Sma200 Pct */
+            price_vs_sma200_pct?: string | null;
+            /** Price Vs Sma20 Pct */
+            price_vs_sma20_pct?: string | null;
+            /** Price Vs Sma50 Pct */
+            price_vs_sma50_pct?: string | null;
+            /** Sma 20 */
+            sma_20?: string | null;
+            /** Sma 200 */
+            sma_200?: string | null;
+            /** Sma 50 */
+            sma_50?: string | null;
+        };
         /** NewsAnalysisRequest */
         NewsAnalysisRequest: {
             /**
@@ -1624,6 +1711,88 @@ export interface components {
          * @enum {string}
          */
         Provenance: "illustrative_fixture" | "alpaca_paper" | "shadow" | "benchmark" | "simulated" | "planned_integration";
+        /** QuantitativeAnalysisReport */
+        QuantitativeAnalysisReport: {
+            /**
+             * Atr 14
+             * Format: decimal-string
+             */
+            atr_14: string;
+            bollinger_bands: components["schemas"]["BollingerBands"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Current Price
+             * Format: decimal-string
+             */
+            current_price: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            macd: components["schemas"]["MACDSignal"];
+            /**
+             * Momentum Score
+             * Format: decimal-string
+             */
+            momentum_score: string;
+            moving_averages: components["schemas"]["MovingAverages"];
+            /**
+             * Rsi 14
+             * Format: decimal-string
+             */
+            rsi_14: string;
+            rsi_condition: components["schemas"]["RSICondition"];
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Summary */
+            summary: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            trend: components["schemas"]["TrendDirection"];
+            /**
+             * Volatility Annualized Pct
+             * Format: decimal-string
+             */
+            volatility_annualized_pct: string;
+            /**
+             * Volume Surge Ratio
+             * Format: decimal-string
+             */
+            volume_surge_ratio: string;
+        };
+        /** QuantitativeAnalysisRequest */
+        QuantitativeAnalysisRequest: {
+            /**
+             * Bar Limit
+             * @description Number of historical bars to retrieve (default 250 for 200-day SMA)
+             * @default 250
+             */
+            bar_limit: number;
+            /**
+             * Symbol
+             * @description Ticker symbol to quantitatively analyze, e.g. AAPL
+             */
+            symbol: string;
+        };
+        /**
+         * RSICondition
+         * @enum {string}
+         */
+        RSICondition: "oversold" | "overbought" | "neutral";
         /**
          * ReactionClassification
          * @enum {string}
@@ -2133,6 +2302,11 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * TrendDirection
+         * @enum {string}
+         */
+        TrendDirection: "bullish" | "bearish" | "neutral";
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -2711,6 +2885,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LLMEventAnalysis"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_quantitative_api_v1_research_quant_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuantitativeAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuantitativeAnalysisReport"];
                 };
             };
             /** @description Validation Error */

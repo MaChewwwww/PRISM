@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -140,7 +139,7 @@ def compute_bollinger_bands(
     middle = sum(sample) / Decimal(str(period))
 
     variance = sum((p - middle) ** 2 for p in sample) / Decimal(str(period))
-    std_dev = Decimal(str(math.sqrt(float(variance))))
+    std_dev = variance.sqrt()
 
     std_offset = Decimal(str(num_std)) * std_dev
     upper = middle + std_offset
@@ -171,7 +170,9 @@ def compute_atr_and_volatility(
 ) -> tuple[Decimal, Decimal]:
     """Compute Average True Range (14) and 20-day Annualized Volatility (%)."""
     if len(closes) < 2:
-        return Decimal("1.0"), Decimal("20.0")
+        if closes and highs and lows:
+            return round(max(highs[0] - lows[0], Decimal("0")), 2), Decimal("0.0")
+        return Decimal("0.0"), Decimal("0.0")
 
     true_ranges: list[Decimal] = []
     for i in range(1, len(closes)):
@@ -184,19 +185,25 @@ def compute_atr_and_volatility(
     atr_sample = true_ranges[-period:] if len(true_ranges) >= period else true_ranges
     atr = sum(atr_sample) / Decimal(str(len(atr_sample))) if atr_sample else Decimal("1.0")
 
-    # Annualized volatility from returns: std_dev(daily returns) * sqrt(252) * 100
+    # Annualized volatility from returns: std_dev(daily returns) * sqrt(252) * 100.
+    # Keep the calculation Decimal-safe so binary floating point never crosses the
+    # quantitative contract boundary.
     if len(closes) >= 20:
         vol_sample = closes[-20:]
         returns = [
-            float((vol_sample[j] - vol_sample[j - 1]) / vol_sample[j - 1])
+            (vol_sample[j] - vol_sample[j - 1]) / vol_sample[j - 1]
             for j in range(1, len(vol_sample))
+            if vol_sample[j - 1] != Decimal("0")
         ]
-        mean_ret = sum(returns) / len(returns)
-        var_ret = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
-        daily_std = math.sqrt(var_ret)
-        ann_vol = Decimal(str(daily_std * math.sqrt(252) * 100.0))
+        if returns:
+            mean_ret = sum(returns, Decimal("0")) / Decimal(str(len(returns)))
+            var_ret = sum((r - mean_ret) ** 2 for r in returns) / Decimal(str(len(returns)))
+            daily_std = var_ret.sqrt()
+            ann_vol = daily_std * Decimal("252").sqrt() * Decimal("100")
+        else:
+            ann_vol = Decimal("0")
     else:
-        ann_vol = Decimal("20.0")
+        ann_vol = Decimal("0.0")
 
     return round(atr, 2), round(ann_vol, 2)
 
@@ -272,9 +279,9 @@ def compute_quantitative_analysis(
 
     # 2. RSI (14)
     rsi_14 = compute_rsi(closes, 14)
-    if rsi_14 >= Decimal("70.0"):
+    if rsi_14 > Decimal("70.0"):
         rsi_condition = RSICondition.OVERBOUGHT
-    elif rsi_14 <= Decimal("30.0"):
+    elif rsi_14 < Decimal("30.0"):
         rsi_condition = RSICondition.OVERSOLD
     else:
         rsi_condition = RSICondition.NEUTRAL

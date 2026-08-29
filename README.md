@@ -36,6 +36,7 @@ This repository currently implements:
 - authenticated presentation APIs for overview, decisions, portfolio, alternatives, news, agents, governance, and weekly summary;
 - a server-rendered, story-first Next.js skeleton connected only to those APIs;
 - a non-authoritative news-analysis endpoint with redacted provider failures;
+- a deterministic quantitative-analysis endpoint with typed technical indicators;
 - HTTP-only session authentication without browser password disclosure;
 - an Alembic baseline, one-shot Compose migration, dependency-aware readiness, and governed deployment workflows.
 
@@ -94,7 +95,7 @@ POST /api/v1/auth/login
 GET /openapi.json
 ```
 
-Authenticated routes include `/api/v1/auth/me`, `/api/v1/system/status`, `/api/v1/research/news-analysis`, and all `/api/v1/presentation/*` endpoints. Login sets an HTTP-only `prism_session` cookie; the response does not expose the token.
+Authenticated routes include `/api/v1/auth/me`, `/api/v1/system/status`, `/api/v1/research/news/analyze`, `/api/v1/research/reaction/analyze`, `/api/v1/research/quant/analyze`, and all `/api/v1/presentation/*` endpoints. Login sets an HTTP-only `prism_session` cookie; the response does not expose the token.
 
 ## Commands
 

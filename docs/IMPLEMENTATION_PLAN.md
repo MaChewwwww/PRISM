@@ -20,7 +20,7 @@ The `/market-tracker` route and Inspect navigation entry reserve a chart/watchli
 
 ## Next: specialist orchestration
 
-Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. Expand the implemented news and market-reaction research slices without granting them authority.
+Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. The News, deterministic Quantitative, and Market Reaction/Mispricing slices are now implemented without granting them authority; expand them behind the same boundaries.
 
 ## Next: proposal, risk, and deterministic authorization
 

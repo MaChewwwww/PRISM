@@ -485,8 +485,8 @@ class BollingerBands(BaseModel):
 
 
 class QuantitativeAnalysisReport(ContractBase):
-    symbol: str
-    current_price: DecimalString
+    symbol: str = Field(min_length=1)
+    current_price: DecimalString = Field(ge=0)
     trend: TrendDirection
     momentum_score: DecimalString = Field(ge=0, le=100)
     rsi_14: DecimalString = Field(ge=0, le=100)
@@ -494,7 +494,7 @@ class QuantitativeAnalysisReport(ContractBase):
     macd: MACDSignal
     moving_averages: MovingAverages
     bollinger_bands: BollingerBands
-    atr_14: DecimalString
-    volatility_annualized_pct: DecimalString
-    volume_surge_ratio: DecimalString
+    atr_14: DecimalString = Field(ge=0)
+    volatility_annualized_pct: DecimalString = Field(ge=0)
+    volume_surge_ratio: DecimalString = Field(ge=0)
     summary: str

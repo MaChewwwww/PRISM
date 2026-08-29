@@ -43,6 +43,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/system/status` | Redacted operational state | Yes |
 | POST | `/api/v1/research/news/analyze` | Non-authoritative structured news research | Yes |
 | POST | `/api/v1/research/reaction/analyze` | Non-authoritative market-reaction and mispricing research | Yes |
+| POST | `/api/v1/research/quant/analyze` | Deterministic quantitative technical analysis | Yes |
 | GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
 | GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
 | GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
@@ -84,6 +85,10 @@ The implemented news endpoint is non-authoritative research. It uses authenticat
 ## Market-reaction endpoint
 
 `POST /api/v1/research/reaction/analyze` retrieves a bounded historical stock-bar window through the server-side Alpaca read adapter, computes deterministic reaction metrics, and asks the provider-neutral LLM gateway for a structured thesis and limitations. The response is a `ResearchReport` with decimal-safe actual/expected reaction, reaction gap, volume ratio, classification, and opportunity-score fields. It is non-authoritative and cannot authorize or submit an order. Research-report caching uses the Alembic-managed `research_reports` table and remains best-effort.
+
+## Quantitative endpoint
+
+`POST /api/v1/research/quant/analyze` accepts an authenticated `symbol` and bounded `bar_limit` from 20 through 500 (default 250). It retrieves normalized historical bars through the server-side Alpaca gateway and returns a deterministic `QuantitativeAnalysisReport` containing RSI (14), MACD (12, 26, 9), SMA (20, 50, 200), Bollinger Bands (20, 2), ATR (14), annualized volatility, volume surge ratio, and a 0-100 momentum score with trend classification. Decimal values serialize as strings. This report is research evidence only: it is not a `TradeProposal`, authorization, execution instruction, or provider/account assertion. Provider failures use a stable redacted error response.
 
 ## Error and authorization boundaries
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -106,9 +106,6 @@ class AlpacaPyGateway:
         limit: int | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve historical stock bars (OHLCV) from Alpaca Market API for a symbol."""
-        if start is None:
-            start = datetime.now(UTC) - timedelta(days=60)
-
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
             timeframe=timeframe,

@@ -3,6 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+from fastapi import HTTPException
+
 from app.contracts.models import (
     MACDCrossover,
     RSICondition,
@@ -16,6 +19,7 @@ from app.research.quant_engine import (
     compute_rsi,
     compute_sma,
 )
+from app.research.routes import QuantitativeAnalysisRequest, analyze_quantitative
 
 
 def test_compute_sma() -> None:
@@ -74,6 +78,17 @@ def test_compute_atr_and_volatility() -> None:
     assert ann_vol >= Decimal("0.0")
 
 
+def test_compute_atr_and_volatility_short_history_does_not_invent_volatility() -> None:
+    atr, ann_vol = compute_atr_and_volatility(
+        [Decimal("101.0")],
+        [Decimal("99.0")],
+        [Decimal("100.0")],
+    )
+
+    assert atr == Decimal("2.0")
+    assert ann_vol == Decimal("0.0")
+
+
 def test_compute_quantitative_analysis_full_report() -> None:
     # 60 sample bars
     bars = []
@@ -119,3 +134,53 @@ def test_compute_quantitative_analysis_empty_bars() -> None:
     assert report.current_price == Decimal("0.0")
     assert report.trend == TrendDirection.NEUTRAL
     assert report.momentum_score == Decimal("50.0")
+
+
+@pytest.mark.asyncio
+async def test_quantitative_route_normalizes_symbol_and_uses_bounded_bars() -> None:
+    class StubGateway:
+        def get_stock_bars(self, *, symbol: str, limit: int) -> list[dict[str, object]]:
+            assert symbol == "AAPL"
+            assert limit == 20
+            return [
+                {
+                    "open": Decimal("100"),
+                    "high": Decimal("101"),
+                    "low": Decimal("99"),
+                    "close": Decimal(str(100 + index)),
+                    "volume": 1_000 + index,
+                }
+                for index in range(20)
+            ]
+
+    report = await analyze_quantitative(
+        request=QuantitativeAnalysisRequest(symbol=" aapl ", bar_limit=20),
+        current_user="operator@prism.local",
+        gateway=StubGateway(),  # type: ignore[arg-type]
+    )
+
+    assert report.symbol == "AAPL"
+    assert report.current_price == Decimal("119.00")
+
+
+@pytest.mark.asyncio
+async def test_quantitative_route_redacts_provider_errors() -> None:
+    class FailingGateway:
+        def get_stock_bars(self, *, symbol: str, limit: int) -> list[dict[str, object]]:
+            raise RuntimeError("secret-provider-token should not be returned")
+
+    with pytest.raises(HTTPException) as raised:
+        await analyze_quantitative(
+            request=QuantitativeAnalysisRequest(symbol="AAPL", bar_limit=20),
+            current_user="operator@prism.local",
+            gateway=FailingGateway(),  # type: ignore[arg-type]
+        )
+
+    assert raised.value.status_code == 502
+    assert raised.value.detail == "Alpaca market data provider is temporarily unavailable"
+    assert "secret-provider-token" not in str(raised.value.detail)
+
+
+def test_quantitative_request_rejects_blank_symbols() -> None:
+    with pytest.raises(ValueError, match="symbol must not be blank"):
+        QuantitativeAnalysisRequest(symbol="   ")

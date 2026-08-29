@@ -8,7 +8,7 @@ Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
 PRISM is a paper-only market intelligence and governed decision platform. It decomposes one market signal into seven specialist AI perspectives, challenges the resulting proposal with AI-assisted Risk Management, and delegates all execution authority to deterministic code. ShadowFund compares alternatives on the same subsequent market path, and asynchronous Post-Analysis may recommend bounded AI Profile changes for manual review.
 
-The current product is a contract-aligned skeleton. It implements versioned governance data, typed contracts, authenticated news and market-reaction research slices, backend-owned illustrative presentation APIs, a story-first frontend, and deployment/migration foundations. It does not yet implement full specialist orchestration, durable portfolio/authorization/ShadowFund engines, or broker order submission.
+The current product is a contract-aligned skeleton. It implements versioned governance data, typed contracts, authenticated news, deterministic quantitative, and market-reaction research slices, backend-owned illustrative presentation APIs, a story-first frontend, and deployment/migration foundations. It does not yet implement full specialist orchestration, durable portfolio/authorization/ShadowFund engines, or broker order submission.
 
 Every current demonstration response is labeled **Illustrative fixture**. It does not represent an Alpaca account, paper order, fill, holding, P&L record, or model/provider call.
 
@@ -162,7 +162,7 @@ The backend sets an HTTP-only `prism_session` cookie; login does not return a to
 
 Alembic owns schema creation. Compose runs a one-shot migration before FastAPI. Readiness validates required configuration and database access; liveness only reports process response. Local direct ports are 3000/8000, while base Compose defaults are 3005/8005. Production publishes Nginx only and deploys automatically after successful protected `main` CI; staging is separately gated.
 
-Provider errors are classified and redacted. The implemented news and market-reaction endpoints run non-authoritative research with structured validation, bounded provider reads, and non-blocking classified retries.
+Provider errors are classified and redacted. The implemented news, deterministic quantitative, and market-reaction endpoints run non-authoritative research with structured validation, bounded provider reads, and non-blocking classified retries. Quantitative output is a typed technical report and never an authorization signal.
 
 ## Frontend concept
 
@@ -185,7 +185,7 @@ Market Tracker is an authenticated Inspect surface for a future interactive pric
 - authenticated illustrative presentation APIs and stable decision IDs;
 - story-first frontend connected only to backend APIs;
 - canonical agent/governance/provenance presentation;
-- implemented news and market-reaction research slices with redacted failures;
+- implemented news, deterministic quantitative, and market-reaction research slices with redacted failures;
 - authentication hardening, Alembic baseline, migration service, readiness, CORS, and port alignment.
 
 ### Deferred engines

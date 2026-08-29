@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
@@ -59,13 +59,25 @@ class MarketReactionRequest(BaseModel):
 
 
 class QuantitativeAnalysisRequest(BaseModel):
-    symbol: str = Field(..., description="Ticker symbol to quantitatively analyze, e.g. AAPL")
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Ticker symbol to quantitatively analyze, e.g. AAPL",
+    )
     bar_limit: int = Field(
         default=250,
         ge=20,
         le=500,
         description="Number of historical bars to retrieve (default 250 for 200-day SMA)",
     )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
 
 
 def get_alpaca_gateway(settings: Annotated[Settings, Depends(get_settings)]) -> AlpacaPyGateway:
@@ -200,11 +212,20 @@ async def analyze_quantitative(
     symbol = request.symbol.strip().upper()
 
     try:
-        bars = gateway.get_stock_bars(symbol=symbol, limit=request.bar_limit)
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
     except Exception as exc:
+        logger.warning(
+            "Alpaca quantitative-bar provider failed for symbol=%s: %s",
+            symbol,
+            type(exc).__name__,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch market bars from Alpaca: {exc!s}",
+            detail="Alpaca market data provider is temporarily unavailable",
         ) from exc
 
     if not bars:

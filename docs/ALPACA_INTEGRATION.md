@@ -2,7 +2,7 @@
 
 ## Responsibility split
 
-- `alpaca-py` is the selected typed read gateway. The current implemented provider slices are authenticated news analysis and read-only historical stock bars for market-reaction research; broader account, asset, and option reads remain adapter work.
+- `alpaca-py` is the selected typed read gateway. The current implemented provider slices are authenticated news analysis, deterministic quantitative analysis, and read-only historical stock bars for market-reaction research; broader account, asset, and option reads remain adapter work.
 - Alpaca CLI v0.0.13 is the selected future order-submission adapter. The current skeleton does not submit orders.
 - Alpaca MCP may be used by developers for read-only investigation with toolsets limited to `account`, `assets`, `stock-data`, `options-data`, and `news`. Trading tools are excluded and credentials are never committed.
 
@@ -15,6 +15,8 @@ Configuration must target Alpaca's paper endpoint. Live mode is a startup error.
 Initial strategies are long calls, long puts, and two-leg call/put debit spreads. Single long options require Level 2; spreads require Level 3. Spread legs must use the same underlying and expiration, simplified 1:1 ratios, `order_class=mleg`, limit pricing, and `day` time-in-force. The system rejects uncovered shorts, credit spreads, equity-option combinations, inactive/non-tradable contracts, extended-hours options, exercise requests, and other strategies.
 
 The BA rules require defined-risk debit spreads when IV Rank exceeds 50%. The market-reaction slice retrieves bounded historical stock bars for research only; it does not compute IV Rank, authorize a proposal, or submit an order. The future market adapter must source and validate the inputs needed for that rule.
+
+The Quantitative Agent retrieves normalized historical stock bars through `AlpacaPyGateway`, then computes deterministic RSI, MACD, moving averages, Bollinger Bands, ATR, annualized volatility, volume surge, and momentum. `POST /api/v1/research/quant/analyze` is authenticated and research-only; it cannot authorize or submit an order. Provider errors are logged by exception class and returned as a redacted temporary-unavailability response.
 
 For the BA-authorized hackathon window, official scoring uses total account equity at EOD Thursday Sep 3, 2026. New entries stop at Wednesday Sep 2, 2026 16:00 ET and all positions force-flatten by Thursday's close. The outer Friday Sep 4 09:30 ET boundary is not a scoring extension. A Sep-3-expiring contract must not be held into settlement; the 0-DTE block, DTE exit, and force-flatten are cumulative controls.
 
