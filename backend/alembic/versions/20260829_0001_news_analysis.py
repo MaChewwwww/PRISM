@@ -8,7 +8,7 @@ Create Date: 2026-08-29
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
+from alembic import context, op
 
 revision: str = "20260829_0001"
 down_revision: str | None = None
@@ -16,9 +16,61 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+_TABLE_NAME = "llm_event_analyses"
+_REQUIRED_COLUMNS = {
+    "id",
+    "trace_id",
+    "created_at",
+    "schema_version",
+    "article_id",
+    "symbol",
+    "headline",
+    "event_type",
+    "sentiment",
+    "significance_score",
+    "expected_reaction_pct",
+    "rationale",
+    "model_name",
+    "prompt_version",
+    "raw_digest",
+}
+
+
+def _adopt_legacy_table_if_compatible() -> bool:
+    """Return True when the pre-Alembic table can be adopted safely.
+
+    Earlier staging revisions created this table with ``Base.metadata.create_all``.
+    Those databases have the complete schema but no ``alembic_version`` row.  The
+    baseline must record its revision without attempting to recreate the table;
+    an incompatible table fails closed so a later migration can be authored.
+    """
+
+    # Offline SQL generation has no database to inspect; emit the baseline DDL.
+    if context.is_offline_mode():
+        return False
+
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if not inspector.has_table(_TABLE_NAME):
+        return False
+
+    existing_columns = {column["name"] for column in inspector.get_columns(_TABLE_NAME)}
+    missing_columns = sorted(_REQUIRED_COLUMNS - existing_columns)
+    if missing_columns:
+        missing = ", ".join(missing_columns)
+        raise RuntimeError(
+            f"Existing {_TABLE_NAME} table is incompatible with migration "
+            f"{revision}; missing columns: {missing}"
+        )
+    return True
+
+
 def upgrade() -> None:
+    if _adopt_legacy_table_if_compatible():
+        return
+
     op.create_table(
-        "llm_event_analyses",
+        _TABLE_NAME,
         sa.Column("id", sa.String(length=36), nullable=False),
         sa.Column("trace_id", sa.String(length=36), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -40,4 +92,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("llm_event_analyses")
+    op.drop_table(_TABLE_NAME)
