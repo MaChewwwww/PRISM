@@ -68,6 +68,8 @@ jobs:
           script: |
             set -eu
             cd "$APP_PATH"
+            git reset --hard
+            git clean -fd
             git fetch --depth=1 origin "$DEPLOY_REV"
             git checkout --detach "$DEPLOY_REV"
             docker compose -f compose.yml -f compose.production.yml up -d --build --remove-orphans
