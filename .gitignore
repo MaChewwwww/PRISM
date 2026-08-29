@@ -1,0 +1,44 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.staging.example
+!.env.production.example
+*.pem
+*.key
+
+# JavaScript
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+
+# Build and runtime artifacts
+build/
+!backend/build/
+!backend/build/contracts.openapi.json
+dist/
+logs/
+tmp/
+*.log
+
+# IDE and OS
+.idea/
+.vscode/settings.json
+.DS_Store
+Thumbs.db
+
+# Local Alpaca/agent configuration
+.mcp.json
+alpaca-profiles/
+runs/

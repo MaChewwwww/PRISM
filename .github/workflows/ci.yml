@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [staging, main]
+  push:
+    branches: [staging, main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint GitHub Actions workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: 0.12.3
+          enable-cache: true
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile && uv sync --project backend --frozen
+      - name: Verify repository
+        run: pnpm verify
+      - name: Audit JavaScript dependencies
+        run: pnpm audit --audit-level high
+      - name: Export locked Python requirements
+        run: uv export --project backend --locked --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/backend-requirements.txt"
+      - name: Audit Python dependencies
+        run: uvx --from pip-audit==2.9.0 pip-audit -r "$RUNNER_TEMP/backend-requirements.txt"
+
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

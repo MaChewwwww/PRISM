@@ -1,0 +1,29 @@
+{
+  "name": "alpaca-ai-hackathon",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "setup": "pnpm install && uv sync --project backend",
+    "dev": "concurrently -n web,api -c cyan,magenta \"pnpm --dir frontend dev\" \"uv run --project backend python -m uvicorn app.main:app --reload --port 8000 --app-dir backend\"",
+    "lint": "pnpm --dir frontend lint && uv run --project backend ruff check backend/app backend/tests backend/scripts scripts",
+    "format:check": "pnpm --dir frontend format:check && uv run --project backend ruff format --check backend/app backend/tests backend/scripts scripts",
+    "typecheck": "pnpm --dir frontend typecheck && uv run --project backend mypy backend/app",
+    "test": "pnpm --dir frontend test:run && uv run --project backend pytest",
+    "contracts": "uv run --project backend python backend/scripts/export_contracts.py && pnpm exec openapi-typescript backend/build/contracts.openapi.json -o frontend/src/types/api.generated.ts",
+    "contracts:check": "pnpm contracts && git diff --exit-code -- backend/build/contracts.openapi.json frontend/src/types/api.generated.ts",
+    "skills:check": "uv run --project backend python scripts/vendor_alpaca_skills.py --check",
+    "repo:check": "uv run --project backend python scripts/check_repository.py",
+    "build": "pnpm --dir frontend build && uv run --project backend python -m compileall -q backend/app",
+    "verify": "pnpm repo:check && pnpm skills:check && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm contracts:check && pnpm build",
+    "docker:config": "docker compose -f compose.yml -f compose.production.yml config --quiet",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.4",
+    "openapi-typescript": "7.13.0"
+  }
+}

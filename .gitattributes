@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.docx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+.agents/skills/vendor/** whitespace=-trailing-space
+docs/conceptual/PROJECT_CONCEPT.md whitespace=-trailing-space

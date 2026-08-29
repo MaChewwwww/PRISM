@@ -1,0 +1,4 @@
+services:
+  nginx:
+    ports: !override
+      - "${STAGING_HTTP_PORT:-8080}:80"

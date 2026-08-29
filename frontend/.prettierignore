@@ -1,0 +1,4 @@
+.next
+coverage
+src/components/ui
+src/types/api.generated.ts

@@ -1,0 +1,55 @@
+name: Deploy staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [staging]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      vars.STAGING_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    environment: staging
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Verify the revision belongs to staging
+        env:
+          DEPLOY_REV: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git fetch origin staging
+          test "$(git rev-parse origin/staging)" = "$DEPLOY_REV"
+      - name: Validate deployment configuration
+        run: docker compose -f compose.yml -f compose.production.yml -f compose.staging.yml config --quiet
+      - name: Deploy exact staging revision
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          DEPLOY_REV: ${{ github.event.workflow_run.head_sha }}
+          APP_PATH: ${{ secrets.VPS_APP_PATH }}
+          STAGING_HTTP_PORT: ${{ vars.STAGING_HTTP_PORT || '8080' }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DEPLOY_REV,APP_PATH,STAGING_HTTP_PORT
+          script: |
+            set -eu
+            cd "$APP_PATH"
+            git fetch --depth=1 origin "$DEPLOY_REV"
+            git checkout --detach "$DEPLOY_REV"
+            docker compose -p governed-market-staging -f compose.yml -f compose.production.yml -f compose.staging.yml up -d --build --remove-orphans
+            curl --fail --silent --show-error http://localhost:${STAGING_HTTP_PORT:-8080}/api/v1/health/ready

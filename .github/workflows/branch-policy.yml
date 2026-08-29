@@ -1,0 +1,20 @@
+name: Branch policy
+
+on:
+  pull_request:
+    branches: [staging, main]
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  branch-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce feature to staging to main
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: python scripts/check_branch_flow.py --head "$HEAD_BRANCH" --base "$BASE_BRANCH"

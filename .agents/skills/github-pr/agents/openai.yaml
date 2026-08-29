@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub PR"
+  short_description: "Commit changes and open a governed pull request"
+  default_prompt: "Use $github-pr to commit the current change and open the correct pull request."

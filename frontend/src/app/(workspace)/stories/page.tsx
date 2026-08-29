@@ -1,0 +1,75 @@
+import { Filter, RotateCcw } from "lucide-react";
+import Link from "next/link";
+
+import { DateRangeControl } from "@/components/product/date-range-control";
+import { DemoDataNotice, PageHeader } from "@/components/product/workspace-ui";
+import {
+  listStories,
+  rangeQuery,
+  readDateRange,
+  type SearchValues,
+} from "@/features/story/story-data";
+import { StoryList } from "@/features/story/story-list";
+
+function value(values: SearchValues, key: string) {
+  const found = values[key];
+  return Array.isArray(found) ? found[0] : found;
+}
+
+export default async function StoriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchValues>;
+}) {
+  const values = await searchParams;
+  const range = readDateRange(values);
+  const outcome = value(values, "outcome") ?? "all";
+  const symbol = value(values, "symbol") ?? "all";
+  const stories = listStories(range, { outcome, symbol });
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Decision stories"
+        title="The full history, told as decisions"
+        description="Browse catalysts, agent debate, deterministic gates, paper-shaped outcomes, and counterfactual lessons without jumping between domain tables."
+      />
+      <DemoDataNotice />
+      <DateRangeControl range={range} />
+      <form className="filter-bar" method="get">
+        <Filter aria-hidden="true" />
+        <input type="hidden" name="range" value={range.preset} />
+        <input type="hidden" name="from" value={range.from} />
+        <input type="hidden" name="to" value={range.to} />
+        <label>
+          <span>Outcome</span>
+          <select name="outcome" defaultValue={outcome}>
+            <option value="all">All outcomes</option>
+            <option value="pass">Pass</option>
+            <option value="modify">Modify</option>
+            <option value="fail">Fail</option>
+            <option value="no_trade">No trade</option>
+            <option value="degraded">Degraded</option>
+          </select>
+        </label>
+        <label>
+          <span>Symbol</span>
+          <select name="symbol" defaultValue={symbol}>
+            <option value="all">All symbols</option>
+            {["ACME", "NOVA", "ORBT", "VELA", "KITE", "HELI"].map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <button type="submit">Apply filters</button>
+        <Link href={`/stories?${rangeQuery(range)}`}>
+          <RotateCcw aria-hidden="true" /> Clear
+        </Link>
+      </form>
+      <div className="result-count" role="status">
+        {stories.length} fictional {stories.length === 1 ? "story" : "stories"}
+      </div>
+      <StoryList stories={stories} />
+    </>
+  );
+}

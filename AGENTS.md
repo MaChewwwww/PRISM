@@ -1,0 +1,33 @@
+# Repository Agent Instructions
+
+This file is the canonical instruction entrypoint for every coding agent and contributor in this repository. `CLAUDE.md` and `GEMINI.md` only redirect here.
+
+## Required reading order
+
+Before changing code or documentation, read the applicable rules in order:
+
+1. `.agents/rules/00-repository-onboarding.md`
+2. `.agents/rules/10-architecture.md`
+3. `.agents/rules/20-alpaca-documentation.md` for Alpaca-facing work
+4. `.agents/rules/30-trading-safety.md` for market, portfolio, rules, or execution work
+5. `.agents/rules/40-frontend-design.md` for frontend work
+6. `.agents/rules/50-testing-quality.md`
+7. `.agents/rules/60-documentation.md`
+8. `.agents/rules/70-commits-pull-requests.md` for commits, branches, and pull requests
+
+Read `docs/README.md` and the documents it identifies for the subsystem being changed. Treat `docs/conceptual/PROJECT_CONCEPT.md` as the conceptual source of truth. The application name is confirmed as **PRISM**; BA-owned numerical thresholds remain intentionally unresolved.
+
+## Non-negotiable repository invariants
+
+- The system is paper-trading only. Never add or enable a live-trading path.
+- AI produces research, proposals, critiques, and recommendations; deterministic code authorizes execution.
+- The frontend never receives Alpaca or LLM credentials and never calls Alpaca directly.
+- Execution is disabled by default and fails closed without a valid active ruleset and authorization.
+- Financial values use decimal-safe representations, never binary floating point at trust boundaries.
+- Do not invent BA thresholds, product names, API behavior, or Alpaca capabilities.
+- Preserve generated/source boundaries. Regenerate contract output instead of hand-editing it.
+- Vendored Alpaca skills are upstream references. These root rules take precedence over them.
+
+## Normal verification
+
+Run the narrowest relevant checks while developing, then run `pnpm verify` before handing off a repository-wide change. Paper API integration tests are opt-in and must never place an order unless the user explicitly requests that test.

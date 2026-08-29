@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/alpacahq/alpaca-skills",
+  "commit": "62891eca3d71f855bd6f87dffcfadb0dab882fb4",
+  "authority": "Repository AGENTS.md and .agents/rules override vendored instructions.",
+  "files": {
+    "LICENSE": "a2b4ae6112a88675df67997572c544c0c2fe884c44817ed5680b25d1a367b959",
+    "skills/trading-api/backtest/SKILL.md": "830db169959a852e75e88250f49678611944c83fb1bc6e8703ecbeac5f42da3c",
+    "skills/trading-api/backtest/reference.md": "d0ed8f7c53500c9ae008d6b59f82fc0044d67bda0580f82409589c6ec1874bfe",
+    "skills/trading-api/paper-trading/SKILL.md": "0c9f90ca6af4e6fe0dd9b1be901ab301f7fb4cd8517e6f52cb43258252f1c79d",
+    "skills/trading-api/paper-trading/reference.md": "3c9acdfa2fa70d2f06ea967a25335ebedd69509df2b8736f0249196e33065be1",
+    "skills/trading-api/paper-trading-cli/SKILL.md": "40867969d5b98b030e43338392a248c311d91ddc11861ce495205a91039c5063",
+    "skills/trading-api/paper-trading-cli/reference.md": "2a0e9671cc2ee722e9dfb0a6c2c382b8f0c911492308713f9d044e80ee3656b6",
+    "skills/trading-api/paper-trading-mcp/SKILL.md": "a3d88b2297656aae96691967f825a778326673fe828de5a5edbeee54e55d8a6d",
+    "skills/trading-api/paper-trading-mcp/reference.md": "8a66a1577c5ed24608428b6fd5f6c172192e3c3598453e276f5067616aca473c"
+  }
+}

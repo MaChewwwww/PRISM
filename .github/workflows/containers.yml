@@ -1,0 +1,42 @@
+name: Container build and scan
+
+on:
+  pull_request:
+    branches: [staging, main]
+  push:
+    branches: [staging, main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  containers:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - name: frontend
+            dockerfile: frontend/Dockerfile
+          - name: backend
+            dockerfile: backend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          load: true
+          push: false
+          tags: local/${{ matrix.name }}:${{ github.sha }}
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: local/${{ matrix.name }}:${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.name }}.sarif

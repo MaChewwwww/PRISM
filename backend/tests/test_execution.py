@@ -1,0 +1,222 @@
+from __future__ import annotations
+
+import hashlib
+import subprocess
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+from typing import Any
+from uuid import uuid4
+
+import pytest
+
+from app.contracts.models import (
+    AuthorizationDecision,
+    AuthorizationState,
+    OptionLeg,
+    OptionSide,
+    OptionStrategy,
+    OptionType,
+    StrategyKind,
+    TradeProposal,
+)
+from app.core.config import Settings
+from app.execution.cli_gateway import (
+    AlpacaCliExecutionGateway,
+    CommandResult,
+    InMemoryReceiptRepository,
+)
+from app.execution.validation import ExecutionRejected, validate_strategy
+
+
+class RecordingRunner:
+    def __init__(self, results: list[CommandResult | BaseException] | None = None):
+        self.results = results or [CommandResult(0, '{"id":"broker-1","status":"accepted"}', "")]
+        self.calls: list[tuple[list[str], str, dict[str, str], float]] = []
+
+    def run(
+        self, argv: list[str], stdin: str, env: dict[str, str], timeout: float
+    ) -> CommandResult:
+        self.calls.append((argv, stdin, env, timeout))
+        result = self.results.pop(0)
+        if isinstance(result, BaseException):
+            raise result
+        return result
+
+
+def build_proposal(kind: StrategyKind = StrategyKind.LONG_CALL) -> TradeProposal:
+    trace_id = uuid4()
+    is_spread = kind in {StrategyKind.CALL_DEBIT_SPREAD, StrategyKind.PUT_DEBIT_SPREAD}
+    option_type = (
+        OptionType.PUT
+        if kind in {StrategyKind.LONG_PUT, StrategyKind.PUT_DEBIT_SPREAD}
+        else OptionType.CALL
+    )
+    long_strike = Decimal("105") if option_type == OptionType.PUT and is_spread else Decimal("100")
+    short_strike = Decimal("100") if option_type == OptionType.PUT else Decimal("105")
+    legs = [
+        OptionLeg(
+            symbol="SPY270115C00100000",
+            underlying="SPY",
+            expiration="2027-01-15",
+            option_type=option_type,
+            side=OptionSide.BUY,
+            strike_price=long_strike,
+        )
+    ]
+    if is_spread:
+        legs.append(
+            OptionLeg(
+                symbol="SPY270115C00105000",
+                underlying="SPY",
+                expiration="2027-01-15",
+                option_type=option_type,
+                side=OptionSide.SELL,
+                strike_price=short_strike,
+            )
+        )
+    return TradeProposal(
+        trace_id=trace_id,
+        research_report_id=uuid4(),
+        symbol="SPY",
+        strategy=OptionStrategy(kind=kind, legs=legs, limit_price=Decimal("2.50")),
+        quantity=1,
+        rationale="Test fixture",
+        proposal_digest=hashlib.sha256(b"proposal").hexdigest(),
+    )
+
+
+def build_decision(proposal: TradeProposal, **updates: object) -> AuthorizationDecision:
+    values: dict[str, object] = {
+        "trace_id": proposal.trace_id,
+        "proposal_id": proposal.id,
+        "proposal_digest": proposal.proposal_digest,
+        "ruleset_version": "rules-v1",
+        "state": AuthorizationState.ACCEPTED,
+        "expires_at": datetime.now(UTC) + timedelta(minutes=1),
+        "account_observed_at": datetime.now(UTC),
+        "supported_options_level": 3,
+        "account_verified": True,
+    }
+    values.update(updates)
+    return AuthorizationDecision(**values)
+
+
+def execution_settings(**updates: Any) -> Settings:
+    values: dict[str, Any] = {
+        "_env_file": None,
+        "execution_enabled": True,
+        "execution_kill_switch": False,
+        "active_ruleset_version": "rules-v1",
+        "alpaca_api_key": "paper-key",
+        "alpaca_secret_key": "paper-secret",
+    }
+    values.update(updates)
+    return Settings(**values)
+
+
+@pytest.mark.parametrize(
+    ("decision_updates", "message"),
+    [
+        ({"state": AuthorizationState.REJECTED}, "not accepted"),
+        ({"state": AuthorizationState.MODIFIED_PENDING_ACCEPTANCE}, "not accepted"),
+        ({"proposal_digest": "0" * 64}, "does not match"),
+        ({"expires_at": datetime.now(UTC) - timedelta(seconds=1)}, "expired"),
+        ({"account_observed_at": datetime.now(UTC) - timedelta(minutes=5)}, "not fresh"),
+        ({"supported_options_level": 1}, "insufficient"),
+    ],
+)
+def test_frs_010_rejected_decisions_never_invoke_cli(
+    decision_updates: dict[str, object], message: str
+) -> None:
+    proposal = build_proposal()
+    runner = RecordingRunner()
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    with pytest.raises(ExecutionRejected, match=message):
+        gateway.submit(proposal, build_decision(proposal, **decision_updates))
+    assert runner.calls == []
+
+
+def test_frs_011_submits_json_stdin_without_shell_command() -> None:
+    proposal = build_proposal(StrategyKind.CALL_DEBIT_SPREAD)
+    runner = RecordingRunner()
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    receipt = gateway.submit(proposal, build_decision(proposal))
+    argv, body, env, _ = runner.calls[0]
+    assert argv[1:] == ["api", "POST", "/v2/orders", "--quiet"]
+    assert '"order_class":"mleg"' in body
+    assert "paper-secret" not in " ".join(argv)
+    assert env["ALPACA_LIVE_TRADE"] == "false"
+    assert receipt.broker_order_id == "broker-1"
+
+
+def test_frs_013_timeout_reconciles_without_resubmission() -> None:
+    proposal = build_proposal()
+    runner = RecordingRunner(
+        [
+            subprocess.TimeoutExpired("alpaca", 1),
+            CommandResult(0, '{"id":"recovered","status":"accepted"}', ""),
+        ]
+    )
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    receipt = gateway.submit(proposal, build_decision(proposal))
+    assert len(runner.calls) == 2
+    assert runner.calls[1][0][1] == "order"
+    assert "get-by-client-id" in runner.calls[1][0]
+    assert receipt.broker_order_id == "recovered"
+
+
+def test_nfrs_004_duplicate_intent_reuses_persisted_receipt() -> None:
+    proposal = build_proposal()
+    runner = RecordingRunner()
+    repository = InMemoryReceiptRepository()
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, repository)
+    decision = build_decision(proposal)
+    first = gateway.submit(proposal, decision)
+    second = gateway.submit(proposal, decision)
+    assert first.client_order_id == second.client_order_id
+    assert len(runner.calls) == 1
+
+
+def test_frs_014_kill_switch_prevents_invocation() -> None:
+    proposal = build_proposal()
+    runner = RecordingRunner()
+    gateway = AlpacaCliExecutionGateway(
+        execution_settings(execution_kill_switch=True), runner, InMemoryReceiptRepository()
+    )
+    with pytest.raises(ExecutionRejected, match="kill-switched"):
+        gateway.submit(proposal, build_decision(proposal))
+    assert not runner.calls
+
+
+def test_frs_007_rejects_uncovered_short() -> None:
+    proposal = build_proposal()
+    proposal.strategy.legs[0].side = OptionSide.SELL
+    with pytest.raises(ExecutionRejected, match="long call or long put"):
+        validate_strategy(proposal.strategy)
+
+
+@pytest.mark.parametrize("mutation", ["ratio", "underlying", "expiration", "both_buy", "credit"])
+def test_frs_007_rejects_malformed_spreads(mutation: str) -> None:
+    proposal = build_proposal(StrategyKind.CALL_DEBIT_SPREAD)
+    long_leg, short_leg = proposal.strategy.legs
+    if mutation == "ratio":
+        short_leg.ratio_qty = 2
+    elif mutation == "underlying":
+        short_leg.underlying = "QQQ"
+    elif mutation == "expiration":
+        short_leg.expiration = "2027-02-19"
+    elif mutation == "both_buy":
+        short_leg.side = OptionSide.BUY
+    else:
+        long_leg.strike_price = Decimal("110")
+    with pytest.raises(ExecutionRejected):
+        validate_strategy(proposal.strategy)
+
+
+def test_frs_008_spread_requires_level_three() -> None:
+    proposal = build_proposal(StrategyKind.PUT_DEBIT_SPREAD)
+    runner = RecordingRunner()
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    with pytest.raises(ExecutionRejected, match="insufficient"):
+        gateway.submit(proposal, build_decision(proposal, supported_options_level=2))
+    assert not runner.calls

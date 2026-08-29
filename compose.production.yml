@@ -1,0 +1,41 @@
+services:
+  nginx:
+    image: nginx:1.28.0-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [edge, application]
+
+  frontend:
+    ports: !reset []
+    restart: unless-stopped
+    networks: [application]
+
+  backend:
+    ports: !reset []
+    restart: unless-stopped
+    networks: [application, data]
+
+  postgres:
+    ports: !reset []
+    restart: unless-stopped
+    networks: [data]
+
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+    networks: [data]
+
+networks:
+  edge:
+  application:
+    internal: true
+  data:
+    internal: true

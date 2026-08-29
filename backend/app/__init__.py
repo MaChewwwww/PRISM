@@ -1,0 +1,1 @@
+"""Governed market-reaction API."""
