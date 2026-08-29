@@ -23,6 +23,6 @@ Legacy research, proposal, execution, audit, profile, and ShadowFund URLs redire
 - Recharts receives numbers only inside chart presentation adapters. Exact financial fixture values remain decimal strings and are available in accessible tables.
 - Every surface identifies its actual source. The current backend fixture remains labeled in provenance metadata; it never implies a broker account, fill, or order.
 
-The staging and production login forms prefill the non-secret operator email from the server environment and offer a judge sign-in action. The password is never sent to browser JavaScript or exposed by a hint endpoint; the server-side route uses the protected environment value to establish the HTTP-only session.
+The staging and production login forms do not auto-fill credentials. When configured, they offer a Login as a Judge action that uses protected server environment values to establish the HTTP-only session; the password is never sent to browser JavaScript or exposed by a hint endpoint.
 
 From the repository root, use `pnpm dev`, `pnpm test`, and `pnpm verify`.

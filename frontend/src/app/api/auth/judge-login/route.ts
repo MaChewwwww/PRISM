@@ -21,7 +21,6 @@ export async function GET() {
   const credentials = judgeCredentials();
   return NextResponse.json({
     enabled: credentials !== null,
-    email: credentials?.email ?? null,
   });
 }
 

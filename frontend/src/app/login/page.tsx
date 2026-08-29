@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [judgeLoginAvailable, setJudgeLoginAvailable] = useState(false);
-  const [judgeEmail, setJudgeEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,13 +17,11 @@ export default function LoginPage() {
     fetch("/api/auth/judge-login")
       .then(async (response) => {
         if (!response.ok) return;
-        return (await response.json()) as { enabled?: boolean; email?: string | null };
+        return (await response.json()) as { enabled?: boolean };
       })
       .then((hint) => {
-        if (!active || !hint?.enabled || !hint.email) return;
+        if (!active || !hint?.enabled) return;
         setJudgeLoginAvailable(true);
-        setJudgeEmail(hint.email);
-        setEmail((current) => current || hint.email || "");
       })
       .catch(() => undefined);
     return () => {
@@ -157,7 +154,7 @@ export default function LoginPage() {
 
             <p className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)]/60 p-3 text-xs text-[var(--muted-foreground)]">
               {judgeLoginAvailable
-                ? `Judge access is ready for ${judgeEmail}. The password stays server-side.`
+                ? "Judge access is ready. The password stays server-side."
                 : "Use the operator credentials supplied through the environment owner. Passwords stay server-side."}
             </p>
 
@@ -169,7 +166,7 @@ export default function LoginPage() {
                 className="flex w-full items-center justify-center gap-2 border border-[var(--primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/10 disabled:opacity-50"
               >
                 <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                Sign in as judge
+                Login as a Judge
               </button>
             )}
 
