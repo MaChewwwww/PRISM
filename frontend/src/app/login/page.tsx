@@ -154,7 +154,10 @@ export default function LoginPage() {
             <div className="rounded border border-[var(--border)] bg-[var(--surface-raised)]/60 p-3 text-xs backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-medium text-[var(--foreground)]">
-                  <KeyRound className="h-3.5 w-3.5 text-[var(--color-perspective-proposal,#547D83)]" aria-hidden="true" />
+                  <KeyRound
+                    className="h-3.5 w-3.5 text-[var(--color-perspective-proposal,#547D83)]"
+                    aria-hidden="true"
+                  />
                   <span className="capitalize">{demoCreds.environment} Seeded Account</span>
                 </div>
                 <button
