@@ -15,6 +15,20 @@ Every action here is expected to alter the server. Say what you are about to run
 before running it, run the smallest command that achieves the goal, and verify
 afterwards with an explicit check rather than an assumption.
 
+## Strict Governance: No Direct Code Changes via SSH
+
+> [!IMPORTANT]
+> **Never modify, patch, or edit application code directly on the server over SSH.**
+> 
+> All code, template, Dockerfile, and repository configuration changes **must go through a GitHub Pull Request and require approval**:
+> 1. Create a governed branch from `staging` (e.g. `feature/*`, `fix/*`, `chore/*`).
+> 2. Implement and verify changes locally with `pnpm verify`.
+> 3. Open a Pull Request targeting `staging` using the `github-pr` skill.
+> 4. Obtain user review and explicit approval before merging.
+> 5. Let the automated CI/CD deployment pipeline deploy the verified commit to the server.
+> 
+> SSH access is strictly limited to runtime service management (restarting containers, running migrations/seeders, pruning Docker cache, inspecting logs, and updating server runtime secrets in `.env.*`). Never perform ad-hoc code edits or git mutations directly on the host VM.
+
 ## Connection Setup
 
 1. Read `docs/deployment/staging-server-maintenance-cheatsheet.md` before
@@ -88,6 +102,7 @@ unexpectedly starts building.
   catalog refreshes.
 - Edit `.env.*` files on the server when a configuration value must change.
   Show the diff and the affected services before applying.
+- **Prohibited**: Direct source code editing, patching, or git commits on the server. All code changes must go through a pull request and require approval.
 
 ## Root-Level Operations
 
