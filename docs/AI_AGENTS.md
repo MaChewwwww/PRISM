@@ -46,6 +46,6 @@ In a VOLATILE regime with IV Rank above 50%, deterministic policy restricts prop
 
 ## Provider boundary and failure behavior
 
-Model providers remain behind a neutral adapter. Invalid structured output, missing required evidence, timeouts after classified retries, or unsafe provider responses stop the relevant workflow and expose a redacted error. The implemented `/api/v1/research/news/analyze` and `/api/v1/research/reaction/analyze` slices are non-authoritative and do not change this boundary.
+Model providers remain behind a neutral adapter. Invalid structured output, missing required evidence, timeouts after classified retries, or unsafe provider responses stop the relevant workflow and expose a redacted error. The implemented `/api/v1/research/news/analyze`, `/api/v1/research/reaction/analyze`, and deterministic `/api/v1/research/quant/analyze` slices are non-authoritative and do not change this boundary. Quantitative analysis uses only normalized historical bars and emits a typed technical report; it never proposes or authorizes an order.
 
 The active model/provider selection remains deployment configuration. Automatic AI Profile switching is deferred.

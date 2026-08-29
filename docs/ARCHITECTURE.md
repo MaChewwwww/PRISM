@@ -2,7 +2,7 @@
 
 Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
-PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The current repository is a contract-aligned skeleton: it implements authenticated news and market-reaction research slices, typed domain boundaries, authenticated illustrative presentation APIs, a generated frontend transport contract, and deployment foundations. Full orchestration, persisted portfolio services, ShadowFund evaluation, and paper order execution remain future work.
+PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The current repository is a contract-aligned skeleton: it implements authenticated news, deterministic quantitative, and market-reaction research slices, typed domain boundaries, authenticated illustrative presentation APIs, a generated frontend transport contract, and deployment foundations. Full orchestration, persisted portfolio services, ShadowFund evaluation, and paper order execution remain future work.
 
 ## Authority and dependency direction
 
@@ -80,7 +80,7 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | --- | --- | --- |
 | `contracts` | Typed proposal, risk, governance, authorization, execution, profile, and audit records | Implemented skeleton |
 | `rules` | Versioned BA registry and deterministic policy boundary | Registry and typed boundary implemented; full evaluator deferred |
-| `research` | Provider-normalized evidence and structured research | News and market-reaction endpoints implemented; full specialist orchestration deferred |
+| `research` | Provider-normalized evidence and structured research | News, deterministic quantitative, and market-reaction endpoints implemented; full specialist orchestration deferred |
 | `presentation` | Backend-owned illustrative read models | Implemented with versioned fixture adapter |
 | `proposal` | Trading Decision proposal synthesis | Contract only / deferred |
 | `risk` | AI-assisted adversarial critique | Contract/presentation only / deferred |
@@ -89,6 +89,10 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | `execution` | Final paper checks, translation, idempotency, reconciliation | Validation skeleton; submission deferred and disabled |
 | `shadowfund` | Immutable counterfactual branches and evaluation | Presentation fixture only / deferred engine |
 | `audit` | Append-oriented decision and execution events | Contract only / deferred persistence |
+
+## Research slices
+
+The current research boundary exposes authenticated, non-authoritative slices for News, Market Reaction/Mispricing, and the Quantitative Agent. Quantitative analysis is deterministic and consumes normalized historical bars to calculate RSI, MACD, SMA, Bollinger Bands, ATR, annualized volatility, volume surge, and a bounded momentum score. It returns a `QuantitativeAnalysisReport` and cannot authorize or submit an order. Provider reads remain server-side, bounded, retried only for transient failures, and surfaced through redacted errors.
 
 ## Presentation skeleton
 

@@ -209,9 +209,9 @@ def main() -> None:
         failures.append(f"Missing agent rules: {sorted(REQUIRED_RULES - actual_rules)}")
     requirements = (ROOT / "docs" / "FRS_NFRS.md").read_text(encoding="utf-8")
     identifiers = re.findall(r"\b(?:FRS|NFRS)-\d{3}\b", requirements)
-    if len(set(identifiers)) != 48:
+    if len(set(identifiers)) != 49:
         failures.append(
-            f"Expected 48 unique requirement IDs; found {len(set(identifiers))}"
+            f"Expected 49 unique requirement IDs; found {len(set(identifiers))}"
         )
     pr_skill = ROOT / ".agents" / "skills" / "github-pr" / "SKILL.md"
     if not pr_skill.is_file() or "description:" not in pr_skill.read_text(

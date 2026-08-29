@@ -7,16 +7,21 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.contracts.models import LLMEventAnalysis, ResearchReport
+from app.contracts.models import (
+    LLMEventAnalysis,
+    QuantitativeAnalysisReport,
+    ResearchReport,
+)
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.research.news_agent import NewsIntelligenceAgent
+from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
 
 router = APIRouter(prefix="/research", tags=["research"])
@@ -51,6 +56,28 @@ class MarketReactionRequest(BaseModel):
         le=100,
         description="Number of recent price bars to retrieve for baseline calculation",
     )
+
+
+class QuantitativeAnalysisRequest(BaseModel):
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Ticker symbol to quantitatively analyze, e.g. AAPL",
+    )
+    bar_limit: int = Field(
+        default=250,
+        ge=20,
+        le=500,
+        description="Number of historical bars to retrieve (default 250 for 200-day SMA)",
+    )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
 
 
 def get_alpaca_gateway(settings: Annotated[Settings, Depends(get_settings)]) -> AlpacaPyGateway:
@@ -172,3 +199,39 @@ async def analyze_reaction(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Market reaction analysis is temporarily unavailable",
         ) from exc
+
+
+@router.post("/quant/analyze", response_model=QuantitativeAnalysisReport)
+async def analyze_quantitative(
+    request: QuantitativeAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+) -> QuantitativeAnalysisReport:
+    """Perform 100% deterministic quantitative and technical momentum analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    try:
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Alpaca quantitative-bar provider failed for symbol=%s: %s",
+            symbol,
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Alpaca market data provider is temporarily unavailable",
+        ) from exc
+
+    if not bars:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No market data bars available for symbol {symbol}",
+        )
+
+    return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)

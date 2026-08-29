@@ -21,6 +21,7 @@ This matrix connects BA requirements, registry keys, AI responsibilities, contra
 | Profile governance | `profiles`, `profile_bounds` | Post-Analysis recommends authorized fields only | typed profile/recommendation models; `/presentation/weekly-summary` | weekly summary, rules | bounds and manual-review tests |
 | Illustrative presentation data | Fixture version, not a ruleset key | Recorded examples only | all `/presentation/*` responses use `data_mode=illustrative_fixture` | all story-first routes | endpoint/auth/provenance tests |
 | Market Tracker provenance and paper boundary | No tunable key; future contract only | Specialists and Trading Decision emit context; deterministic code remains authoritative | Planned `GET /api/v1/market-tracker`; UTC range, decimal values, capability/freshness metadata | `/market-tracker`, Inspect navigation | no-network skeleton, filter/taxonomy, accessibility, docs, and OpenAPI-deferred checks |
+| Quantitative technical evidence | No tunable key; indicator windows are contract/documented computation inputs | Quantitative Agent computes deterministic evidence; no proposal or authorization authority | `QuantitativeAnalysisReport`; authenticated `POST /api/v1/research/quant/analyze` | Agents and future decision traces | indicator unit tests, decimal serialization, auth, bounded input, and redacted-provider tests |
 
 ## Decision vocabulary
 
