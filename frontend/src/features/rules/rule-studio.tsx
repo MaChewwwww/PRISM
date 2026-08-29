@@ -74,13 +74,13 @@ export function RuleStudio({ rules }: { rules: ConfigurableRule[] }) {
                     setDraft((current) => ({ ...current, [rule.id]: event.target.value }));
                     setPreviewed(false);
                   }}
-                  placeholder="TBD"
+                  placeholder={`Current: ${rule.activeValue}`}
                   aria-describedby={`${rule.id}-help`}
                 />
                 <span>{rule.unit}</span>
               </div>
               <small id={`${rule.id}-help`}>
-                No approved default or safe range is supplied by this prototype.
+                Active value: <strong>{rule.activeValue} {rule.unit}</strong>. Entering a new value creates a draft candidate — it does not modify the active ruleset.
               </small>
             </div>
           </section>

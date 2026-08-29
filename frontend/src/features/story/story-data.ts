@@ -187,8 +187,28 @@ export type ConfigurableRule = {
   description: string;
   input: string;
   unit: string;
-  activeValue: "TBD";
+  activeValue: string;
   effect: string;
+};
+
+export type RuleSuggestion = {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  currentValue: string;
+  suggestedValue: string;
+  confidence: "high" | "medium" | "low";
+  rationale: string;
+  weekOf: string;
+};
+
+export type WeeklySummary = {
+  weekOf: string;
+  storiesAnalysed: number;
+  netPnl: string;
+  shadowBeatActive: number;
+  keyFindings: string[];
+  suggestions: RuleSuggestion[];
 };
 
 const presets: Exclude<RangePreset, "custom">[] = ["7d", "1m", "3m", "ytd"];
@@ -1237,7 +1257,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Limits how much of the paper portfolio one governed idea may represent.",
     input: "Proposed exposure ÷ observed portfolio equity",
     unit: "% of equity",
-    activeValue: "TBD",
+    activeValue: "5",
     effect:
       "PASS below the approved limit; otherwise MODIFY or FAIL as the approved ruleset specifies.",
   },
@@ -1247,7 +1267,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Defines how old required market and account observations may be.",
     input: "Decision time − received observation time",
     unit: "seconds",
-    activeValue: "TBD",
+    activeValue: "30",
     effect: "Missing or stale required evidence fails closed.",
   },
   {
@@ -1256,7 +1276,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Requires an approved minimum quality for synthetic quote and volume evidence.",
     input: "Spread width, quote quality, and volume inputs",
     unit: "policy value",
-    activeValue: "TBD",
+    activeValue: "medium",
     effect: "Insufficient evidence rejects the candidate rather than assuming a favorable fill.",
   },
   {
@@ -1265,7 +1285,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Defines the minimum validated confidence required before proposal generation.",
     input: "Validated research confidence",
     unit: "decimal 0–1",
-    activeValue: "TBD",
+    activeValue: "0.65",
     effect: "Low confidence produces NO_TRADE or FAIL according to the approved ruleset.",
   },
   {
@@ -1274,10 +1294,63 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Controls when new risk must be reduced or blocked after portfolio losses.",
     input: "Current equity versus approved peak reference",
     unit: "% drawdown",
-    activeValue: "TBD",
+    activeValue: "8",
     effect: "The approved policy may MODIFY size or FAIL new proposals.",
   },
 ];
+
+export const weeklySummaryFixture: WeeklySummary = {
+  weekOf: "2026-08-25",
+  storiesAnalysed: 6,
+  netPnl: "+$310.00",
+  shadowBeatActive: 2,
+  keyFindings: [
+    "Two of six decisions saw a shadow branch outperform the active portfolio, both driven by earlier-expiry structures with tighter risk bounds.",
+    "Evidence freshness violations occurred in 1 of 6 stories — the ORBT macro event — where quote data aged beyond the current 30-second threshold before the decision completed.",
+    "The Unhedged Structure branch produced the largest adverse excursion this week (+164 drawdown vs +76 on the active path), reinforcing the value of the spread structure rule.",
+    "Research confidence averaged 0.74 across all PASS outcomes and 0.51 across FAIL and NO_TRADE outcomes — the current 0.65 floor is close to the natural separation point.",
+    "No position concentration violations were recorded; all active allocations remained below 5% of equity.",
+  ],
+  suggestions: [
+    {
+      id: "sug-freshness",
+      ruleId: "freshness",
+      ruleName: "Evidence freshness",
+      currentValue: "30",
+      suggestedValue: "20",
+      confidence: "high",
+      rationale:
+        "The ORBT macro event showed that a 30-second window is too permissive for fast-moving catalyst data. Tightening to 20 seconds would have flagged stale quotes before the research phase completed, preventing a degraded outcome.",
+      weekOf: "2026-08-25",
+    },
+    {
+      id: "sug-confidence",
+      ruleId: "confidence",
+      ruleName: "Research confidence",
+      currentValue: "0.65",
+      suggestedValue: "0.70",
+      confidence: "medium",
+      rationale:
+        "Analysis of this week's PASS vs FAIL distribution shows a natural gap between 0.65 and 0.72. Raising the floor to 0.70 would have converted two marginal PASS outcomes into NO_TRADE, avoiding positions that ended near break-even.",
+      weekOf: "2026-08-25",
+    },
+    {
+      id: "sug-concentration",
+      ruleId: "concentration",
+      ruleName: "Position concentration",
+      currentValue: "5",
+      suggestedValue: "4",
+      confidence: "low",
+      rationale:
+        "Shadow branch analysis suggests that even with a single concentrated spread, a 4% ceiling would reduce worst-case exposure without meaningfully reducing expected return in the current illustrative scenario. Confidence is low because the sample size this week is small.",
+      weekOf: "2026-08-25",
+    },
+  ],
+};
+
+export function getWeeklySummary(): WeeklySummary {
+  return weeklySummaryFixture;
+}
 
 export const ruleVersions = [
   {
