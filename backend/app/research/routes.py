@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.contracts.models import (
     FundamentalAnalysisReport,
     LLMEventAnalysis,
+    MacroAnalysisReport,
     QuantitativeAnalysisReport,
     ResearchReport,
 )
@@ -22,6 +23,7 @@ from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.research.fundamental_engine import compute_fundamental_analysis
+from app.research.macro_agent import MacroeconomicAgent
 from app.research.news_agent import NewsIntelligenceAgent
 from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
@@ -93,6 +95,22 @@ class FundamentalAnalysisRequest(BaseModel):
         ge=1,
         le=30,
         description="Number of recent price bars to retrieve for live valuation calculation",
+    )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
+
+
+class MacroAnalysisRequest(BaseModel):
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Target ticker symbol to assess macroeconomic impact for, e.g. NVDA",
     )
 
     @field_validator("symbol")
@@ -286,3 +304,33 @@ async def analyze_fundamental(
         latest_close=latest_close,
         trace_id=trace_id,
     )
+
+
+@router.post("/macro/analyze", response_model=MacroAnalysisReport)
+async def analyze_macro(
+    request: MacroAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> MacroAnalysisReport:
+    """Perform macroeconomic regime, interest rate, and cross-asset intelligence analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    llm_gateway = LLMGateway(settings)
+    agent = MacroeconomicAgent(llm_gateway=llm_gateway, alpaca_gateway=gateway)
+
+    try:
+        report = await agent.analyze_macro(
+            symbol=symbol,
+            trace_id=trace_id,
+            db_session=db_session,
+        )
+        return report
+    except Exception as exc:
+        logger.error("Macroeconomic analysis failed for %s: %s", symbol, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Macroeconomic analysis failed: {exc!s}",
+        ) from exc

@@ -612,3 +612,47 @@ class FundamentalAnalysisReport(ContractBase):
     fundamental_health: FundamentalHealth
     valuation_stance: ValuationStance
     summary: str
+
+
+class MacroRegime(StrEnum):
+    RISK_ON = "risk_on"
+    RISK_OFF = "risk_off"
+    EXPANSIONARY = "expansionary"
+    CONTRACTIONARY = "contractionary"
+    STAGFLATIONARY = "stagflationary"
+    TRANSITIONAL = "transitional"
+
+
+class RateEnvironment(StrEnum):
+    RATE_CUT_CYCLE = "rate_cut_cycle"
+    PAUSE_ELEVATED = "pause_elevated"
+    RISING_RATES = "rising_rates"
+    NEUTRAL = "neutral"
+
+
+class MarketStressLevel(StrEnum):
+    LOW = "low"
+    MODERATE = "moderate"
+    HIGH = "high"
+    EXTREME = "extreme"
+
+
+class MacroAssetPerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    asset_symbol: str
+    asset_name: str
+    price_change_5d_pct: DecimalString
+    price_change_20d_pct: DecimalString
+
+
+class MacroAnalysisReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    macro_regime: MacroRegime
+    rate_environment: RateEnvironment
+    market_stress_level: MarketStressLevel
+    macro_climate_score: DecimalString = Field(ge=0, le=100)
+    assets: list[MacroAssetPerformance]
+    macro_tailwinds: list[str] = Field(default_factory=list)
+    macro_headwinds: list[str] = Field(default_factory=list)
+    stock_macro_sensitivity: str
+    thesis: str

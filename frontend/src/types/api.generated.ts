@@ -296,6 +296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/macro/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Macro
+         * @description Perform macroeconomic regime, interest rate, and cross-asset intelligence analysis.
+         */
+        post: operations["analyze_macro_api_v1_research_macro_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/news/analyze": {
         parameters: {
             query?: never;
@@ -1444,6 +1464,80 @@ export interface components {
              */
             signal: string;
         };
+        /** MacroAnalysisReport */
+        MacroAnalysisReport: {
+            /** Assets */
+            assets: components["schemas"]["MacroAssetPerformance"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Macro Climate Score
+             * Format: decimal-string
+             */
+            macro_climate_score: string;
+            /** Macro Headwinds */
+            macro_headwinds?: string[];
+            macro_regime: components["schemas"]["MacroRegime"];
+            /** Macro Tailwinds */
+            macro_tailwinds?: string[];
+            market_stress_level: components["schemas"]["MarketStressLevel"];
+            rate_environment: components["schemas"]["RateEnvironment"];
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Stock Macro Sensitivity */
+            stock_macro_sensitivity: string;
+            /** Symbol */
+            symbol: string;
+            /** Thesis */
+            thesis: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** MacroAnalysisRequest */
+        MacroAnalysisRequest: {
+            /**
+             * Symbol
+             * @description Target ticker symbol to assess macroeconomic impact for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /** MacroAssetPerformance */
+        MacroAssetPerformance: {
+            /** Asset Name */
+            asset_name: string;
+            /** Asset Symbol */
+            asset_symbol: string;
+            /**
+             * Price Change 20D Pct
+             * Format: decimal-string
+             */
+            price_change_20d_pct: string;
+            /**
+             * Price Change 5D Pct
+             * Format: decimal-string
+             */
+            price_change_5d_pct: string;
+        };
+        /**
+         * MacroRegime
+         * @enum {string}
+         */
+        MacroRegime: "risk_on" | "risk_off" | "expansionary" | "contractionary" | "stagflationary" | "transitional";
         /**
          * MarketDataType
          * @enum {string}
@@ -1483,6 +1577,11 @@ export interface components {
          * @enum {string}
          */
         MarketRegime: "normal" | "volatile" | "event" | "crisis";
+        /**
+         * MarketStressLevel
+         * @enum {string}
+         */
+        MarketStressLevel: "low" | "moderate" | "high" | "extreme";
         /** MovingAverages */
         MovingAverages: {
             /** Price Vs Sma200 Pct */
@@ -1926,6 +2025,11 @@ export interface components {
          * @enum {string}
          */
         RSICondition: "oversold" | "overbought" | "neutral";
+        /**
+         * RateEnvironment
+         * @enum {string}
+         */
+        RateEnvironment: "rate_cut_cycle" | "pause_elevated" | "rising_rates" | "neutral";
         /**
          * ReactionClassification
          * @enum {string}
@@ -3062,6 +3166,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FundamentalAnalysisReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_macro_api_v1_research_macro_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MacroAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroAnalysisReport"];
                 };
             };
             /** @description Validation Error */

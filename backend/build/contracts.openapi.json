@@ -2349,6 +2349,151 @@
         "title": "MACDSignal",
         "type": "object"
       },
+      "MacroAnalysisReport": {
+        "additionalProperties": false,
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/MacroAssetPerformance"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "macro_climate_score": {
+            "format": "decimal-string",
+            "title": "Macro Climate Score",
+            "type": "string"
+          },
+          "macro_headwinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Macro Headwinds",
+            "type": "array"
+          },
+          "macro_regime": {
+            "$ref": "#/components/schemas/MacroRegime"
+          },
+          "macro_tailwinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Macro Tailwinds",
+            "type": "array"
+          },
+          "market_stress_level": {
+            "$ref": "#/components/schemas/MarketStressLevel"
+          },
+          "rate_environment": {
+            "$ref": "#/components/schemas/RateEnvironment"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "stock_macro_sensitivity": {
+            "title": "Stock Macro Sensitivity",
+            "type": "string"
+          },
+          "symbol": {
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "thesis": {
+            "title": "Thesis",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "macro_regime",
+          "rate_environment",
+          "market_stress_level",
+          "macro_climate_score",
+          "assets",
+          "stock_macro_sensitivity",
+          "thesis"
+        ],
+        "title": "MacroAnalysisReport",
+        "type": "object"
+      },
+      "MacroAnalysisRequest": {
+        "properties": {
+          "symbol": {
+            "description": "Target ticker symbol to assess macroeconomic impact for, e.g. NVDA",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "MacroAnalysisRequest",
+        "type": "object"
+      },
+      "MacroAssetPerformance": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_name": {
+            "title": "Asset Name",
+            "type": "string"
+          },
+          "asset_symbol": {
+            "title": "Asset Symbol",
+            "type": "string"
+          },
+          "price_change_20d_pct": {
+            "format": "decimal-string",
+            "title": "Price Change 20D Pct",
+            "type": "string"
+          },
+          "price_change_5d_pct": {
+            "format": "decimal-string",
+            "title": "Price Change 5D Pct",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_symbol",
+          "asset_name",
+          "price_change_5d_pct",
+          "price_change_20d_pct"
+        ],
+        "title": "MacroAssetPerformance",
+        "type": "object"
+      },
+      "MacroRegime": {
+        "enum": [
+          "risk_on",
+          "risk_off",
+          "expansionary",
+          "contractionary",
+          "stagflationary",
+          "transitional"
+        ],
+        "title": "MacroRegime",
+        "type": "string"
+      },
       "MarketDataType": {
         "enum": [
           "bars",
@@ -2425,6 +2570,16 @@
           "crisis"
         ],
         "title": "MarketRegime",
+        "type": "string"
+      },
+      "MarketStressLevel": {
+        "enum": [
+          "low",
+          "moderate",
+          "high",
+          "extreme"
+        ],
+        "title": "MarketStressLevel",
         "type": "string"
       },
       "MovingAverages": {
@@ -3465,6 +3620,16 @@
           "neutral"
         ],
         "title": "RSICondition",
+        "type": "string"
+      },
+      "RateEnvironment": {
+        "enum": [
+          "rate_cut_cycle",
+          "pause_elevated",
+          "rising_rates",
+          "neutral"
+        ],
+        "title": "RateEnvironment",
         "type": "string"
       },
       "ReactionClassification": {
@@ -6063,6 +6228,82 @@
           }
         },
         "summary": "Analyze Fundamental",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/macro/analyze": {
+      "post": {
+        "description": "Perform macroeconomic regime, interest rate, and cross-asset intelligence analysis.",
+        "operationId": "analyze_macro_api_v1_research_macro_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MacroAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroAnalysisReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Macro",
         "tags": [
           "research"
         ]
