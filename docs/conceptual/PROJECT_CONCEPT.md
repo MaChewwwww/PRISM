@@ -172,6 +172,10 @@ The visual skeleton uses Plus Jakarta Sans, monospace tabular financial values, 
 
 Governance is read-only. Weekly Summary shows bounded Post-Analysis recommendations awaiting manual review and provides no threshold mutation or automatic activation path.
 
+### Market Tracker
+
+Market Tracker is an authenticated Inspect surface for a future interactive price/time chart, symbol watchlist, timeframe controls, and activity overlays. Its skeleton is intentionally provider-free: it preserves the shared UTC range and default `1Day` timeframe, but shows an explicit integration-deferred state with no fabricated symbols, prices, positions, orders, fills, or provider claims. Future overlays distinguish confirmed `fill`, `order`, `proposal`, `decision`, `no_trade`, and `shadow` events; only confirmed fills qualify as actual trades. The planned flow remains Browser -> authenticated Next.js server adapter -> FastAPI -> server-only Alpaca and persisted PRISM repositories. Historical bars and snapshots are the first future milestone, followed by server-owned streams and reconciliation; the browser never receives provider credentials.
+
 ## Delivery scope
 
 ### Implemented skeleton

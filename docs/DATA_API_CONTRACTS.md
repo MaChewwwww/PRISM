@@ -54,6 +54,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/presentation/agents/{agent_id}` | Agent detail | Yes |
 | GET | `/api/v1/presentation/governance` | Active ruleset, profile, and semantics | Yes |
 | GET | `/api/v1/presentation/weekly-summary` | Manual-review profile recommendations | Yes |
+| GET | `/api/v1/market-tracker` | **Planned, deferred** normalized bars, watchlist, and activity markers | Yes |
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
 Collection endpoints require `from` and `to` query parameters. Both must be timezone-aware UTC timestamps, and `from` must not be later than `to`.
@@ -69,6 +70,12 @@ Every presentation response includes metadata with:
 - `fixture_version`.
 
 The current adapter always returns `data_mode=illustrative_fixture` and `fixture_version=prism-demo-v1`. No response implies an Alpaca account request, paper order, fill, holding, P&L record, or provider/model invocation.
+
+## Planned Market Tracker contract (not implemented)
+
+The future authenticated `GET /api/v1/market-tracker` accepts `symbol`, validated UTC `from` and `to`, `timeframe` (`1Min`, `5Min`, `15Min`, `1Hour`, or `1Day`), selected activity kinds, and `traded_only`. Its response will define `MarketTrackerResponse`, `MarketBar`, `MarketWatchlistItem`, and `MarketActivityMarker` types plus capability/freshness metadata. Bars contain UTC timestamps, OHLCV, trade count, and optional VWAP. Watchlist items contain normalized snapshot values, change, and verified-trade state. Activity markers retain event kind, instrument, status, identifiers, optional decimal price/quantity, and provenance; option markers chart the underlying while retaining contract, expiration, strike, side, and leg details.
+
+All future prices, quantities, percentages, and Greeks remain decimal strings. The standard metadata envelope will include `generated_at`, `as_of`, the requested UTC range, `data_mode`, provider/fixture source, and freshness. The endpoint is deliberately not in generated OpenAPI or frontend transport types in this skeleton. Empty and degraded responses must be explicit and must never fabricate market or account data.
 
 ## News-analysis endpoint
 
