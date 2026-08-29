@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -15,10 +16,8 @@ import {
 
 import type { ChartPoint } from "@/features/story/story-data";
 
-type SeriesKey = "actual" | "alternative" | "benchmark";
-
-type SeriesDefinition = {
-  key: SeriesKey;
+export type SeriesDefinition = {
+  key: string;
   label: string;
   color: string;
   dashed?: boolean;
@@ -39,12 +38,42 @@ export function StoryLineChart({
   series: SeriesDefinition[];
   valuePrefix?: string;
 }) {
-  const numericData = data.map((point) => ({
-    date: point.date,
-    actual: Number(point.actual),
-    alternative: point.alternative === undefined ? undefined : Number(point.alternative),
-    benchmark: point.benchmark === undefined ? undefined : Number(point.benchmark),
-  }));
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
+    () => new Set(series.map((s) => s.key)),
+  );
+
+  const toggleKey = (key: string) => {
+    setVisibleKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size > 1) {
+          next.delete(key);
+        }
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (visibleKeys.size === series.length) {
+      setVisibleKeys(new Set([series[0]?.key ?? ""]));
+    } else {
+      setVisibleKeys(new Set(series.map((s) => s.key)));
+    }
+  };
+
+  const visibleSeries = series.filter((s) => visibleKeys.has(s.key));
+
+  const numericData = data.map((point) => {
+    const row: Record<string, number | string | undefined> = { date: point.date };
+    for (const s of series) {
+      const val = point[s.key];
+      row[s.key] = val === undefined || val === null ? undefined : Number(val);
+    }
+    return row;
+  });
 
   return (
     <figure className="chart-frame" aria-labelledby={`${slug(title)}-title`}>
@@ -55,6 +84,42 @@ export function StoryLineChart({
         </div>
         <strong>{summary}</strong>
       </figcaption>
+
+      {series.length > 1 && (
+        <div
+          className="chart-series-toggles"
+          role="toolbar"
+          aria-label="Toggle visible trajectories"
+        >
+          <span className="chart-series-toggles-label">Trajectories:</span>
+          <div className="flex flex-wrap items-center gap-1.5 flex-1">
+            {series.map((s) => {
+              const isActive = visibleKeys.has(s.key);
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  className="chart-toggle-btn"
+                  data-active={isActive ? "true" : "false"}
+                  onClick={() => toggleKey(s.key)}
+                  aria-pressed={isActive}
+                >
+                  <span
+                    className="chart-toggle-dot"
+                    style={{ backgroundColor: s.color }}
+                    aria-hidden="true"
+                  />
+                  <span>{s.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" className="chart-toggle-action" onClick={toggleAll}>
+            {visibleKeys.size === series.length ? "Primary only" : "Select all"}
+          </button>
+        </div>
+      )}
+
       {data.length > 0 ? (
         <div className="chart-canvas" role="img" aria-label={`${title}. ${summary}`}>
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -86,7 +151,7 @@ export function StoryLineChart({
                 formatter={(value) => `${valuePrefix}${String(value)}`}
               />
               <Legend wrapperStyle={{ fontSize: "0.72rem", paddingTop: "0.75rem" }} />
-              {series.map((item) => (
+              {visibleSeries.map((item) => (
                 <Line
                   key={item.key}
                   type="monotone"
@@ -114,7 +179,7 @@ export function StoryLineChart({
             <thead>
               <tr>
                 <th scope="col">Observation</th>
-                {series.map((item) => (
+                {visibleSeries.map((item) => (
                   <th scope="col" key={item.key}>
                     {item.label}
                   </th>
@@ -125,7 +190,7 @@ export function StoryLineChart({
               {data.map((point) => (
                 <tr key={point.date}>
                   <th scope="row">{point.date}</th>
-                  {series.map((item) => (
+                  {visibleSeries.map((item) => (
                     <td key={item.key}>
                       {valuePrefix}
                       {point[item.key] ?? "—"}

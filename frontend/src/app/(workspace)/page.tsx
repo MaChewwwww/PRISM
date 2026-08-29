@@ -112,8 +112,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         description="Compare the real Active Paper trajectory with parallel Shadow Portfolios across the identical market timeline."
       >
         <StoryLineChart
-          title="Active Equity vs. Best Shadow Path"
-          description="Solid teal is our Active Portfolio; dashed amethyst is ShadowFund simulation (non-executing); dashed slate is Market Benchmark."
+          title="Active Equity vs. Shadow Multiverse Trajectories"
+          description="Interactive multi-branch trajectory. Click any trajectory button to toggle individual shadow branches on or off."
           summary={
             alternativeLead > 0
               ? `Shadow Lead: +$${alternativeLead.toFixed(2)}`
@@ -124,15 +124,33 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           series={[
             { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
             {
-              key: "alternative",
-              label: "Best Shadow Portfolio",
+              key: "agentAlternative",
+              label: "Shadow: Agent Counterfactual",
               color: "#818CF8",
+              dashed: true,
+            },
+            {
+              key: "reducedSize",
+              label: "Shadow: Reduced Sizing",
+              color: "#34D399",
+              dashed: true,
+            },
+            {
+              key: "unhedged",
+              label: "Shadow: Unhedged Structure",
+              color: "#FB923C",
+              dashed: true,
+            },
+            {
+              key: "cashBaseline",
+              label: "Shadow: Cash Baseline",
+              color: "#94A3B8",
               dashed: true,
             },
             {
               key: "benchmark",
               label: "Market Benchmark",
-              color: "#64748B",
+              color: "#38BDF8",
               dashed: true,
             },
           ]}

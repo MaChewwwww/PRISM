@@ -36,9 +36,14 @@ export type StorySummary = {
 
 export type ChartPoint = {
   date: string;
-  actual: string;
+  actual?: string;
   alternative?: string;
   benchmark?: string;
+  agentAlternative?: string;
+  reducedSize?: string;
+  unhedged?: string;
+  cashBaseline?: string;
+  [key: string]: string | undefined;
 };
 
 export type DecisionNode = {
@@ -601,6 +606,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-01-02",
     actual: "100000.00",
+    agentAlternative: "100000.00",
+    reducedSize: "100000.00",
+    unhedged: "100000.00",
+    cashBaseline: "100000.00",
     alternative: "100000.00",
     benchmark: "100000.00",
     pnl: "0.00",
@@ -609,6 +618,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-02-02",
     actual: "100640.00",
+    agentAlternative: "100410.00",
+    reducedSize: "100320.00",
+    unhedged: "100820.00",
+    cashBaseline: "100000.00",
     alternative: "100410.00",
     benchmark: "100330.00",
     pnl: "640.00",
@@ -617,6 +630,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-03-02",
     actual: "100180.00",
+    agentAlternative: "100760.00",
+    reducedSize: "100090.00",
+    unhedged: "99420.00",
+    cashBaseline: "100000.00",
     alternative: "100760.00",
     benchmark: "100520.00",
     pnl: "180.00",
@@ -625,6 +642,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-04-01",
     actual: "101220.00",
+    agentAlternative: "101090.00",
+    reducedSize: "100610.00",
+    unhedged: "100980.00",
+    cashBaseline: "100000.00",
     alternative: "101090.00",
     benchmark: "100810.00",
     pnl: "1220.00",
@@ -633,6 +654,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-05-01",
     actual: "101080.00",
+    agentAlternative: "101420.00",
+    reducedSize: "100540.00",
+    unhedged: "100360.00",
+    cashBaseline: "100000.00",
     alternative: "101420.00",
     benchmark: "101120.00",
     pnl: "1080.00",
@@ -641,6 +666,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-06-01",
     actual: "101760.00",
+    agentAlternative: "101980.00",
+    reducedSize: "100880.00",
+    unhedged: "101440.00",
+    cashBaseline: "100000.00",
     alternative: "101980.00",
     benchmark: "101440.00",
     pnl: "1760.00",
@@ -649,6 +678,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-01",
     actual: "102140.00",
+    agentAlternative: "102510.00",
+    reducedSize: "101070.00",
+    unhedged: "101820.00",
+    cashBaseline: "100000.00",
     alternative: "102510.00",
     benchmark: "101720.00",
     pnl: "2140.00",
@@ -657,6 +690,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-08",
     actual: "102040.00",
+    agentAlternative: "102620.00",
+    reducedSize: "101020.00",
+    unhedged: "101240.00",
+    cashBaseline: "100000.00",
     alternative: "102620.00",
     benchmark: "101760.00",
     pnl: "2040.00",
@@ -665,6 +702,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-22",
     actual: "102480.00",
+    agentAlternative: "102910.00",
+    reducedSize: "101240.00",
+    unhedged: "102180.00",
+    cashBaseline: "100000.00",
     alternative: "102910.00",
     benchmark: "101880.00",
     pnl: "2480.00",
@@ -673,6 +714,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-29",
     actual: "102790.00",
+    agentAlternative: "103030.00",
+    reducedSize: "101395.00",
+    unhedged: "102310.00",
+    cashBaseline: "100000.00",
     alternative: "103030.00",
     benchmark: "101960.00",
     pnl: "2790.00",
@@ -681,6 +726,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-05",
     actual: "102610.00",
+    agentAlternative: "103260.00",
+    reducedSize: "101305.00",
+    unhedged: "101690.00",
+    cashBaseline: "100000.00",
     alternative: "103260.00",
     benchmark: "102020.00",
     pnl: "2610.00",
@@ -689,6 +738,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-12",
     actual: "102920.00",
+    agentAlternative: "103410.00",
+    reducedSize: "101460.00",
+    unhedged: "102420.00",
+    cashBaseline: "100000.00",
     alternative: "103410.00",
     benchmark: "102110.00",
     pnl: "2920.00",
@@ -697,6 +750,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-18",
     actual: "103070.00",
+    agentAlternative: "103590.00",
+    reducedSize: "101535.00",
+    unhedged: "102680.00",
+    cashBaseline: "100000.00",
     alternative: "103590.00",
     benchmark: "102160.00",
     pnl: "3070.00",
@@ -705,6 +762,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-21",
     actual: "103120.00",
+    agentAlternative: "103720.00",
+    reducedSize: "101560.00",
+    unhedged: "102710.00",
+    cashBaseline: "100000.00",
     alternative: "103720.00",
     benchmark: "102220.00",
     pnl: "3120.00",
@@ -713,6 +774,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-22",
     actual: "103180.00",
+    agentAlternative: "103780.00",
+    reducedSize: "101590.00",
+    unhedged: "102830.00",
+    cashBaseline: "100000.00",
     alternative: "103780.00",
     benchmark: "102240.00",
     pnl: "3180.00",
@@ -721,6 +786,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-25",
     actual: "103364.00",
+    agentAlternative: "104021.00",
+    reducedSize: "101682.00",
+    unhedged: "102540.00",
+    cashBaseline: "100000.00",
     alternative: "104021.00",
     benchmark: "102310.00",
     pnl: "3364.00",
@@ -729,6 +798,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-28",
     actual: "103840.00",
+    agentAlternative: "104620.00",
+    reducedSize: "101920.00",
+    unhedged: "103210.00",
+    cashBaseline: "100000.00",
     alternative: "104620.00",
     benchmark: "102440.00",
     pnl: "3840.00",

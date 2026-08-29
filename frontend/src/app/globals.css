@@ -597,6 +597,71 @@
   font: 650 0.68rem/1.4 var(--font-geist-mono);
   text-align: right;
 }
+.chart-series-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.6rem;
+  background: color-mix(in oklch, var(--surface) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.chart-series-toggles-label {
+  font-size: 0.65rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  margin-right: 0.25rem;
+}
+.chart-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.68rem;
+  font-family: inherit;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.chart-toggle-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--foreground);
+}
+.chart-toggle-btn[data-active="true"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
+  border-color: var(--border-specular, rgba(255, 255, 255, 0.2));
+}
+.chart-toggle-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transition: opacity 0.15s ease;
+}
+.chart-toggle-btn[data-active="false"] .chart-toggle-dot {
+  opacity: 0.25;
+}
+.chart-toggle-action {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.chart-toggle-action:hover {
+  color: var(--accent-foreground);
+}
 .chart-canvas {
   width: 100%;
   min-width: 0;
