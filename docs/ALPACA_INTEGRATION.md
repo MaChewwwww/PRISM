@@ -2,7 +2,7 @@
 
 ## Responsibility split
 
-- `alpaca-py` is the selected typed read gateway. The current implemented provider slice is news analysis; broader account, asset, stock, and option reads remain adapter work.
+- `alpaca-py` is the selected typed read gateway. The current implemented provider slices are authenticated news analysis and read-only historical stock bars for market-reaction research; broader account, asset, and option reads remain adapter work.
 - Alpaca CLI v0.0.13 is the selected future order-submission adapter. The current skeleton does not submit orders.
 - Alpaca MCP may be used by developers for read-only investigation with toolsets limited to `account`, `assets`, `stock-data`, `options-data`, and `news`. Trading tools are excluded and credentials are never committed.
 
@@ -14,7 +14,7 @@ Configuration must target Alpaca's paper endpoint. Live mode is a startup error.
 
 Initial strategies are long calls, long puts, and two-leg call/put debit spreads. Single long options require Level 2; spreads require Level 3. Spread legs must use the same underlying and expiration, simplified 1:1 ratios, `order_class=mleg`, limit pricing, and `day` time-in-force. The system rejects uncovered shorts, credit spreads, equity-option combinations, inactive/non-tradable contracts, extended-hours options, exercise requests, and other strategies.
 
-The BA rules require defined-risk debit spreads when IV Rank exceeds 50%. The future market adapter must source and validate the inputs needed for that rule; the current skeleton does not claim that computation is implemented.
+The BA rules require defined-risk debit spreads when IV Rank exceeds 50%. The market-reaction slice retrieves bounded historical stock bars for research only; it does not compute IV Rank, authorize a proposal, or submit an order. The future market adapter must source and validate the inputs needed for that rule.
 
 For the BA-authorized hackathon window, official scoring uses total account equity at EOD Thursday Sep 3, 2026. New entries stop at Wednesday Sep 2, 2026 16:00 ET and all positions force-flatten by Thursday's close. The outer Friday Sep 4 09:30 ET boundary is not a scoring extension. A Sep-3-expiring contract must not be held into settlement; the 0-DTE block, DTE exit, and force-flatten are cumulative controls.
 
@@ -31,7 +31,7 @@ The system persists the client order identifier and intent before invoking the C
 
 ## Historical data caching and persistence
 
-The repository interfaces reserve a cache-aside boundary for future market-data adapters. Persisted historical bars, quote snapshots, Redis warming, and deterministic replay storage are not implemented in this skeleton and must not be represented as live or provider-backed data. When those adapters are added, they must preserve immutable query digests, bounded provider requests, and reproducible replay fixtures without changing the paper-only execution boundary.
+The repository interfaces reserve a cache-aside boundary for future market-data adapters. Persisted historical bars, quote snapshots, Redis warming, and deterministic replay storage are not implemented in this skeleton. The market-reaction report cache is persisted research output, not a market-data replay store, and must not be represented as an account or execution record. When broader adapters are added, they must preserve immutable query digests, bounded provider requests, and reproducible replay fixtures without changing the paper-only execution boundary.
 
 
 ## Official-source workflow

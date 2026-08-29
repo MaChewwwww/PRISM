@@ -2134,6 +2134,64 @@
         "title": "MarketDataType",
         "type": "string"
       },
+      "MarketReactionRequest": {
+        "properties": {
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional article ID for caching linkage with News Agent",
+            "title": "Article Id"
+          },
+          "bar_limit": {
+            "default": 30,
+            "description": "Number of recent price bars to retrieve for baseline calculation",
+            "maximum": 100.0,
+            "minimum": 2.0,
+            "title": "Bar Limit",
+            "type": "integer"
+          },
+          "catalyst_summary": {
+            "description": "Summary of the catalyst or news event to compare market reaction against",
+            "minLength": 1,
+            "title": "Catalyst Summary",
+            "type": "string"
+          },
+          "expected_reaction_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected price reaction percentage (e.g. 3.5 for +3.5%), or null if unknown",
+            "title": "Expected Reaction Pct"
+          },
+          "symbol": {
+            "description": "Ticker symbol, e.g. AAPL",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "catalyst_summary"
+        ],
+        "title": "MarketReactionRequest",
+        "type": "object"
+      },
       "MarketRegime": {
         "enum": [
           "normal",
@@ -2936,6 +2994,15 @@
         "title": "Provenance",
         "type": "string"
       },
+      "ReactionClassification": {
+        "enum": [
+          "UNDERREACTION",
+          "OVERREACTION",
+          "FAIR_REACTION"
+        ],
+        "title": "ReactionClassification",
+        "type": "string"
+      },
       "ReasonCode": {
         "enum": [
           "RULESET_NOT_CONFIGURED",
@@ -2975,6 +3042,38 @@
       "ResearchReport": {
         "additionalProperties": false,
         "properties": {
+          "actual_reaction_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Reaction Pct"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReactionClassification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "confidence": {
             "anyOf": [
               {
@@ -3002,6 +3101,27 @@
             "title": "Evidence",
             "type": "array"
           },
+          "expected_reaction_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected Reaction Pct"
+          },
           "freshness_seconds": {
             "minimum": 0,
             "title": "Freshness Seconds",
@@ -3018,6 +3138,50 @@
             },
             "title": "Limitations",
             "type": "array"
+          },
+          "opportunity_score": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "maximum": 100.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Opportunity Score"
+          },
+          "reaction_gap_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reaction Gap Pct"
           },
           "schema_version": {
             "const": "1.0",
@@ -3037,6 +3201,28 @@
             "format": "uuid",
             "title": "Trace Id",
             "type": "string"
+          },
+          "volume_ratio": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Volume Ratio"
           }
         },
         "required": [
@@ -5293,6 +5479,82 @@
           }
         },
         "summary": "Analyze News",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/reaction/analyze": {
+      "post": {
+        "description": "Retrieve market bars for a symbol and run Market Reaction / Mispricing analysis.",
+        "operationId": "analyze_reaction_api_v1_research_reaction_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketReactionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Reaction",
         "tags": [
           "research"
         ]

@@ -46,6 +46,12 @@ class EvidenceItem(BaseModel):
     received_at: datetime
 
 
+class ReactionClassification(StrEnum):
+    UNDERREACTION = "UNDERREACTION"
+    OVERREACTION = "OVERREACTION"
+    FAIR_REACTION = "FAIR_REACTION"
+
+
 class ResearchReport(ContractBase):
     symbol: str
     thesis: str
@@ -53,6 +59,12 @@ class ResearchReport(ContractBase):
     freshness_seconds: int = Field(ge=0)
     evidence: list[EvidenceItem]
     limitations: list[str] = Field(default_factory=list)
+    actual_reaction_pct: DecimalString | None = None
+    expected_reaction_pct: DecimalString | None = None
+    reaction_gap_pct: DecimalString | None = None
+    volume_ratio: DecimalString | None = Field(default=None, ge=0)
+    classification: ReactionClassification | None = None
+    opportunity_score: DecimalString | None = Field(default=None, ge=0, le=100)
 
 
 class OptionSide(StrEnum):

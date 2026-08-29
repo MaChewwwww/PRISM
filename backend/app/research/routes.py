@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+from decimal import Decimal
 from typing import Annotated
 from uuid import uuid4
 
@@ -8,21 +10,46 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.contracts.models import LLMEventAnalysis
+from app.contracts.models import LLMEventAnalysis, ResearchReport
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.research.news_agent import NewsIntelligenceAgent
+from app.research.reaction_agent import MarketReactionAgent
 
 router = APIRouter(prefix="/research", tags=["research"])
+logger = logging.getLogger(__name__)
 
 
 class NewsAnalysisRequest(BaseModel):
     symbol: str = Field(..., description="Ticker symbol to query news for, e.g. AAPL")
     limit: int = Field(
         5, ge=1, le=20, description="Number of news articles to retrieve and analyze"
+    )
+
+
+class MarketReactionRequest(BaseModel):
+    symbol: str = Field(..., min_length=1, description="Ticker symbol, e.g. AAPL")
+    catalyst_summary: str = Field(
+        ...,
+        min_length=1,
+        description="Summary of the catalyst or news event to compare market reaction against",
+    )
+    expected_reaction_pct: Decimal | None = Field(
+        default=None,
+        description="Expected price reaction percentage (e.g. 3.5 for +3.5%), or null if unknown",
+    )
+    article_id: str | None = Field(
+        default=None,
+        description="Optional article ID for caching linkage with News Agent",
+    )
+    bar_limit: int = Field(
+        default=30,
+        ge=2,
+        le=100,
+        description="Number of recent price bars to retrieve for baseline calculation",
     )
 
 
@@ -82,12 +109,66 @@ async def analyze_news(
             analyses.append(analysis)
         except Exception:
             # Continue analyzing other articles, logging the error
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.error(
+            logger.warning(
                 "News analysis failed for article_id=%s",
                 article.get("id"),
             )
 
     return analyses
+
+
+@router.post("/reaction/analyze", response_model=ResearchReport)
+async def analyze_reaction(
+    request: MarketReactionRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+) -> ResearchReport:
+    """Retrieve market bars for a symbol and run Market Reaction / Mispricing analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    try:
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Alpaca market-bar provider failed for symbol=%s: %s",
+            symbol,
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Alpaca market data provider is temporarily unavailable",
+        ) from exc
+
+    if not bars:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No market data bars available for symbol {symbol}",
+        )
+
+    llm_gateway = LLMGateway(settings)
+    agent = MarketReactionAgent(llm_gateway)
+
+    try:
+        report = await agent.analyze_reaction(
+            symbol=symbol,
+            bars=bars,
+            catalyst_summary=request.catalyst_summary,
+            expected_reaction_pct=request.expected_reaction_pct,
+            trace_id=trace_id,
+            db_session=db_session,
+            article_id=request.article_id,
+        )
+        return report
+    except Exception as exc:
+        logger.exception("Market reaction analysis failed for symbol=%s", symbol)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Market reaction analysis is temporarily unavailable",
+        ) from exc

@@ -296,6 +296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/reaction/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Reaction
+         * @description Retrieve market bars for a symbol and run Market Reaction / Mispricing analysis.
+         */
+        post: operations["analyze_reaction_api_v1_research_reaction_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/status": {
         parameters: {
             query?: never;
@@ -1252,6 +1272,35 @@ export interface components {
          * @enum {string}
          */
         MarketDataType: "bars" | "quotes" | "trades" | "news";
+        /** MarketReactionRequest */
+        MarketReactionRequest: {
+            /**
+             * Article Id
+             * @description Optional article ID for caching linkage with News Agent
+             */
+            article_id?: string | null;
+            /**
+             * Bar Limit
+             * @description Number of recent price bars to retrieve for baseline calculation
+             * @default 30
+             */
+            bar_limit: number;
+            /**
+             * Catalyst Summary
+             * @description Summary of the catalyst or news event to compare market reaction against
+             */
+            catalyst_summary: string;
+            /**
+             * Expected Reaction Pct
+             * @description Expected price reaction percentage (e.g. 3.5 for +3.5%), or null if unknown
+             */
+            expected_reaction_pct?: number | string | null;
+            /**
+             * Symbol
+             * @description Ticker symbol, e.g. AAPL
+             */
+            symbol: string;
+        };
         /**
          * MarketRegime
          * @enum {string}
@@ -1576,6 +1625,11 @@ export interface components {
          */
         Provenance: "illustrative_fixture" | "alpaca_paper" | "shadow" | "benchmark" | "simulated" | "planned_integration";
         /**
+         * ReactionClassification
+         * @enum {string}
+         */
+        ReactionClassification: "UNDERREACTION" | "OVERREACTION" | "FAIR_REACTION";
+        /**
          * ReasonCode
          * @enum {string}
          */
@@ -1588,6 +1642,13 @@ export interface components {
         /** ResearchReport */
         ResearchReport: {
             /**
+             * Actual Reaction Pct
+             * @default null
+             */
+            actual_reaction_pct: (number | string) | null;
+            /** @default null */
+            classification: components["schemas"]["ReactionClassification"] | null;
+            /**
              * Confidence
              * Format: decimal-string
              */
@@ -1599,6 +1660,11 @@ export interface components {
             created_at?: string;
             /** Evidence */
             evidence: components["schemas"]["EvidenceItem"][];
+            /**
+             * Expected Reaction Pct
+             * @default null
+             */
+            expected_reaction_pct: (number | string) | null;
             /** Freshness Seconds */
             freshness_seconds: number;
             /**
@@ -1608,6 +1674,16 @@ export interface components {
             id?: string;
             /** Limitations */
             limitations?: string[];
+            /**
+             * Opportunity Score
+             * @default null
+             */
+            opportunity_score: (number | string) | null;
+            /**
+             * Reaction Gap Pct
+             * @default null
+             */
+            reaction_gap_pct: (number | string) | null;
             /**
              * Schema Version
              * @default 1.0
@@ -1623,6 +1699,11 @@ export interface components {
              * Format: uuid
              */
             trace_id: string;
+            /**
+             * Volume Ratio
+             * @default null
+             */
+            volume_ratio: (number | string) | null;
         };
         /** RiskAssessment */
         RiskAssessment: {
@@ -2630,6 +2711,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LLMEventAnalysis"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_reaction_api_v1_research_reaction_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketReactionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchReport"];
                 };
             };
             /** @description Validation Error */
