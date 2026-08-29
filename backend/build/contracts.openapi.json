@@ -673,6 +673,15 @@
         "title": "AlternativeSession",
         "type": "object"
       },
+      "AltmanZone": {
+        "enum": [
+          "safe",
+          "grey",
+          "distress"
+        ],
+        "title": "AltmanZone",
+        "type": "string"
+      },
       "AuditEvent": {
         "additionalProperties": false,
         "properties": {
@@ -1530,6 +1539,143 @@
         ],
         "title": "ExposureItem",
         "type": "object"
+      },
+      "FundamentalAnalysisReport": {
+        "additionalProperties": false,
+        "properties": {
+          "altman_z_score": {
+            "format": "decimal-string",
+            "title": "Altman Z Score",
+            "type": "string"
+          },
+          "altman_zone": {
+            "$ref": "#/components/schemas/AltmanZone"
+          },
+          "composite_quality_score": {
+            "format": "decimal-string",
+            "title": "Composite Quality Score",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_price": {
+            "format": "decimal-string",
+            "title": "Current Price",
+            "type": "string"
+          },
+          "enterprise_value_millions": {
+            "format": "decimal-string",
+            "title": "Enterprise Value Millions",
+            "type": "string"
+          },
+          "fundamental_health": {
+            "$ref": "#/components/schemas/FundamentalHealth"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "market_cap_millions": {
+            "format": "decimal-string",
+            "title": "Market Cap Millions",
+            "type": "string"
+          },
+          "piotroski_f_score": {
+            "maximum": 9.0,
+            "minimum": 0.0,
+            "title": "Piotroski F Score",
+            "type": "integer"
+          },
+          "profitability": {
+            "$ref": "#/components/schemas/ProfitabilityMetrics"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "solvency": {
+            "$ref": "#/components/schemas/SolvencyMetrics"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbol": {
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "valuation": {
+            "$ref": "#/components/schemas/ValuationMetrics"
+          },
+          "valuation_stance": {
+            "$ref": "#/components/schemas/ValuationStance"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "current_price",
+          "market_cap_millions",
+          "enterprise_value_millions",
+          "profitability",
+          "solvency",
+          "valuation",
+          "piotroski_f_score",
+          "altman_z_score",
+          "altman_zone",
+          "composite_quality_score",
+          "fundamental_health",
+          "valuation_stance",
+          "summary"
+        ],
+        "title": "FundamentalAnalysisReport",
+        "type": "object"
+      },
+      "FundamentalAnalysisRequest": {
+        "properties": {
+          "bar_limit": {
+            "default": 5,
+            "description": "Number of recent price bars to retrieve for live valuation calculation",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Bar Limit",
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Ticker symbol to analyze fundamentals for, e.g. NVDA",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "FundamentalAnalysisRequest",
+        "type": "object"
+      },
+      "FundamentalHealth": {
+        "enum": [
+          "excellent",
+          "healthy",
+          "moderate",
+          "vulnerable",
+          "distressed"
+        ],
+        "title": "FundamentalHealth",
+        "type": "string"
       },
       "Governance": {
         "additionalProperties": false,
@@ -3140,6 +3286,45 @@
         "title": "ProfileSummary",
         "type": "object"
       },
+      "ProfitabilityMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "gross_margin_pct": {
+            "format": "decimal-string",
+            "title": "Gross Margin Pct",
+            "type": "string"
+          },
+          "net_margin_pct": {
+            "format": "decimal-string",
+            "title": "Net Margin Pct",
+            "type": "string"
+          },
+          "operating_margin_pct": {
+            "format": "decimal-string",
+            "title": "Operating Margin Pct",
+            "type": "string"
+          },
+          "roa_pct": {
+            "format": "decimal-string",
+            "title": "Roa Pct",
+            "type": "string"
+          },
+          "roe_pct": {
+            "format": "decimal-string",
+            "title": "Roe Pct",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gross_margin_pct",
+          "operating_margin_pct",
+          "net_margin_pct",
+          "roe_pct",
+          "roa_pct"
+        ],
+        "title": "ProfitabilityMetrics",
+        "type": "object"
+      },
       "Provenance": {
         "enum": [
           "illustrative_fixture",
@@ -3905,6 +4090,39 @@
         "title": "ShadowState",
         "type": "string"
       },
+      "SolvencyMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "current_ratio": {
+            "format": "decimal-string",
+            "title": "Current Ratio",
+            "type": "string"
+          },
+          "debt_to_equity": {
+            "format": "decimal-string",
+            "title": "Debt To Equity",
+            "type": "string"
+          },
+          "interest_coverage_ratio": {
+            "format": "decimal-string",
+            "title": "Interest Coverage Ratio",
+            "type": "string"
+          },
+          "net_debt_millions": {
+            "format": "decimal-string",
+            "title": "Net Debt Millions",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_ratio",
+          "debt_to_equity",
+          "interest_coverage_ratio",
+          "net_debt_millions"
+        ],
+        "title": "SolvencyMetrics",
+        "type": "object"
+      },
       "StoryDetail": {
         "additionalProperties": false,
         "properties": {
@@ -4557,6 +4775,79 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "ValuationMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "ev_to_ebitda": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ev To Ebitda"
+          },
+          "fcf_yield_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fcf Yield Pct"
+          },
+          "free_cash_flow_millions": {
+            "format": "decimal-string",
+            "title": "Free Cash Flow Millions",
+            "type": "string"
+          },
+          "pe_ratio_ttm": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pe Ratio Ttm"
+          },
+          "price_to_book": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price To Book"
+          }
+        },
+        "required": [
+          "free_cash_flow_millions"
+        ],
+        "title": "ValuationMetrics",
+        "type": "object"
+      },
+      "ValuationStance": {
+        "enum": [
+          "undervalued",
+          "fairly_valued",
+          "premium",
+          "overvalued"
+        ],
+        "title": "ValuationStance",
+        "type": "string"
       },
       "WeeklySummary": {
         "additionalProperties": false,
@@ -5698,6 +5989,82 @@
         "summary": "Weekly Summary",
         "tags": [
           "presentation"
+        ]
+      }
+    },
+    "/api/v1/research/fundamental/analyze": {
+      "post": {
+        "description": "Perform 100% deterministic fundamental financial statement and valuation analysis.",
+        "operationId": "analyze_fundamental_api_v1_research_fundamental_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundamentalAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundamentalAnalysisReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Fundamental",
+        "tags": [
+          "research"
         ]
       }
     },

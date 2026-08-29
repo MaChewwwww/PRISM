@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
+    FundamentalAnalysisReport,
     LLMEventAnalysis,
     QuantitativeAnalysisReport,
     ResearchReport,
@@ -20,6 +21,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.fundamental_engine import compute_fundamental_analysis
 from app.research.news_agent import NewsIntelligenceAgent
 from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
@@ -69,6 +71,28 @@ class QuantitativeAnalysisRequest(BaseModel):
         ge=20,
         le=500,
         description="Number of historical bars to retrieve (default 250 for 200-day SMA)",
+    )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
+
+
+class FundamentalAnalysisRequest(BaseModel):
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Ticker symbol to analyze fundamentals for, e.g. NVDA",
+    )
+    bar_limit: int = Field(
+        default=5,
+        ge=1,
+        le=30,
+        description="Number of recent price bars to retrieve for live valuation calculation",
     )
 
     @field_validator("symbol")
@@ -228,10 +252,37 @@ async def analyze_quantitative(
             detail="Alpaca market data provider is temporarily unavailable",
         ) from exc
 
-    if not bars:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No market data bars available for symbol {symbol}",
+    return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
+
+
+@router.post("/fundamental/analyze", response_model=FundamentalAnalysisReport)
+async def analyze_fundamental(
+    request: FundamentalAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+) -> FundamentalAnalysisReport:
+    """Perform 100% deterministic fundamental financial statement and valuation analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    latest_close: Decimal | None = None
+    try:
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
+        if bars and len(bars) > 0 and "close" in bars[-1]:
+            latest_close = Decimal(str(bars[-1]["close"]))
+    except Exception as exc:
+        logger.warning(
+            "Alpaca price-bar provider warning for symbol=%s: %s (using baseline valuation)",
+            symbol,
+            type(exc).__name__,
         )
 
-    return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
+    return compute_fundamental_analysis(
+        symbol=symbol,
+        latest_close=latest_close,
+        trace_id=trace_id,
+    )

@@ -276,6 +276,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/fundamental/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Fundamental
+         * @description Perform 100% deterministic fundamental financial statement and valuation analysis.
+         */
+        post: operations["analyze_fundamental_api_v1_research_fundamental_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/news/analyze": {
         parameters: {
             query?: never;
@@ -639,6 +659,11 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * AltmanZone
+         * @enum {string}
+         */
+        AltmanZone: "safe" | "grey" | "distress";
         /** AuditEvent */
         AuditEvent: {
             /** Actor Type */
@@ -1027,6 +1052,86 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** FundamentalAnalysisReport */
+        FundamentalAnalysisReport: {
+            /**
+             * Altman Z Score
+             * Format: decimal-string
+             */
+            altman_z_score: string;
+            altman_zone: components["schemas"]["AltmanZone"];
+            /**
+             * Composite Quality Score
+             * Format: decimal-string
+             */
+            composite_quality_score: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Current Price
+             * Format: decimal-string
+             */
+            current_price: string;
+            /**
+             * Enterprise Value Millions
+             * Format: decimal-string
+             */
+            enterprise_value_millions: string;
+            fundamental_health: components["schemas"]["FundamentalHealth"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Market Cap Millions
+             * Format: decimal-string
+             */
+            market_cap_millions: string;
+            /** Piotroski F Score */
+            piotroski_f_score: number;
+            profitability: components["schemas"]["ProfitabilityMetrics"];
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            solvency: components["schemas"]["SolvencyMetrics"];
+            /** Summary */
+            summary: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            valuation: components["schemas"]["ValuationMetrics"];
+            valuation_stance: components["schemas"]["ValuationStance"];
+        };
+        /** FundamentalAnalysisRequest */
+        FundamentalAnalysisRequest: {
+            /**
+             * Bar Limit
+             * @description Number of recent price bars to retrieve for live valuation calculation
+             * @default 5
+             */
+            bar_limit: number;
+            /**
+             * Symbol
+             * @description Ticker symbol to analyze fundamentals for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /**
+         * FundamentalHealth
+         * @enum {string}
+         */
+        FundamentalHealth: "excellent" | "healthy" | "moderate" | "vulnerable" | "distressed";
         /** Governance */
         Governance: {
             /**
@@ -1706,6 +1811,34 @@ export interface components {
              */
             status: "active" | "available";
         };
+        /** ProfitabilityMetrics */
+        ProfitabilityMetrics: {
+            /**
+             * Gross Margin Pct
+             * Format: decimal-string
+             */
+            gross_margin_pct: string;
+            /**
+             * Net Margin Pct
+             * Format: decimal-string
+             */
+            net_margin_pct: string;
+            /**
+             * Operating Margin Pct
+             * Format: decimal-string
+             */
+            operating_margin_pct: string;
+            /**
+             * Roa Pct
+             * Format: decimal-string
+             */
+            roa_pct: string;
+            /**
+             * Roe Pct
+             * Format: decimal-string
+             */
+            roe_pct: string;
+        };
         /**
          * Provenance
          * @enum {string}
@@ -2065,6 +2198,29 @@ export interface components {
          * @enum {string}
          */
         ShadowState: "open" | "complete" | "incomplete";
+        /** SolvencyMetrics */
+        SolvencyMetrics: {
+            /**
+             * Current Ratio
+             * Format: decimal-string
+             */
+            current_ratio: string;
+            /**
+             * Debt To Equity
+             * Format: decimal-string
+             */
+            debt_to_equity: string;
+            /**
+             * Interest Coverage Ratio
+             * Format: decimal-string
+             */
+            interest_coverage_ratio: string;
+            /**
+             * Net Debt Millions
+             * Format: decimal-string
+             */
+            net_debt_millions: string;
+        };
         /** StoryDetail */
         StoryDetail: {
             /** Alternatives */
@@ -2320,6 +2476,27 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** ValuationMetrics */
+        ValuationMetrics: {
+            /** Ev To Ebitda */
+            ev_to_ebitda?: string | null;
+            /** Fcf Yield Pct */
+            fcf_yield_pct?: string | null;
+            /**
+             * Free Cash Flow Millions
+             * Format: decimal-string
+             */
+            free_cash_flow_millions: string;
+            /** Pe Ratio Ttm */
+            pe_ratio_ttm?: string | null;
+            /** Price To Book */
+            price_to_book?: string | null;
+        };
+        /**
+         * ValuationStance
+         * @enum {string}
+         */
+        ValuationStance: "undervalued" | "fairly_valued" | "premium" | "overvalued";
         /** WeeklySummary */
         WeeklySummary: {
             /** Illustrativenetpnl */
@@ -2848,6 +3025,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_fundamental_api_v1_research_fundamental_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FundamentalAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundamentalAnalysisReport"];
                 };
             };
             /** @description Validation Error */

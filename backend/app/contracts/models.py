@@ -498,3 +498,117 @@ class QuantitativeAnalysisReport(ContractBase):
     volatility_annualized_pct: DecimalString = Field(ge=0)
     volume_surge_ratio: DecimalString = Field(ge=0)
     summary: str
+
+
+class CompetitiveMoat(StrEnum):
+    WIDE = "wide"
+    NARROW = "narrow"
+    NONE = "none"
+    DETERIORATING = "deteriorating"
+
+
+class RelativePerformance(StrEnum):
+    OUTPERFORMING = "outperforming"
+    UNDERPERFORMING = "underperforming"
+    MIXED = "mixed"
+    INLINE = "inline"
+
+
+class IndustrySentiment(StrEnum):
+    POSITIVE = "positive"
+    MODERATELY_POSITIVE = "moderately_positive"
+    MIXED = "mixed"
+    MODERATELY_NEGATIVE = "moderately_negative"
+    NEGATIVE = "negative"
+
+
+class PeerPerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    symbol: str
+    price_change_5d_pct: DecimalString
+    price_change_20d_pct: DecimalString
+
+
+class IndustryAnalysisReport(ContractBase):
+    symbol: str
+    sector_name: str
+    sector_etf: str
+    sector_health_score: DecimalString = Field(ge=0, le=100)
+    stock_return_5d_pct: DecimalString
+    stock_return_20d_pct: DecimalString
+    sector_return_5d_pct: DecimalString
+    sector_return_20d_pct: DecimalString
+    relative_alpha_5d_pct: DecimalString
+    relative_alpha_20d_pct: DecimalString
+    sector_relative_performance: RelativePerformance
+    peer_relative_performance: RelativePerformance
+    peers: list[PeerPerformance]
+    competitive_moat: CompetitiveMoat
+    overall_sentiment: IndustrySentiment
+    tailwinds: list[str] = Field(default_factory=list)
+    headwinds: list[str] = Field(default_factory=list)
+    thesis: str
+
+
+class FundamentalHealth(StrEnum):
+    EXCELLENT = "excellent"
+    HEALTHY = "healthy"
+    MODERATE = "moderate"
+    VULNERABLE = "vulnerable"
+    DISTRESSED = "distressed"
+
+
+class ValuationStance(StrEnum):
+    UNDERVALUED = "undervalued"
+    FAIRLY_VALUED = "fairly_valued"
+    PREMIUM = "premium"
+    OVERVALUED = "overvalued"
+
+
+class AltmanZone(StrEnum):
+    SAFE = "safe"
+    GREY = "grey"
+    DISTRESS = "distress"
+
+
+class ProfitabilityMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    gross_margin_pct: DecimalString
+    operating_margin_pct: DecimalString
+    net_margin_pct: DecimalString
+    roe_pct: DecimalString
+    roa_pct: DecimalString
+
+
+class SolvencyMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_ratio: DecimalString
+    debt_to_equity: DecimalString
+    interest_coverage_ratio: DecimalString
+    net_debt_millions: DecimalString
+
+
+class ValuationMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pe_ratio_ttm: DecimalString | None = None
+    ev_to_ebitda: DecimalString | None = None
+    price_to_book: DecimalString | None = None
+    fcf_yield_pct: DecimalString | None = None
+    free_cash_flow_millions: DecimalString
+
+
+class FundamentalAnalysisReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    current_price: DecimalString = Field(ge=0)
+    market_cap_millions: DecimalString = Field(ge=0)
+    enterprise_value_millions: DecimalString = Field(ge=0)
+    profitability: ProfitabilityMetrics
+    solvency: SolvencyMetrics
+    valuation: ValuationMetrics
+    piotroski_f_score: int = Field(ge=0, le=9)
+    altman_z_score: DecimalString
+    altman_zone: AltmanZone
+    composite_quality_score: DecimalString = Field(ge=0, le=100)
+    fundamental_health: FundamentalHealth
+    valuation_stance: ValuationStance
+    summary: str
