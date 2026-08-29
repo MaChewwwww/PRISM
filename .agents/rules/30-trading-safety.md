@@ -18,4 +18,4 @@ Build subprocess calls as argument arrays with JSON on stdin. Do not use a shell
 
 Allow only long calls, long puts, and two-leg long call/put debit spreads. Options use whole-contract quantities, `day` time in force, no extended hours, and active OCC contracts. Spreads require Level 3, one underlying, one expiration, a 1:1 simplified ratio, a net debit limit, and covering long/short legs in the same order. Reject naked short options, credit spreads, equity legs, rolls, more than two legs, and exercises.
 
-BA-owned concentration, drawdown, sizing, liquidity, and freshness thresholds remain TBD. Missing required business configuration returns a deterministic rejection; never substitute example values.
+BA-owned concentration, drawdown, sizing, liquidity, freshness, opportunity, exit, and hackathon-window controls are authorized in `backend/app/rules/authorized_baseline.v1.json` and mirrored in `docs/BUSINESS_RULES.md`. Missing or invalid required business configuration returns a deterministic rejection; never substitute examples or defaults outside that registry.

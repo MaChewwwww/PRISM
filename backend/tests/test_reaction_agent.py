@@ -105,8 +105,9 @@ async def test_alpaca_gateway_get_stock_bars_success() -> None:
         bars = gateway.get_stock_bars("AAPL", limit=1)
 
         assert len(bars) == 1
-        assert bars[0]["open"] == 200.0
-        assert bars[0]["close"] == 204.0
+        assert bars[0]["open"] == Decimal("200.0")
+        assert bars[0]["close"] == Decimal("204.0")
+        assert isinstance(bars[0]["open"], Decimal)
         assert bars[0]["volume"] == 50000
         mock_stock_client.get_stock_bars.assert_called_once()
 

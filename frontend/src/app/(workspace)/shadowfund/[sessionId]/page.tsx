@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { legacyAlternativeLookup } from "@/features/story/story-data";
+import { legacyAlternativeLookup } from "@/features/story/presentation-api";
 
 export default async function LegacyShadowFundDetail({
   params,

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from alpaca.data.historical.news import NewsClient
@@ -15,6 +16,13 @@ from alpaca.trading.client import TradingClient
 from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
+
+
+def _is_transient_provider_error(exc: Exception) -> bool:
+    status_code = getattr(exc, "status_code", None)
+    if status_code in {408, 409, 425, 429, 500, 502, 503, 504}:
+        return True
+    return isinstance(exc, (ConnectionError, TimeoutError))
 
 
 class AlpacaPyGateway:
@@ -78,14 +86,13 @@ class AlpacaPyGateway:
                 ]
             except Exception as exc:
                 logger.warning(
-                    "Alpaca news fetch failed for %s (attempt %d/%d): %s",
+                    "Alpaca news fetch failed for %s (attempt %d/%d)",
                     symbol,
                     attempt + 1,
                     retries,
-                    exc,
                 )
-                if attempt == retries - 1:
-                    raise exc
+                if attempt == retries - 1 or not _is_transient_provider_error(exc):
+                    raise
                 time.sleep(delay)
                 delay *= 2.0
         return []
@@ -99,9 +106,6 @@ class AlpacaPyGateway:
         limit: int | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve historical stock bars (OHLCV) from Alpaca Market API for a symbol."""
-        if start is None:
-            start = datetime.now(UTC) - timedelta(days=60)
-
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
             timeframe=timeframe,
@@ -127,13 +131,17 @@ class AlpacaPyGateway:
                 return [
                     {
                         "timestamp": bar.timestamp,
-                        "open": bar.open,
-                        "high": bar.high,
-                        "low": bar.low,
-                        "close": bar.close,
+                        "open": Decimal(str(bar.open)),
+                        "high": Decimal(str(bar.high)),
+                        "low": Decimal(str(bar.low)),
+                        "close": Decimal(str(bar.close)),
                         "volume": bar.volume,
                         "trade_count": getattr(bar, "trade_count", None),
-                        "vwap": getattr(bar, "vwap", None),
+                        "vwap": (
+                            Decimal(str(bar.vwap))
+                            if getattr(bar, "vwap", None) is not None
+                            else None
+                        ),
                     }
                     for bar in bars
                 ]
@@ -143,10 +151,10 @@ class AlpacaPyGateway:
                     symbol,
                     attempt + 1,
                     retries,
-                    exc,
+                    type(exc).__name__,
                 )
-                if attempt == retries - 1:
-                    raise exc
+                if attempt == retries - 1 or not _is_transient_provider_error(exc):
+                    raise
                 time.sleep(delay)
                 delay *= 2.0
         return []

@@ -13,7 +13,7 @@ describe("authentication proxy", () => {
 
   it("FRS-019 redirects authenticated operators away from login", () => {
     const request = new NextRequest("http://localhost/login", {
-      headers: { cookie: "shadowfund_session=test-session" },
+      headers: { cookie: "prism_session=test-session" },
     });
     const response = proxy(request);
 

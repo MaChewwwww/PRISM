@@ -1,80 +1,122 @@
-# Business Rules
+# PRISM business rules
 
-## Purpose and status
+Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
-Deterministic rules are the authoritative trade gate. The BA owns rule intent, thresholds, precedence, exceptions, and acceptance cases. Those values are currently in progress; engineering must implement a configurable engine and fail closed when required configuration is absent.
+This document is the human-readable mirror of `backend/app/rules/authorized_baseline.v1.json`. The JSON registry is the only machine-readable numerical source. Changes require a new ruleset/profile version and synchronized contracts, tests, and documentation.
 
-## Decision semantics
+## Decision process
 
-- `PASS`: the proposal satisfies the rule.
-- `MODIFY`: the proposal is not executable as submitted; explicit bounded changes are returned.
-- `FAIL`: the proposal is rejected.
-- `APPROVE`: every required evaluation passes for the exact payload.
-- `REJECT`: one or more required evaluations fail or required configuration is missing.
+1. Seven specialist agents produce validated evidence.
+2. Trading Decision emits `TradeProposal` or `NO_TRADE`.
+3. AI-assisted Risk Management critiques the proposal and portfolio context.
+4. Deterministic rules evaluate each rule as `PASS`, `MODIFY`, or `FAIL`.
+5. Aggregation returns `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
+6. Only `APPROVE` may proceed toward execution. An accepted modification creates a revised proposal and must be authorized again.
+7. Any genuine execution target is Alpaca paper only. Current skeleton execution is disabled and unimplemented.
 
-A MODIFY result does not authorize a mutated payload. The modification must become a new accepted proposal and be evaluated again.
+## Active baseline parameter register
 
-## Rule definition template
+Ruleset: `prism-authorized-baseline@1.0.0`; lifecycle: `active`; effective from `2026-08-29T00:00:00Z`; open-ended until superseded; default profile: `balanced`.
 
-| Field | Meaning |
-| --- | --- |
-| `rule_id` / version | Stable identity and immutable version |
-| Name and description | Business-readable intent |
-| Owner and status | BA/product owner; draft/approved/retired |
-| Inputs | Exact contract fields and snapshot freshness |
-| Condition | Deterministic expression |
-| Configuration | Default, units, allowed range, source |
-| Outcome | PASS, MODIFY, or FAIL and reason code |
-| Priority | Evaluation/precedence order |
-| Exceptions | Explicit approved exceptions, if any |
-| Profile configurable | Whether a profile may choose inside a named range |
-| Tests | Boundary, negative, and interaction cases |
+| Parameter | Authorized value |
+| --- | ---: |
+| Starting-capital baseline | 100,000.00 USD |
+| Maximum risk per trade, NORMAL | 1.00% of current equity |
+| Maximum risk per trade, VOLATILE | 0.75% of current equity |
+| Normal target allocation | 2.00% of equity |
+| Volatile target allocation | 1.50% maximum |
+| Drawdown CAUTION / DEFENSIVE / HALT | 1.50% / 2.25% / 3.00% from start-of-day equity |
+| Cash / buying-power reserve | 5.00% minimum |
+| Ticker concentration | 5.00% maximum |
+| Sector concentration | 10.00% maximum |
+| Correlated-cluster concentration | 7.50% maximum |
+| Aggregate modeled hard-stop risk | 3.00% maximum |
+| Maximum open positions | 6 |
+| Maximum bid/ask spread | 10.00% of premium |
+| Evidence/market-data freshness | 30 seconds maximum |
+| Opportunity score | 75 absolute floor; Balanced 84 |
+| Net expected value | +0.15R minimum after material execution costs |
+| Realistic reward/risk | 1.50:1 minimum |
+| Balanced take-profit | 75.00% of initial debit |
+| Take-profit authorized range | 75.00% through 100.00% |
+| Stop-loss | fixed 50.00% of initial debit |
+| DTE exit | 7 days default; authorized range 2 through 14 days |
+| Baseline maximum hold | 14 days; authorized range 3 through 45 days |
+| Hackathon maximum hold override | 4 trading days |
 
-## Initial platform rules
+The 14-day value is the reusable baseline profile value. The four-trading-day value is the tighter hackathon operating override. They are not aliases and must be presented separately.
 
-The following are engineering hard limits, not BA thresholds: paper environment only; execution disabled by default; active ruleset required; valid unexpired authorization required; exact proposal/payload digest; active/tradable option contracts; appropriate options level; `day` options orders; no extended hours (market boundary: 09:30–16:00 America/New_York); only long calls, long puts, and 1:1 two-leg debit spreads; client order ID required; kill switch honored; shadow candidates (`ShadowCandidate`) are strictly non-executable and barred from the broker execution adapter.
+## Hackathon operating configuration
 
+This is a distinct, hackathon-specific operating configuration. It keeps the BA baseline risk, concentration, liquidity, instrument, and exit controls unchanged while applying the four-trading-day hold override and the fixed evaluation window below. It does not replace the reusable 14-day baseline value.
 
-Active trading windows are configurable as one or more intraday intervals within the regular market session boundary (default: `[{"start": "09:30", "end": "16:00"}]` in `America/New_York` time). Proposals submitted outside configured active windows fail closed with reason code `OUTSIDE_TRADING_WINDOW`.
+### Hackathon evaluation window
 
-The competition account starting capital baseline is established at $100,000.00 USD. Position concentration, order notional, portfolio cash buffer, drawdown, concurrent positions, liquidity, minimum confidence, data freshness duration, exit policy, and ShadowFund horizon remain BA/product TBDs. An absent mandatory value returns `RULESET_NOT_CONFIGURED`.
+The BA-authorized hackathon configuration follows the official evaluation window described in [PR #16](https://github.com/MaChewwwww/PRISM/pull/16) (2026-08-29). Official P&L is measured on **total account equity**, not cash balance, at **EOD Thursday September 3, 2026**. The agent starts on **Monday August 31 at 09:30 ET**. **Friday September 4 at 09:30 ET** is only the outer window boundary and is not the scoring timestamp.
 
-## Implied volatility (IV) regime and strategy constraints
+The four-session operating window is bounded as follows:
 
-To protect capital against post-catalyst volatility collapse (IV crush) and vega deflation:
+| Rule | Authorized setting | Operational meaning |
+| --- | --- | --- |
+| Trading start | Monday Aug 31, 2026 09:30 ET | First eligible entry time. |
+| Official scoring point | EOD Thursday Sep 3, 2026; total account equity | The value used for the official P&L comparison. |
+| Window outer boundary | Friday Sep 4, 2026 09:30 ET | Window edge only; it does not extend scoring or holding. |
+| Effective maximum hold | Minimum of 4 trading days and the EOD Sep 3 scoring point | A late entry cannot run beyond the scoring point. |
+| New-entry cutoff | Wednesday Sep 2, 2026 16:00 ET | No new positions after the Wednesday close; existing positions may only be managed or exited. |
+| End-of-window force-flatten | By Thursday Sep 3, 2026 close | Close every position before settlement and score the resulting total equity. |
 
-- **High IV Regime ($\text{IV Rank} > 50\%$ or $\text{IV}/\text{HV} > 1.20$):**
-  - Single-leg long options (`long_call`, `long_put`) are **strictly prohibited** and fail evaluation with reason code `HIGH_IV_SINGLE_LEG_PROHIBITED`.
-  - Only two-leg Defined-Risk Debit Spreads (`call_debit_spread`, `put_debit_spread`) are permitted, ensuring the short OTM leg offsets positive vega exposure and cushions post-event IV collapse.
-- **Normal / Low IV Regime ($\text{IV Rank} \le 50\%$ and $\text{IV}/\text{HV} \le 1.20$):**
-  - Both single-leg long options and two-leg debit spreads are permitted; single legs capitalize on potential volatility expansion.
-- **Extreme IV Regime ($\text{IV Rank} > 90\%$):**
-  - Single legs are hard-rejected; debit spread width is constrained to minimize vega drag, or the proposal is modified to `NO_TRADE`.
+Every entry therefore has at least one full Thursday session of runway. The EV and realistic reward/risk gates still reject a proposal that cannot realize its modeled edge in the remaining window. The force-flatten supersedes the standard `max_hold_default_days` only for this hackathon configuration; hard stop, take-profit, DTE, thesis invalidation, and the 0-DTE block continue to apply earlier. A Sep-3-expiring contract must not be held into settlement because the force-flatten and DTE controls are mandatory.
 
-## Deterministic options exit policy and position lifecycle
+### Autonomous run configuration
 
-To prevent holding open option spreads until expiration—which incurs unnecessary theta decay, assignment friction, and gamma pin risk—the system evaluates position-level exit rules:
+Autonomous paper execution is an operational opt-in, not a replacement for this ruleset. `AUTONOMOUS_TRADING_ENABLED` defaults to `false`; enabling it requires `EXECUTION_ENABLED=true`, an active ruleset, complete Alpaca paper credentials, and a UTC `AUTONOMOUS_TRADING_START_AT`/`AUTONOMOUS_TRADING_END_AT` pair. Production intervals must remain within the authorized hackathon trading start and force-flatten deadline. Staging may use its separate paper account for a bounded rehearsal interval; neither environment may bypass paper mode, the kill switch, or mandatory rules.
 
-- **Take-Profit Rule ($\text{TP}$):** Automatically triggers a closing order when position unrealized profit reaches or exceeds the configured `take_profit_pct` (default: **$50.0\%$** of theoretical maximum profit). This captures the bulk of the move without suffering late-stage time decay.
-- **Stop-Loss Rule ($\text{SL}$):** Automatically triggers a closing order when position loss reaches or exceeds the configured `stop_loss_pct` (default: **$50.0\%$** of initial debit paid), capping maximum capital loss per trade.
-- **Time/DTE Rule (Gamma Pin Risk):** Force-closes any open option position when days-to-expiration reaches $\le \text{dte\_threshold}$ (default: **$\le 7\text{ days}$**), avoiding assignment risks and illiquid expiration dynamics.
-- **Max Holding Duration:** Force-closes positions after `max_hold_days` elapsed sessions (default: **$14\text{ days}$**) if the reaction thesis has not materialized.
+The current repository has no autonomous orchestration loop. These settings provide a fail-closed schedule gate for the future loop; they do not, by themselves, submit or schedule orders.
 
-### AI Profile tunability and safety bounds
+## Standard AI Profiles
 
-Exit parameters are configurable per active **`AIProfile`** (by the user or recommended via **Post-Analysis AI**), but must strictly adhere to the following deterministic safety envelope:
+| Profile | Target allocation | Opportunity threshold | Take-profit | Stop-loss |
+| --- | ---: | ---: | ---: | ---: |
+| Conservative | 1.50% | 90 | 75.00% | 50.00% fixed |
+| Balanced | 2.00% | 84 | 75.00% | 50.00% fixed |
+| Aggressive | 2.50% | 80 | 100.00% | 50.00% fixed |
 
-| Parameter | Default | Safe Approved Range | Enforcement Action on Breach |
-| :--- | :---: | :---: | :--- |
-| `take_profit_pct` | $50.0\%$ | $[20.0\%, 90.0\%]$ | Rejects profile activation if $< 20.0\%$ or $> 90.0\%$ |
-| `stop_loss_pct` | $50.0\%$ | $[20.0\%, 75.0\%]$ | Rejects profile activation if $< 20.0\%$ or $> 75.0\%$ |
-| `dte_threshold` | $7\text{ days}$ | $[2\text{ days}, 14\text{ days}]$ | Rejects if $< 2\text{d}$ (pin risk) or $> 14\text{d}$ |
-| `max_hold_days` | $14\text{ days}$ | $[3\text{ days}, 45\text{ days}]$ | Rejects if $< 3\text{d}$ or $> 45\text{d}$ |
+Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 through 95; take-profit 75.00% through 100.00%; stop-loss exactly 50.00%.
 
-When Post-Analysis AI audits historical ShadowFund counterfactual sessions, it may generate an `AIProfileRecommendation` to adjust these parameters to optimize risk-adjusted returns (Sharpe ratio / win rate). The recommendation can be applied manually by the operator or automatically switched if guardrailed auto-tuning is enabled.
+## Deterministic priorities
 
+| Priority | Gate | Required behavior |
+| --- | --- | --- |
+| P0 | Platform and authorization integrity | Reject live mode, disabled execution, kill switch, missing/invalid ruleset, incompatible profile, expired authorization, or digest mismatch. |
+| P1 | Portfolio survival | Apply drawdown state, aggregate/ticker/sector/cluster concentration, cash reserve, max positions, and planned stop-risk controls. |
+| P2 | Instrument and regime | Permit only supported option structures and verified permissions. VOLATILE restricts to 1:1 debit spreads. CRISIS blocks new risk. |
+| P3 | Freshness and execution quality | Reject evidence older than 30 seconds and spreads wider than 10% of premium; validate active contracts and required snapshots. |
+| P4 | Opportunity and economics | Require score, net EV, and realistic reward/risk gates independently. |
+| P5 | Exit completeness | Require bounded take-profit, fixed stop-loss, DTE, holding, and thesis-invalidation behavior. |
 
-## Versioning and audit
+`MODIFY` is valid only where a safe, deterministic revision can be described, such as reducing size to a concentration cap. A proposal that cannot be safely revised is `FAIL`. Aggregate modification state is `MODIFIED_PENDING_ACCEPTANCE`, never approval.
 
+## Sizing and risk states
 
-Rulesets are immutable after activation. A decision stores the ruleset version, individual evaluations, input snapshot references, effective profile version, outcome, allowed payload digest, and expiration. Retired rules remain queryable for historical audit.
+Final allocation is the smallest applicable limit among profile target, per-trade stop-risk, ticker cap, sector/cluster cap, aggregate portfolio-risk cap, regime cap, liquidity cap, and buying-power cap. With the fixed 50% stop, the 1.00% normal risk cap implies a 2.00% allocation ceiling, and the 0.75% volatile cap implies a 1.50% ceiling. Quantity rounds down to an executable whole-contract size.
+
+| State | Trigger | New-risk behavior |
+| --- | --- | --- |
+| NORMAL | Below 1.50% start-of-day drawdown | Normal authorized rules apply. |
+| CAUTION | At least 1.50% | Reduce new-risk budget. |
+| DEFENSIVE | At least 2.25% | Only highest-quality opportunities with reduced sizing. |
+| HALT | At least 3.00% | Reject all new proposals. Mandatory exits still govern active positions. |
+
+Market-regime detection details beyond authorized thresholds must remain versioned and testable. No martingale or loss-recovery sizing is permitted.
+
+## Supported initial option envelope
+
+Only long calls, long puts, and two-leg 1:1 long call/put debit spreads are in the initial envelope. Options use whole-contract quantities, `day` time in force, no extended hours, and active OCC contracts. Reject naked shorts, credit spreads, equity legs, rolls, more than two legs, unsupported approval levels, and unverified account capabilities.
+
+## Exit behavior
+
+Every position requires deterministic profit, loss, DTE, time, and thesis-invalidation exits. Balanced take-profit is 75%; the fixed stop-loss is 50%. The rules engine validates the policy before authorization, and future monitoring must apply mandatory exits independently of AI availability.
+
+## Deliberately unresolved
+
+Availability/latency SLOs, backup retention, RPO, RTO, and any numerical value absent from the versioned registry remain unresolved. Infrastructure examples do not authorize them.

@@ -9,10 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const baseUrl =
-      process.env.API_INTERNAL_URL ??
-      process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:8000/api/v1";
+    const baseUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8000/api/v1";
 
     const backendRes = await fetch(`${baseUrl}/auth/login`, {
       method: "POST",
@@ -29,19 +26,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = (await backendRes.json()) as { token: string; email: string; expires_at: string };
+    const data = (await backendRes.json()) as { email: string; expires_at: string };
+    const backendCookie = backendRes.headers.get("set-cookie");
+    if (!backendCookie) {
+      return NextResponse.json(
+        { error: "Authentication service did not create a session" },
+        { status: 502 },
+      );
+    }
 
     const response = NextResponse.json({ ok: true, email: data.email });
-    response.cookies.set("shadowfund_session", data.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 24 * 60 * 60,
-    });
+    response.headers.set("set-cookie", backendCookie);
 
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[Login Route Error]", err);
     return NextResponse.json({ error: "Unable to reach authentication service" }, { status: 503 });
   }
 }

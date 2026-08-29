@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.contracts.models import EvidenceItem, ResearchReport
+from app.contracts.models import EvidenceItem, ReactionClassification, ResearchReport
 from app.core.llm_gateway import LLMGateway
 from app.research.models import ResearchReportModel
 
 PROMPT_VERSION = "1.0"
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "You are a Market Reaction and Mispricing Intelligence Agent for PRISM, a multi-agent trading "
@@ -40,9 +42,18 @@ class ReactionAnalysisLLMOutput(BaseModel):
         default_factory=list,
         description="Key risks, uncertainties, or data limitations in the reaction analysis.",
     )
-    classification: str = Field(
+    classification: Literal["UNDERREACTION", "OVERREACTION", "FAIR_REACTION"] = Field(
         description="Classification: 'UNDERREACTION', 'OVERREACTION', or 'FAIR_REACTION'."
     )
+
+
+def _freshness_seconds(bars: list[dict[str, Any]], now: datetime) -> int:
+    latest_timestamp = bars[-1].get("timestamp") if bars else None
+    if not isinstance(latest_timestamp, datetime):
+        return 0
+    if latest_timestamp.tzinfo is None or latest_timestamp.utcoffset() is None:
+        return 0
+    return max(0, int((now - latest_timestamp.astimezone(UTC)).total_seconds()))
 
 
 def compute_reaction_metrics(
@@ -68,6 +79,8 @@ def compute_reaction_metrics(
 
     # Reference pre-event price is the earliest bar in sample (e.g. 1-day/hour prior)
     pre_price = Decimal(str(bars[0]["close"]))
+    if pre_price <= 0:
+        raise ValueError("market bar close must be positive")
     # Current price is latest bar close
     current_price = Decimal(str(bars[-1]["close"]))
 
@@ -169,9 +182,20 @@ class MarketReactionAgent:
                         freshness_seconds=cached.freshness_seconds,
                         evidence=evidence_items,
                         limitations=limitations_raw,
+                        actual_reaction_pct=cached.actual_reaction_pct,
+                        expected_reaction_pct=cached.expected_reaction_pct,
+                        reaction_gap_pct=cached.reaction_gap_pct,
+                        volume_ratio=cached.volume_ratio,
+                        classification=(
+                            ReactionClassification(cached.classification)
+                            if cached.classification
+                            else None
+                        ),
+                        opportunity_score=cached.opportunity_score,
                     )
             except Exception:
-                pass
+                # Research caching is best-effort; provider analysis remains usable.
+                logger.warning("Market reaction cache read failed for symbol=%s", symbol)
 
         # Deterministic math calculation
         metrics = compute_reaction_metrics(bars, expected_reaction_pct)
@@ -235,9 +259,15 @@ class MarketReactionAgent:
             symbol=symbol,
             thesis=parsed.thesis,
             confidence=Decimal(str(round(parsed.confidence, 4))),
-            freshness_seconds=60,
+            freshness_seconds=_freshness_seconds(bars, now_utc),
             evidence=evidence_items,
             limitations=parsed.limitations,
+            actual_reaction_pct=metrics["actual_reaction_pct"],
+            expected_reaction_pct=metrics["expected_reaction_pct"],
+            reaction_gap_pct=metrics["reaction_gap_pct"],
+            volume_ratio=metrics["volume_ratio"],
+            classification=ReactionClassification(metrics["classification"]),
+            opportunity_score=metrics["opportunity_score"],
         )
 
         # Write to PostgreSQL DB cache
@@ -267,6 +297,7 @@ class MarketReactionAgent:
                 actual_reaction_pct=metrics["actual_reaction_pct"],
                 expected_reaction_pct=metrics["expected_reaction_pct"],
                 reaction_gap_pct=metrics["reaction_gap_pct"],
+                volume_ratio=metrics["volume_ratio"],
                 classification=metrics["classification"],
                 opportunity_score=metrics["opportunity_score"],
                 model_name=completion.model,
@@ -275,6 +306,8 @@ class MarketReactionAgent:
             db_session.add(db_model)
             await db_session.commit()
         except Exception:
-            pass
+            # A cache write must never turn a non-authoritative research result into an error.
+            await db_session.rollback()
+            logger.warning("Market reaction cache write failed for symbol=%s", symbol)
 
         return report

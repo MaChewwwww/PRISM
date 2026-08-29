@@ -54,6 +54,7 @@ class ResearchReportModel(Base):
     actual_reaction_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     expected_reaction_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     reaction_gap_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    volume_ratio: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     classification: Mapped[str | None] = mapped_column(String(50), nullable=True)
     opportunity_score: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
 

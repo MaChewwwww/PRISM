@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { rangeForPreset, type DateRange, type RangePreset } from "@/features/story/story-data";
+import { rangeForPreset, type DateRange, type RangePreset } from "@/features/story/date-range";
 
 const presets: Array<{ value: Exclude<RangePreset, "custom">; label: string }> = [
   { value: "7d", label: "7D" },
@@ -30,7 +30,7 @@ export function DateRangeControl({ range }: { range: DateRange }) {
   }
 
   function selectPreset(preset: Exclude<RangePreset, "custom">) {
-    const nextRange = rangeForPreset(preset);
+    const nextRange = rangeForPreset(preset, range.to);
     setFrom(nextRange.from);
     setTo(nextRange.to);
     setError(null);
@@ -48,7 +48,7 @@ export function DateRangeControl({ range }: { range: DateRange }) {
       return;
     }
     setError(null);
-    navigate({ preset: "custom", from, to });
+    navigate({ preset: "custom", from, to, timezone: "UTC" });
   }
 
   return (

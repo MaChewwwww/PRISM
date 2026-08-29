@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.api.routes import get_database_readiness
 from app.core.config import Settings, get_settings
 from app.main import app
 
@@ -7,6 +8,7 @@ from app.main import app
 def test_frs_015_public_endpoints_and_redacted_status() -> None:
     settings = Settings(_env_file=None, alpaca_cli_path="definitely-not-installed")
     app.dependency_overrides[get_settings] = lambda: settings
+    app.dependency_overrides[get_database_readiness] = lambda: True
     with TestClient(app) as client:
         assert client.get("/api/v1/health/live").json() == {"status": "ok"}
         assert client.get("/api/v1/health/ready").json() == {"status": "ready"}
@@ -24,7 +26,7 @@ def test_frs_015_public_endpoints_and_redacted_status() -> None:
         assert login_res.status_code == 200
         data = login_res.json()
         assert data["email"] == settings.auth_email
-        assert "token" in data
+        assert "token" not in data
 
         # Authenticated request to /system/status succeeds
         payload = client.get("/api/v1/system/status").json()

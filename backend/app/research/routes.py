@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi.concurrency import run_in_threadpool
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
@@ -25,6 +27,7 @@ from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
 
 router = APIRouter(prefix="/research", tags=["research"])
+logger = logging.getLogger(__name__)
 
 
 class NewsAnalysisRequest(BaseModel):
@@ -35,9 +38,10 @@ class NewsAnalysisRequest(BaseModel):
 
 
 class MarketReactionRequest(BaseModel):
-    symbol: str = Field(..., description="Ticker symbol, e.g. AAPL")
+    symbol: str = Field(..., min_length=1, description="Ticker symbol, e.g. AAPL")
     catalyst_summary: str = Field(
         ...,
+        min_length=1,
         description="Summary of the catalyst or news event to compare market reaction against",
     )
     expected_reaction_pct: Decimal | None = Field(
@@ -57,7 +61,11 @@ class MarketReactionRequest(BaseModel):
 
 
 class QuantitativeAnalysisRequest(BaseModel):
-    symbol: str = Field(..., description="Ticker symbol to quantitatively analyze, e.g. AAPL")
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Ticker symbol to quantitatively analyze, e.g. AAPL",
+    )
     bar_limit: int = Field(
         default=250,
         ge=20,
@@ -72,6 +80,13 @@ class IndustryAnalysisRequest(BaseModel):
         default=None,
         description="Optional custom peer tickers to compare against",
     )
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
 
 
 def get_alpaca_gateway(settings: Annotated[Settings, Depends(get_settings)]) -> AlpacaPyGateway:
@@ -101,11 +116,15 @@ async def analyze_news(
     trace_id = uuid4()
 
     try:
-        articles = gateway.get_news(symbol=request.symbol.strip().upper(), limit=request.limit)
+        articles = await run_in_threadpool(
+            gateway.get_news,
+            symbol=request.symbol.strip().upper(),
+            limit=request.limit,
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch news from Alpaca: {exc!s}",
+            detail="Alpaca news provider is temporarily unavailable",
         ) from exc
 
     if not articles:
@@ -124,11 +143,12 @@ async def analyze_news(
                 db_session=db_session,
             )
             analyses.append(analysis)
-        except Exception as exc:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning("Failed to analyze article %s: %s", article.get("id"), exc)
+        except Exception:
+            # Continue analyzing other articles, logging the error
+            logger.warning(
+                "News analysis failed for article_id=%s",
+                article.get("id"),
+            )
 
     return analyses
 
@@ -146,11 +166,20 @@ async def analyze_reaction(
     symbol = request.symbol.strip().upper()
 
     try:
-        bars = gateway.get_stock_bars(symbol=symbol, limit=request.bar_limit)
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
     except Exception as exc:
+        logger.warning(
+            "Alpaca market-bar provider failed for symbol=%s: %s",
+            symbol,
+            type(exc).__name__,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch market bars from Alpaca: {exc!s}",
+            detail="Alpaca market data provider is temporarily unavailable",
         ) from exc
 
     if not bars:
@@ -174,13 +203,38 @@ async def analyze_reaction(
         )
         return report
     except Exception as exc:
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.error(f"Market reaction analysis failed for {symbol}: {exc}", exc_info=True)
+        logger.exception("Market reaction analysis failed for symbol=%s", symbol)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Market reaction analysis failed: {exc!s}",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Market reaction analysis is temporarily unavailable",
+        ) from exc
+
+
+@router.post("/quant/analyze", response_model=QuantitativeAnalysisReport)
+async def analyze_quantitative(
+    request: QuantitativeAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+) -> QuantitativeAnalysisReport:
+    """Perform 100% deterministic quantitative and technical momentum analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    try:
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Alpaca quantitative-bar provider failed for symbol=%s: %s",
+            symbol,
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Alpaca market data provider is temporarily unavailable",
         ) from exc
 
 

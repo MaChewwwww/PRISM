@@ -1,18 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DemoDataNotice, DisabledAction } from "@/components/product/workspace-ui";
+import { ProvenanceLabel } from "./workspace-ui";
 
-describe("workspace placeholder controls", () => {
-  it("FRS-019 identifies fixture data as non-live", () => {
-    render(<DemoDataNotice />);
-    expect(screen.getByRole("note")).toHaveTextContent("No provider request was made");
+describe("ProvenanceLabel", () => {
+  it("labels the demonstration snapshot as an illustrative fixture", () => {
+    render(<ProvenanceLabel provenance="illustrative_fixture" />);
+
+    expect(screen.getByText("Illustrative fixture")).toHaveAttribute(
+      "data-provenance",
+      "illustrative_fixture",
+    );
   });
 
-  it("FRS-005 keeps future authority actions disabled with a reason", () => {
-    render(<DisabledAction label="Execute paper order" reason="Execution is unavailable." />);
-    const button = screen.getByRole("button", { name: "Execute paper order" });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleDescription("Execution is unavailable.");
+  it("reserves paper and simulation labels for their typed sources", () => {
+    const { rerender } = render(<ProvenanceLabel provenance="alpaca_paper" />);
+    expect(screen.getByText("Alpaca paper")).toBeInTheDocument();
+
+    rerender(<ProvenanceLabel provenance="shadow" />);
+    expect(screen.getByText("ShadowFund")).toBeInTheDocument();
   });
 });

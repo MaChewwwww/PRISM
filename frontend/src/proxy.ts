@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
-  const sessionToken = request.cookies.get("shadowfund_session")?.value;
+  const sessionToken = request.cookies.get("prism_session")?.value;
   const { pathname } = request.nextUrl;
 
   const isLoginPage = pathname === "/login";

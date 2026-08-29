@@ -3,6 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+from fastapi import HTTPException
+
 from app.contracts.models import (
     MACDCrossover,
     RSICondition,
@@ -16,6 +19,7 @@ from app.research.quant_engine import (
     compute_rsi,
     compute_sma,
 )
+from app.research.routes import QuantitativeAnalysisRequest, analyze_quantitative
 
 
 def test_compute_sma() -> None:
@@ -72,6 +76,17 @@ def test_compute_atr_and_volatility() -> None:
     atr, ann_vol = compute_atr_and_volatility(highs, lows, closes, period=14)
     assert atr == Decimal("10.0")
     assert ann_vol >= Decimal("0.0")
+
+
+def test_compute_atr_and_volatility_short_history_does_not_invent_volatility() -> None:
+    atr, ann_vol = compute_atr_and_volatility(
+        [Decimal("101.0")],
+        [Decimal("99.0")],
+        [Decimal("100.0")],
+    )
+
+    assert atr == Decimal("2.0")
+    assert ann_vol == Decimal("0.0")
 
 
 def test_compute_quantitative_analysis_full_report() -> None:

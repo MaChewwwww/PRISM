@@ -1,121 +1,51 @@
-# PRISM — AI Agents
+# PRISM AI agents
 
-**One signal. Multiple perspectives. Better decisions.**
+Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
-## The PRISM Multi-Agent Pipeline and Decision Layers
+AI produces evidence, proposals, critiques, and recommendations. Deterministic code owns authorization. The canonical topology contains seven specialist agents, followed by distinct risk, authorization, execution, evaluation, and learning stages.
 
-Just as an optical prism separates a single beam of light into its constituent spectral bands, **PRISM** takes a single market signal and autonomously breaks it down through a sequential pipeline of **7 specialist AI agents**, each contributing a unique perspective, followed by **2 decision and execution layers** before deterministic rules govern whether a trade may proceed.
+## Canonical specialist sequence
 
-> **One signal → Autonomous perspectives → Governed decisions → Clearer outcomes**
-
-## Pipeline and Layer Roster
-
-| AI Agent / Decision Layer | Component Type | Primary Function | Key Inputs |
+| Order | Agent | Responsibility | Authoritative limit |
 | --- | --- | --- | --- |
-| **News Intelligence Agent** | AI Agent | Analyzes financial news, announcements, earnings releases, and market events to determine their relevance, sentiment, significance, and potential impact on an asset. | Financial news, headlines, timestamps, company/ticker, event type, sentiment |
-| **Quantitative Analysis Agent** | AI Agent | Interprets quantitative market indicators to evaluate price trends, momentum, volatility, trading volume, and other technical signals. | Historical/current prices, OHLCV, RSI, MACD, ATR, volatility, momentum, volume |
-| **Industry Intelligence Agent** | AI Agent | Evaluates the company's industry and competitive environment, including sector performance, competitors, supply/demand conditions, and industry-specific developments. | Sector data, competitor performance, industry news, company/sector relationships |
-| **Fundamental Analysis Agent** | AI Agent | Evaluates the company's financial health and valuation to determine whether its underlying fundamentals support the current market price or movement. | Revenue, earnings, EPS, growth, margins, valuation ratios, debt, cash flow, guidance |
-| **Macroeconomic Analysis Agent** | AI Agent | Evaluates broader economic and financial conditions that may influence an asset or sector, such as interest rates, inflation, market indexes, and economic events. | Interest rates, inflation, major indexes, economic indicators, macroeconomic news |
-| **Market Reaction / Mispricing Agent** | AI Agent | Compares the significance of new information with the market's actual response to identify potential underreaction, fair reaction, or overreaction. This is the system's primary analytical innovation. | Outputs from all specialist agents, price reaction, volume, historical reactions to similar events, expected vs. actual movement |
-| **Trading Decision Agent** | AI Agent | Synthesizes the outputs of all specialist agents and determines whether the available evidence provides sufficient justification to BUY, SELL, or HOLD an asset. | All agent reports, confidence, expected return, downside, market conditions, mispricing signal |
-| **Risk Management Layer** | Decision Layer | Applies predefined risk constraints before a trade is executed, including position limits, portfolio exposure, volatility, and maximum acceptable loss. | Portfolio, positions, volatility, exposure, position size, risk/reward |
-| **Execution Layer** | Decision Layer | Executes an approved trading decision through Alpaca's paper-trading environment and records the resulting order and position information. | Approved trade, ticker, order type, quantity, price, account/portfolio |
+| 1 | News Agent | Normalize and classify catalysts; retain source, time, uncertainty, and evidence references. | Research only; cannot propose an order. |
+| 2 | Quantitative Agent | Evaluate price, volume, volatility, options, liquidity, and historical analog behavior. | Research only; decimal-safe inputs required. |
+| 3 | Industry Agent | Compare sector, peers, supply chain, and competitive context. | Research only. |
+| 4 | Fundamental Agent | Assess earnings, valuation, balance-sheet, and issuer-specific evidence. | Research only. |
+| 5 | Macroeconomic Agent | Assess rates, policy, indexes, volatility regime, and cross-asset context. | Research only. |
+| 6 | Market Reaction/Mispricing Agent | Synthesize expected versus observed reaction and whether a defensible reaction gap exists. | May emit `NO_CLEAR_EDGE`; cannot authorize. |
+| 7 | Trading Decision Agent | Produce a versioned `TradeProposal` or `NO_TRADE`, including structure, economics, exit policy, evidence, and limitations. | Proposal only. |
 
-## Authority model
+Specialist work may be concurrent where inputs are independent, but synthesis consumes validated, timestamped outputs. Missing, stale, invalid, contradictory, or unparseable evidence degrades confidence or ends in `NO_TRADE`.
 
-AI components and decision layers are untrusted decision-support structures. They never own broker credentials, deterministic rule definitions, or execution authority. The Execution Layer invokes Alpaca only after all deterministic checks pass.
+## Downstream stages
 
-| AI Agent / Decision Layer | Component Type | Output | Prohibited behavior |
-| --- | --- | --- | --- |
-| News Intelligence Agent | AI Agent | Structured news/event analysis with sentiment and significance | Proposing or placing an order |
-| Quantitative Analysis Agent | AI Agent | Technical signal assessment with trend, momentum, and volatility metrics | Proposing or placing an order |
-| Industry Intelligence Agent | AI Agent | Sector/competitive landscape evaluation | Proposing or placing an order |
-| Fundamental Analysis Agent | AI Agent | Financial health and valuation assessment | Proposing or placing an order |
-| Macroeconomic Analysis Agent | AI Agent | Macro condition assessment with economic context | Proposing or placing an order |
-| Market Reaction / Mispricing Agent | AI Agent | `ResearchReport` with reaction gap, analog evidence, and mispricing signal | Proposing or placing an order |
-| Trading Decision Agent | AI Agent | `TradeProposal` or `NO_TRADE` with rationale and shadow candidates | Claiming authorization |
-| Risk Management Layer | Decision Layer | `RiskAssessment` with exposure, constraints, and critique | Overriding hard rules |
-| Execution Layer | Decision Layer | `ExecutionReceipt` via Alpaca paper CLI | Executing without a valid `AuthorizationDecision` |
+| Stage | Type | Responsibility |
+| --- | --- | --- |
+| Risk Management | AI-assisted | Challenge portfolio concentration, drawdown, liquidity, volatility, tail risk, and contradictory evidence; recommend changes but do not authorize. |
+| Rules Engine | Deterministic | Evaluate typed rules as `PASS`, `MODIFY`, or `FAIL`; produce aggregate `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`. |
+| Execution | Deterministic integration | Recheck immutable bindings and changing state, then translate only a current `APPROVE` into an Alpaca paper order. Disabled and unimplemented in the current skeleton. |
+| ShadowFund | Deterministic evaluation | Track non-executable counterfactual branches against the same subsequent market path. Engine deferred; illustrative views implemented. |
+| Post-Analysis | Asynchronous AI-assisted | Compare completed chosen/ShadowFund evidence and recommend changes only to authorized AI Profile fields. Recommendations require validation and manual review. |
 
-## Output contract
+## Structured records
 
-Every output uses a versioned strict schema and includes identity, trace ID, timestamps, model/prompt version, concise rationale, assumptions, evidence references, confidence/uncertainty, and explicit failure/no-action outcomes. Free-form text may accompany a valid structure but cannot replace it.
+Each AI output includes schema version, trace ID, source record IDs, observed/generated times, agent/model/prompt versions, evidence references, confidence, uncertainty, limitations, and terminal state. The system records concise rationale, not hidden chain-of-thought.
 
-Invalid JSON, missing required fields, unknown enums, out-of-range values, unsupported instruments, or ungrounded identifiers produce a terminal validation error. The system stores the error and does not advance the workflow.
+The Trading Decision Agent's `TradeProposal` binds the research record and market snapshot, selects only supported paper option structures, declares realistic expected value and reward/risk, and includes an `ExitPolicy`. The active Balanced exit defaults are 75% take-profit, fixed 50% stop-loss, 7 DTE, and a 14-day baseline holding limit; the hackathon operating override is four trading days.
 
-## Strategy synthesis and volatility regime conditioning
+During the BA-authorized hackathon window, Trading Decision must not propose a new entry after Wednesday Sep 2, 2026 16:00 ET. The effective hold ends at the EOD Thursday Sep 3 total-equity scoring point, when all positions are force-flattened; Friday Sep 4 09:30 ET is only the outer window boundary. Sep-3-expiring contracts cannot be carried into settlement.
 
-The Trading Decision Agent and Risk Management Layer operate under strict quantitative volatility filters:
+## Research and opportunity score
 
-1. **Deterministic IV Conditioning:**
-   - The Trading Decision Agent receives market volatility metrics (`iv_rank`, `iv_to_hv_ratio`, `atm_iv`).
-   - When $\text{IV Rank} > 50\%$ or post-earnings volatility is elevated, the Trading Decision Agent is restricted to **Defined-Risk Debit Spreads** (`call_debit_spread`, `put_debit_spread`). This offsets post-event implied volatility collapse (IV crush) by selling an out-of-the-money leg.
-   - When $\text{IV Rank} \le 50\%$, single-leg long options (`long_call`, `long_put`) are permitted to exploit potential volatility expansion.
+The Market Reaction/Mispricing stage may emit an opportunity score from 0 through 100, but score alone is never permission. The absolute floor is 75; Balanced requires at least 84, Conservative 90, and Aggressive 80. A proposal must independently pass realistic net EV of at least +0.15R, reward/risk of at least 1.5:1, portfolio-risk, freshness, liquidity, and execution-quality gates.
 
-2. **Deterministic Contract Selection (Anti-Hallucination):**
-   - The Trading Decision Agent selects the strategic thesis, target delta ($\approx 0.50\text{ Delta}$ long leg / $0.30\text{ Delta}$ short leg), and target DTE window ($21\text{ to }45\text{ days}$).
-   - A deterministic Option Chain Resolver queries Alpaca's active option chain to bind exact, tradable OCC contract symbols and strikes, preventing LLM strike hallucination.
+## Regime and structure guidance
 
-3. **Risk Management Critique:**
-   - The Risk Management Layer evaluates whether the proposed strategy introduces adverse vega exposure or tail risk relative to the active regime and portfolio concentration.
+In a VOLATILE regime with IV Rank above 50%, deterministic policy restricts proposals to defined-risk 1:1 debit spreads, caps target allocation at 1.5%, and caps planned stop risk at 0.75% of equity. In NORMAL conditions, supported single-leg long calls/puts and debit spreads remain subject to all hard controls. AI may describe a regime; deterministic code applies the rule.
 
-4. **Exit Policy Formulation:**
-   - Every candidate `TradeProposal` incorporates a structured `ExitPolicy` specifying take-profit targets (default $50\%$), stop-loss limits (default $50\%$), DTE pin-risk boundaries ($\le 7\text{d}$), and maximum holding duration.
+## Provider boundary and failure behavior
 
-5. **Single-Prompt Multi-Perspective Extraction:**
-   - In the same inference pass that creates the primary candidate action, the Trading Decision Agent extracts structured `shadow_candidates` (e.g. contrarian reversal thesis, conservative sizing multiplier, or alternate delta candidate). This provides rich multiverse inputs for ShadowFund with zero extra API latency or token overhead.
+Model providers remain behind a neutral adapter. Invalid structured output, missing required evidence, timeouts after classified retries, or unsafe provider responses stop the relevant workflow and expose a redacted error. The implemented `/api/v1/research/news/analyze`, `/api/v1/research/reaction/analyze`, and deterministic `/api/v1/research/quant/analyze` slices are non-authoritative and do not change this boundary. Quantitative analysis uses only normalized historical bars and emits a typed technical report; it never proposes or authorizes an order.
 
-## Post-Analysis and adaptive profile tuning
-
-
-Post-Analysis AI acts as an asynchronous, self-auditing intelligence loop:
-
-1. **ShadowFund Counterfactual Audit:**
-   - The agent continuously evaluates completed executions against ShadowFund virtual branches (*Do Nothing*, *Reduced Sizing*, *Hedged*).
-   - Measures decision regret, drawdown impact, and exit timing efficacy across market volatility regimes.
-
-2. **Exit Policy & Risk Calibration:**
-   - Evaluates whether alternate exit parameters (e.g., locking profit at $40\%$ vs $60\%$, or cutting losses at $35\%$ vs $50\%$) would have historically improved portfolio Sharpe ratio and win rate.
-   - Synthesizes empirical evidence into structured `AIProfileRecommendation` proposals containing recommended parameter adjustments.
-
-3. **Dual Activation Modes:**
-   - **Manual Prescriptive Mode (Default):** Surfaces the recommendation, rationale, and counterfactual comparison to the operator on the UI for manual **Apply / Modify / Reject** review.
-   - **Autonomous Guardrailed Mode (Optional):** Automatically switches to the updated profile *only if* all proposed values pass the **Deterministic Profile Validator** within the approved $[20\%, 90\%]$ safety envelope.
-
-## Prompt and model lifecycle
-
-
-
-
-- Store prompt templates by stable name and semantic version.
-- Record provider, model identifier, prompt version, contract version, and relevant input digest.
-- Do not store hidden chain-of-thought. Store concise user-facing rationale and evidence.
-- Evaluate prompt/model changes against fixed replay fixtures before activation.
-- Keep provider calls behind an interface so the provider can be changed without changing domain contracts.
-
-## Supported providers and configuration
-
-The system supports pluggable LLM backends configured via environment variables:
-- **Featherless AI** (`featherless`): High-throughput, serverless open-weights models (e.g. `DeepSeek-V4-Flash-0731`, `Qwen3.8-Flash-Next`, `Qwen3.8-27B`) via `FEATHERLESS_API_KEY` and `FEATHERLESS_BASE_URL` (`https://api.featherless.ai/v1`).
-- **Anthropic** (`anthropic`): Claude models via `ANTHROPIC_API_KEY`.
-- **Google Gemini** (`gemini`): Gemini models via `GEMINI_API_KEY`.
-- **Ollama** (`ollama`): Local open-weights models via `OLLAMA_BASE_URL`.
-- **DeepSeek** (`deepseek`): DeepSeek models via `DEEPSEEK_API_KEY`.
-- **OpenAI** (`openai`): OpenAI models via `OPENAI_API_KEY`.
-
-Environment selection is driven by `LLM_PROVIDER` and optional `LLM_MODEL`. When using `featherless`, recommended warm-pool models include `DeepSeek-V4-Flash-0731` for full research/strategy reasoning and `Qwen3.8-Flash-Next` for low-latency JSON extraction.
-
-## Safety and observability
-
-- Agents receive the minimum required context and no Alpaca secret.
-- Treat news and external text as untrusted data, not instructions.
-- Bound tool access by agent responsibility; research tools are read-only.
-- Apply timeouts, retry only safe calls, and record latency/token/error metadata without sensitive content.
-- User-visible decision stories may show concise rationale, evidence references, structured outputs, model/prompt versions, latency, token counts, and sanitized tool/MCP invocation summaries. They must never show hidden chain-of-thought or sensitive tool arguments/results.
-- Distinguish recorded invocations from configured or planned capabilities. A provider, model, tool, or MCP server is counted only when a run record says it was used.
-- NO_CLEAR_EDGE and NO_TRADE are successful outcomes.
-
-## Deferred decisions
-
-The active production model set, evaluation thresholds, and automatic AI Profile switching remain TBD. Infrastructure supports runtime configuration across all supported providers without altering core contracts.
+The active model/provider selection remains deployment configuration. Automatic AI Profile switching is deferred.

@@ -7,10 +7,12 @@ import {
   DemoDataNotice,
   MetricStrip,
   PageHeader,
+  ProvenanceLabel,
   Section,
 } from "@/components/product/workspace-ui";
 import { formatDateTime } from "@/features/story/formatters";
-import { loadPortfolio, readDateRange, type SearchValues } from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { loadPortfolio } from "@/features/story/presentation-api";
 
 export default async function PortfolioPage({
   searchParams,
@@ -18,71 +20,95 @@ export default async function PortfolioPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const portfolio = loadPortfolio(range);
+  const portfolio = await loadPortfolio(range);
   const first = portfolio.points[0];
   const last = portfolio.points.at(-1);
-  const paperChange = first && last ? Number(last.actual) - Number(first.actual) : null;
+  const chosenChange = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
   const alternativeDelta = last
-    ? Number(last.alternative ?? last.actual) - Number(last.actual)
+    ? Number(last.alternative ?? last.chosenPath) - Number(last.chosenPath)
     : null;
 
   return (
     <>
       <PageHeader
-        eyebrow="Portfolio"
-        title="One paper path, several ways to learn from it"
-        description="Compare the illustrative paper account with ShadowFund alternatives over a shared date range."
+        eyebrow="Active Portfolio & Shadow Analytics"
+        title="Active Portfolio Path vs. Shadow Multiverse"
+        description="Inspect the current backend portfolio view and non-executable counterfactual branches over the shared UTC date range."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <MetricStrip
         metrics={[
           {
-            label: "Illustrative equity",
-            value: last ? `$${last.actual}` : "No observations",
-            detail: "Not a live account",
+            label: "Active Portfolio Equity",
+            value: last ? `$${last.chosenPath}` : "No data",
+            detail: "Versioned backend fixture",
           },
           {
-            label: "Period change",
-            value: paperChange === null ? "—" : `$${paperChange.toFixed(2)}`,
+            label: "Active Portfolio Period P&L",
+            value:
+              chosenChange === null
+                ? "—"
+                : `${chosenChange >= 0 ? "+" : ""}$${chosenChange.toFixed(2)}`,
             detail: `${range.from} to ${range.to}`,
           },
           {
-            label: "Best branch delta",
-            value: alternativeDelta === null ? "—" : `$${alternativeDelta.toFixed(2)}`,
-            detail: "Simulated versus paper-shaped",
+            label: "Best Shadow Delta",
+            value:
+              alternativeDelta === null
+                ? "—"
+                : `${alternativeDelta >= 0 ? "+" : ""}$${alternativeDelta.toFixed(2)}`,
+            detail: "Shadow vs. Active",
           },
-          { label: "Cash allocation", value: "94.7%", detail: "Fictional snapshot" },
+          { label: "Cash Buffer", value: "94.7%", detail: "$98,352.48 available" },
         ]}
       />
 
       <Section
         id="equity-comparison"
-        title="Equity comparison"
-        description="Is the difference persistent, or concentrated around a few decisions?"
+        title="Chosen Path vs. Shadow Performance"
+        description="Is the performance advantage persistent or concentrated around specific news catalyst events?"
       >
         <StoryLineChart
-          title="Portfolio equity"
-          description="Exact values are fixed decimal strings; plotting conversion is presentation-only."
+          title="Portfolio Equity Trajectory"
+          description="Interactive multi-branch trajectory. Click any trajectory button to toggle individual shadow branches on or off."
           summary={
             alternativeDelta !== null && alternativeDelta > 0
-              ? `Best branch ahead by $${alternativeDelta.toFixed(2)}`
-              : "No alternative lead in this range"
+              ? `Shadow Portfolio ahead by +$${alternativeDelta.toFixed(2)}`
+              : "Active Portfolio leads in this period"
           }
           data={portfolio.points}
           valuePrefix="$"
           series={[
-            { key: "actual", label: "Illustrative paper", color: "var(--primary)" },
+            { key: "chosenPath", label: "Active Portfolio", color: "#547D83" },
             {
-              key: "alternative",
-              label: "Best ShadowFund",
-              color: "var(--alternative)",
+              key: "agentAlternative",
+              label: "Shadow: Agent Counterfactual",
+              color: "#818CF8",
+              dashed: true,
+            },
+            {
+              key: "reducedSize",
+              label: "Shadow: Reduced Sizing",
+              color: "#34D399",
+              dashed: true,
+            },
+            {
+              key: "unhedged",
+              label: "Shadow: Unhedged Structure",
+              color: "#FB923C",
+              dashed: true,
+            },
+            {
+              key: "cashBaseline",
+              label: "Shadow: Cash Baseline",
+              color: "#94A3B8",
               dashed: true,
             },
             {
               key: "benchmark",
-              label: "Synthetic benchmark",
-              color: "var(--benchmark)",
+              label: "Market Benchmark",
+              color: "#38BDF8",
               dashed: true,
             },
           ]}
@@ -92,28 +118,35 @@ export default async function PortfolioPage({
       <div className="dashboard-pair portfolio-pair">
         <Section
           id="holdings"
-          title="Illustrative holdings"
-          description="Fictional positions reserve the structure for future normalized portfolio data."
+          title="Active Portfolio Holdings"
+          description="Current backend contract positions, option spreads, and cash reserve. No account was contacted."
         >
           <div className="holding-list">
             {portfolio.positions.map((position) => (
-              <div key={position.symbol}>
+              <div
+                key={position.symbol}
+                className="prism-glass-card p-4 transition-all hover:border-[#547D83]/40"
+              >
                 <div>
-                  <strong>{position.symbol}</strong>
-                  <span>{position.provenance}</span>
+                  <strong className="text-white font-medium">{position.symbol}</strong>
+                  <ProvenanceLabel provenance={position.provenance} />
                 </div>
                 <dl>
                   <div>
                     <dt>Allocation</dt>
-                    <dd>{position.allocation}</dd>
+                    <dd className="font-mono tabular-nums">{position.allocation}</dd>
                   </div>
                   <div>
                     <dt>Value</dt>
-                    <dd>{position.value}</dd>
+                    <dd className="font-mono tabular-nums">{position.value}</dd>
                   </div>
                   <div>
                     <dt>P&amp;L</dt>
-                    <dd>{position.pnl}</dd>
+                    <dd
+                      className={`font-mono tabular-nums font-semibold ${position.pnl.startsWith("+") ? "text-[#00D084]" : position.pnl.startsWith("-") ? "text-[#FF6B6B]" : "text-slate-300"}`}
+                    >
+                      {position.pnl}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -122,18 +155,21 @@ export default async function PortfolioPage({
         </Section>
         <Section
           id="allocation"
-          title="Exposure mix"
-          description="A proportional view without presenting demo numbers as policy thresholds."
+          title="Capital Allocation & Exposure"
+          description="Proportional capital exposure across cash buffer and defined-risk option debit spreads."
         >
           <div className="exposure-list">
             {portfolio.exposure.map((item) => (
               <div key={item.label}>
                 <div>
-                  <span>{item.label}</span>
-                  <strong>{item.value}%</strong>
+                  <span className="text-slate-300">{item.label}</span>
+                  <strong className="font-mono tabular-nums text-white">{item.value}%</strong>
                 </div>
                 <span className="exposure-track">
-                  <span style={{ width: `${item.value}%` }} />
+                  <span
+                    style={{ width: `${item.value}%` }}
+                    className="bg-[#547D83] transition-all duration-500"
+                  />
                 </span>
               </div>
             ))}
@@ -142,33 +178,40 @@ export default async function PortfolioPage({
             className="text-link"
             href={`/alternatives?range=${range.preset}&from=${range.from}&to=${range.to}`}
           >
-            Open ShadowFund comparisons <ArrowRight aria-hidden="true" />
+            Explore ShadowFund Alternative Sessions <ArrowRight aria-hidden="true" />
           </Link>
         </Section>
       </div>
 
       <Section
         id="portfolio-activity"
-        title="What changed in the period"
-        description="Decision-linked activity is more useful here than an undifferentiated order log."
+        title="Active Portfolio Decision Activity"
+        description="Decision-linked fixture events during the selected period; these are not broker fills."
       >
         {portfolio.activities.length > 0 ? (
           <ol className="activity-list">
             {portfolio.activities.map((activity) => (
-              <li key={activity.occurredAt}>
-                <time dateTime={activity.occurredAt}>{formatDateTime(activity.occurredAt)}</time>
+              <li
+                key={activity.occurredAt}
+                className="prism-glass-card p-3 my-2 flex items-center justify-between"
+              >
+                <time dateTime={activity.occurredAt} className="text-xs text-slate-400 font-mono">
+                  {formatDateTime(activity.occurredAt)}
+                </time>
                 <div>
-                  <strong>{activity.label}</strong>
-                  <span>{activity.detail}</span>
+                  <strong className="text-sm text-white block">{activity.label}</strong>
+                  <span className="text-xs text-slate-300">{activity.detail}</span>
                 </div>
-                <b>{activity.amount}</b>
+                <b
+                  className={`font-mono tabular-nums text-sm ${activity.amount.startsWith("+") ? "text-[#00D084]" : "text-slate-300"}`}
+                >
+                  {activity.amount}
+                </b>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="inline-empty">
-            No illustrative portfolio activity falls inside this range.
-          </p>
+          <p className="inline-empty">No Active Portfolio activity falls inside this date range.</p>
         )}
       </Section>
     </>

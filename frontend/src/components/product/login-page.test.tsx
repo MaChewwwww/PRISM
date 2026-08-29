@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,7 +16,9 @@ vi.mock("next/navigation", () => ({
 
 describe("Login page", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    pushMock.mockReset();
+    refreshMock.mockReset();
   });
 
   it("renders the login form with required fields", () => {
@@ -29,14 +31,14 @@ describe("Login page", () => {
 
   it("handles failed login and displays error alert", async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+    vi.spyOn(global, "fetch").mockResolvedValue({
       ok: false,
       json: async () => ({ error: "Invalid credentials" }),
     } as Response);
 
     render(<LoginPage />);
-    await user.type(screen.getByLabelText("Email"), "wrong@test.com");
-    await user.type(screen.getByLabelText("Password"), "badpass");
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "wrong@test.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "badpass" } });
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid credentials");
@@ -45,16 +47,49 @@ describe("Login page", () => {
 
   it("handles successful login and navigates to home", async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+    vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
-      json: async () => ({ ok: true, email: "operator@shadowfund.local" }),
+      json: async () => ({ ok: true, email: "operator@prism.local" }),
     } as Response);
 
     render(<LoginPage />);
-    await user.type(screen.getByLabelText("Email"), "operator@shadowfund.local");
-    await user.type(screen.getByLabelText("Password"), "shadowfund2026!");
+    await user.type(screen.getByLabelText("Email"), "operator@prism.local");
+    await user.type(screen.getByLabelText("Password"), "operator-password");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
+    expect(pushMock).toHaveBeenCalledWith("/");
+  });
+
+  it("does not auto-fill credentials in the browser", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response);
+    render(<LoginPage />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Login as a Judge" })).toBeVisible(),
+    );
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
+    expect(screen.getByText(/password stays server-side/i)).toBeVisible();
+  });
+
+  it("uses server-side judge credentials without sending them through the browser", async () => {
+    const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/auth/judge-login") && init?.method !== "POST") {
+        return {
+          ok: true,
+          json: async () => ({ enabled: true }),
+        } as Response;
+      }
+      return { ok: true, json: async () => ({ ok: true }) } as Response;
+    });
+    const user = userEvent.setup();
+    render(<LoginPage />);
+    await user.click(await screen.findByRole("button", { name: "Login as a Judge" }));
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/judge-login", { method: "POST" });
     expect(pushMock).toHaveBeenCalledWith("/");
   });
 });

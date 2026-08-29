@@ -6,7 +6,14 @@ from enum import StrEnum
 from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+    model_validator,
+)
 
 DecimalString = Annotated[
     Decimal,
@@ -39,6 +46,12 @@ class EvidenceItem(BaseModel):
     received_at: datetime
 
 
+class ReactionClassification(StrEnum):
+    UNDERREACTION = "UNDERREACTION"
+    OVERREACTION = "OVERREACTION"
+    FAIR_REACTION = "FAIR_REACTION"
+
+
 class ResearchReport(ContractBase):
     symbol: str
     thesis: str
@@ -46,6 +59,12 @@ class ResearchReport(ContractBase):
     freshness_seconds: int = Field(ge=0)
     evidence: list[EvidenceItem]
     limitations: list[str] = Field(default_factory=list)
+    actual_reaction_pct: DecimalString | None = None
+    expected_reaction_pct: DecimalString | None = None
+    reaction_gap_pct: DecimalString | None = None
+    volume_ratio: DecimalString | None = Field(default=None, ge=0)
+    classification: ReactionClassification | None = None
+    opportunity_score: DecimalString | None = Field(default=None, ge=0, le=100)
 
 
 class OptionSide(StrEnum):
@@ -89,10 +108,10 @@ class OptionStrategy(BaseModel):
 
 class ExitPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    take_profit_pct: DecimalString = Field(default=Decimal("50.0"), gt=0)
-    stop_loss_pct: DecimalString = Field(default=Decimal("50.0"), gt=0)
-    dte_threshold: int = Field(default=7, ge=1)
-    max_hold_days: int = Field(default=14, ge=1)
+    take_profit_pct: DecimalString = Field(default=Decimal("75.0"), ge=75, le=100)
+    stop_loss_pct: DecimalString = Field(default=Decimal("50.0"), ge=50, le=50)
+    dte_threshold: int = Field(default=7, ge=2, le=14)
+    max_hold_days: int = Field(default=14, ge=3, le=45)
 
 
 class ShadowCandidate(BaseModel):
@@ -104,6 +123,7 @@ class ShadowCandidate(BaseModel):
 
 
 class TradeProposal(ContractBase):
+    proposal_version: int = Field(default=1, ge=1)
     research_report_id: UUID
     symbol: str
     strategy: OptionStrategy
@@ -129,36 +149,116 @@ class RiskAssessment(ContractBase):
 
 
 class RuleOutcome(StrEnum):
-    PASS = "pass"
-    MODIFY = "modify"
-    FAIL = "fail"
+    PASS = "PASS"
+    MODIFY = "MODIFY"
+    FAIL = "FAIL"
+
+
+class RulePriority(StrEnum):
+    P0 = "P0"
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+    P4 = "P4"
+    P5 = "P5"
+
+
+class ReasonCode(StrEnum):
+    RULESET_NOT_CONFIGURED = "RULESET_NOT_CONFIGURED"
+    STALE_DATA = "STALE_DATA"
+    OUTSIDE_TRADING_WINDOW = "OUTSIDE_TRADING_WINDOW"
+    HACKATHON_ENTRY_CUTOFF = "HACKATHON_ENTRY_CUTOFF"
+    HACKATHON_FORCE_FLATTEN = "HACKATHON_FORCE_FLATTEN"
+    HACKATHON_SCORING_WINDOW = "HACKATHON_SCORING_WINDOW"
+    EXPIRY_ASSIGNMENT_RISK = "EXPIRY_ASSIGNMENT_RISK"
+    DRAWDOWN_CAUTION = "DRAWDOWN_CAUTION"
+    DRAWDOWN_DEFENSIVE = "DRAWDOWN_DEFENSIVE"
+    DRAWDOWN_HALT = "DRAWDOWN_HALT"
+    CASH_BUFFER_BREACH = "CASH_BUFFER_BREACH"
+    TICKER_CONCENTRATION_BREACH = "TICKER_CONCENTRATION_BREACH"
+    HIGH_IV_SINGLE_LEG_PROHIBITED = "HIGH_IV_SINGLE_LEG_PROHIBITED"
+    RISK_LIMIT_BREACH = "RISK_LIMIT_BREACH"
+    LIQUIDITY_LIMIT_BREACH = "LIQUIDITY_LIMIT_BREACH"
+    NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
+    REWARD_RISK_BELOW_FLOOR = "REWARD_RISK_BELOW_FLOOR"
+    PAYLOAD_MISMATCH = "PAYLOAD_MISMATCH"
+    PROFILE_OUT_OF_BOUNDS = "PROFILE_OUT_OF_BOUNDS"
+    UNSUPPORTED_INSTRUMENT = "UNSUPPORTED_INSTRUMENT"
+
+
+class MarketRegime(StrEnum):
+    NORMAL = "normal"
+    VOLATILE = "volatile"
+    EVENT = "event"
+    CRISIS = "crisis"
+
+
+class PortfolioRiskState(StrEnum):
+    NORMAL = "normal"
+    CAUTION = "caution"
+    DEFENSIVE = "defensive"
+    HALT = "halt"
 
 
 class RuleEvaluation(ContractBase):
+    rule_id: str
     proposal_id: UUID
+    priority: RulePriority
     ruleset_version: str
     outcome: RuleOutcome
-    reasons: list[str]
+    reason_codes: list[ReasonCode]
+    explanation: str
+    input_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
     modified_proposal_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
-class AuthorizationState(StrEnum):
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
-    MODIFIED_PENDING_ACCEPTANCE = "modified_pending_acceptance"
+class AllowedOrderPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str
+    strategy: OptionStrategy
+    quantity: int = Field(ge=1)
+
+
+class AuthorizationOutcome(StrEnum):
+    APPROVE = "APPROVE"
+    REJECT = "REJECT"
+    MODIFIED_PENDING_ACCEPTANCE = "MODIFIED_PENDING_ACCEPTANCE"
 
 
 class AuthorizationDecision(ContractBase):
     proposal_id: UUID
+    proposal_version: int = Field(ge=1)
     proposal_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    ruleset_id: str
     ruleset_version: str
-    state: AuthorizationState
+    profile_id: UUID
+    profile_version: int = Field(ge=1)
+    outcome: AuthorizationOutcome
+    allowed_order_payload_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    allowed_order_payload: AllowedOrderPayload | None = None
+    market_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    portfolio_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    market_regime: MarketRegime
+    portfolio_risk_state: PortfolioRiskState
+    decision_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime
     account_observed_at: datetime
     supported_options_level: int = Field(ge=0)
     account_verified: bool
+    rule_trace: list[RuleEvaluation] = Field(default_factory=list)
 
-    @field_validator("expires_at", "account_observed_at")
+    @model_validator(mode="after")
+    def validate_authorization_binding(self) -> AuthorizationDecision:
+        if (self.allowed_order_payload_digest is None) != (self.allowed_order_payload is None):
+            raise ValueError("allowed order payload digest and payload must be provided together")
+        if self.outcome is AuthorizationOutcome.APPROVE and (
+            self.allowed_order_payload_digest is None or self.allowed_order_payload is None
+        ):
+            raise ValueError("approved authorization requires an allowed order payload binding")
+        return self
+
+    @field_validator("decision_at", "expires_at", "account_observed_at")
     @classmethod
     def require_aware_decision_timestamp(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
@@ -214,25 +314,61 @@ class AuditEvent(ContractBase):
     payload: dict[str, Any]
 
 
+class AIProfileKind(StrEnum):
+    CONSERVATIVE = "conservative"
+    BALANCED = "balanced"
+    AGGRESSIVE = "aggressive"
+
+
+class AIProfileStatus(StrEnum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    REJECTED = "rejected"
+
+
+class ActivationMode(StrEnum):
+    MANUAL = "manual"
+
+
+class AIProfileParameters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_position_size_pct: DecimalString = Field(ge=Decimal("1.5"), le=Decimal("2.5"))
+    opportunity_score_threshold: DecimalString = Field(ge=75, le=95)
+    take_profit_pct: DecimalString = Field(ge=75, le=100)
+    stop_loss_pct: DecimalString = Field(ge=50, le=50)
+
+
 class AIProfile(ContractBase):
-    profile_key: str
+    profile_key: AIProfileKind
     version: int = Field(ge=1)
-    parameters: dict[str, DecimalString | str | int | bool]
-    active: bool = False
+    status: AIProfileStatus
+    ruleset_id: str
+    ruleset_version: str
+    activation_mode: ActivationMode = ActivationMode.MANUAL
+    effective_at: datetime | None = None
+    expires_at: datetime | None = None
+    parameters: AIProfileParameters
 
 
 class RecommendationState(StrEnum):
     PROPOSED = "proposed"
-    ACCEPTED = "accepted"
+    VALIDATED = "validated"
+    APPLIED = "applied"
     REJECTED = "rejected"
 
 
 class AIProfileRecommendation(ContractBase):
     profile_id: UUID
-    recommended_parameters: dict[str, DecimalString | str | int | bool]
+    ruleset_id: str
+    ruleset_version: str
+    recommended_parameters: AIProfileParameters
     evidence_session_ids: list[UUID]
     rationale: str
     state: RecommendationState = RecommendationState.PROPOSED
+    manual_review_required: Literal[True] = True
+    validation_reason_codes: list[ReasonCode] = Field(default_factory=list)
 
 
 class MarketDataType(StrEnum):
@@ -349,8 +485,8 @@ class BollingerBands(BaseModel):
 
 
 class QuantitativeAnalysisReport(ContractBase):
-    symbol: str
-    current_price: DecimalString
+    symbol: str = Field(min_length=1)
+    current_price: DecimalString = Field(ge=0)
     trend: TrendDirection
     momentum_score: DecimalString = Field(ge=0, le=100)
     rsi_14: DecimalString = Field(ge=0, le=100)
@@ -412,3 +548,7 @@ class IndustryAnalysisReport(ContractBase):
     tailwinds: list[str] = Field(default_factory=list)
     headwinds: list[str] = Field(default_factory=list)
     thesis: str
+    atr_14: DecimalString = Field(ge=0)
+    volatility_annualized_pct: DecimalString = Field(ge=0)
+    volume_surge_ratio: DecimalString = Field(ge=0)
+    summary: str

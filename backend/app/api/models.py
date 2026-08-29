@@ -29,7 +29,6 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    token: str
     email: str
     expires_at: str
 
