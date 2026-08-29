@@ -80,7 +80,7 @@ export default async function PortfolioPage({
           data={portfolio.points}
           valuePrefix="$"
           series={[
-            { key: "chosenPath", label: "Active Portfolio governed path", color: "#547D83" },
+            { key: "chosenPath", label: "Active Portfolio", color: "#547D83" },
             {
               key: "agentAlternative",
               label: "Shadow: Agent Counterfactual",

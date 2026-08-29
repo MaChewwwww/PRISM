@@ -6,7 +6,7 @@ Browsers, provider data, AI output, external APIs, and command output are untrus
 
 ## Authentication and credentials
 
-The current skeleton uses seeded operator credentials and an HTTP-only `prism_session` cookie signed by the backend. The login response does not expose the session token. The browser never receives Alpaca or LLM credentials, and the removed demo-credentials endpoint is not replaced with a password-bearing hint. In staging and production, the judge sign-in route reads the protected server environment and establishes the same session without sending the password through browser JavaScript; only the non-secret operator email may be returned as a hint.
+The current skeleton uses seeded operator credentials and an HTTP-only `prism_session` cookie signed by the backend. The login response does not expose the session token. The browser never receives Alpaca or LLM credentials, and the removed demo-credentials endpoint is not replaced with a password-bearing hint. In staging and production, the Login as a Judge route reads the protected server environment and establishes the same session without sending credentials through browser JavaScript. The login form does not auto-fill credentials.
 
 Development may use non-secret local labels. Staging and production reject example/default passwords and session secrets; authentication secrets must be supplied through protected environment configuration. `/api/v1/system/status`, the news-analysis endpoint, and all presentation endpoints require authentication. Liveness and readiness remain unauthenticated for orchestration.
 

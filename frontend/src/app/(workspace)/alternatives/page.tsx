@@ -7,6 +7,10 @@ import { formatDate } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listAlternativeSessions } from "@/features/story/presentation-api";
 
+function displayBranchLabel(label: string) {
+  return label === "Illustrative governed path" ? "Active Portfolio" : label;
+}
+
 export default async function AlternativesPage({
   searchParams,
 }: {
@@ -82,7 +86,9 @@ export default async function AlternativesPage({
                 </div>
                 <div>
                   <dt>Best Shadow Path</dt>
-                  <dd className="font-mono tabular-nums text-[#818CF8]">{session.bestBranch}</dd>
+                  <dd className="font-mono tabular-nums text-[#818CF8]">
+                    {displayBranchLabel(session.bestBranch)}
+                  </dd>
                 </div>
                 <div>
                   <dt>Shadow Delta</dt>
