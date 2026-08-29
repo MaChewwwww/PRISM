@@ -93,30 +93,34 @@ Every stage produces typed, versioned records. Stale market data (>30s), invalid
 
 ## Alpaca Ecosystem Integration
 
-PRISM deeply leverages Alpaca's developer platform across research, market data, paper execution, and developer investigation:
+PRISM deeply leverages Alpaca's developer platform across research, market data, paper execution, and agent exploration:
 
-```text
-+-----------------------------------------------------------------------------------------+
-|                                ALPACAPLATFORM INTEGRATION                                |
-+-----------------------------------------------------------------------------------------+
-|  Alpaca Market Data API (alpaca-py 0.44.0)                                              |
-|  - Historical Stock Bars (/v2/stocks/bars)     -> Powers Quantitative & Reaction Agents  |
-|  - Multi-Symbol Snapshots (/v2/stocks/snapshots) -> Real-time pricing & spread validation  |
-|  - Curated News Stream (/v2/news)               -> Ingested by News Intelligence Agent    |
-+-----------------------------------------------------------------------------------------+
-|  Alpaca Paper Trading API (Level 2 & Level 3 Options)                                   |
-|  - Level 2: Single-Leg Long Calls & Long Puts                                           |
-|  - Level 3: Defined-Risk 1:1 Call/Put Debit Spreads (order_class=mleg)                   |
-|  - Strict Limit Pricing, Day Time-In-Force, and Whole-Contract Sizing                   |
-+-----------------------------------------------------------------------------------------+
-|  Alpaca CLI (v0.0.13) Subprocess Order Gateway                                          |
-|  - Isolated child-process gateway receiving JSON on stdin (prevents injection attacks)   |
-|  - Server-side credentials; client_order_id idempotency & safe reconciliation           |
-+-----------------------------------------------------------------------------------------+
-|  Alpaca MCP (Model Context Protocol) Server                                             |
-|  - Read-only agent exploration toolsets (account, assets, stock-data, options-data, news)|
-+-----------------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph MarketData["1. Market Intelligence (alpaca-py 0.44.0)"]
+        A1["/v2/news (News Stream)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
+        A2["/v2/stocks/bars (Historical Bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
+        A3["/v2/stocks/snapshots (Multi-Symbol)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
+    end
+
+    subgraph PaperExecution["2. Governed Options Execution (Alpaca Paper API & CLI)"]
+        C1["Deterministic Rules Engine (APPROVE Verdict)"] -->|Authorized Payload| C2["Alpaca Execution Gate"]
+        C2 -->|Level 2 Options| D1["Long Calls & Long Puts"]
+        C2 -->|Level 3 Options (order_class=mleg)| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
+        C2 -->|Subprocess JSON stdin| D3["Alpaca CLI Idempotent Order Gateway"]
+    end
+
+    subgraph Exploration["3. Agent Discovery (Alpaca MCP Server)"]
+        E1["Read-Only MCP Toolsets (account, assets, stock/options data)"] -->|Context Enrichment| E2["Agent Context & Developer Tooling"]
+    end
 ```
+
+| Alpaca Component | Endpoints & Scope | PRISM Architectural Role | Safety & Governance Envelope |
+| --- | --- | --- | --- |
+| **`alpaca-py` Market Data API** | `/v2/news`<br>`/v2/stocks/bars`<br>`/v2/stocks/snapshots` | Ingests real-time catalysts for **News Agent**; feeds OHLCV bars into **Quantitative Engine** (RSI, MACD, Bollinger Bands, ATR); provides live spreads to **Reaction Agent**. | Read-only market intelligence; freshness strictly checked (<= 30s) before any trade proposal. |
+| **Alpaca Paper Trading API** | `/v2/orders`<br>`/v2/positions`<br>`/v2/account` | Executes approved option contracts (Level 2 Long Calls/Puts and Level 3 Multi-Leg 1:1 Debit Spreads via `order_class=mleg`). | Restricted to paper endpoints (`paper-api.alpaca.markets`); limit pricing within <= 10% spread; day TIF. |
+| **Alpaca CLI (v0.0.13)** | Subprocess order gateway | Secure server-side order submission receiving typed JSON over standard input; handles client-order-id idempotency and disconnect reconciliation. | Prevents shell injection; keeps credentials strictly isolated in backend memory (never exposed to browser or LLMs). |
+| **Alpaca MCP Server** | `account`, `assets`, `stock-data`, `options-data`, `news` | Provides structured market and asset discovery tools for developer workflows and research agents. | Read-only tools only; mutating trading tools are excluded to prevent LLMs from bypassing deterministic rules. |
 
 ---
 
@@ -200,20 +204,16 @@ Visit the live production deployment at **[https://prism-ai.japanwest.cloudapp.a
 
 PRISM is built with a modern, high-performance, and type-safe architecture:
 
-```text
-[ Authenticated Browser ]
-        │
-        ▼ (HTTPS / WSS)
-[ Nginx Reverse Proxy (SSL / TLS 1.3 / Security Headers) ]
-        │
-        ├──▶ [ Next.js 16 Web Application ] (React 19, TypeScript, Tailwind 4, Specular Glass UI)
-        │
-        └──▶ [ FastAPI Monolith ] (Python 3.12, Pydantic 2, SQLAlchemy 2, Alembic)
-                 │
-                 ├──▶ [ PostgreSQL 17 ] (Transactional persistence, audit logs, decision traces)
-                 ├──▶ [ Redis ] (Ephemeral coordination & caching)
-                 ├──▶ [ Provider-Neutral LLM Gateway ] (DeepSeek, Claude, Gemini, OpenAI, Featherless)
-                 └──▶ [ Alpaca Paper Gateway & CLI ] (alpaca-py 0.44.0, Alpaca CLI v0.0.13)
+```mermaid
+flowchart TD
+    Client["Authenticated Operator Browser"] -->|HTTPS / WSS| Proxy["Nginx Reverse Proxy\n(SSL/TLS 1.3 · Security Headers)"]
+    Proxy -->|UI Routes & SSR| Next["Next.js 16 Web Application\n(React 19 · TypeScript · Tailwind 4 · Specular Glass UI)"]
+    Proxy -->|/api/v1/*| API["FastAPI Modular Monolith\n(Python 3.12 · Pydantic 2 · SQLAlchemy 2 · Alembic)"]
+    
+    API --> DB[("PostgreSQL 17\n(Transactional Audit & Decision Logs)")]
+    API --> Cache[("Redis\n(Ephemeral Coordination)")]
+    API --> LLM["Provider-Neutral AI Gateway\n(DeepSeek · Claude · Gemini · OpenAI · Featherless)"]
+    API --> Alpaca["Alpaca Paper Gateway & CLI\n(alpaca-py 0.44.0 · Alpaca CLI v0.0.13)"]
 ```
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, Radix UI primitives, Lucide Icons, WCAG 2.2 AA Dark Cyber-Crystalline theme.
