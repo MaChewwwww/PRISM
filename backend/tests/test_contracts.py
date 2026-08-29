@@ -13,6 +13,8 @@ from app.contracts import (
     HistoricalMarketDataRecord,
     LLMEventAnalysis,
     MarketDataType,
+    ReactionClassification,
+    ResearchReport,
     TimeFrameKind,
 )
 
@@ -123,6 +125,41 @@ def test_frs_025_nfrs_019_llm_event_analysis() -> None:
             model_name="claude",
             prompt_version="1.0",
             raw_digest=raw_digest,
+        )
+
+
+def test_frg_02_market_reaction_research_report_metrics_are_decimal_safe() -> None:
+    report = ResearchReport(
+        trace_id=uuid4(),
+        symbol="AAPL",
+        thesis="Observed reaction is below the catalyst expectation.",
+        confidence=Decimal("0.85"),
+        freshness_seconds=12,
+        evidence=[],
+        actual_reaction_pct=Decimal("1.25"),
+        expected_reaction_pct=Decimal("4.00"),
+        reaction_gap_pct=Decimal("2.75"),
+        volume_ratio=Decimal("1.80"),
+        classification=ReactionClassification.UNDERREACTION,
+        opportunity_score=Decimal("82.5"),
+    )
+
+    payload = report.model_dump(mode="json")
+    assert payload["actual_reaction_pct"] == "1.25"
+    assert payload["reaction_gap_pct"] == "2.75"
+    assert payload["volume_ratio"] == "1.80"
+    assert payload["opportunity_score"] == "82.5"
+    assert payload["classification"] == "UNDERREACTION"
+
+    with pytest.raises(ValidationError):
+        ResearchReport(
+            trace_id=uuid4(),
+            symbol="AAPL",
+            thesis="Invalid score",
+            confidence=Decimal("0.5"),
+            freshness_seconds=0,
+            evidence=[],
+            opportunity_score=Decimal("100.1"),
         )
 
 

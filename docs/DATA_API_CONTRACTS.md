@@ -41,7 +41,8 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/auth/me` | Current operator session | Yes |
 | POST | `/api/v1/auth/logout` | Clears session cookie | No |
 | GET | `/api/v1/system/status` | Redacted operational state | Yes |
-| POST | `/api/v1/research/news-analysis` | Non-authoritative structured news research | Yes |
+| POST | `/api/v1/research/news/analyze` | Non-authoritative structured news research | Yes |
+| POST | `/api/v1/research/reaction/analyze` | Non-authoritative market-reaction and mispricing research | Yes |
 | GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
 | GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
 | GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
@@ -72,6 +73,10 @@ The current adapter always returns `data_mode=illustrative_fixture` and `fixture
 ## News-analysis endpoint
 
 The implemented news endpoint is non-authoritative research. It uses authenticated access, structured response validation, cached analysis records, classified transient retries in a worker thread, and redacted provider errors. Retries never block the event loop and never turn an AI result into execution authority.
+
+## Market-reaction endpoint
+
+`POST /api/v1/research/reaction/analyze` retrieves a bounded historical stock-bar window through the server-side Alpaca read adapter, computes deterministic reaction metrics, and asks the provider-neutral LLM gateway for a structured thesis and limitations. The response is a `ResearchReport` with decimal-safe actual/expected reaction, reaction gap, volume ratio, classification, and opportunity-score fields. It is non-authoritative and cannot authorize or submit an order. Research-report caching uses the Alembic-managed `research_reports` table and remains best-effort.
 
 ## Error and authorization boundaries
 

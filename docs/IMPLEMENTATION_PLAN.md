@@ -16,7 +16,7 @@ This remains a skeleton. The demonstration dataset is always `illustrative_fixtu
 
 ## Next: specialist orchestration
 
-Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. Expand the implemented news-analysis slice without granting it authority.
+Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. Expand the implemented news and market-reaction research slices without granting them authority.
 
 ## Next: proposal, risk, and deterministic authorization
 
