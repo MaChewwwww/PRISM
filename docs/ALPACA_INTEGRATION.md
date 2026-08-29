@@ -35,6 +35,8 @@ The system persists the client order identifier and intent before invoking the C
 
 The repository interfaces reserve a cache-aside boundary for future market-data adapters. Persisted historical bars, quote snapshots, Redis warming, and deterministic replay storage are not implemented in this skeleton. The market-reaction report cache is persisted research output, not a market-data replay store, and must not be represented as an account or execution record. When broader adapters are added, they must preserve immutable query digests, bounded provider requests, and reproducible replay fixtures without changing the paper-only execution boundary.
 
+Autonomous paper execution is controlled by server-only `AUTONOMOUS_TRADING_ENABLED`, `AUTONOMOUS_TRADING_START_AT`, and `AUTONOMOUS_TRADING_END_AT` settings. A future orchestration loop may run only when the explicit flag is enabled, the UTC interval is active, and all deterministic authorization checks pass. Production intervals are bounded by the BA registry's hackathon start and force-flatten timestamps; staging may use its separate paper account for a bounded rehearsal interval. No scheduler or autonomous Alpaca order path is implemented in the current skeleton.
+
 
 ## Official-source workflow
 

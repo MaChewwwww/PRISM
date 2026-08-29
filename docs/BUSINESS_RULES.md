@@ -67,6 +67,12 @@ The four-session operating window is bounded as follows:
 
 Every entry therefore has at least one full Thursday session of runway. The EV and realistic reward/risk gates still reject a proposal that cannot realize its modeled edge in the remaining window. The force-flatten supersedes the standard `max_hold_default_days` only for this hackathon configuration; hard stop, take-profit, DTE, thesis invalidation, and the 0-DTE block continue to apply earlier. A Sep-3-expiring contract must not be held into settlement because the force-flatten and DTE controls are mandatory.
 
+### Autonomous run configuration
+
+Autonomous paper execution is an operational opt-in, not a replacement for this ruleset. `AUTONOMOUS_TRADING_ENABLED` defaults to `false`; enabling it requires `EXECUTION_ENABLED=true`, an active ruleset, complete Alpaca paper credentials, and a UTC `AUTONOMOUS_TRADING_START_AT`/`AUTONOMOUS_TRADING_END_AT` pair. Production intervals must remain within the authorized hackathon trading start and force-flatten deadline. Staging may use its separate paper account for a bounded rehearsal interval; neither environment may bypass paper mode, the kill switch, or mandatory rules.
+
+The current repository has no autonomous orchestration loop. These settings provide a fail-closed schedule gate for the future loop; they do not, by themselves, submit or schedule orders.
+
 ## Standard AI Profiles
 
 | Profile | Target allocation | Opportunity threshold | Take-profit | Stop-loss |

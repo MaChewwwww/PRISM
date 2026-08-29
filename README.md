@@ -71,6 +71,18 @@ pnpm dev
 
 Replace the development authentication examples in `.env`. Direct development runs the web app at `http://localhost:3000` and API at `http://localhost:8000`. Keep `EXECUTION_ENABLED=false`, `ALPACA_PAPER=true`, and `ALPACA_LIVE_TRADE=false`.
 
+### Autonomous paper-trading window
+
+Autonomous trading is disabled by default and the current skeleton has no autonomous scheduler. The server-side configuration is ready for a future orchestration loop:
+
+```text
+AUTONOMOUS_TRADING_ENABLED=false
+AUTONOMOUS_TRADING_START_AT=2026-08-31T13:30:00Z
+AUTONOMOUS_TRADING_END_AT=2026-09-03T20:00:00Z
+```
+
+When enabled, `EXECUTION_ENABLED=true`, an active ruleset, and Alpaca paper credentials are also required. Production schedules must stay inside the BA-authorized hackathon window. Staging uses its own server-side paper account and may select a bounded rehearsal window; the kill switch and full deterministic authorization checks remain mandatory.
+
 ### Compose
 
 ```bash
