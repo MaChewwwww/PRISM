@@ -13,4 +13,4 @@ Engineering documentation is part of the implementation.
 - Include source links and dates for time-sensitive Alpaca behavior.
 - Maintain `DESIGN.md` as the authoritative design system and visual branding specification.
 
-Use concise Markdown, stable heading anchors, and repository-relative links. Every new document must be linked from `docs/README.md`.
+Use concise Markdown, stable heading anchors, and repository-relative links. Every new document must be linked from `docs/README.md`. Avoid LaTeX math syntax (such as `$\rightarrow$` or `\to`); use plain ASCII arrows (`->`) instead.

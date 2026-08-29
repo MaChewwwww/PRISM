@@ -27,6 +27,7 @@ Read `docs/README.md` and the documents it identifies for the subsystem being ch
 - Do not invent thresholds, product names, API behavior, or Alpaca capabilities. Use the BA-authorized governance values from the source-of-truth docs; anything still unresolved stays unresolved until authorized.
 - Preserve generated/source boundaries. Regenerate contract output instead of hand-editing it.
 - Vendored Alpaca skills are upstream references. These root rules take precedence over them.
+- Format communication and documentation in standard Markdown. Never use LaTeX syntax or math-mode markers (such as `$\rightarrow$`, `\to`, or `$...$` delimiters for plain text); always use plain ASCII arrows (`->`) or standard Markdown.
 
 ## Normal verification
 
