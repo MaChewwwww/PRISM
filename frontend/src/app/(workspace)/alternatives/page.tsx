@@ -28,8 +28,7 @@ export default async function AlternativesPage({
           <span className="text-[#818CF8] font-mono text-xs">Layer 01</span>
           <h2 className="text-white font-semibold mt-1">Decision Counterfactuals</h2>
           <p className="text-slate-300 text-xs mt-1">
-            Illustrative governed path, Cash baseline, Reduced sizing (50%), and Unhedged
-            alternatives.
+            Active Portfolio path, Cash baseline, Reduced sizing (50%), and Unhedged alternatives.
           </p>
         </div>
         <div className="prism-glass-card p-4">

@@ -35,6 +35,9 @@ export default async function AlternativeDetailPage({
   if (!session) notFound();
 
   const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
+  const activePathLabel = "Active Portfolio governed path";
+  const bestBranchLabel =
+    session.bestBranch === "Illustrative governed path" ? activePathLabel : session.bestBranch;
 
   return (
     <>
@@ -53,10 +56,10 @@ export default async function AlternativeDetailPage({
       {/* Outcome comparison header */}
       <div className="alt-outcome-grid">
         <div className="alt-outcome-actual prism-glass-card">
-          <span className="alt-outcome-label">Illustrative governed path</span>
+          <span className="alt-outcome-label">{activePathLabel}</span>
           <span
             className="alt-outcome-pnl"
-            aria-label={`Chosen illustrative outcome: ${session.chosenPathPnl}`}
+            aria-label={`Active Portfolio outcome: ${session.chosenPathPnl}`}
           >
             {session.chosenPathPnl}
           </span>
@@ -85,12 +88,12 @@ export default async function AlternativeDetailPage({
           summary={
             session.bestBranch === "Illustrative governed path"
               ? `Chosen path finished ${session.bestDelta} ahead of all shadow alternatives`
-              : `${session.bestBranch} finished ${session.bestDelta} relative to the chosen path`
+              : `${bestBranchLabel} finished ${session.bestDelta} relative to the Active Portfolio path`
           }
           data={session.path}
           valuePrefix="$"
           series={[
-            { key: "chosenPath", label: "Illustrative governed path", color: "#547D83" },
+            { key: "chosenPath", label: activePathLabel, color: "#547D83" },
             {
               key: "alternative",
               label:
@@ -109,11 +112,11 @@ export default async function AlternativeDetailPage({
       <Section
         id="branch-matrix"
         title="Shadow Branch Results vs. Chosen Path"
-        description="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the chosen illustrative path."
+        description="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
       >
         <div className="table-wrap prism-glass-card">
           <table>
-            <caption>ShadowFund branch comparison vs. chosen illustrative path</caption>
+            <caption>ShadowFund branch comparison vs. Active Portfolio path</caption>
             <thead>
               <tr>
                 <th>Branch</th>
@@ -131,7 +134,9 @@ export default async function AlternativeDetailPage({
                   key={branch.id}
                   className={branch.id === "chosen" ? "bg-[#547D83]/10 font-semibold" : ""}
                 >
-                  <th scope="row">{branch.label}</th>
+                  <th scope="row">
+                    {branch.label === "Illustrative governed path" ? activePathLabel : branch.label}
+                  </th>
                   <td>{branch.variation}</td>
                   <td className="font-mono tabular-nums font-semibold text-[#00D084]">
                     {branch.pnl}

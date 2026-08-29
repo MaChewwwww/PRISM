@@ -9,9 +9,10 @@ export function DemoDataNotice() {
     <div className="demo-notice" role="note">
       <FlaskConical aria-hidden="true" />
       <div>
-        <strong>Illustrative story</strong>
+        <strong>Active Portfolio view</strong>
         <span>
-          Fixed illustrative market, portfolio, agent, and usage data. No provider request was made.
+          Current backend portfolio snapshot. Provenance remains explicitly labeled as an
+          illustrative fixture; no provider request was made.
         </span>
       </div>
     </div>

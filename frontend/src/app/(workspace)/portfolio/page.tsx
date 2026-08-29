@@ -31,21 +31,21 @@ export default async function PortfolioPage({
   return (
     <>
       <PageHeader
-        eyebrow="Illustrative Portfolio & Shadow Analytics"
-        title="Chosen Fixture Path vs. Shadow Multiverse"
-        description="Inspect a versioned demonstration snapshot and non-executable counterfactual branches over the shared UTC date range."
+        eyebrow="Active Portfolio & Shadow Analytics"
+        title="Active Portfolio Path vs. Shadow Multiverse"
+        description="Inspect the current backend portfolio view and non-executable counterfactual branches over the shared UTC date range."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <MetricStrip
         metrics={[
           {
-            label: "Illustrative Equity",
+            label: "Active Portfolio Equity",
             value: last ? `$${last.chosenPath}` : "No data",
             detail: "Versioned backend fixture",
           },
           {
-            label: "Illustrative Period P&L",
+            label: "Active Portfolio Period P&L",
             value:
               chosenChange === null
                 ? "—"
@@ -75,12 +75,12 @@ export default async function PortfolioPage({
           summary={
             alternativeDelta !== null && alternativeDelta > 0
               ? `Shadow Portfolio ahead by +$${alternativeDelta.toFixed(2)}`
-              : "Chosen illustrative path leads in this period"
+              : "Active Portfolio leads in this period"
           }
           data={portfolio.points}
           valuePrefix="$"
           series={[
-            { key: "chosenPath", label: "Illustrative governed path", color: "#547D83" },
+            { key: "chosenPath", label: "Active Portfolio governed path", color: "#547D83" },
             {
               key: "agentAlternative",
               label: "Shadow: Agent Counterfactual",
@@ -118,8 +118,8 @@ export default async function PortfolioPage({
       <div className="dashboard-pair portfolio-pair">
         <Section
           id="holdings"
-          title="Illustrative Holdings"
-          description="Demonstration contract positions, option spreads, and cash reserve. No account was contacted."
+          title="Active Portfolio Holdings"
+          description="Current backend contract positions, option spreads, and cash reserve. No account was contacted."
         >
           <div className="holding-list">
             {portfolio.positions.map((position) => (
@@ -185,7 +185,7 @@ export default async function PortfolioPage({
 
       <Section
         id="portfolio-activity"
-        title="Illustrative Decision Activity"
+        title="Active Portfolio Decision Activity"
         description="Decision-linked fixture events during the selected period; these are not broker fills."
       >
         {portfolio.activities.length > 0 ? (
@@ -211,7 +211,7 @@ export default async function PortfolioPage({
             ))}
           </ol>
         ) : (
-          <p className="inline-empty">No illustrative activity falls inside this date range.</p>
+          <p className="inline-empty">No Active Portfolio activity falls inside this date range.</p>
         )}
       </Section>
     </>

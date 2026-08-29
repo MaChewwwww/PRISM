@@ -4,7 +4,7 @@
 
 Copy `.env.example` to an untracked `.env`, replace the development-only authentication values, and run `pnpm docker:up`. Direct development through `pnpm dev` uses frontend port 3000 and backend port 8000. The base Compose stack defaults to frontend port 3005, backend port 8005, PostgreSQL port 5439, and optional Redis port 6385.
 
-Compose starts PostgreSQL, runs `alembic upgrade head` in a one-shot `migrate` service, then starts FastAPI after migration succeeds. The frontend starts after backend readiness. FastAPI startup does not create tables.
+Compose starts PostgreSQL, runs `alembic upgrade head` in a one-shot `migrate` service, then starts FastAPI after migration succeeds. The frontend starts after backend readiness. FastAPI startup does not create tables. The frontend receives only its internal API URL, environment name, and server-side authentication values; Alpaca and LLM credentials remain confined to backend services.
 
 Readiness validates required configuration and database connectivity. Liveness only proves that the process can answer. `/api/v1/system/status` is authenticated and is not a Compose health-check target.
 
