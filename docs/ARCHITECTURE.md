@@ -96,6 +96,12 @@ All frontend story surfaces load through one server-side adapter typed from gene
 
 Presentation data never claims a broker call, paper fill, account holding, or LLM invocation. Stable fixture decision IDs and UTC range URLs preserve cross-page trace navigation.
 
+## Market Tracker boundary (deferred)
+
+The `/market-tracker` route is a provider-free frontend skeleton. It reserves an interactive price/time chart, symbol watchlist, timeframe controls, and independently filterable activity overlays, but renders no symbols, prices, bars, positions, orders, fills, or provider claims until a server adapter is authorized. The six activity kinds are `fill`, `order`, `proposal`, `decision`, `no_trade`, and `shadow`; only confirmed `fill` activity qualifies as an actual trade.
+
+The planned flow is `Browser -> authenticated Next.js server adapter -> FastAPI market-tracker endpoint -> server-only Alpaca adapter and persisted PRISM repositories`. The browser will never receive Alpaca credentials or connect to Alpaca. Historical REST loading is the first future milestone; server-owned market and account streams, persistence, reconciliation, and cache warming follow later. The route preserves the shared UTC `range`, `from`, and `to` URL parameters while the endpoint remains intentionally absent from the current OpenAPI artifact.
+
 ## Hackathon operating window
 
 The BA-owned registry also carries the fixed-date hackathon window. It starts Monday Aug 31, 2026 at 09:30 ET, stops new entries at Wednesday Sep 2, 2026 16:00 ET, scores total account equity at EOD Thursday Sep 3, 2026, and force-flattens by that close. Friday Sep 4 at 09:30 ET is an outer boundary only. The presentation governance endpoint exposes the registry's UTC timestamps and the human-readable ET controls; future deterministic authorization must enforce them. No Sep-3-expiring contract may be held into settlement.

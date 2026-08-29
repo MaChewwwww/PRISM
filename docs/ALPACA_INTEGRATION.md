@@ -49,3 +49,17 @@ Before implementing or changing Alpaca behavior, follow `.agents/rules/20-alpaca
 ## Version and provenance policy
 
 Runtime SDKs, the CLI, and vendored Alpaca skills are pinned. The vendored skills are reference material; repository trading-safety rules remain authoritative. Upgrade changes require documentation review, contract/test updates, and paper-only verification.
+
+## Market Tracker integration design (deferred)
+
+Verified against official Alpaca US documentation on `2026-08-29`. The future server-only adapter will use:
+
+- historical `/v2/stocks/bars` for bounded, paginated chart windows and validated timeframes: [historical stock bars](https://docs.alpaca.markets/us/reference/stockbars);
+- `/v2/stocks/snapshots` for selected watchlist symbols: [multi-symbol snapshots](https://docs.alpaca.markets/us/reference/stocksnapshots-1);
+- `StockDataStream` trades, quotes, and bars for later server-owned live updates: [real-time stock pricing data](https://docs.alpaca.markets/us/docs/real-time-stock-pricing-data.md);
+- `/v2/positions` for genuine open paper positions: [open positions](https://docs.alpaca.markets/us/reference/getallopenpositions);
+- `/v2/orders` for paper order lifecycle records: [orders](https://docs.alpaca.markets/us/reference/getallorders-1);
+- `/v2/account/activities` filtered to `FILL` and partial-fill trade activity for confirmed fills: [account activities](https://docs.alpaca.markets/us/reference/getaccountactivities-2);
+- optional `trade_updates` for later account/order streaming: [working with orders](https://docs.alpaca.markets/us/docs/working-with-orders).
+
+The market-data API supports HTTP and WebSocket delivery: [market data overview](https://docs.alpaca.markets/us/docs/about-market-data-api.md). Feed entitlement, symbol limits, historical lookback, and freshness vary by subscription; the server selects an authorized feed and exposes capability/freshness metadata. The browser receives normalized server events only and never receives Alpaca credentials. Historical REST loading is the first milestone; streams, persistence, reconciliation, and cache warming are deferred. No Alpaca call is made by the current Market Tracker skeleton.

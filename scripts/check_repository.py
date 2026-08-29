@@ -26,6 +26,7 @@ REQUIRED_DOCS = {
     "CI_CD.md",
     "DESIGN.md",
     "GOVERNANCE_TRACEABILITY.md",
+    "MARKET_TRACKER.md",
 }
 REQUIRED_RULES = {
     f"{number}-{name}.md"
@@ -177,6 +178,9 @@ def _check_governance(failures: list[str]) -> None:
         failures.append(
             f"API catalog is missing presentation paths: {sorted(uncatalogued)}"
         )
+    docs_index = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    if "[Market Tracker](MARKET_TRACKER.md)" not in docs_index:
+        failures.append("Docs index is missing Market Tracker")
 
     frontend_root = ROOT / "frontend" / "src"
     frontend_text = "\n".join(
@@ -205,9 +209,9 @@ def main() -> None:
         failures.append(f"Missing agent rules: {sorted(REQUIRED_RULES - actual_rules)}")
     requirements = (ROOT / "docs" / "FRS_NFRS.md").read_text(encoding="utf-8")
     identifiers = re.findall(r"\b(?:FRS|NFRS)-\d{3}\b", requirements)
-    if len(set(identifiers)) != 47:
+    if len(set(identifiers)) != 48:
         failures.append(
-            f"Expected 47 unique requirement IDs; found {len(set(identifiers))}"
+            f"Expected 48 unique requirement IDs; found {len(set(identifiers))}"
         )
     pr_skill = ROOT / ".agents" / "skills" / "github-pr" / "SKILL.md"
     if not pr_skill.is_file() or "description:" not in pr_skill.read_text(

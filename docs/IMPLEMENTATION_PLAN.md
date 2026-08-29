@@ -14,6 +14,10 @@
 
 This remains a skeleton. The demonstration dataset is always `illustrative_fixture` and does not represent provider, Alpaca account, paper order, fill, holding, or P&L activity.
 
+## Market Tracker skeleton: implemented, provider integration deferred
+
+The `/market-tracker` route and Inspect navigation entry reserve a chart/watchlist workspace, shared UTC date-range URLs, a default `1Day` timeframe, and six independently filterable activity kinds (`fill`, `order`, `proposal`, `decision`, `no_trade`, `shadow`). The page makes no provider or backend request and renders no fake market/account values. Only confirmed `fill` activity will count as a verified trade when the planned endpoint is implemented. The endpoint contract, server-owned Alpaca flow, entitlement caveats, and deferred milestones are recorded in `MARKET_TRACKER.md` and `ALPACA_INTEGRATION.md`.
+
 ## Next: specialist orchestration
 
 Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. Expand the implemented news and market-reaction research slices without granting them authority.

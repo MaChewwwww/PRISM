@@ -33,6 +33,7 @@ Do not silently reconcile a conflict. Update every affected downstream artifact 
 
 - [ShadowFund](SHADOWFUND.md)
 - [Alpaca Integration](ALPACA_INTEGRATION.md)
+- [Market Tracker](MARKET_TRACKER.md)
 
 ## Platform, design, and operations
 
