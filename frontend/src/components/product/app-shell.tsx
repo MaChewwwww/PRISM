@@ -3,6 +3,7 @@
 import {
   BookOpenCheck,
   BriefcaseBusiness,
+  CalendarCheck,
   FlaskConical,
   GitBranch,
   LayoutDashboard,
@@ -41,6 +42,7 @@ const navigation = [
       { label: "News & catalysts", icon: Newspaper, href: "/news" },
       { label: "Agents & tools", icon: Sparkles, href: "/agents" },
       { label: "Rules", icon: BookOpenCheck, href: "/rules" },
+      { label: "Weekly summary", icon: CalendarCheck, href: "/weekly-summary" },
     ],
   },
 ];

@@ -67,7 +67,7 @@ export default async function StoriesPage({
         </Link>
       </form>
       <div className="result-count" role="status">
-        {stories.length} fictional {stories.length === 1 ? "story" : "stories"}
+        {stories.length} illustrative {stories.length === 1 ? "story" : "stories"}
       </div>
       <StoryList stories={stories} />
     </>

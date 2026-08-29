@@ -36,9 +36,14 @@ export type StorySummary = {
 
 export type ChartPoint = {
   date: string;
-  actual: string;
+  actual?: string;
   alternative?: string;
   benchmark?: string;
+  agentAlternative?: string;
+  reducedSize?: string;
+  unhedged?: string;
+  cashBaseline?: string;
+  [key: string]: string | undefined;
 };
 
 export type DecisionNode = {
@@ -76,6 +81,7 @@ export type AlternativeBranch = {
   label: string;
   variation: string;
   pnl: string;
+  deltaVsActual: string;
   drawdown: string;
   coverage: string;
   status: "complete" | "incomplete";
@@ -181,8 +187,28 @@ export type ConfigurableRule = {
   description: string;
   input: string;
   unit: string;
-  activeValue: "TBD";
+  activeValue: string;
   effect: string;
+};
+
+export type RuleSuggestion = {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  currentValue: string;
+  suggestedValue: string;
+  confidence: "high" | "medium" | "low";
+  rationale: string;
+  weekOf: string;
+};
+
+export type WeeklySummary = {
+  weekOf: string;
+  storiesAnalysed: number;
+  netPnl: string;
+  shadowBeatActive: number;
+  keyFindings: string[];
+  suggestions: RuleSuggestion[];
 };
 
 const presets: Exclude<RangePreset, "custom">[] = ["7d", "1m", "3m", "ytd"];
@@ -343,6 +369,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Active Portfolio (Paper)",
     variation: "Recorded governed outcome",
     pnl: "+$184.00",
+    deltaVsActual: "—",
     drawdown: "-$76.00",
     coverage: "96%",
     status: "complete",
@@ -352,6 +379,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Cash Baseline",
     variation: "Remain entirely in cash",
     pnl: "$0.00",
+    deltaVsActual: "-$184.00",
     drawdown: "$0.00",
     coverage: "100%",
     status: "complete",
@@ -361,6 +389,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Reduced Sizing",
     variation: "Half the active allocation (50% risk)",
     pnl: "+$102.00",
+    deltaVsActual: "-$82.00",
     drawdown: "-$38.00",
     coverage: "96%",
     status: "complete",
@@ -370,6 +399,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Unhedged Structure",
     variation: "Long option without the short spread leg",
     pnl: "+$61.00",
+    deltaVsActual: "-$123.00",
     drawdown: "-$164.00",
     coverage: "82%",
     status: "incomplete",
@@ -379,6 +409,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Agent Counterfactual",
     variation: "Earlier expiry with the same bounded structure",
     pnl: "+$241.00",
+    deltaVsActual: "+$57.00",
     drawdown: "-$91.00",
     coverage: "94%",
     status: "complete",
@@ -392,7 +423,7 @@ function detailFor(summary: StorySummary, index: number): StoryDetail {
   return {
     ...summary,
     catalyst: {
-      headline: `${summary.symbol} fictional ${summary.category.toLowerCase()} update changed the evidence set`,
+      headline: `${summary.symbol} illustrative ${summary.category.toLowerCase()} update changed the evidence set`,
       source: "Illustrative Alpaca News-shaped fixture",
       publishedAt: summary.occurredAt,
       classification:
@@ -417,7 +448,7 @@ function detailFor(summary: StorySummary, index: number): StoryDetail {
         actor: "Market context",
         status: summary.outcome === "degraded" ? "incomplete" : "ready",
         detail:
-          "Fictional news and synthetic bars were timestamped and treated as untrusted evidence.",
+          "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence.",
       },
       {
         id: "research",
@@ -601,6 +632,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-01-02",
     actual: "100000.00",
+    agentAlternative: "100000.00",
+    reducedSize: "100000.00",
+    unhedged: "100000.00",
+    cashBaseline: "100000.00",
     alternative: "100000.00",
     benchmark: "100000.00",
     pnl: "0.00",
@@ -609,6 +644,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-02-02",
     actual: "100640.00",
+    agentAlternative: "100410.00",
+    reducedSize: "100320.00",
+    unhedged: "100820.00",
+    cashBaseline: "100000.00",
     alternative: "100410.00",
     benchmark: "100330.00",
     pnl: "640.00",
@@ -617,6 +656,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-03-02",
     actual: "100180.00",
+    agentAlternative: "100760.00",
+    reducedSize: "100090.00",
+    unhedged: "99420.00",
+    cashBaseline: "100000.00",
     alternative: "100760.00",
     benchmark: "100520.00",
     pnl: "180.00",
@@ -625,6 +668,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-04-01",
     actual: "101220.00",
+    agentAlternative: "101090.00",
+    reducedSize: "100610.00",
+    unhedged: "100980.00",
+    cashBaseline: "100000.00",
     alternative: "101090.00",
     benchmark: "100810.00",
     pnl: "1220.00",
@@ -633,6 +680,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-05-01",
     actual: "101080.00",
+    agentAlternative: "101420.00",
+    reducedSize: "100540.00",
+    unhedged: "100360.00",
+    cashBaseline: "100000.00",
     alternative: "101420.00",
     benchmark: "101120.00",
     pnl: "1080.00",
@@ -641,6 +692,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-06-01",
     actual: "101760.00",
+    agentAlternative: "101980.00",
+    reducedSize: "100880.00",
+    unhedged: "101440.00",
+    cashBaseline: "100000.00",
     alternative: "101980.00",
     benchmark: "101440.00",
     pnl: "1760.00",
@@ -649,6 +704,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-01",
     actual: "102140.00",
+    agentAlternative: "102510.00",
+    reducedSize: "101070.00",
+    unhedged: "101820.00",
+    cashBaseline: "100000.00",
     alternative: "102510.00",
     benchmark: "101720.00",
     pnl: "2140.00",
@@ -657,6 +716,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-08",
     actual: "102040.00",
+    agentAlternative: "102620.00",
+    reducedSize: "101020.00",
+    unhedged: "101240.00",
+    cashBaseline: "100000.00",
     alternative: "102620.00",
     benchmark: "101760.00",
     pnl: "2040.00",
@@ -665,6 +728,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-22",
     actual: "102480.00",
+    agentAlternative: "102910.00",
+    reducedSize: "101240.00",
+    unhedged: "102180.00",
+    cashBaseline: "100000.00",
     alternative: "102910.00",
     benchmark: "101880.00",
     pnl: "2480.00",
@@ -673,6 +740,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-07-29",
     actual: "102790.00",
+    agentAlternative: "103030.00",
+    reducedSize: "101395.00",
+    unhedged: "102310.00",
+    cashBaseline: "100000.00",
     alternative: "103030.00",
     benchmark: "101960.00",
     pnl: "2790.00",
@@ -681,6 +752,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-05",
     actual: "102610.00",
+    agentAlternative: "103260.00",
+    reducedSize: "101305.00",
+    unhedged: "101690.00",
+    cashBaseline: "100000.00",
     alternative: "103260.00",
     benchmark: "102020.00",
     pnl: "2610.00",
@@ -689,6 +764,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-12",
     actual: "102920.00",
+    agentAlternative: "103410.00",
+    reducedSize: "101460.00",
+    unhedged: "102420.00",
+    cashBaseline: "100000.00",
     alternative: "103410.00",
     benchmark: "102110.00",
     pnl: "2920.00",
@@ -697,6 +776,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-18",
     actual: "103070.00",
+    agentAlternative: "103590.00",
+    reducedSize: "101535.00",
+    unhedged: "102680.00",
+    cashBaseline: "100000.00",
     alternative: "103590.00",
     benchmark: "102160.00",
     pnl: "3070.00",
@@ -705,6 +788,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-21",
     actual: "103120.00",
+    agentAlternative: "103720.00",
+    reducedSize: "101560.00",
+    unhedged: "102710.00",
+    cashBaseline: "100000.00",
     alternative: "103720.00",
     benchmark: "102220.00",
     pnl: "3120.00",
@@ -713,6 +800,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-22",
     actual: "103180.00",
+    agentAlternative: "103780.00",
+    reducedSize: "101590.00",
+    unhedged: "102830.00",
+    cashBaseline: "100000.00",
     alternative: "103780.00",
     benchmark: "102240.00",
     pnl: "3180.00",
@@ -721,6 +812,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-25",
     actual: "103364.00",
+    agentAlternative: "104021.00",
+    reducedSize: "101682.00",
+    unhedged: "102540.00",
+    cashBaseline: "100000.00",
     alternative: "104021.00",
     benchmark: "102310.00",
     pnl: "3364.00",
@@ -729,6 +824,10 @@ export const portfolioPoints: PortfolioPoint[] = [
   {
     date: "2026-08-28",
     actual: "103840.00",
+    agentAlternative: "104620.00",
+    reducedSize: "101920.00",
+    unhedged: "103210.00",
+    cashBaseline: "100000.00",
     alternative: "104620.00",
     benchmark: "102440.00",
     pnl: "3840.00",
@@ -800,7 +899,7 @@ export const alternativeSessions: AlternativeSession[] = [
     storyId: "acme-earnings-gap",
     occurredAt: "2026-08-25T14:30:00Z",
     symbol: "ACME",
-    title: "Which structure handled the fictional volatility contraction best?",
+    title: "Which structure handled the volatility contraction best?",
     summary:
       "The agent alternative finished ahead, while the unhedged branch showed the largest adverse excursion.",
     actualPnl: "+$184.00",
@@ -826,7 +925,7 @@ export const alternativeSessions: AlternativeSession[] = [
     storyId: "vela-guidance-pass",
     occurredAt: "2026-07-29T15:20:00Z",
     symbol: "VELA",
-    title: "Did the selected hedge improve the fictional guidance trade?",
+    title: "Did the selected hedge improve the guidance trade?",
     summary:
       "The governed paper path retained more value than the unhedged branch after volatility contracted.",
     actualPnl: "+$126.00",
@@ -855,7 +954,7 @@ export const alternativeSessions: AlternativeSession[] = [
     occurredAt: "2026-08-21T16:10:00Z",
     symbol: "NOVA",
     title: "How much did no action protect after the announcement?",
-    summary: "Every simulated entry finished below the cash baseline in this fictional scenario.",
+    summary: "Every simulated entry finished below the cash baseline in this scenario.",
     actualPnl: "$0.00",
     bestBranch: "No action",
     alternativeLabel: "Shadow: Unhedged Proposal",
@@ -1031,7 +1130,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Market Wire",
     provider: "Alpaca News-shaped fixture",
     symbols: ["ACME"],
-    headline: "ACME fictional earnings update arrives above the synthetic comparison set",
+    headline: "ACME illustrative earnings update arrives above the synthetic comparison set",
     summary:
       "A deterministic article fixture used to demonstrate catalyst linkage and event-time filtering.",
     category: "Earnings",
@@ -1044,7 +1143,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Business Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["NOVA"],
-    headline: "NOVA announces a fictional product milestone",
+    headline: "NOVA announces a simulated product milestone",
     summary:
       "The synthetic market response already reflected the headline by the time research completed.",
     category: "Product",
@@ -1069,7 +1168,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Market Wire",
     provider: "Alpaca News-shaped fixture",
     symbols: ["VELA"],
-    headline: "VELA raises fictional guidance for the next reporting period",
+    headline: "VELA raises illustrative guidance for the next reporting period",
     summary: "A bounded fixture scenario connected to a PASS story and ShadowFund comparison.",
     category: "Guidance",
     storyId: "vela-guidance-pass",
@@ -1081,7 +1180,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Corporate Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["KITE"],
-    headline: "KITE files a fictional corporate-action update",
+    headline: "KITE files a simulated corporate-action update",
     summary:
       "The story demonstrates why a plausible thesis can still fail on missing liquidity configuration.",
     category: "Corporate action",
@@ -1094,7 +1193,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Sector Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["HELI"],
-    headline: "Synthetic sector rotation lifts multiple fictional names",
+    headline: "Synthetic sector rotation lifts multiple illustrative names",
     summary: "The wider move weakened the single-name explanation and produced NO_TRADE.",
     category: "Sector",
     storyId: "heli-sector-rotation",
@@ -1106,7 +1205,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Business Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["ACME"],
-    headline: "Conflicting fictional guidance sources create an incomplete evidence set",
+    headline: "Conflicting illustrative guidance sources create an incomplete evidence set",
     summary: "The fixture retains source disagreement rather than collapsing it into certainty.",
     category: "Guidance",
     storyId: "acme-guidance-review",
@@ -1158,7 +1257,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Limits how much of the paper portfolio one governed idea may represent.",
     input: "Proposed exposure ÷ observed portfolio equity",
     unit: "% of equity",
-    activeValue: "TBD",
+    activeValue: "5",
     effect:
       "PASS below the approved limit; otherwise MODIFY or FAIL as the approved ruleset specifies.",
   },
@@ -1168,7 +1267,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Defines how old required market and account observations may be.",
     input: "Decision time − received observation time",
     unit: "seconds",
-    activeValue: "TBD",
+    activeValue: "30",
     effect: "Missing or stale required evidence fails closed.",
   },
   {
@@ -1177,7 +1276,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Requires an approved minimum quality for synthetic quote and volume evidence.",
     input: "Spread width, quote quality, and volume inputs",
     unit: "policy value",
-    activeValue: "TBD",
+    activeValue: "medium",
     effect: "Insufficient evidence rejects the candidate rather than assuming a favorable fill.",
   },
   {
@@ -1186,7 +1285,7 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Defines the minimum validated confidence required before proposal generation.",
     input: "Validated research confidence",
     unit: "decimal 0–1",
-    activeValue: "TBD",
+    activeValue: "0.65",
     effect: "Low confidence produces NO_TRADE or FAIL according to the approved ruleset.",
   },
   {
@@ -1195,10 +1294,63 @@ export const configurableRules: ConfigurableRule[] = [
     description: "Controls when new risk must be reduced or blocked after portfolio losses.",
     input: "Current equity versus approved peak reference",
     unit: "% drawdown",
-    activeValue: "TBD",
+    activeValue: "8",
     effect: "The approved policy may MODIFY size or FAIL new proposals.",
   },
 ];
+
+export const weeklySummaryFixture: WeeklySummary = {
+  weekOf: "2026-08-25",
+  storiesAnalysed: 6,
+  netPnl: "+$310.00",
+  shadowBeatActive: 2,
+  keyFindings: [
+    "Two of six decisions saw a shadow branch outperform the active portfolio, both driven by earlier-expiry structures with tighter risk bounds.",
+    "Evidence freshness violations occurred in 1 of 6 stories — the ORBT macro event — where quote data aged beyond the current 30-second threshold before the decision completed.",
+    "The Unhedged Structure branch produced the largest adverse excursion this week (+164 drawdown vs +76 on the active path), reinforcing the value of the spread structure rule.",
+    "Research confidence averaged 0.74 across all PASS outcomes and 0.51 across FAIL and NO_TRADE outcomes — the current 0.65 floor is close to the natural separation point.",
+    "No position concentration violations were recorded; all active allocations remained below 5% of equity.",
+  ],
+  suggestions: [
+    {
+      id: "sug-freshness",
+      ruleId: "freshness",
+      ruleName: "Evidence freshness",
+      currentValue: "30",
+      suggestedValue: "20",
+      confidence: "high",
+      rationale:
+        "The ORBT macro event showed that a 30-second window is too permissive for fast-moving catalyst data. Tightening to 20 seconds would have flagged stale quotes before the research phase completed, preventing a degraded outcome.",
+      weekOf: "2026-08-25",
+    },
+    {
+      id: "sug-confidence",
+      ruleId: "confidence",
+      ruleName: "Research confidence",
+      currentValue: "0.65",
+      suggestedValue: "0.70",
+      confidence: "medium",
+      rationale:
+        "Analysis of this week's PASS vs FAIL distribution shows a natural gap between 0.65 and 0.72. Raising the floor to 0.70 would have converted two marginal PASS outcomes into NO_TRADE, avoiding positions that ended near break-even.",
+      weekOf: "2026-08-25",
+    },
+    {
+      id: "sug-concentration",
+      ruleId: "concentration",
+      ruleName: "Position concentration",
+      currentValue: "5",
+      suggestedValue: "4",
+      confidence: "low",
+      rationale:
+        "Shadow branch analysis suggests that even with a single concentrated spread, a 4% ceiling would reduce worst-case exposure without meaningfully reducing expected return in the current illustrative scenario. Confidence is low because the sample size this week is small.",
+      weekOf: "2026-08-25",
+    },
+  ],
+};
+
+export function getWeeklySummary(): WeeklySummary {
+  return weeklySummaryFixture;
+}
 
 export const ruleVersions = [
   {

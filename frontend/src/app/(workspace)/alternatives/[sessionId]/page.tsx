@@ -1,16 +1,29 @@
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StoryLineChart } from "@/components/product/story-charts";
-import {
-  DemoDataNotice,
-  MetricStrip,
-  PageHeader,
-  Section,
-  StateBadge,
-} from "@/components/product/workspace-ui";
+import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/product/workspace-ui";
 import { getAlternativeSession } from "@/features/story/story-data";
+
+function DeltaBadge({ delta }: { delta: string }) {
+  const isPositive = delta.startsWith("+");
+  const isNeutral = delta === "—" || delta === "$0.00";
+  return (
+    <span
+      className="delta-badge"
+      data-sign={isNeutral ? "neutral" : isPositive ? "positive" : "negative"}
+      aria-label={`${isPositive ? "outperformed" : "underperformed"} active by ${delta}`}
+    >
+      {isNeutral ? null : isPositive ? (
+        <TrendingUp aria-hidden="true" className="delta-badge-icon" />
+      ) : (
+        <TrendingDown aria-hidden="true" className="delta-badge-icon" />
+      )}
+      {delta}
+    </span>
+  );
+}
 
 export default async function AlternativeDetailPage({
   params,
@@ -20,6 +33,9 @@ export default async function AlternativeDetailPage({
   const { sessionId } = await params;
   const session = getAlternativeSession(sessionId);
   if (!session) notFound();
+
+  const shadowBranches = session.branches.filter((b) => b.id !== "actual");
+
   return (
     <>
       <Link className="back-link" href="/alternatives">
@@ -33,33 +49,39 @@ export default async function AlternativeDetailPage({
         <StateBadge state="simulated" />
       </PageHeader>
       <DemoDataNotice />
-      <MetricStrip
-        metrics={[
-          { label: "Active Outcome", value: session.actualPnl, detail: "Paper execution P&L" },
-          { label: "Best Shadow Path", value: session.bestBranch, detail: "Simulated alternative" },
-          {
-            label: "Counterfactual Delta",
-            value: session.bestDelta,
-            detail: "Active vs. Shadow delta",
-          },
-          {
-            label: "Data Coverage",
-            value: session.coverage,
-            detail: "Fixture observation density",
-          },
-        ]}
-      />
+
+      {/* Outcome comparison header */}
+      <div className="alt-outcome-grid">
+        <div className="alt-outcome-actual prism-glass-card">
+          <span className="alt-outcome-label">Active Portfolio (Paper)</span>
+          <span className="alt-outcome-pnl" aria-label={`Active outcome: ${session.actualPnl}`}>
+            {session.actualPnl}
+          </span>
+          <span className="alt-outcome-sub">Governed paper execution · recorded outcome</span>
+        </div>
+        {shadowBranches.map((branch) => (
+          <div key={branch.id} className="alt-outcome-shadow prism-glass-card">
+            <span className="alt-outcome-label">{branch.label}</span>
+            <span className="alt-outcome-pnl alt-outcome-pnl--shadow">{branch.pnl}</span>
+            <div className="alt-outcome-delta-row">
+              <span className="alt-outcome-sub">vs Active:</span>
+              <DeltaBadge delta={branch.deltaVsActual} />
+            </div>
+          </div>
+        ))}
+      </div>
+
       <Section
         id="branch-path"
-        title="How the Alternative Trajectories Diverged"
-        description="Solid mineral teal is our Active Portfolio; dashed amethyst is the leading Shadow counterfactual; dashed slate is Cash Baseline."
+        title="Trajectory Comparison vs. Active Portfolio"
+        description="Each line shows the cumulative P&L of one shadow branch relative to the same timeline. The teal Active Portfolio line is the reference you are comparing against."
       >
         <StoryLineChart
           title="Cumulative Decision Trajectories"
-          description="P&amp;L progression across identical market conditions and timestamps."
+          description="Interactive trajectory view. Toggle shadow branches on or off to isolate any comparison."
           summary={
             session.bestBranch === "Active Portfolio (Paper)"
-              ? `Active Portfolio finished ${session.bestDelta} ahead of shadow alternative`
+              ? `Active Portfolio finished ${session.bestDelta} ahead of all shadow alternatives`
               : `${session.bestBranch} finished ${session.bestDelta} relative to active path`
           }
           data={session.path}
@@ -68,28 +90,34 @@ export default async function AlternativeDetailPage({
             { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
             {
               key: "alternative",
-              label: session.alternativeLabel ?? session.bestBranch,
+              label:
+                session.alternativeLabel ??
+                (session.bestBranch === "Active Portfolio (Paper)"
+                  ? "Shadow: Unhedged Alternative"
+                  : session.bestBranch),
               color: "#818CF8",
               dashed: true,
             },
-            { key: "benchmark", label: "Shadow: Cash Baseline", color: "#64748B", dashed: true },
+            { key: "benchmark", label: "Shadow: Cash Baseline", color: "#94A3B8", dashed: true },
           ]}
         />
       </Section>
+
       <Section
         id="branch-matrix"
-        title="Shadow Portfolio Decision Matrix"
-        description="Each branch isolates one controlled parameter to attribute alpha and risk."
+        title="Shadow Branch Results vs. Active Portfolio"
+        description="Every branch ran under identical market conditions. The delta column shows directly how each outcome differed from what actually happened."
       >
         <div className="table-wrap prism-glass-card">
           <table>
-            <caption>ShadowFund Branch Metrics &amp; Comparison</caption>
+            <caption>ShadowFund Branch Comparison vs. Active Portfolio</caption>
             <thead>
               <tr>
                 <th>Branch</th>
                 <th>Variation Tested</th>
-                <th>P&amp;L</th>
-                <th>Drawdown</th>
+                <th>Final P&amp;L</th>
+                <th>vs Active (Δ)</th>
+                <th>Max Drawdown</th>
                 <th>Coverage</th>
                 <th>State</th>
               </tr>
@@ -105,6 +133,9 @@ export default async function AlternativeDetailPage({
                   <td className="font-mono tabular-nums font-semibold text-[#00D084]">
                     {branch.pnl}
                   </td>
+                  <td className="font-mono tabular-nums">
+                    <DeltaBadge delta={branch.deltaVsActual} />
+                  </td>
                   <td className="font-mono tabular-nums text-[#FF6B6B]">{branch.drawdown}</td>
                   <td className="font-mono tabular-nums">{branch.coverage}</td>
                   <td>
@@ -116,9 +147,10 @@ export default async function AlternativeDetailPage({
           </table>
         </div>
       </Section>
+
       <Section
         id="limitations"
-        title="Simulation Constraints & Model Boundaries"
+        title="Simulation Constraints &amp; Model Boundaries"
         description="Explicit assumptions and limitations preserved for audit integrity."
       >
         <ul className="limitation-list space-y-2">

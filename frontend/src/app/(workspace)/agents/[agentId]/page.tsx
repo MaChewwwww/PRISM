@@ -125,7 +125,7 @@ export default async function AgentDetailPage({
             ))}
           </ol>
         ) : (
-          <p className="inline-empty">No fictional runs fall inside this date range.</p>
+          <p className="inline-empty">No illustrative runs fall inside this date range.</p>
         )}
       </Section>
     </>
