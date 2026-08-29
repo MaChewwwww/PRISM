@@ -2326,3 +2326,110 @@ tbody th span {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Current Holdings table (portfolio) */
+.holdings-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+.holdings-panel-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+.csv-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--primary);
+  background: rgba(84, 125, 131, 0.2);
+  color: var(--foreground);
+  font: 500 0.75rem/1 var(--font-sans);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.csv-button:hover {
+  background: rgba(84, 125, 131, 0.35);
+  border-color: #669299;
+  box-shadow: 0 0 20px rgba(84, 125, 131, 0.35);
+}
+.csv-button:active {
+  transform: scale(0.98);
+}
+.csv-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--primary);
+}
+.csv-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+.holdings-table-scroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--border-strong);
+  border-radius: var(--radius-panel);
+}
+.holdings-table-scroll:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+}
+.holdings-table thead th {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  color: var(--muted-foreground);
+  font: 600 0.58rem/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.holdings-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+.holdings-table tbody tr:last-child {
+  border-bottom: 0;
+}
+.holdings-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.holdings-table tbody th,
+.holdings-table tbody td {
+  padding: 1rem;
+  font: 500 0.8125rem/1.2 var(--font-sans);
+  color: var(--foreground);
+  vertical-align: middle;
+  text-align: left;
+  white-space: nowrap;
+}
+.holdings-table .holdings-num {
+  text-align: right;
+}
+.holdings-ticker {
+  display: block;
+  font-weight: 600;
+  color: #ffffff;
+}
+.holdings-provenance {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font: 500 0.6rem/1 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 700px) {
+  .holdings-table thead th,
+  .holdings-table tbody th,
+  .holdings-table tbody td {
+    padding: 0.75rem 0.6rem;
+  }
+}
