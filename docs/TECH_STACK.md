@@ -29,20 +29,20 @@ PRISM deeply leverages Alpaca's developer platform across market data ingestion,
 
 ```mermaid
 flowchart TD
-    subgraph MarketData["1. Market Intelligence (alpaca-py 0.44.0)"]
-        A1["/v2/news (News Stream)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
-        A2["/v2/stocks/bars (Historical Bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
-        A3["/v2/stocks/snapshots (Multi-Symbol)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
+    subgraph MarketData["1. Market Intelligence - alpaca-py 0.44.0"]
+        A1["News Stream (/v2/news)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
+        A2["Historical Bars (/v2/stocks/bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
+        A3["Multi-Symbol Snapshots (/v2/stocks/snapshots)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
     end
 
-    subgraph PaperExecution["2. Governed Options Execution (Alpaca Paper API & CLI)"]
+    subgraph PaperExecution["2. Governed Options Execution - Paper API & CLI"]
         C1["Deterministic Rules Engine (APPROVE Verdict)"] -->|Authorized Payload| C2["Alpaca Execution Gate"]
-        C2 -->|Level 2 Options| D1["Long Calls & Long Puts"]
-        C2 -->|Level 3 Options (order_class=mleg)| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
+        C2 -->|Level 2 Single Options| D1["Long Calls & Long Puts"]
+        C2 -->|Level 3 Multi-Leg Debit Spreads| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
         C2 -->|Subprocess JSON stdin| D3["Alpaca CLI Idempotent Order Gateway"]
     end
 
-    subgraph Exploration["3. Agent Discovery (Alpaca MCP Server)"]
+    subgraph Exploration["3. Agent Discovery - Alpaca MCP Server"]
         E1["Read-Only MCP Toolsets (account, assets, stock/options data)"] -->|Context Enrichment| E2["Agent Context & Developer Tooling"]
     end
 ```
