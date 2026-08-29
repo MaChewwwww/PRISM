@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   GitBranch,
   LayoutDashboard,
+  LineChart,
   Network,
   Newspaper,
   Sparkles,
@@ -33,6 +34,7 @@ const navigation = [
     label: "Inspect",
     items: [
       { label: "News & catalysts", icon: Newspaper, href: "/news" },
+      { label: "Market Tracker", icon: LineChart, href: "/market-tracker" },
       { label: "Agents & tools", icon: Sparkles, href: "/agents" },
       { label: "Rules", icon: BookOpenCheck, href: "/rules" },
     ],

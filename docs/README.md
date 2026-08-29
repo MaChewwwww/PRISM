@@ -33,6 +33,7 @@ Do not silently reconcile a conflict. Update every affected downstream artifact 
 
 - [ShadowFund](SHADOWFUND.md)
 - [Alpaca Integration](ALPACA_INTEGRATION.md)
+- [Market Tracker](MARKET_TRACKER.md)
 
 ## Platform, design, and operations
 
@@ -41,6 +42,8 @@ Do not silently reconcile a conflict. Update every affected downstream artifact 
 - [CI/CD and Branch Promotion](CI_CD.md)
 - [Docker](DOCKER.md)
 - [VPS Deployment](VPS_DEPLOYMENT.md)
+- [Staging Server Maintenance Cheatsheet](deployment/staging-server-maintenance-cheatsheet.md)
+- [Single Azure VM Runbook](deployment/single-azure-vm.md)
 - [Security](SECURITY.md)
 
 ## Status vocabulary

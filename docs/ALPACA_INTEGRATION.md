@@ -2,7 +2,7 @@
 
 ## Responsibility split
 
-- `alpaca-py` is the selected typed read gateway. The current implemented provider slices are authenticated news analysis and read-only historical stock bars for market-reaction research; broader account, asset, and option reads remain adapter work.
+- `alpaca-py` is the selected typed read gateway. The current implemented provider slices are authenticated news analysis, deterministic quantitative analysis, and read-only historical stock bars for market-reaction research; broader account, asset, and option reads remain adapter work.
 - Alpaca CLI v0.0.13 is the selected future order-submission adapter. The current skeleton does not submit orders.
 - Alpaca MCP may be used by developers for read-only investigation with toolsets limited to `account`, `assets`, `stock-data`, `options-data`, and `news`. Trading tools are excluded and credentials are never committed.
 
@@ -15,6 +15,8 @@ Configuration must target Alpaca's paper endpoint. Live mode is a startup error.
 Initial strategies are long calls, long puts, and two-leg call/put debit spreads. Single long options require Level 2; spreads require Level 3. Spread legs must use the same underlying and expiration, simplified 1:1 ratios, `order_class=mleg`, limit pricing, and `day` time-in-force. The system rejects uncovered shorts, credit spreads, equity-option combinations, inactive/non-tradable contracts, extended-hours options, exercise requests, and other strategies.
 
 The BA rules require defined-risk debit spreads when IV Rank exceeds 50%. The market-reaction slice retrieves bounded historical stock bars for research only; it does not compute IV Rank, authorize a proposal, or submit an order. The future market adapter must source and validate the inputs needed for that rule.
+
+The Quantitative Agent retrieves normalized historical stock bars through `AlpacaPyGateway`, then computes deterministic RSI, MACD, moving averages, Bollinger Bands, ATR, annualized volatility, volume surge, and momentum. `POST /api/v1/research/quant/analyze` is authenticated and research-only; it cannot authorize or submit an order. Provider errors are logged by exception class and returned as a redacted temporary-unavailability response.
 
 For the BA-authorized hackathon window, official scoring uses total account equity at EOD Thursday Sep 3, 2026. New entries stop at Wednesday Sep 2, 2026 16:00 ET and all positions force-flatten by Thursday's close. The outer Friday Sep 4 09:30 ET boundary is not a scoring extension. A Sep-3-expiring contract must not be held into settlement; the 0-DTE block, DTE exit, and force-flatten are cumulative controls.
 
@@ -33,6 +35,8 @@ The system persists the client order identifier and intent before invoking the C
 
 The repository interfaces reserve a cache-aside boundary for future market-data adapters. Persisted historical bars, quote snapshots, Redis warming, and deterministic replay storage are not implemented in this skeleton. The market-reaction report cache is persisted research output, not a market-data replay store, and must not be represented as an account or execution record. When broader adapters are added, they must preserve immutable query digests, bounded provider requests, and reproducible replay fixtures without changing the paper-only execution boundary.
 
+Autonomous paper execution is controlled by server-only `AUTONOMOUS_TRADING_ENABLED`, `AUTONOMOUS_TRADING_START_AT`, and `AUTONOMOUS_TRADING_END_AT` settings. A future orchestration loop may run only when the explicit flag is enabled, the UTC interval is active, and all deterministic authorization checks pass. Production intervals are bounded by the BA registry's hackathon start and force-flatten timestamps; staging may use its separate paper account for a bounded rehearsal interval. No scheduler or autonomous Alpaca order path is implemented in the current skeleton.
+
 
 ## Official-source workflow
 
@@ -49,3 +53,17 @@ Before implementing or changing Alpaca behavior, follow `.agents/rules/20-alpaca
 ## Version and provenance policy
 
 Runtime SDKs, the CLI, and vendored Alpaca skills are pinned. The vendored skills are reference material; repository trading-safety rules remain authoritative. Upgrade changes require documentation review, contract/test updates, and paper-only verification.
+
+## Market Tracker integration design (deferred)
+
+Verified against official Alpaca US documentation on `2026-08-29`. The future server-only adapter will use:
+
+- historical `/v2/stocks/bars` for bounded, paginated chart windows and validated timeframes: [historical stock bars](https://docs.alpaca.markets/us/reference/stockbars);
+- `/v2/stocks/snapshots` for selected watchlist symbols: [multi-symbol snapshots](https://docs.alpaca.markets/us/reference/stocksnapshots-1);
+- `StockDataStream` trades, quotes, and bars for later server-owned live updates: [real-time stock pricing data](https://docs.alpaca.markets/us/docs/real-time-stock-pricing-data.md);
+- `/v2/positions` for genuine open paper positions: [open positions](https://docs.alpaca.markets/us/reference/getallopenpositions);
+- `/v2/orders` for paper order lifecycle records: [orders](https://docs.alpaca.markets/us/reference/getallorders-1);
+- `/v2/account/activities` filtered to `FILL` and partial-fill trade activity for confirmed fills: [account activities](https://docs.alpaca.markets/us/reference/getaccountactivities-2);
+- optional `trade_updates` for later account/order streaming: [working with orders](https://docs.alpaca.markets/us/docs/working-with-orders).
+
+The market-data API supports HTTP and WebSocket delivery: [market data overview](https://docs.alpaca.markets/us/docs/about-market-data-api.md). Feed entitlement, symbol limits, historical lookback, and freshness vary by subscription; the server selects an authorized feed and exposes capability/freshness metadata. The browser receives normalized server events only and never receives Alpaca credentials. Historical REST loading is the first milestone; streams, persistence, reconciliation, and cache warming are deferred. No Alpaca call is made by the current Market Tracker skeleton.

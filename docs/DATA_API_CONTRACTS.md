@@ -43,6 +43,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/system/status` | Redacted operational state | Yes |
 | POST | `/api/v1/research/news/analyze` | Non-authoritative structured news research | Yes |
 | POST | `/api/v1/research/reaction/analyze` | Non-authoritative market-reaction and mispricing research | Yes |
+| POST | `/api/v1/research/quant/analyze` | Deterministic quantitative technical analysis | Yes |
 | GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
 | GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
 | GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
@@ -54,6 +55,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/presentation/agents/{agent_id}` | Agent detail | Yes |
 | GET | `/api/v1/presentation/governance` | Active ruleset, profile, and semantics | Yes |
 | GET | `/api/v1/presentation/weekly-summary` | Manual-review profile recommendations | Yes |
+| GET | `/api/v1/market-tracker` | **Planned, deferred** normalized bars, watchlist, and activity markers | Yes |
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
 Collection endpoints require `from` and `to` query parameters. Both must be timezone-aware UTC timestamps, and `from` must not be later than `to`.
@@ -70,6 +72,12 @@ Every presentation response includes metadata with:
 
 The current adapter always returns `data_mode=illustrative_fixture` and `fixture_version=prism-demo-v1`. No response implies an Alpaca account request, paper order, fill, holding, P&L record, or provider/model invocation.
 
+## Planned Market Tracker contract (not implemented)
+
+The future authenticated `GET /api/v1/market-tracker` accepts `symbol`, validated UTC `from` and `to`, `timeframe` (`1Min`, `5Min`, `15Min`, `1Hour`, or `1Day`), selected activity kinds, and `traded_only`. Its response will define `MarketTrackerResponse`, `MarketBar`, `MarketWatchlistItem`, and `MarketActivityMarker` types plus capability/freshness metadata. Bars contain UTC timestamps, OHLCV, trade count, and optional VWAP. Watchlist items contain normalized snapshot values, change, and verified-trade state. Activity markers retain event kind, instrument, status, identifiers, optional decimal price/quantity, and provenance; option markers chart the underlying while retaining contract, expiration, strike, side, and leg details.
+
+All future prices, quantities, percentages, and Greeks remain decimal strings. The standard metadata envelope will include `generated_at`, `as_of`, the requested UTC range, `data_mode`, provider/fixture source, and freshness. The endpoint is deliberately not in generated OpenAPI or frontend transport types in this skeleton. Empty and degraded responses must be explicit and must never fabricate market or account data.
+
 ## News-analysis endpoint
 
 The implemented news endpoint is non-authoritative research. It uses authenticated access, structured response validation, cached analysis records, classified transient retries in a worker thread, and redacted provider errors. Retries never block the event loop and never turn an AI result into execution authority.
@@ -77,6 +85,10 @@ The implemented news endpoint is non-authoritative research. It uses authenticat
 ## Market-reaction endpoint
 
 `POST /api/v1/research/reaction/analyze` retrieves a bounded historical stock-bar window through the server-side Alpaca read adapter, computes deterministic reaction metrics, and asks the provider-neutral LLM gateway for a structured thesis and limitations. The response is a `ResearchReport` with decimal-safe actual/expected reaction, reaction gap, volume ratio, classification, and opportunity-score fields. It is non-authoritative and cannot authorize or submit an order. Research-report caching uses the Alembic-managed `research_reports` table and remains best-effort.
+
+## Quantitative endpoint
+
+`POST /api/v1/research/quant/analyze` accepts an authenticated `symbol` and bounded `bar_limit` from 20 through 500 (default 250). It retrieves normalized historical bars through the server-side Alpaca gateway and returns a deterministic `QuantitativeAnalysisReport` containing RSI (14), MACD (12, 26, 9), SMA (20, 50, 200), Bollinger Bands (20, 2), ATR (14), annualized volatility, volume surge ratio, and a 0-100 momentum score with trend classification. Decimal values serialize as strings. This report is research evidence only: it is not a `TradeProposal`, authorization, execution instruction, or provider/account assertion. Provider failures use a stable redacted error response.
 
 ## Error and authorization boundaries
 

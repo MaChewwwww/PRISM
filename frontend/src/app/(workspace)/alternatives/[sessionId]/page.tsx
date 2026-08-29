@@ -35,7 +35,7 @@ export default async function AlternativeDetailPage({
   if (!session) notFound();
 
   const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
-  const activePathLabel = "Active Portfolio governed path";
+  const activePathLabel = "Active Portfolio";
   const bestBranchLabel =
     session.bestBranch === "Illustrative governed path" ? activePathLabel : session.bestBranch;
 

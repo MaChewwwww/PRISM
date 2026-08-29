@@ -298,7 +298,7 @@ export default async function StoryDetailPage({
                       >
                         <th scope="row">
                           {branch.label === "Illustrative governed path"
-                            ? "Active Portfolio governed path"
+                            ? "Active Portfolio"
                             : branch.label}
                           <span className="text-xs font-mono block text-slate-400 font-normal">
                             {branch.status}

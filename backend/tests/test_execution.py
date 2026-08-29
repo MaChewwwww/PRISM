@@ -27,7 +27,7 @@ from app.execution.cli_gateway import (
     CommandResult,
     InMemoryReceiptRepository,
 )
-from app.execution.validation import ExecutionRejected, validate_strategy
+from app.execution.validation import ExecutionRejected, validate_authorization, validate_strategy
 
 
 class RecordingRunner:
@@ -215,6 +215,36 @@ def test_frs_014_kill_switch_prevents_invocation() -> None:
     with pytest.raises(ExecutionRejected, match="kill-switched"):
         gateway.submit(proposal, build_decision(proposal))
     assert not runner.calls
+
+
+def test_frs_009_autonomous_trading_window_blocks_out_of_window_authorization() -> None:
+    proposal = build_proposal()
+    window_now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
+    decision = build_decision(
+        proposal,
+        expires_at=window_now + timedelta(minutes=1),
+        account_observed_at=window_now,
+    )
+    settings = execution_settings(
+        autonomous_trading_enabled=True,
+        autonomous_trading_start_at="2026-08-31T13:30:00Z",
+        autonomous_trading_end_at="2026-09-03T20:00:00Z",
+    )
+
+    with pytest.raises(ExecutionRejected, match="Autonomous trading window is not active"):
+        validate_authorization(
+            proposal,
+            decision,
+            settings,
+            now=datetime(2026, 8, 31, 13, 29, 59, tzinfo=UTC),
+        )
+
+    validate_authorization(
+        proposal,
+        decision,
+        settings,
+        now=window_now,
+    )
 
 
 def test_frs_007_rejects_uncovered_short() -> None:

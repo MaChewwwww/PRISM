@@ -14,9 +14,13 @@
 
 This remains a skeleton. The demonstration dataset is always `illustrative_fixture` and does not represent provider, Alpaca account, paper order, fill, holding, or P&L activity.
 
+## Market Tracker skeleton: implemented, provider integration deferred
+
+The `/market-tracker` route and Inspect navigation entry reserve a chart/watchlist workspace, shared UTC date-range URLs, a default `1Day` timeframe, and six independently filterable activity kinds (`fill`, `order`, `proposal`, `decision`, `no_trade`, `shadow`). The page makes no provider or backend request and renders no fake market/account values. Only confirmed `fill` activity will count as a verified trade when the planned endpoint is implemented. The endpoint contract, server-owned Alpaca flow, entitlement caveats, and deferred milestones are recorded in `MARKET_TRACKER.md` and `ALPACA_INTEGRATION.md`.
+
 ## Next: specialist orchestration
 
-Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. Expand the implemented news and market-reaction research slices without granting them authority.
+Implement durable evidence ingestion and the seven specialist workflows with provider-neutral adapters, strict structured outputs, freshness controls, and observable traces. The News, deterministic Quantitative, and Market Reaction/Mispricing slices are now implemented without granting them authority; expand them behind the same boundaries.
 
 ## Next: proposal, risk, and deterministic authorization
 
@@ -24,7 +28,7 @@ Implement persisted TradeProposal versioning, AI-assisted Risk Management, the c
 
 ## Next: portfolio, ShadowFund, and paper execution
 
-Implement persisted portfolio snapshots, exposure calculations, counterfactual valuation, and paper-order execution/reconciliation behind the disabled-by-default gate. Networked tests remain opt-in and must not place an order without explicit user authorization.
+Implement persisted portfolio snapshots, exposure calculations, counterfactual valuation, autonomous orchestration, and paper-order execution/reconciliation behind the disabled-by-default gate. The server-side `AUTONOMOUS_TRADING_*` schedule settings and fail-closed execution gate are configuration groundwork only; no scheduler is active. Networked tests remain opt-in and must not place an order without explicit user authorization.
 
 ## Later: operations and evaluation
 

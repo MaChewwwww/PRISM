@@ -1,1 +1,1 @@
-"""Governed market-reaction API."""
+"""Governed PRISM research and presentation API."""

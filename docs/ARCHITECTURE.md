@@ -2,7 +2,7 @@
 
 Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
-PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The current repository is a contract-aligned skeleton: it implements authenticated news and market-reaction research slices, typed domain boundaries, authenticated illustrative presentation APIs, a generated frontend transport contract, and deployment foundations. Full orchestration, persisted portfolio services, ShadowFund evaluation, and paper order execution remain future work.
+PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The current repository is a contract-aligned skeleton: it implements authenticated news, deterministic quantitative, and market-reaction research slices, typed domain boundaries, authenticated illustrative presentation APIs, a generated frontend transport contract, and deployment foundations. Full orchestration, persisted portfolio services, ShadowFund evaluation, and paper order execution remain future work.
 
 ## Authority and dependency direction
 
@@ -80,15 +80,19 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | --- | --- | --- |
 | `contracts` | Typed proposal, risk, governance, authorization, execution, profile, and audit records | Implemented skeleton |
 | `rules` | Versioned BA registry and deterministic policy boundary | Registry and typed boundary implemented; full evaluator deferred |
-| `research` | Provider-normalized evidence and structured research | News and market-reaction endpoints implemented; full specialist orchestration deferred |
+| `research` | Provider-normalized evidence and structured research | News, deterministic quantitative, and market-reaction endpoints implemented; full specialist orchestration deferred |
 | `presentation` | Backend-owned illustrative read models | Implemented with versioned fixture adapter |
 | `proposal` | Trading Decision proposal synthesis | Contract only / deferred |
 | `risk` | AI-assisted adversarial critique | Contract/presentation only / deferred |
 | `market` | Alpaca market/news adapter | Read-only news and historical stock-bar slices |
 | `portfolio` | Durable snapshots and exposure calculations | Deferred |
-| `execution` | Final paper checks, translation, idempotency, reconciliation | Validation skeleton; submission deferred and disabled |
+| `execution` | Final paper checks, translation, idempotency, reconciliation | Validation and autonomous-window gate; submission deferred and disabled |
 | `shadowfund` | Immutable counterfactual branches and evaluation | Presentation fixture only / deferred engine |
 | `audit` | Append-oriented decision and execution events | Contract only / deferred persistence |
+
+## Research slices
+
+The current research boundary exposes authenticated, non-authoritative slices for News, Market Reaction/Mispricing, and the Quantitative Agent. Quantitative analysis is deterministic and consumes normalized historical bars to calculate RSI, MACD, SMA, Bollinger Bands, ATR, annualized volatility, volume surge, and a bounded momentum score. It returns a `QuantitativeAnalysisReport` and cannot authorize or submit an order. Provider reads remain server-side, bounded, retried only for transient failures, and surfaced through redacted errors.
 
 ## Presentation skeleton
 
@@ -96,9 +100,21 @@ All frontend story surfaces load through one server-side adapter typed from gene
 
 Presentation data never claims a broker call, paper fill, account holding, or LLM invocation. Stable fixture decision IDs and UTC range URLs preserve cross-page trace navigation.
 
+## Market Tracker boundary (deferred)
+
+The `/market-tracker` route is a provider-free frontend skeleton. It reserves an interactive price/time chart, symbol watchlist, timeframe controls, and independently filterable activity overlays, but renders no symbols, prices, bars, positions, orders, fills, or provider claims until a server adapter is authorized. The six activity kinds are `fill`, `order`, `proposal`, `decision`, `no_trade`, and `shadow`; only confirmed `fill` activity qualifies as an actual trade.
+
+The planned flow is `Browser -> authenticated Next.js server adapter -> FastAPI market-tracker endpoint -> server-only Alpaca adapter and persisted PRISM repositories`. The browser will never receive Alpaca credentials or connect to Alpaca. Historical REST loading is the first future milestone; server-owned market and account streams, persistence, reconciliation, and cache warming follow later. The route preserves the shared UTC `range`, `from`, and `to` URL parameters while the endpoint remains intentionally absent from the current OpenAPI artifact.
+
 ## Hackathon operating window
 
 The BA-owned registry also carries the fixed-date hackathon window. It starts Monday Aug 31, 2026 at 09:30 ET, stops new entries at Wednesday Sep 2, 2026 16:00 ET, scores total account equity at EOD Thursday Sep 3, 2026, and force-flattens by that close. Friday Sep 4 at 09:30 ET is an outer boundary only. The presentation governance endpoint exposes the registry's UTC timestamps and the human-readable ET controls; future deterministic authorization must enforce them. No Sep-3-expiring contract may be held into settlement.
+
+## Autonomous run control
+
+Autonomous paper execution is an explicit server-side opt-in, controlled by `AUTONOMOUS_TRADING_ENABLED` and a UTC half-open interval from `AUTONOMOUS_TRADING_START_AT` through (but excluding) `AUTONOMOUS_TRADING_END_AT`. The flag defaults to false, requires `EXECUTION_ENABLED=true`, an active ruleset, and a complete Alpaca paper credential pair. Production intervals must be contained within the registry's hackathon trading start and force-flatten deadline. Staging uses a separate paper credential pair and may select a bounded rehearsal interval; this does not change the production BA window or any deterministic authorization requirement.
+
+This is configuration and validation groundwork only. The autonomous orchestration loop is not implemented, so setting the variables does not itself schedule or submit orders.
 
 ## Authorization binding
 
@@ -111,7 +127,7 @@ An authorization decision binds at least:
 - allowed payload digest;
 - rule trace, decision time, and expiration.
 
-Only `APPROVE` may reach the execution service. Before any future submission, execution must recheck paper mode, execution-enabled state, kill switch, authorization currency, payload digest, account and market freshness, permissions, buying-power inputs, contract activity, and client order ID.
+Only `APPROVE` may reach the execution service. Before any future submission, execution must recheck paper mode, execution-enabled state, autonomous window (when enabled), kill switch, authorization currency, payload digest, account and market freshness, permissions, buying-power inputs, contract activity, and client order ID.
 
 ## Database and readiness
 

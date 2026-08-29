@@ -23,6 +23,7 @@ describe("AppShell", () => {
       ["Portfolio", "/portfolio"],
       ["Alternatives", "/alternatives"],
       ["News & catalysts", "/news"],
+      ["Market Tracker", "/market-tracker"],
       ["Agents & tools", "/agents"],
       ["Rules", "/rules"],
     ];

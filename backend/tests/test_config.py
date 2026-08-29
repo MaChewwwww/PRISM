@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
@@ -17,6 +19,76 @@ def test_frs_006_rejects_partial_credentials() -> None:
 def test_frs_010_execution_requires_active_ruleset() -> None:
     with pytest.raises(ValidationError, match="ACTIVE_RULESET_VERSION"):
         Settings(_env_file=None, execution_enabled=True, execution_kill_switch=False)
+
+
+def test_autonomous_trading_defaults_to_disabled_without_a_schedule() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.autonomous_trading_enabled is False
+    assert settings.autonomous_trading_start_at is None
+    assert settings.autonomous_trading_end_at is None
+    assert settings.autonomous_trading_window_active(datetime.now(UTC)) is False
+
+
+def test_autonomous_trading_requires_explicit_execution_and_schedule() -> None:
+    with pytest.raises(ValidationError, match="requires EXECUTION_ENABLED"):
+        Settings(
+            _env_file=None,
+            autonomous_trading_enabled=True,
+            alpaca_api_key="paper-key",
+            alpaca_secret_key="paper-secret",
+        )
+
+    with pytest.raises(ValidationError, match="requires a UTC start and end time"):
+        Settings(
+            _env_file=None,
+            autonomous_trading_enabled=True,
+            execution_enabled=True,
+            active_ruleset_version="1.0.0",
+            alpaca_api_key="paper-key",
+            alpaca_secret_key="paper-secret",
+        )
+
+
+def test_staging_autonomous_trading_window_can_be_used_for_rehearsal() -> None:
+    common = {
+        "_env_file": None,
+        "environment": "staging",
+        "auth_password": "staging-password-123",
+        "auth_secret_key": "s" * 32,
+        "autonomous_trading_enabled": True,
+        "execution_enabled": True,
+        "active_ruleset_version": "1.0.0",
+        "alpaca_api_key": "paper-key",
+        "alpaca_secret_key": "paper-secret",
+        "autonomous_trading_start_at": "2026-08-29T00:00:00Z",
+        "autonomous_trading_end_at": "2026-08-30T00:00:00Z",
+    }
+    settings = Settings(**common)
+    assert settings.autonomous_trading_window_active(datetime(2026, 8, 29, 12, tzinfo=UTC)) is True
+
+
+def test_production_autonomous_trading_window_is_bounded_by_authorized_hackathon_window() -> None:
+    production = {
+        "_env_file": None,
+        "environment": "production",
+        "auth_password": "production-password-123",
+        "auth_secret_key": "p" * 32,
+        "autonomous_trading_enabled": True,
+        "execution_enabled": True,
+        "active_ruleset_version": "1.0.0",
+        "alpaca_api_key": "paper-key",
+        "alpaca_secret_key": "paper-secret",
+        "autonomous_trading_start_at": "2026-08-30T13:30:00Z",
+        "autonomous_trading_end_at": "2026-09-03T20:00:00Z",
+    }
+    with pytest.raises(ValidationError, match="within the BA-authorized hackathon window"):
+        Settings(**production)
+
+    production["autonomous_trading_start_at"] = "2026-08-31T13:30:00Z"
+    settings = Settings(**production)
+    assert settings.autonomous_trading_window_active(datetime(2026, 9, 1, tzinfo=UTC)) is True
+    assert settings.autonomous_trading_window_active(datetime(2026, 9, 3, 20, tzinfo=UTC)) is False
 
 
 def test_llm_configuration_defaults() -> None:

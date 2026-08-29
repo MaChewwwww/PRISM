@@ -919,6 +919,45 @@
         "title": "AuthorizationOutcome",
         "type": "string"
       },
+      "BollingerBands": {
+        "additionalProperties": false,
+        "properties": {
+          "bandwidth_pct": {
+            "format": "decimal-string",
+            "title": "Bandwidth Pct",
+            "type": "string"
+          },
+          "lower": {
+            "format": "decimal-string",
+            "title": "Lower",
+            "type": "string"
+          },
+          "middle": {
+            "format": "decimal-string",
+            "title": "Middle",
+            "type": "string"
+          },
+          "percent_b": {
+            "format": "decimal-string",
+            "title": "Percent B",
+            "type": "string"
+          },
+          "upper": {
+            "format": "decimal-string",
+            "title": "Upper",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upper",
+          "middle",
+          "lower",
+          "bandwidth_pct",
+          "percent_b"
+        ],
+        "title": "BollingerBands",
+        "type": "object"
+      },
       "Catalyst": {
         "additionalProperties": false,
         "properties": {
@@ -2124,6 +2163,46 @@
         "title": "LogoutResponse",
         "type": "object"
       },
+      "MACDCrossover": {
+        "enum": [
+          "bullish_cross",
+          "bearish_cross",
+          "none"
+        ],
+        "title": "MACDCrossover",
+        "type": "string"
+      },
+      "MACDSignal": {
+        "additionalProperties": false,
+        "properties": {
+          "crossover": {
+            "$ref": "#/components/schemas/MACDCrossover"
+          },
+          "histogram": {
+            "format": "decimal-string",
+            "title": "Histogram",
+            "type": "string"
+          },
+          "macd": {
+            "format": "decimal-string",
+            "title": "Macd",
+            "type": "string"
+          },
+          "signal": {
+            "format": "decimal-string",
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "macd",
+          "signal",
+          "histogram",
+          "crossover"
+        ],
+        "title": "MACDSignal",
+        "type": "object"
+      },
       "MarketDataType": {
         "enum": [
           "bars",
@@ -2201,6 +2280,85 @@
         ],
         "title": "MarketRegime",
         "type": "string"
+      },
+      "MovingAverages": {
+        "additionalProperties": false,
+        "properties": {
+          "price_vs_sma200_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Vs Sma200 Pct"
+          },
+          "price_vs_sma20_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Vs Sma20 Pct"
+          },
+          "price_vs_sma50_pct": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Vs Sma50 Pct"
+          },
+          "sma_20": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 20"
+          },
+          "sma_200": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 200"
+          },
+          "sma_50": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sma 50"
+          }
+        },
+        "title": "MovingAverages",
+        "type": "object"
       },
       "NewsAnalysisRequest": {
         "properties": {
@@ -2992,6 +3150,136 @@
           "planned_integration"
         ],
         "title": "Provenance",
+        "type": "string"
+      },
+      "QuantitativeAnalysisReport": {
+        "additionalProperties": false,
+        "properties": {
+          "atr_14": {
+            "format": "decimal-string",
+            "title": "Atr 14",
+            "type": "string"
+          },
+          "bollinger_bands": {
+            "$ref": "#/components/schemas/BollingerBands"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_price": {
+            "format": "decimal-string",
+            "title": "Current Price",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "macd": {
+            "$ref": "#/components/schemas/MACDSignal"
+          },
+          "momentum_score": {
+            "format": "decimal-string",
+            "title": "Momentum Score",
+            "type": "string"
+          },
+          "moving_averages": {
+            "$ref": "#/components/schemas/MovingAverages"
+          },
+          "rsi_14": {
+            "format": "decimal-string",
+            "title": "Rsi 14",
+            "type": "string"
+          },
+          "rsi_condition": {
+            "$ref": "#/components/schemas/RSICondition"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "symbol": {
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/TrendDirection"
+          },
+          "volatility_annualized_pct": {
+            "format": "decimal-string",
+            "title": "Volatility Annualized Pct",
+            "type": "string"
+          },
+          "volume_surge_ratio": {
+            "format": "decimal-string",
+            "title": "Volume Surge Ratio",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "current_price",
+          "trend",
+          "momentum_score",
+          "rsi_14",
+          "rsi_condition",
+          "macd",
+          "moving_averages",
+          "bollinger_bands",
+          "atr_14",
+          "volatility_annualized_pct",
+          "volume_surge_ratio",
+          "summary"
+        ],
+        "title": "QuantitativeAnalysisReport",
+        "type": "object"
+      },
+      "QuantitativeAnalysisRequest": {
+        "properties": {
+          "bar_limit": {
+            "default": 250,
+            "description": "Number of historical bars to retrieve (default 250 for 200-day SMA)",
+            "maximum": 500.0,
+            "minimum": 20.0,
+            "title": "Bar Limit",
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Ticker symbol to quantitatively analyze, e.g. AAPL",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "QuantitativeAnalysisRequest",
+        "type": "object"
+      },
+      "RSICondition": {
+        "enum": [
+          "oversold",
+          "overbought",
+          "neutral"
+        ],
+        "title": "RSICondition",
         "type": "string"
       },
       "ReactionClassification": {
@@ -4220,6 +4508,15 @@
         ],
         "title": "TranscriptStep",
         "type": "object"
+      },
+      "TrendDirection": {
+        "enum": [
+          "bullish",
+          "bearish",
+          "neutral"
+        ],
+        "title": "TrendDirection",
+        "type": "string"
       },
       "ValidationError": {
         "properties": {
@@ -5479,6 +5776,82 @@
           }
         },
         "summary": "Analyze News",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/quant/analyze": {
+      "post": {
+        "description": "Perform 100% deterministic quantitative and technical momentum analysis.",
+        "operationId": "analyze_quantitative_api_v1_research_quant_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantitativeAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuantitativeAnalysisReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Quantitative",
         "tags": [
           "research"
         ]
