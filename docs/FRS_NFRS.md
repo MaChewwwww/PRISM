@@ -2,7 +2,7 @@
 
 **One signal. Multiple perspectives. Better decisions.**
 
-This is the requirements baseline for **PRISM**. Priorities use Must/Should/Could. Status is Proposed until its acceptance evidence is reviewed. BA-owned numeric limits intentionally remain **TBD** and must not be guessed in code.
+This is the requirements baseline for **PRISM**. Priorities use Must/Should/Could. Status is Proposed until its acceptance evidence is reviewed. BA-owned numeric limits are now **authorized** in the [Authorized governance requirements](#authorized-governance-requirements) addendum and in `BUSINESS_RULES.md`; they must be implemented as versioned ruleset configuration, never hard-coded ad hoc. Any limit not covered by that addendum (for example SLOs and backup RPO/RTO) remains **TBD** and must not be guessed in code.
 
 ## Functional requirements
 
@@ -28,13 +28,13 @@ This is the requirements baseline for **PRISM**. Priorities use Must/Should/Coul
 | FRS-018 | ShadowFund shall create immutable counterfactual branches and disclose data/fill limitations. | Should | Concept | Analytics / Proposed | Branch varies declared inputs, records coverage/metrics, and never executes. | Domain tests; `ShadowSession` |
 | FRS-019 | The frontend shall provide an authentication gate and a responsive story-first decision journal covering overview, decision stories, portfolio comparisons, ShadowFund alternatives, news, agent/tool/LLM observability, and deterministic rule explanations. | Must | Product plan | Frontend / Proposed | A shared UTC range filters related surfaces; story detail preserves catalyst $\rightarrow$ agent interpretation $\rightarrow$ deterministic gate $\rightarrow$ outcome $\rightarrow$ counterfactual order; fixture provenance is explicit; hidden reasoning and infrastructure status are absent from user navigation. | Vitest/a11y/responsive checks |
 | FRS-020 | Contract generation shall export OpenAPI/JSON Schema and committed TypeScript types. | Must | Bootstrap plan | Platform / Proposed | Regeneration is deterministic and CI fails on a diff. | `pnpm contracts:check` |
-| FRS-021 | The ruleset shall support BA-owned exposure, concentration, confidence, freshness, and loss thresholds against a $100,000.00 starting capital baseline. | Must | Concept | BA / Proposed | Initial account starting balance is $100,000.00; thresholds are versioned and validated once approved. | Rule tests after BA approval |
+| FRS-021 | The ruleset shall implement the BA-authorized exposure, concentration, confidence, freshness, and loss thresholds against a $100,000.00 starting capital baseline. | Must | Concept | BA / Accepted | Initial account starting balance is $100,000.00; authorized thresholds match the [Authorized governance requirements](#authorized-governance-requirements) addendum and are versioned. | Rule tests; `BUSINESS_RULES.md` |
 | FRS-022 | Read-only Alpaca integrations shall normalize account, asset, stock, option, and news data through typed gateways. | Must | Integration plan | Market / Proposed | Provider models do not leak into domain contracts; failures/freshness are explicit. | Adapter contract tests |
 | FRS-023 | Normal work shall merge from an allowed typed work branch into `staging`, and production promotion shall merge only from `staging` into `main`. | Must | Repository workflow | Platform / Proposed | Branch-policy CI rejects every unsupported head/base pair. | Branch-policy workflow tests; `CI_CD.md` |
 | FRS-024 | The repository shall provide a reusable PR skill that commits intended work when needed, selects an explicit governed branch/base, pushes without force, and creates or reuses a GitHub PR without merging it. | Must | Agent workflow | Platform / Proposed | Skill validates, preserves unrelated changes, avoids empty/duplicate PRs, and reports the PR URL and commit. | Skill validation; `github-pr/SKILL.md` |
 | FRS-025 | Historical market data queries and LLM event analysis results shall be persisted with deterministic digests and immutability flags. | Should | Performance plan | Market / Proposed | Immutable records bypass duplicate external provider calls; query digest matches contract. | Contract tests; `HistoricalMarketDataRecord` |
 | FRS-026 | The system shall evaluate Implied Volatility (IV) regime metrics from options data and enforce Defined-Risk Debit Spreads when IV Rank exceeds 50% to prevent volatility crush. | Must | Risk plan | Risk / Proposed | Single-leg long options are rejected when IV Rank > 50%; debit spread short leg offsets vega crush. | Strategy & Rule tests; `BUSINESS_RULES.md` |
-| FRS-027 | The system shall evaluate deterministic position-level exit policies (take-profit, stop-loss, DTE expiration threshold, and max hold duration) within AI Profile approved bounds [20%, 90%]. | Must | Risk plan | Risk / Proposed | Position closes automatically when TP (50%), SL (50%), DTE <= 7d, or max duration is reached; parameters tuneable via Post-Analysis AI. | Contract & Rule tests; `ExitPolicy` |
+| FRS-027 | The system shall evaluate deterministic position-level exit policies (take-profit, stop-loss, DTE expiration threshold, and max hold duration) within AI Profile authorized bounds (take-profit [75%, 100%], stop-loss fixed at 50%). | Must | Risk plan | Risk / Accepted | Position closes automatically when TP (Balanced default 75%), SL (fixed 50%), DTE <= 7d, or max duration is reached; take-profit is tuneable via Post-Analysis AI within authorized bounds. | Contract & Rule tests; `ExitPolicy`; `BUSINESS_RULES.md` |
 | FRS-028 | The proposal layer shall support single-prompt multi-perspective extraction of shadow candidates, evaluated across parallel counterfactual branches without executing live orders. | Should | Analytics plan | Analytics / Proposed | Proposal embeds shadow candidates with zero added API roundtrips; candidates are strictly non-executable. | Contract & Domain tests; `ShadowCandidate` |
 
 ## Non-functional requirements
@@ -64,6 +64,50 @@ This is the requirements baseline for **PRISM**. Priorities use Must/Should/Coul
 | NFRS-018 | Successful `staging` CI may deploy to an isolated protected staging environment; production deployment shall deploy automatically on port 80 following successful `main` CI and retain manual override. | Must | Deployment workflow | Operations / Proposed | Port 80 production deployment, isolated path/port/project, main ancestry check, and readiness smoke tests are present. | Workflow review and deployment evidence |
 | NFRS-019 | Cached market and LLM query records shall have unique deterministically computed cryptographic digests to eliminate cache collisions. | Must | Performance plan | Platform / Proposed | Digests are 64-char lowercase hex strings computed over normalized parameters. | Contract tests; `HistoricalMarketDataRecord` |
 
+
+## Authorized governance requirements
+
+The BA has authorized the market-reaction trading governance baseline. These requirements resolve the previously TBD numeric limits and are the active ruleset for the hackathon MVP. Concrete thresholds live in `BUSINESS_RULES.md`; the requirements below define the behavior that must enforce them. They are traced to the existing FRS/NFRS rows where applicable and use the same Must/Should priorities.
+
+### Functional governance requirements
+
+| ID | Requirement | Priority | Traces to | Owner / status |
+| --- | --- | --- | --- | --- |
+| FRG-01 | Ingest corporate news and macroeconomic headlines via Alpaca REST/WebSocket feeds, applying SHA-256 deduplication and $\le 30\text{s}$ freshness checks. | Must | FRS-001, FRS-022, FRS-025 | Market / Accepted |
+| FRG-02 | Analyze catalyst significance against actual price displacement and historical analogs, emitting a structured `ResearchReport` with a $0$–$100$ `opportunity_score`. | Must | FRS-001 | AI / Accepted |
+| FRG-03 | Convert research into defined-risk option strategies (debit spreads when IV Rank $> 50\%$) with embedded exit policies. | Must | FRS-002, FRS-007, FRS-026 | AI / Accepted |
+| FRG-04 | Conduct an adversarial risk critique of bid/ask spreads, tail risk, and portfolio vega, producing a structured `RiskAssessment`. | Must | FRS-003 | Risk / Accepted |
+| FRG-05 | Enforce hard safety rules (cash buffer, concentration, daily drawdown) and return an authoritative APPROVE / MODIFY / REJECT decision. | Must | FRS-004 | BA/Risk / Accepted |
+| FRG-06 | Route approved orders through the Alpaca CLI adapter with pre-assigned `client_order_id`s for idempotent reconciliation. | Must | FRS-011, FRS-013 | Execution / Accepted |
+| FRG-07 | Monitor active positions continuously and close on $50\%$ take-profit, $50\%$ stop-loss, $\le 7$-DTE expiry stop, or $14$-day hold cap. | Must | FRS-027 | Risk / Accepted |
+| FRG-08 | Instantiate a ShadowFund session tracking parallel virtual branches (Cash, $0.5\times$ sizing, Unhedged/Contrarian) on the exact market path. | Should | FRS-018, FRS-028 | Analytics / Accepted |
+| FRG-09 | Calculate trade-level expected value using realistic outcome probabilities and net execution costs; reject any candidate below the $+0.15\text{R}$ EV floor. | Must | FRS-004 | Risk / Accepted |
+| FRG-10 | Calculate realistic expected profit, expected loss, maximum loss, reward/risk ($\ge 1.5{:}1$), and R-multiple before authorization. | Must | FRS-004 | Risk / Accepted |
+| FRG-11 | Rank eligible opportunities by risk-adjusted expected value and capital efficiency when multiple trades compete for a finite risk budget. | Should | FRS-004 | Risk / Accepted |
+| FRG-12 | Size positions as the minimum of all applicable hard caps (per-trade risk, concentration, portfolio exposure, regime, liquidity, drawdown, buying power). | Must | FRS-004 | Risk / Accepted |
+| FRG-13 | Evaluate incremental portfolio Delta, Vega, sector concentration, correlated exposure, event concentration, and expiration concentration before approval. | Must | FRS-004 | Risk / Accepted |
+| FRG-14 | Re-check execution-critical data and risk conditions immediately before broker submission; materially changed conditions require re-authorization. | Must | FRS-010 | Execution / Accepted |
+| FRG-15 | Attribute net P&L by catalyst, strategy, regime, ticker, score band, confidence, holding period, and exit reason, and detect performance degradation. | Should | FRS-017 | Analytics / Accepted |
+| FRG-16 | Transition through NORMAL, CAUTION, DEFENSIVE, and HALT risk states using deterministic drawdown/performance triggers and reduce new-risk capacity as losses increase. | Must | FRS-004 | Risk / Accepted |
+| FRG-17 | Support deterministic hard exits plus bounded AI-recommended earlier exits on thesis invalidation, contradictory news, or stagnation. | Must | FRS-027 | Risk / Accepted |
+| FRG-18 | Record and evaluate rejected/modified opportunities so rule quality, avoided losses, missed opportunities, and decision regret can be measured without forcing execution. | Should | FRS-018 | Analytics / Accepted |
+
+### Non-functional governance requirements
+
+| ID | Requirement | Priority | Traces to | Owner / status |
+| --- | --- | --- | --- | --- |
+| NFRG-01 | Fail-closed posture: immediately halt execution and log an explicit refusal code when data is stale ($> 30\text{s}$) or configuration is missing. | Must | NFRS-010 | Security / Accepted |
+| NFRG-02 | Zero-credential client boundary: Alpaca and LLM secrets reside strictly server-side; the presentation layer interacts only with redacted public endpoints. | Must | NFRS-005 | Security / Accepted |
+| NFRG-03 | Cryptographic traceability: every research, proposal, rule-evaluation, and execution payload is bound by a SHA-256 digest for immutable audit logging. | Must | NFRS-003, NFRS-019 | Platform / Accepted |
+| NFRG-04 | Decision idempotency: every execution intent uses a unique `client_order_id` with duplicate-detection; uncertain submission state fails closed. | Must | NFRS-004 | Execution / Accepted |
+| NFRG-05 | Data lineage: every metric used in authorization traces to a timestamped market/news/portfolio input and methodology version. | Must | NFRS-014 | Platform / Accepted |
+| NFRG-06 | Deterministic reproducibility: the same versioned inputs and ruleset produce the same authorization result. | Must | NFRS-003 | Platform / Accepted |
+| NFRG-07 | Performance observability: expose trade- and portfolio-level P&L, drawdown, expectancy, payoff ratio, profit factor, and execution-cost metrics. | Should | NFRS-014 | Platform / Accepted |
+| NFRG-08 | Explainability: every APPROVE / MODIFY / REJECT outcome exposes material evidence, rule results, and reason codes to the command center. | Must | NFRS-014 | Platform / Accepted |
+
+### Authorized baseline parameter register
+
+The concrete active values are maintained in `BUSINESS_RULES.md` under [Active baseline parameter register](BUSINESS_RULES.md#active-baseline-parameter-register). Summary: risk per trade $1.0\%$ (normal) / $0.75\%$ (volatile); normal target allocation $2.0\%$; volatile target allocation $\le 1.5\%$; drawdown states $1.5\%$ / $2.25\%$ / $3.0\%$; cash buffer $\ge 5.0\%$; ticker concentration $\le 5.0\%$; sector concentration $\le 10.0\%$; correlated-cluster concentration $\le 7.5\%$; aggregate modeled hard-stop risk $\le 3.0\%$; maximum open positions $6$; maximum bid/ask spread $\le 10\%$ of premium; data freshness $\le 30\text{s}$; opportunity score floor $75$ with Balanced profile $\ge 84$; net EV $\ge +0.15\text{R}$; reward/risk $\ge 1.5{:}1$.
 
 ## Traceability policy
 
