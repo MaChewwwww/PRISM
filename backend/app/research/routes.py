@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
+    IndustryAnalysisReport,
     LLMEventAnalysis,
     QuantitativeAnalysisReport,
     ResearchReport,
@@ -18,6 +19,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.industry_agent import IndustryIntelligenceAgent
 from app.research.news_agent import NewsIntelligenceAgent
 from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
@@ -61,6 +63,14 @@ class QuantitativeAnalysisRequest(BaseModel):
         ge=20,
         le=500,
         description="Number of historical bars to retrieve (default 250 for 200-day SMA)",
+    )
+
+
+class IndustryAnalysisRequest(BaseModel):
+    symbol: str = Field(..., description="Ticker symbol to analyze industry for, e.g. NVDA")
+    custom_peers: list[str] | None = Field(
+        default=None,
+        description="Optional custom peer tickers to compare against",
     )
 
 
@@ -199,3 +209,37 @@ async def analyze_quantitative(
         )
 
     return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
+
+
+@router.post("/industry/analyze", response_model=IndustryAnalysisReport)
+async def analyze_industry(
+    request: IndustryAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> IndustryAnalysisReport:
+    """Perform industry, competitive landscape, and relative alpha intelligence analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    llm_gateway = LLMGateway(settings)
+    agent = IndustryIntelligenceAgent(llm_gateway=llm_gateway, alpaca_gateway=gateway)
+
+    try:
+        report = await agent.analyze_industry(
+            symbol=symbol,
+            trace_id=trace_id,
+            custom_peers=request.custom_peers,
+            db_session=db_session,
+        )
+        return report
+    except Exception as exc:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Industry analysis failed for {symbol}: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Industry analysis failed: {exc!s}",
+        ) from exc

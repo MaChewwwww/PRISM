@@ -59,3 +59,36 @@ class ResearchReportModel(Base):
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+
+
+class IndustryAnalysisModel(Base):
+    __tablename__ = "industry_analyses"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    trace_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    schema_version: Mapped[Literal["1.0"]] = mapped_column(
+        String(10), nullable=False, default="1.0"
+    )
+
+    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+    sector_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    sector_etf: Mapped[str] = mapped_column(String(20), nullable=False)
+    stock_return_5d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    stock_return_20d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    sector_return_5d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    sector_return_20d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    relative_alpha_5d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    relative_alpha_20d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    sector_relative_performance: Mapped[str] = mapped_column(String(50), nullable=False)
+    peer_relative_performance: Mapped[str] = mapped_column(String(50), nullable=False)
+    peers_json: Mapped[str] = mapped_column(Text, nullable=False)
+    sector_health_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    competitive_moat: Mapped[str] = mapped_column(String(50), nullable=False)
+    overall_sentiment: Mapped[str] = mapped_column(String(50), nullable=False)
+    tailwinds_json: Mapped[str] = mapped_column(Text, nullable=False)
+    headwinds_json: Mapped[str] = mapped_column(Text, nullable=False)
+    thesis: Mapped[str] = mapped_column(Text, nullable=False)
+
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
