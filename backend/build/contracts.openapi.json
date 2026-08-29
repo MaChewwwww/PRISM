@@ -1120,6 +1120,16 @@
         "title": "ChartPoint",
         "type": "object"
       },
+      "CompetitiveMoat": {
+        "enum": [
+          "wide",
+          "narrow",
+          "none",
+          "deteriorating"
+        ],
+        "title": "CompetitiveMoat",
+        "type": "string"
+      },
       "DataMode": {
         "enum": [
           "illustrative_fixture"
@@ -2142,6 +2152,177 @@
         "title": "IllustrativeOutcome",
         "type": "object"
       },
+      "IndustryAnalysisReport": {
+        "additionalProperties": false,
+        "properties": {
+          "competitive_moat": {
+            "$ref": "#/components/schemas/CompetitiveMoat"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "headwinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Headwinds",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "overall_sentiment": {
+            "$ref": "#/components/schemas/IndustrySentiment"
+          },
+          "peer_relative_performance": {
+            "$ref": "#/components/schemas/RelativePerformance"
+          },
+          "peers": {
+            "items": {
+              "$ref": "#/components/schemas/PeerPerformance"
+            },
+            "title": "Peers",
+            "type": "array"
+          },
+          "relative_alpha_20d_pct": {
+            "format": "decimal-string",
+            "title": "Relative Alpha 20D Pct",
+            "type": "string"
+          },
+          "relative_alpha_5d_pct": {
+            "format": "decimal-string",
+            "title": "Relative Alpha 5D Pct",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sector_etf": {
+            "title": "Sector Etf",
+            "type": "string"
+          },
+          "sector_health_score": {
+            "format": "decimal-string",
+            "title": "Sector Health Score",
+            "type": "string"
+          },
+          "sector_name": {
+            "title": "Sector Name",
+            "type": "string"
+          },
+          "sector_relative_performance": {
+            "$ref": "#/components/schemas/RelativePerformance"
+          },
+          "sector_return_20d_pct": {
+            "format": "decimal-string",
+            "title": "Sector Return 20D Pct",
+            "type": "string"
+          },
+          "sector_return_5d_pct": {
+            "format": "decimal-string",
+            "title": "Sector Return 5D Pct",
+            "type": "string"
+          },
+          "stock_return_20d_pct": {
+            "format": "decimal-string",
+            "title": "Stock Return 20D Pct",
+            "type": "string"
+          },
+          "stock_return_5d_pct": {
+            "format": "decimal-string",
+            "title": "Stock Return 5D Pct",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "tailwinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tailwinds",
+            "type": "array"
+          },
+          "thesis": {
+            "title": "Thesis",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "sector_name",
+          "sector_etf",
+          "sector_health_score",
+          "stock_return_5d_pct",
+          "stock_return_20d_pct",
+          "sector_return_5d_pct",
+          "sector_return_20d_pct",
+          "relative_alpha_5d_pct",
+          "relative_alpha_20d_pct",
+          "sector_relative_performance",
+          "peer_relative_performance",
+          "peers",
+          "competitive_moat",
+          "overall_sentiment",
+          "thesis"
+        ],
+        "title": "IndustryAnalysisReport",
+        "type": "object"
+      },
+      "IndustryAnalysisRequest": {
+        "properties": {
+          "custom_peers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional custom peer tickers to compare against",
+            "title": "Custom Peers"
+          },
+          "symbol": {
+            "description": "Ticker symbol to analyze industry for, e.g. NVDA",
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "IndustryAnalysisRequest",
+        "type": "object"
+      },
+      "IndustrySentiment": {
+        "enum": [
+          "positive",
+          "moderately_positive",
+          "mixed",
+          "moderately_negative",
+          "negative"
+        ],
+        "title": "IndustrySentiment",
+        "type": "string"
+      },
       "LLMEventAnalysis": {
         "additionalProperties": false,
         "properties": {
@@ -2973,6 +3154,32 @@
         "title": "Overview",
         "type": "object"
       },
+      "PeerPerformance": {
+        "additionalProperties": false,
+        "properties": {
+          "price_change_20d_pct": {
+            "format": "decimal-string",
+            "title": "Price Change 20D Pct",
+            "type": "string"
+          },
+          "price_change_5d_pct": {
+            "format": "decimal-string",
+            "title": "Price Change 5D Pct",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "price_change_5d_pct",
+          "price_change_20d_pct"
+        ],
+        "title": "PeerPerformance",
+        "type": "object"
+      },
       "Portfolio": {
         "additionalProperties": false,
         "properties": {
@@ -3675,6 +3882,16 @@
           "rejected"
         ],
         "title": "RecommendationState",
+        "type": "string"
+      },
+      "RelativePerformance": {
+        "enum": [
+          "outperforming",
+          "underperforming",
+          "mixed",
+          "inline"
+        ],
+        "title": "RelativePerformance",
         "type": "string"
       },
       "ResearchReport": {
@@ -6228,6 +6445,82 @@
           }
         },
         "summary": "Analyze Fundamental",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/industry/analyze": {
+      "post": {
+        "description": "Perform industry, competitive landscape, and relative alpha intelligence analysis.",
+        "operationId": "analyze_industry_api_v1_research_industry_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndustryAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndustryAnalysisReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Industry",
         "tags": [
           "research"
         ]

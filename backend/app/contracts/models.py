@@ -494,9 +494,9 @@ class QuantitativeAnalysisReport(ContractBase):
     macd: MACDSignal
     moving_averages: MovingAverages
     bollinger_bands: BollingerBands
-    atr_14: DecimalString = Field(ge=0)
-    volatility_annualized_pct: DecimalString = Field(ge=0)
-    volume_surge_ratio: DecimalString = Field(ge=0)
+    atr_14: DecimalString
+    volatility_annualized_pct: DecimalString
+    volume_surge_ratio: DecimalString
     summary: str
 
 

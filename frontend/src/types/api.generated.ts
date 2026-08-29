@@ -296,6 +296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/industry/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Industry
+         * @description Perform industry, competitive landscape, and relative alpha intelligence analysis.
+         */
+        post: operations["analyze_industry_api_v1_research_industry_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/macro/analyze": {
         parameters: {
             query?: never;
@@ -886,6 +906,11 @@ export interface components {
             unhedged?: string | null;
         };
         /**
+         * CompetitiveMoat
+         * @enum {string}
+         */
+        CompetitiveMoat: "wide" | "narrow" | "none" | "deteriorating";
+        /**
          * DataMode
          * @enum {string}
          */
@@ -1366,6 +1391,101 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** IndustryAnalysisReport */
+        IndustryAnalysisReport: {
+            competitive_moat: components["schemas"]["CompetitiveMoat"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Headwinds */
+            headwinds?: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            overall_sentiment: components["schemas"]["IndustrySentiment"];
+            peer_relative_performance: components["schemas"]["RelativePerformance"];
+            /** Peers */
+            peers: components["schemas"]["PeerPerformance"][];
+            /**
+             * Relative Alpha 20D Pct
+             * Format: decimal-string
+             */
+            relative_alpha_20d_pct: string;
+            /**
+             * Relative Alpha 5D Pct
+             * Format: decimal-string
+             */
+            relative_alpha_5d_pct: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Sector Etf */
+            sector_etf: string;
+            /**
+             * Sector Health Score
+             * Format: decimal-string
+             */
+            sector_health_score: string;
+            /** Sector Name */
+            sector_name: string;
+            sector_relative_performance: components["schemas"]["RelativePerformance"];
+            /**
+             * Sector Return 20D Pct
+             * Format: decimal-string
+             */
+            sector_return_20d_pct: string;
+            /**
+             * Sector Return 5D Pct
+             * Format: decimal-string
+             */
+            sector_return_5d_pct: string;
+            /**
+             * Stock Return 20D Pct
+             * Format: decimal-string
+             */
+            stock_return_20d_pct: string;
+            /**
+             * Stock Return 5D Pct
+             * Format: decimal-string
+             */
+            stock_return_5d_pct: string;
+            /** Symbol */
+            symbol: string;
+            /** Tailwinds */
+            tailwinds?: string[];
+            /** Thesis */
+            thesis: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** IndustryAnalysisRequest */
+        IndustryAnalysisRequest: {
+            /**
+             * Custom Peers
+             * @description Optional custom peer tickers to compare against
+             */
+            custom_peers?: string[] | null;
+            /**
+             * Symbol
+             * @description Ticker symbol to analyze industry for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /**
+         * IndustrySentiment
+         * @enum {string}
+         */
+        IndustrySentiment: "positive" | "moderately_positive" | "mixed" | "moderately_negative" | "negative";
         /** LLMEventAnalysis */
         LLMEventAnalysis: {
             /** Article Id */
@@ -1734,6 +1854,21 @@ export interface components {
             /** Stories */
             stories: components["schemas"]["StorySummary"][];
         };
+        /** PeerPerformance */
+        PeerPerformance: {
+            /**
+             * Price Change 20D Pct
+             * Format: decimal-string
+             */
+            price_change_20d_pct: string;
+            /**
+             * Price Change 5D Pct
+             * Format: decimal-string
+             */
+            price_change_5d_pct: string;
+            /** Symbol */
+            symbol: string;
+        };
         /** Portfolio */
         Portfolio: {
             /** Activities */
@@ -2045,6 +2180,11 @@ export interface components {
          * @enum {string}
          */
         RecommendationState: "proposed" | "validated" | "applied" | "rejected";
+        /**
+         * RelativePerformance
+         * @enum {string}
+         */
+        RelativePerformance: "outperforming" | "underperforming" | "mixed" | "inline";
         /** ResearchReport */
         ResearchReport: {
             /**
@@ -3166,6 +3306,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FundamentalAnalysisReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_industry_api_v1_research_industry_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndustryAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndustryAnalysisReport"];
                 };
             };
             /** @description Validation Error */
