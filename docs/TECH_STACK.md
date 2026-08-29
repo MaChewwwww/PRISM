@@ -25,30 +25,34 @@ PRISM is built as a production-grade, modular financial decision platform that c
 
 ## Alpaca Ecosystem Integration
 
-PRISM deeply leverages Alpaca's developer platform across market data ingestion, research intelligence, paper trading execution, and agent tooling.
+PRISM deeply leverages Alpaca's developer platform across market data ingestion, research intelligence, paper trading execution, and agent tooling:
 
-```text
-Alpaca Ecosystem Integration
-+-----------------------------------------------------------------------------------+
-|  Alpaca Market Data API (alpaca-py)                                              |
-|  -> Historical Stock Bars (/v2/stocks/bars)     -> Quantitative Agent Engine      |
-|  -> Multi-Symbol Snapshots (/v2/stocks/snapshots) -> Market Reaction Agent        |
-|  -> Market News Feed (/v2/news)                 -> News Intelligence Agent        |
-+-----------------------------------------------------------------------------------+
-|  Alpaca Paper Trading API (alpaca-py & CLI)                                       |
-|  -> Level 2 Single Options (Long Calls, Long Puts)                                |
-|  -> Level 3 Multi-Leg Options (1:1 Defined-Risk Call/Put Debit Spreads)           |
-|  -> Strict Limit Pricing, Day TIF, and Client Order ID Idempotency                |
-+-----------------------------------------------------------------------------------+
-|  Alpaca CLI (v0.0.13)                                                             |
-|  -> Isolated subprocess gateway with JSON stdin to prevent shell injection       |
-|  -> Server-side credential isolation (never sent to browser or AI models)         |
-+-----------------------------------------------------------------------------------+
-|  Alpaca MCP (Model Context Protocol) Server                                       |
-|  -> Read-only developer exploration toolsets: account, assets, stock/options data |
-|  -> Trading toolsets excluded to preserve deterministic governance invariants     |
-+-----------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph MarketData["1. Market Intelligence (alpaca-py 0.44.0)"]
+        A1["/v2/news (News Stream)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
+        A2["/v2/stocks/bars (Historical Bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
+        A3["/v2/stocks/snapshots (Multi-Symbol)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
+    end
+
+    subgraph PaperExecution["2. Governed Options Execution (Alpaca Paper API & CLI)"]
+        C1["Deterministic Rules Engine (APPROVE Verdict)"] -->|Authorized Payload| C2["Alpaca Execution Gate"]
+        C2 -->|Level 2 Options| D1["Long Calls & Long Puts"]
+        C2 -->|Level 3 Options (order_class=mleg)| D2["1:1 Defined-Risk Call/Put Debit Spreads"]
+        C2 -->|Subprocess JSON stdin| D3["Alpaca CLI Idempotent Order Gateway"]
+    end
+
+    subgraph Exploration["3. Agent Discovery (Alpaca MCP Server)"]
+        E1["Read-Only MCP Toolsets (account, assets, stock/options data)"] -->|Context Enrichment| E2["Agent Context & Developer Tooling"]
+    end
 ```
+
+| Alpaca Component | Endpoints & Scope | PRISM Architectural Role | Safety & Governance Envelope |
+| --- | --- | --- | --- |
+| **`alpaca-py` Market Data API** | `/v2/news`<br>`/v2/stocks/bars`<br>`/v2/stocks/snapshots` | Ingests real-time catalysts for **News Agent**; feeds OHLCV bars into **Quantitative Engine** (RSI, MACD, Bollinger Bands, ATR); provides live spreads to **Reaction Agent**. | Read-only market intelligence; freshness strictly checked (<= 30s) before any trade proposal. |
+| **Alpaca Paper Trading API** | `/v2/orders`<br>`/v2/positions`<br>`/v2/account` | Executes approved option contracts (Level 2 Long Calls/Puts and Level 3 Multi-Leg 1:1 Debit Spreads via `order_class=mleg`). | Restricted to paper endpoints (`paper-api.alpaca.markets`); limit pricing within <= 10% spread; day TIF. |
+| **Alpaca CLI (v0.0.13)** | Subprocess order gateway | Secure server-side order submission receiving typed JSON over standard input; handles client-order-id idempotency and disconnect reconciliation. | Prevents shell injection; keeps credentials strictly isolated in backend memory (never exposed to browser or LLMs). |
+| **Alpaca MCP Server** | `account`, `assets`, `stock-data`, `options-data`, `news` | Provides structured market and asset discovery tools for developer workflows and research agents. | Read-only tools only; mutating trading tools are excluded to prevent LLMs from bypassing deterministic rules. |
 
 ### 1. `alpaca-py` (v0.44.0) — Market Intelligence & Research
 - **Historical Stock Bars (`/v2/stocks/bars`)**: Feeds the **Quantitative Agent** to compute 100% deterministic technical indicators, including RSI, MACD, Bollinger Bands, ATR, annualized historical volatility, volume surge, and bounded momentum scores.
