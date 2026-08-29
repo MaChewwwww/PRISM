@@ -2,21 +2,48 @@
 
 import { KeyRound, Lock, ShieldCheck, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
-const SEEDED_EMAIL = "operator@prism.local";
-const SEEDED_PASSWORD = "prism-staging-2026!";
+type DemoCredentials = {
+  email: string;
+  password: string;
+  environment: string;
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState(SEEDED_EMAIL);
-  const [password, setPassword] = useState(SEEDED_PASSWORD);
+  const [email, setEmail] = useState("operator@prism.local");
+  const [password, setPassword] = useState("prism-staging-2026!");
+  const [demoCreds, setDemoCreds] = useState<DemoCredentials>({
+    email: "operator@prism.local",
+    password: "prism-staging-2026!",
+    environment: "staging",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function loadDemoCreds() {
+      try {
+        const res = await fetch("/api/auth/demo-credentials");
+        if (res.ok) {
+          const data = (await res.json()) as DemoCredentials;
+          if (data.email && data.password) {
+            setDemoCreds(data);
+            setEmail(data.email);
+            setPassword(data.password);
+          }
+        }
+      } catch {
+        // Fallback to defaults
+      }
+    }
+    loadDemoCreds();
+  }, []);
+
   function handleAutoFill() {
-    setEmail(SEEDED_EMAIL);
-    setPassword(SEEDED_PASSWORD);
+    setEmail(demoCreds.email);
+    setPassword(demoCreds.password);
     setError(null);
   }
 
@@ -128,7 +155,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-medium text-[var(--foreground)]">
                   <KeyRound className="h-3.5 w-3.5 text-[var(--color-perspective-proposal,#547D83)]" aria-hidden="true" />
-                  <span>Seeded Hackathon Account</span>
+                  <span className="capitalize">{demoCreds.environment} Seeded Account</span>
                 </div>
                 <button
                   type="button"
@@ -139,7 +166,7 @@ export default function LoginPage() {
                 </button>
               </div>
               <p className="mt-1 font-mono text-[0.7rem] text-[var(--muted-foreground)]">
-                operator@prism.local · prism-staging-2026!
+                {demoCreds.email} · {demoCreds.password}
               </p>
             </div>
 
