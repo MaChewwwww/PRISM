@@ -79,6 +79,10 @@ The BA has authorized two evaluation horizons to capture both immediate reaction
 - **Intraday horizon:** P&L difference from the execution timestamp to the market close of that same trading day.
 - **1-week horizon:** P&L difference from the execution timestamp to the market close exactly 5 trading days later (or until a deterministic exit is triggered).
 
+### Hackathon operating configuration
+
+When the hackathon-specific operating configuration is the active ruleset (see [Hackathon operating configuration](BUSINESS_RULES.md#hackathon-operating-configuration) in `BUSINESS_RULES.md`), the **primary** ShadowFund evaluation horizon is **4 trading days**, aligning ShadowFund with the hackathon's 4-trading-day maximum hold and primary P&L evaluation window. The intraday horizon is still captured. This is a scoped hackathon setting and does not change the authorized intraday/1-week horizons above under the standard baseline.
+
 ## Limitations and disclosures
 
 Shadow results are simulations, not executable returns. Alpaca paper trading and ShadowFund do not model all market impact, queue position, latency, price improvement, regulatory fees, assignment risk, or liquidity constraints. Thin option markets can make midpoint-based results materially optimistic. Results must always show their data coverage and simulation limitations.

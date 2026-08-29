@@ -31,17 +31,21 @@ export async function POST(request: NextRequest) {
 
     const data = (await backendRes.json()) as { token: string; email: string; expires_at: string };
 
+    const isHttps =
+      request.headers.get("x-forwarded-proto") === "https" || request.nextUrl.protocol === "https:";
+
     const response = NextResponse.json({ ok: true, email: data.email });
     response.cookies.set("shadowfund_session", data.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isHttps,
       sameSite: "lax",
       path: "/",
       maxAge: 24 * 60 * 60,
     });
 
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[Login Route Error]", err);
     return NextResponse.json({ error: "Unable to reach authentication service" }, { status: 503 });
   }
 }
