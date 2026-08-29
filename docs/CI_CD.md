@@ -33,7 +33,7 @@ Configure GitHub branch protection or rulesets for both integration branches. Re
 
 A successful CI run caused by a push to `staging` can trigger `.github/workflows/deploy-staging.yml`. Deployment is disabled until repository variable `STAGING_DEPLOY_ENABLED` equals `true`. The job uses the protected `staging` environment and its `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, and `VPS_APP_PATH` secrets.
 
-Staging checks out the exact CI commit in its own VPS path and Compose project, listens on `${STAGING_HTTP_PORT:-8080}`, and verifies readiness. Use a staging-specific DNS/TLS proxy before exposing it beyond trusted operators.
+Staging checks out the exact CI commit in its own VPS path and Compose project, listens on `${STAGING_HTTP_PORT:-3005}`, and verifies readiness. Use a staging-specific DNS/TLS proxy before exposing it beyond trusted operators.
 
 ## Production delivery
 

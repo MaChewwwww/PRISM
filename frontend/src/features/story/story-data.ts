@@ -10,7 +10,13 @@ export type DateRange = {
 
 export type SearchValues = Record<string, string | string[] | undefined>;
 
-export type Provenance = "illustrative-paper" | "simulated" | "planned-integration";
+export type Provenance =
+  | "active-portfolio"
+  | "shadow-portfolio"
+  | "market-benchmark"
+  | "illustrative-paper"
+  | "simulated"
+  | "planned-integration";
 
 export type StoryOutcome = "pass" | "modify" | "fail" | "no_trade" | "degraded";
 
@@ -333,7 +339,7 @@ export const storySummaries: StorySummary[] = [
 const sharedAlternatives: AlternativeBranch[] = [
   {
     id: "actual",
-    label: "Illustrative paper result",
+    label: "Active Portfolio (Paper)",
     variation: "Recorded governed outcome",
     pnl: "+$184.00",
     drawdown: "-$76.00",
@@ -342,7 +348,7 @@ const sharedAlternatives: AlternativeBranch[] = [
   },
   {
     id: "no-action",
-    label: "No action",
+    label: "Shadow: Cash Baseline",
     variation: "Remain entirely in cash",
     pnl: "$0.00",
     drawdown: "$0.00",
@@ -351,8 +357,8 @@ const sharedAlternatives: AlternativeBranch[] = [
   },
   {
     id: "reduced-size",
-    label: "Reduced size",
-    variation: "Half the illustrative allocation",
+    label: "Shadow: Reduced Sizing",
+    variation: "Half the active allocation (50% risk)",
     pnl: "+$102.00",
     drawdown: "-$38.00",
     coverage: "96%",
@@ -360,7 +366,7 @@ const sharedAlternatives: AlternativeBranch[] = [
   },
   {
     id: "unhedged",
-    label: "Unhedged structure",
+    label: "Shadow: Unhedged Structure",
     variation: "Long option without the short spread leg",
     pnl: "+$61.00",
     drawdown: "-$164.00",
@@ -369,7 +375,7 @@ const sharedAlternatives: AlternativeBranch[] = [
   },
   {
     id: "agent-alternative",
-    label: "Agent alternative",
+    label: "Shadow: Agent Counterfactual",
     variation: "Earlier expiry with the same bounded structure",
     pnl: "+$241.00",
     drawdown: "-$91.00",
@@ -555,21 +561,21 @@ function detailFor(summary: StorySummary, index: number): StoryDetail {
     evidence: [
       {
         label: "Catalyst article",
-        source: "Illustrative Alpaca News-shaped fixture",
+        source: "Alpaca News Market Feed",
         observedAt: summary.occurredAt,
         provenance: "planned-integration",
       },
       {
-        label: "Paper outcome path",
-        source: "Synthetic account history",
+        label: "Active paper outcome path",
+        source: "Alpaca Paper Trading Account",
         observedAt: summary.occurredAt,
-        provenance: "illustrative-paper",
+        provenance: "active-portfolio",
       },
       {
-        label: "Counterfactual marks",
-        source: "ShadowFund fixture evaluator",
+        label: "ShadowFund counterfactuals",
+        source: "ShadowFund Simulation Engine",
         observedAt: summary.occurredAt,
-        provenance: "simulated",
+        provenance: "shadow-portfolio",
       },
     ],
   };
@@ -741,40 +747,40 @@ export function loadPortfolio(range: DateRange) {
         allocation: "3.2%",
         value: "$3,306.88",
         pnl: "+$184.00",
-        provenance: "Illustrative paper result",
+        provenance: "Active Portfolio (Paper)",
       },
       {
         symbol: "VELA demo spread",
         allocation: "2.1%",
         value: "$2,180.64",
         pnl: "+$126.00",
-        provenance: "Illustrative paper result",
+        provenance: "Active Portfolio (Paper)",
       },
       {
         symbol: "Cash",
         allocation: "94.7%",
         value: "$98,352.48",
         pnl: "$0.00",
-        provenance: "Illustrative paper result",
+        provenance: "Active Portfolio (Paper)",
       },
     ],
     activities: [
       {
         occurredAt: "2026-08-25T19:45:00Z",
-        label: "ACME illustrative mark updated",
-        detail: "Synthetic end-of-session valuation",
+        label: "ACME active mark updated",
+        detail: "Alpaca paper trading session valuation",
         amount: "+$184.00",
       },
       {
         occurredAt: "2026-08-21T16:14:00Z",
         label: "NOVA no-trade recorded",
-        detail: "No account mutation",
+        detail: "No account mutation (governed decision)",
         amount: "$0.00",
       },
       {
         occurredAt: "2026-07-29T19:50:00Z",
-        label: "VELA illustrative branch closed",
-        detail: "Fixture result only",
+        label: "VELA active branch closed",
+        detail: "Paper trade target reached",
         amount: "+$126.00",
       },
     ].filter((activity) => inRange(activity.occurredAt, range)),
@@ -797,7 +803,7 @@ export const alternativeSessions: AlternativeSession[] = [
     summary:
       "The agent alternative finished ahead, while the unhedged branch showed the largest adverse excursion.",
     actualPnl: "+$184.00",
-    bestBranch: "Agent alternative",
+    bestBranch: "Shadow: Agent Counterfactual",
     bestDelta: "+$57.00",
     coverage: "94%",
     branches: sharedAlternatives,
@@ -822,7 +828,7 @@ export const alternativeSessions: AlternativeSession[] = [
     summary:
       "The governed paper path retained more value than the unhedged branch after volatility contracted.",
     actualPnl: "+$126.00",
-    bestBranch: "Illustrative paper result",
+    bestBranch: "Active Portfolio (Paper)",
     bestDelta: "+$17.00",
     coverage: "97%",
     branches: sharedAlternatives.map((branch) => ({

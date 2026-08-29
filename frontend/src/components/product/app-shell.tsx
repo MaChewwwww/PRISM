@@ -60,7 +60,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <header className="topbar">
         <Link className="wordmark" href="/" aria-label="PRISM decision journal home">
-          <span aria-hidden="true">PR</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="PRISM"
+            className="h-7 w-7 object-contain drop-shadow-[0_0_8px_rgba(84,125,131,0.5)]"
+          />
           <strong>PRISM</strong>
           <small>Decision journal</small>
         </Link>
@@ -69,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <FlaskConical aria-hidden="true" /> Demo narrative
           </div>
           <div className="environment-tag">
-            <span aria-hidden="true" /> Paper only
+            <span aria-hidden="true" className="animate-prism-pulse" /> Active Paper
           </div>
           <SignOutButton />
           <button
@@ -119,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="rail-safety">
             <ShieldCheck aria-hidden="true" />
-            <span>Paper only · simulated branches never execute</span>
+            <span>Active Paper Only · Shadow Portfolios Never Execute</span>
           </div>
         </aside>
         <main id="main-content" className="workspace">

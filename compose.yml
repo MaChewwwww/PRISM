@@ -10,7 +10,7 @@ services:
     environment:
       API_INTERNAL_URL: http://backend:8000/api/v1
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3005}:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -30,7 +30,7 @@ services:
       ALPACA_PAPER: "true"
       ALPACA_LIVE_TRADE: "false"
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8005}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/ready', timeout=2)"]
       interval: 10s
@@ -47,7 +47,7 @@ services:
       POSTGRES_USER: shadowfund
       POSTGRES_PASSWORD: shadowfund
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5439}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -60,7 +60,7 @@ services:
     image: redis:8.2.3-alpine
     profiles: ["cache"]
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6385}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
