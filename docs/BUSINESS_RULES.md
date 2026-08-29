@@ -219,3 +219,18 @@ This is a distinct, hackathon-specific operating configuration that coexists wit
 | Take profit | **75% Balanced / up to 100% Aggressive** | Same as baseline (`take_profit_pct` range $[75\%, 100\%]$). |
 
 The hard safety controls (risk-per-trade caps, concentration limits, drawdown states, liquidity reserve, instrument restrictions, and mandatory exits) remain unchanged under this configuration. Only the hold duration and evaluation/ShadowFund horizons are shortened for the hackathon.
+
+### Hackathon evaluation window
+
+Per Alpaca's official guidelines, the **official P&L is measured on total account equity (not cash balance) as of EOD Thursday Sep 3**. The agent begins trading **Mon Aug 31 09:30 ET**; the hackathon window's outer boundary is Fri Sep 4 09:30 ET, but scoring effectively ends at Thursday's close. This yields **4 trading sessions** (Mon Aug 31, Tue Sep 1, Wed Sep 2, Thu Sep 3) in which positions must be opened and closed. The following window-bounded rules apply under the hackathon configuration:
+
+| Rule | Setting | Rationale |
+| :--- | ---: | :--- |
+| Trading start | **Mon Aug 31 09:30 ET** | Official start of the P&L measurement period. |
+| Official scoring point | **EOD Thu Sep 3 (total equity)** | Judged on total account equity, not cash; Sep-3 option exercises/assignments are reflected in this value. |
+| Window outer boundary | **Fri Sep 4 09:30 ET** | Hackathon window edge only; not the scoring timestamp. |
+| Effective maximum hold | **min(4 trading days, EOD Thu Sep 3)** | The 4-trading-day hold is capped by the scoring point; a position opened late cannot exceed it. |
+| End-of-window force-flatten | **Force-close all open positions by Thu Sep 3 close** | Ensures the scored equity is clean and avoids Sep-3 expiration assignment/exercise. |
+| New-entry cutoff | **Wed Sep 2, 16:00 ET (market close)** | No new positions opened after this; only management/exits of existing positions run through Thu Sep 3 close. Guarantees every trade gets at least one full session (Thursday) of runway before the forced flatten, consistent with the EV ($\ge +0.15\text{R}$) and reward/risk ($\ge 1.5{:}1$) gates that reject trades unable to realize their modeled edge. |
+
+Because scoring is on total equity at EOD Thu Sep 3, all positions should be flat by Thursday's close. Assignment and exercise risk from Sep-3 expirations is avoided by the force-flatten combined with the 0-DTE block and the $\le 7$ DTE exit; the agent must not hold a Sep-3-expiring contract into settlement. The force-flatten and scoring point supersede the standard `max_hold_days` for the hackathon; all other deterministic exits (hard stop, take-profit, DTE, thesis invalidation) continue to apply and may trigger earlier.

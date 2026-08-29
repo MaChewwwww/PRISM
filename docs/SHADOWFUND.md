@@ -81,7 +81,7 @@ The BA has authorized two evaluation horizons to capture both immediate reaction
 
 ### Hackathon operating configuration
 
-When the hackathon-specific operating configuration is the active ruleset (see [Hackathon operating configuration](BUSINESS_RULES.md#hackathon-operating-configuration) in `BUSINESS_RULES.md`), the **primary** ShadowFund evaluation horizon is **4 trading days**, aligning ShadowFund with the hackathon's 4-trading-day maximum hold and primary P&L evaluation window. The intraday horizon is still captured. This is a scoped hackathon setting and does not change the authorized intraday/1-week horizons above under the standard baseline.
+When the hackathon-specific operating configuration is the active ruleset (see [Hackathon operating configuration](BUSINESS_RULES.md#hackathon-operating-configuration) in `BUSINESS_RULES.md`), the **primary** ShadowFund evaluation horizon is **4 trading days**, aligning ShadowFund with the hackathon's 4-trading-day maximum hold. Per Alpaca's official guidelines the scored performance point is total account equity at **EOD Thu Sep 3** (the agent starts trading Mon Aug 31 09:30 ET), so counterfactual branches are evaluated up to that scoring point; the intraday horizon is still captured. This is a scoped hackathon setting and does not change the authorized intraday/1-week horizons above under the standard baseline.
 
 ## Limitations and disclosures
 
