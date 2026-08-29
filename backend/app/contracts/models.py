@@ -494,7 +494,57 @@ class QuantitativeAnalysisReport(ContractBase):
     macd: MACDSignal
     moving_averages: MovingAverages
     bollinger_bands: BollingerBands
-    atr_14: DecimalString = Field(ge=0)
-    volatility_annualized_pct: DecimalString = Field(ge=0)
-    volume_surge_ratio: DecimalString = Field(ge=0)
+    atr_14: DecimalString
+    volatility_annualized_pct: DecimalString
+    volume_surge_ratio: DecimalString
     summary: str
+
+
+class CompetitiveMoat(StrEnum):
+    WIDE = "wide"
+    NARROW = "narrow"
+    NONE = "none"
+    DETERIORATING = "deteriorating"
+
+
+class RelativePerformance(StrEnum):
+    OUTPERFORMING = "outperforming"
+    UNDERPERFORMING = "underperforming"
+    MIXED = "mixed"
+    INLINE = "inline"
+
+
+class IndustrySentiment(StrEnum):
+    POSITIVE = "positive"
+    MODERATELY_POSITIVE = "moderately_positive"
+    MIXED = "mixed"
+    MODERATELY_NEGATIVE = "moderately_negative"
+    NEGATIVE = "negative"
+
+
+class PeerPerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    symbol: str
+    price_change_5d_pct: DecimalString
+    price_change_20d_pct: DecimalString
+
+
+class IndustryAnalysisReport(ContractBase):
+    symbol: str
+    sector_name: str
+    sector_etf: str
+    sector_health_score: DecimalString = Field(ge=0, le=100)
+    stock_return_5d_pct: DecimalString
+    stock_return_20d_pct: DecimalString
+    sector_return_5d_pct: DecimalString
+    sector_return_20d_pct: DecimalString
+    relative_alpha_5d_pct: DecimalString
+    relative_alpha_20d_pct: DecimalString
+    sector_relative_performance: RelativePerformance
+    peer_relative_performance: RelativePerformance
+    peers: list[PeerPerformance]
+    competitive_moat: CompetitiveMoat
+    overall_sentiment: IndustrySentiment
+    tailwinds: list[str] = Field(default_factory=list)
+    headwinds: list[str] = Field(default_factory=list)
+    thesis: str

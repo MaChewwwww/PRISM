@@ -183,7 +183,7 @@ def compute_atr_and_volatility(
         true_ranges.append(tr)
 
     atr_sample = true_ranges[-period:] if len(true_ranges) >= period else true_ranges
-    atr = sum(atr_sample) / Decimal(str(len(atr_sample))) if atr_sample else Decimal("1.0")
+    atr = sum(atr_sample) / Decimal(str(len(atr_sample))) if atr_sample else Decimal("0.0")
 
     # Annualized volatility from returns: std_dev(daily returns) * sqrt(252) * 100.
     # Keep the calculation Decimal-safe so binary floating point never crosses the
@@ -279,9 +279,9 @@ def compute_quantitative_analysis(
 
     # 2. RSI (14)
     rsi_14 = compute_rsi(closes, 14)
-    if rsi_14 > Decimal("70.0"):
+    if rsi_14 >= Decimal("70.0"):
         rsi_condition = RSICondition.OVERBOUGHT
-    elif rsi_14 < Decimal("30.0"):
+    elif rsi_14 <= Decimal("30.0"):
         rsi_condition = RSICondition.OVERSOLD
     else:
         rsi_condition = RSICondition.NEUTRAL
