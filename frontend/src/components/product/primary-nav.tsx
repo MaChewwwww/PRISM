@@ -84,7 +84,7 @@ export function PrimaryNav({ open, onNavigate }: PrimaryNavProps) {
                 onClick={onNavigate}
               >
                 <Icon aria-hidden="true" />
-                <span>{label}</span>
+                <span className="text-[12px]">{label}</span>
               </Link>
             ))}
           </div>
