@@ -202,3 +202,20 @@ The system optimizes sustainable risk-adjusted net P&L rather than trade frequen
 - **AC-08:** Post-analysis recommendations cannot change hard limits or activate outside authorized ranges.
 - **AC-09:** Rejected opportunities are eligible for ShadowFund evaluation without creating an execution path.
 - **AC-10:** The same versioned inputs and ruleset reproduce the same deterministic authorization result.
+
+## Hackathon operating configuration
+
+This is a distinct, hackathon-specific operating configuration that coexists with the authorized governance baseline. It is applied only when the hackathon config is the active ruleset; it does not replace the [Active baseline parameter register](#active-baseline-parameter-register). Where a value below differs from the authorized baseline, the difference is intentional and scoped to the hackathon and is called out in the notes.
+
+| Rule | Hackathon setting | Note vs authorized baseline |
+| :--- | ---: | :--- |
+| Maximum hold | **4 trading days** | Tighter than the baseline `max_hold_days` default of 14 calendar days; within the approved safety range $[3, 45]$ days. |
+| Primary P&L evaluation | **4 trading days** | Hackathon-specific primary evaluation window. |
+| ShadowFund primary horizon | **4 trading days** | Differs from the baseline ShadowFund horizons (intraday and 1-week / 5 trading days); see `SHADOWFUND.md` [Evaluation windows](SHADOWFUND.md#evaluation-windows). |
+| DTE exit | **$\le 7$ DTE** | Same as baseline. |
+| 0-DTE | **Blocked** | Same as baseline (minimum expiration is 2 days out). |
+| Early thesis invalidation | **Immediate exit** | Same as baseline (deterministic Early Thesis Exit on contradictory news). |
+| Hard stop | **50% of initial debit** | Same as baseline (fixed $50\%$ stop-loss). |
+| Take profit | **75% Balanced / up to 100% Aggressive** | Same as baseline (`take_profit_pct` range $[75\%, 100\%]$). |
+
+The hard safety controls (risk-per-trade caps, concentration limits, drawdown states, liquidity reserve, instrument restrictions, and mandatory exits) remain unchanged under this configuration. Only the hold duration and evaluation/ShadowFund horizons are shortened for the hackathon.
