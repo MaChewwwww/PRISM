@@ -57,14 +57,18 @@ export default async function AlternativeDetailPage({
         <StoryLineChart
           title="Cumulative Decision Trajectories"
           description="P&amp;L progression across identical market conditions and timestamps."
-          summary={`${session.bestBranch} finished ${session.bestDelta} relative to active path`}
+          summary={
+            session.bestBranch === "Active Portfolio (Paper)"
+              ? `Active Portfolio finished ${session.bestDelta} ahead of shadow alternative`
+              : `${session.bestBranch} finished ${session.bestDelta} relative to active path`
+          }
           data={session.path}
           valuePrefix="$"
           series={[
             { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
             {
               key: "alternative",
-              label: session.bestBranch,
+              label: session.alternativeLabel ?? session.bestBranch,
               color: "#818CF8",
               dashed: true,
             },

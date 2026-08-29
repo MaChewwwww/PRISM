@@ -119,6 +119,7 @@ export type AlternativeSession = {
   summary: string;
   actualPnl: string;
   bestBranch: string;
+  alternativeLabel?: string;
   bestDelta: string;
   coverage: string;
   branches: AlternativeBranch[];
@@ -804,6 +805,7 @@ export const alternativeSessions: AlternativeSession[] = [
       "The agent alternative finished ahead, while the unhedged branch showed the largest adverse excursion.",
     actualPnl: "+$184.00",
     bestBranch: "Shadow: Agent Counterfactual",
+    alternativeLabel: "Shadow: Agent Counterfactual",
     bestDelta: "+$57.00",
     coverage: "94%",
     branches: sharedAlternatives,
@@ -829,6 +831,7 @@ export const alternativeSessions: AlternativeSession[] = [
       "The governed paper path retained more value than the unhedged branch after volatility contracted.",
     actualPnl: "+$126.00",
     bestBranch: "Active Portfolio (Paper)",
+    alternativeLabel: "Shadow: Unhedged Alternative",
     bestDelta: "+$17.00",
     coverage: "97%",
     branches: sharedAlternatives.map((branch) => ({
@@ -855,6 +858,7 @@ export const alternativeSessions: AlternativeSession[] = [
     summary: "Every simulated entry finished below the cash baseline in this fictional scenario.",
     actualPnl: "$0.00",
     bestBranch: "No action",
+    alternativeLabel: "Shadow: Unhedged Proposal",
     bestDelta: "+$96.00",
     coverage: "92%",
     branches: sharedAlternatives.map((branch) => ({
