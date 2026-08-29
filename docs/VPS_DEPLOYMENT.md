@@ -21,6 +21,10 @@
 
 Production publishes only ports 80/443 at the edge. PostgreSQL and Redis have no public host ports. Staging defaults to edge port 3005 and must use a distinct path, project name, database, and secrets.
 
+For lock-aware runtime commands and the current single-VM paths, see the [staging server maintenance cheatsheet](deployment/staging-server-maintenance-cheatsheet.md) and [single Azure VM runbook](deployment/single-azure-vm.md).
+
+Autonomous paper execution remains disabled unless separately reviewed and authorized. Production schedules must remain inside the BA-authorized hackathon window; staging supplies its own protected paper credentials and may use a bounded rehearsal interval. The current deployment does not run an autonomous scheduler.
+
 ## Rollback and operations
 
 Rollback redeploys a prior verified revision/image. Migrations must be forward-compatible; destructive recovery needs a separately tested plan. Rollback never deletes audit or execution evidence.

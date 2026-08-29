@@ -86,7 +86,7 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | `risk` | AI-assisted adversarial critique | Contract/presentation only / deferred |
 | `market` | Alpaca market/news adapter | Read-only news and historical stock-bar slices |
 | `portfolio` | Durable snapshots and exposure calculations | Deferred |
-| `execution` | Final paper checks, translation, idempotency, reconciliation | Validation skeleton; submission deferred and disabled |
+| `execution` | Final paper checks, translation, idempotency, reconciliation | Validation and autonomous-window gate; submission deferred and disabled |
 | `shadowfund` | Immutable counterfactual branches and evaluation | Presentation fixture only / deferred engine |
 | `audit` | Append-oriented decision and execution events | Contract only / deferred persistence |
 
@@ -110,6 +110,12 @@ The planned flow is `Browser -> authenticated Next.js server adapter -> FastAPI 
 
 The BA-owned registry also carries the fixed-date hackathon window. It starts Monday Aug 31, 2026 at 09:30 ET, stops new entries at Wednesday Sep 2, 2026 16:00 ET, scores total account equity at EOD Thursday Sep 3, 2026, and force-flattens by that close. Friday Sep 4 at 09:30 ET is an outer boundary only. The presentation governance endpoint exposes the registry's UTC timestamps and the human-readable ET controls; future deterministic authorization must enforce them. No Sep-3-expiring contract may be held into settlement.
 
+## Autonomous run control
+
+Autonomous paper execution is an explicit server-side opt-in, controlled by `AUTONOMOUS_TRADING_ENABLED` and a UTC half-open interval from `AUTONOMOUS_TRADING_START_AT` through (but excluding) `AUTONOMOUS_TRADING_END_AT`. The flag defaults to false, requires `EXECUTION_ENABLED=true`, an active ruleset, and a complete Alpaca paper credential pair. Production intervals must be contained within the registry's hackathon trading start and force-flatten deadline. Staging uses a separate paper credential pair and may select a bounded rehearsal interval; this does not change the production BA window or any deterministic authorization requirement.
+
+This is configuration and validation groundwork only. The autonomous orchestration loop is not implemented, so setting the variables does not itself schedule or submit orders.
+
 ## Authorization binding
 
 An authorization decision binds at least:
@@ -121,7 +127,7 @@ An authorization decision binds at least:
 - allowed payload digest;
 - rule trace, decision time, and expiration.
 
-Only `APPROVE` may reach the execution service. Before any future submission, execution must recheck paper mode, execution-enabled state, kill switch, authorization currency, payload digest, account and market freshness, permissions, buying-power inputs, contract activity, and client order ID.
+Only `APPROVE` may reach the execution service. Before any future submission, execution must recheck paper mode, execution-enabled state, autonomous window (when enabled), kill switch, authorization currency, payload digest, account and market freshness, permissions, buying-power inputs, contract activity, and client order ID.
 
 ## Database and readiness
 

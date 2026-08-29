@@ -28,7 +28,7 @@ Implement persisted TradeProposal versioning, AI-assisted Risk Management, the c
 
 ## Next: portfolio, ShadowFund, and paper execution
 
-Implement persisted portfolio snapshots, exposure calculations, counterfactual valuation, and paper-order execution/reconciliation behind the disabled-by-default gate. Networked tests remain opt-in and must not place an order without explicit user authorization.
+Implement persisted portfolio snapshots, exposure calculations, counterfactual valuation, autonomous orchestration, and paper-order execution/reconciliation behind the disabled-by-default gate. The server-side `AUTONOMOUS_TRADING_*` schedule settings and fail-closed execution gate are configuration groundwork only; no scheduler is active. Networked tests remain opt-in and must not place an order without explicit user authorization.
 
 ## Later: operations and evaluation
 

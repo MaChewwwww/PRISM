@@ -6,7 +6,7 @@ Copy `.env.example` to an untracked `.env`, replace the development-only authent
 
 Compose starts PostgreSQL, runs `alembic upgrade head` in a one-shot `migrate` service, then starts FastAPI after migration succeeds. The frontend starts after backend readiness. FastAPI startup does not create tables. The frontend receives only its internal API URL, environment name, and server-side authentication values; Alpaca and LLM credentials remain confined to backend services.
 
-Readiness validates required configuration and database connectivity. Liveness only proves that the process can answer. `/api/v1/system/status` is authenticated and is not a Compose health-check target.
+Readiness validates required configuration and database connectivity. Liveness only proves that the process can answer. `/api/v1/system/status` is authenticated and is not a Compose health-check target. Autonomous paper-trading variables (`AUTONOMOUS_TRADING_ENABLED`, `AUTONOMOUS_TRADING_START_AT`, and `AUTONOMOUS_TRADING_END_AT`) are server-only configuration; they default to disabled and do not start a scheduler in this skeleton.
 
 ## Production override
 
@@ -18,4 +18,4 @@ The production override publishes only Nginx on `{PRISM_HTTP_PORT:-80}`. Applica
 
 Validate the resolved production topology with `pnpm docker:config`. Execution remains disabled by default and fails closed without valid paper configuration, an active ruleset, and a current authorization.
 
-Never bake environment files, credentials, local data, build caches, or MCP configuration into images.
+Never bake environment files, credentials, local data, build caches, or MCP configuration into images. Scheduled execution remains paper-only and requires the deterministic authorization gate; production schedules must stay inside the BA-authorized window.
