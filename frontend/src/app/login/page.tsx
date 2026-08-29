@@ -41,7 +41,7 @@ export default function LoginPage() {
 
   return (
     <div className="app-shell flex min-h-screen flex-col">
-      <header className="topbar">
+      <header className="login-header">
         <div className="wordmark">
           <span aria-hidden="true">PR</span>
           <strong>PRISM</strong>
