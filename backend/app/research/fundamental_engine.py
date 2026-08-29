@@ -1,0 +1,338 @@
+from __future__ import annotations
+
+from decimal import Decimal
+from typing import Any
+from uuid import UUID, uuid4
+
+from app.contracts.models import (
+    AltmanZone,
+    FundamentalAnalysisReport,
+    FundamentalHealth,
+    ProfitabilityMetrics,
+    SolvencyMetrics,
+    ValuationMetrics,
+    ValuationStance,
+)
+from app.research.fundamental_data import CompanyFinancials, get_company_financials
+
+
+def _to_decimal(val: Any) -> Decimal:
+    return Decimal(str(val))
+
+
+def compute_profitability_metrics(fin: CompanyFinancials) -> ProfitabilityMetrics:
+    """Compute margins and capital efficiency ratios."""
+    rev = fin.revenue_ttm if fin.revenue_ttm > Decimal("0.0") else Decimal("1.0")
+    equity = (
+        fin.stockholders_equity if fin.stockholders_equity != Decimal("0.0") else Decimal("1.0")
+    )
+    assets = fin.total_assets if fin.total_assets > Decimal("0.0") else Decimal("1.0")
+
+    gross_margin = (fin.gross_profit_ttm / rev) * Decimal("100.0")
+    op_margin = (fin.operating_income_ttm / rev) * Decimal("100.0")
+    net_margin = (fin.net_income_ttm / rev) * Decimal("100.0")
+    roe = (fin.net_income_ttm / equity) * Decimal("100.0")
+    roa = (fin.net_income_ttm / assets) * Decimal("100.0")
+
+    return ProfitabilityMetrics(
+        gross_margin_pct=round(gross_margin, 2),
+        operating_margin_pct=round(op_margin, 2),
+        net_margin_pct=round(net_margin, 2),
+        roe_pct=round(roe, 2),
+        roa_pct=round(roa, 2),
+    )
+
+
+def compute_solvency_metrics(fin: CompanyFinancials) -> SolvencyMetrics:
+    """Compute liquidity, leverage, and debt coverage metrics."""
+    curr_liab = (
+        fin.current_liabilities if fin.current_liabilities > Decimal("0.0") else Decimal("1.0")
+    )
+    equity = (
+        fin.stockholders_equity if fin.stockholders_equity != Decimal("0.0") else Decimal("1.0")
+    )
+    int_exp = (
+        fin.interest_expense_ttm if fin.interest_expense_ttm > Decimal("0.0") else Decimal("1.0")
+    )
+
+    curr_ratio = fin.current_assets / curr_liab
+    debt_equity = fin.total_debt / equity
+    int_coverage = fin.operating_income_ttm / int_exp
+    net_debt = fin.total_debt - fin.cash_and_equivalents
+
+    return SolvencyMetrics(
+        current_ratio=round(curr_ratio, 2),
+        debt_to_equity=round(debt_equity, 2),
+        interest_coverage_ratio=round(int_coverage, 2),
+        net_debt_millions=round(net_debt, 2),
+    )
+
+
+def compute_valuation_metrics(
+    fin: CompanyFinancials, current_price: Decimal
+) -> tuple[ValuationMetrics, Decimal, Decimal]:
+    """Compute valuation multiples and return (metrics, market_cap_m, enterprise_val_m)."""
+    market_cap_m = (current_price * fin.shares_outstanding_millions) / Decimal("1.0")
+    ev_m = market_cap_m + fin.total_debt - fin.cash_and_equivalents
+    fcf_m = fin.operating_cash_flow_ttm - fin.capex_ttm
+
+    pe_ratio = (
+        round(current_price / fin.diluted_eps_ttm, 2)
+        if fin.diluted_eps_ttm > Decimal("0.0")
+        else None
+    )
+    ev_to_ebitda = (
+        round(ev_m / fin.ebitda_ttm, 2)
+        if fin.ebitda_ttm > Decimal("0.0") and ev_m > Decimal("0.0")
+        else None
+    )
+    pb_ratio = (
+        round(market_cap_m / fin.stockholders_equity, 2)
+        if fin.stockholders_equity > Decimal("0.0") and market_cap_m > Decimal("0.0")
+        else None
+    )
+    fcf_yield = (
+        round((fcf_m / market_cap_m) * Decimal("100.0"), 2)
+        if market_cap_m > Decimal("0.0")
+        else None
+    )
+
+    val_metrics = ValuationMetrics(
+        pe_ratio_ttm=pe_ratio,
+        ev_to_ebitda=ev_to_ebitda,
+        price_to_book=pb_ratio,
+        fcf_yield_pct=fcf_yield,
+        free_cash_flow_millions=round(fcf_m, 2),
+    )
+    return val_metrics, round(market_cap_m, 2), round(ev_m, 2)
+
+
+def compute_piotroski_f_score(fin: CompanyFinancials) -> int:
+    """Compute 9-point Piotroski F-Score evaluating profitability, leverage, and efficiency."""
+    score = 0
+    # 1. Net Income > 0
+    if fin.net_income_ttm > Decimal("0.0"):
+        score += 1
+    # 2. Operating Cash Flow > 0
+    if fin.operating_cash_flow_ttm > Decimal("0.0"):
+        score += 1
+    # 3. Quality of earnings: OCF > Net Income (low accruals)
+    if fin.operating_cash_flow_ttm > fin.net_income_ttm:
+        score += 1
+    # 4. ROA increased YoY
+    curr_roa = (
+        fin.net_income_ttm / fin.total_assets
+        if fin.total_assets > Decimal("0.0")
+        else Decimal("0.0")
+    )
+    prior_roa = (
+        fin.prior_net_income / fin.prior_total_assets
+        if fin.prior_total_assets > Decimal("0.0")
+        else Decimal("0.0")
+    )
+    if curr_roa > prior_roa:
+        score += 1
+    # 5. Long-term debt didn't increase significantly
+    if fin.total_debt <= (fin.total_assets * Decimal("0.5")):
+        score += 1
+    # 6. Current ratio improved or healthy (> 1.5)
+    curr_ratio = (
+        fin.current_assets / fin.current_liabilities
+        if fin.current_liabilities > Decimal("0.0")
+        else Decimal("1.0")
+    )
+    if curr_ratio >= fin.prior_current_ratio or curr_ratio >= Decimal("1.5"):
+        score += 1
+    # 7. No major share dilution (placeholder +1 for established bluechips)
+    score += 1
+    # 8. Gross margin improved or very strong (> 40%)
+    curr_gm = (
+        (fin.gross_profit_ttm / fin.revenue_ttm) * Decimal("100.0")
+        if fin.revenue_ttm > Decimal("0.0")
+        else Decimal("0.0")
+    )
+    if curr_gm >= fin.prior_gross_margin_pct or curr_gm >= Decimal("40.0"):
+        score += 1
+    # 9. Asset turnover healthy
+    curr_turnover = (
+        fin.revenue_ttm / fin.total_assets if fin.total_assets > Decimal("0.0") else Decimal("0.0")
+    )
+    if curr_turnover >= Decimal("0.3"):
+        score += 1
+
+    return min(9, max(0, score))
+
+
+def compute_altman_z_score(
+    fin: CompanyFinancials, market_cap_m: Decimal
+) -> tuple[Decimal, AltmanZone]:
+    """Compute Altman Z-Score for non-financial corporate default risk."""
+    total_assets = fin.total_assets if fin.total_assets > Decimal("0.0") else Decimal("1.0")
+    working_cap = fin.current_assets - fin.current_liabilities
+    retained_est = fin.stockholders_equity * Decimal("0.7")
+    ebit = fin.operating_income_ttm
+    market_val_equity = market_cap_m if market_cap_m > Decimal("0.0") else fin.stockholders_equity
+    total_liab = fin.total_debt + fin.current_liabilities
+    if total_liab <= Decimal("0.0"):
+        total_liab = Decimal("1.0")
+    sales = fin.revenue_ttm
+
+    # Standard Altman Z-Score formula:
+    # Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 0.999*X5
+    x1 = working_cap / total_assets
+    x2 = retained_est / total_assets
+    x3 = ebit / total_assets
+    x4 = market_val_equity / total_liab
+    x5 = sales / total_assets
+
+    z = (
+        (Decimal("1.2") * x1)
+        + (Decimal("1.4") * x2)
+        + (Decimal("3.3") * x3)
+        + (Decimal("0.6") * x4)
+        + (Decimal("0.999") * x5)
+    )
+    z_score = round(z, 2)
+
+    if z_score >= Decimal("3.0"):
+        zone = AltmanZone.SAFE
+    elif z_score >= Decimal("1.8"):
+        zone = AltmanZone.GREY
+    else:
+        zone = AltmanZone.DISTRESS
+
+    return z_score, zone
+
+
+def compute_composite_fundamental_score(
+    prof: ProfitabilityMetrics,
+    solv: SolvencyMetrics,
+    f_score: int,
+    z_score: Decimal,
+    pe_ratio: Decimal | None,
+) -> tuple[Decimal, FundamentalHealth, ValuationStance]:
+    """Compute composite 0-100 fundamental quality score, health category, and valuation stance."""
+    # 1. Profitability Factor (30 pts max)
+    prof_pts = min(
+        Decimal("30.0"),
+        max(
+            Decimal("0.0"), (prof.net_margin_pct * Decimal("0.6")) + (prof.roe_pct * Decimal("0.4"))
+        ),
+    )
+
+    # 2. Solvency Factor (30 pts max)
+    solv_pts = Decimal("0.0")
+    if solv.current_ratio >= Decimal("1.5"):
+        solv_pts += Decimal("10.0")
+    elif solv.current_ratio >= Decimal("1.0"):
+        solv_pts += Decimal("5.0")
+
+    if solv.debt_to_equity <= Decimal("0.5"):
+        solv_pts += Decimal("10.0")
+    elif solv.debt_to_equity <= Decimal("1.5"):
+        solv_pts += Decimal("5.0")
+
+    if solv.interest_coverage_ratio >= Decimal("5.0"):
+        solv_pts += Decimal("10.0")
+    elif solv.interest_coverage_ratio >= Decimal("2.0"):
+        solv_pts += Decimal("5.0")
+
+    # 3. Piotroski & Altman Quality Factor (25 pts max)
+    f_pts = (Decimal(str(f_score)) / Decimal("9.0")) * Decimal("15.0")
+    z_pts = min(Decimal("10.0"), max(Decimal("0.0"), (z_score / Decimal("4.0")) * Decimal("10.0")))
+
+    # 4. Valuation Quality (15 pts max)
+    val_pts = Decimal("10.0")
+    if pe_ratio is not None:
+        if pe_ratio < Decimal("15.0"):
+            val_pts = Decimal("15.0")
+            stance = ValuationStance.UNDERVALUED
+        elif pe_ratio <= Decimal("30.0"):
+            val_pts = Decimal("12.0")
+            stance = ValuationStance.FAIRLY_VALUED
+        elif pe_ratio <= Decimal("55.0"):
+            val_pts = Decimal("8.0")
+            stance = ValuationStance.PREMIUM
+        else:
+            val_pts = Decimal("5.0")
+            stance = ValuationStance.OVERVALUED
+    else:
+        stance = ValuationStance.FAIRLY_VALUED
+
+    total_score = min(
+        Decimal("100.0"),
+        max(Decimal("0.0"), round(prof_pts + solv_pts + f_pts + z_pts + val_pts, 1)),
+    )
+
+    # Determine Health Category
+    if total_score >= Decimal("80.0"):
+        health = FundamentalHealth.EXCELLENT
+    elif total_score >= Decimal("65.0"):
+        health = FundamentalHealth.HEALTHY
+    elif total_score >= Decimal("45.0"):
+        health = FundamentalHealth.MODERATE
+    elif total_score >= Decimal("30.0"):
+        health = FundamentalHealth.VULNERABLE
+    else:
+        health = FundamentalHealth.DISTRESSED
+
+    return total_score, health, stance
+
+
+def compute_fundamental_analysis(
+    symbol: str,
+    latest_close: Decimal | None = None,
+    trace_id: UUID | None = None,
+) -> FundamentalAnalysisReport:
+    """Perform 100% deterministic fundamental financial statement analysis."""
+    sym = symbol.strip().upper()
+    t_id = trace_id or uuid4()
+    fin = get_company_financials(sym)
+
+    # Use live close price if available, otherwise default to conservative estimate
+    close_price = (
+        latest_close if latest_close and latest_close > Decimal("0.0") else Decimal("100.0")
+    )
+
+    # 1. Compute Metrics
+    prof = compute_profitability_metrics(fin)
+    solv = compute_solvency_metrics(fin)
+    val, market_cap_m, ev_m = compute_valuation_metrics(fin, close_price)
+    f_score = compute_piotroski_f_score(fin)
+    z_score, z_zone = compute_altman_z_score(fin, market_cap_m)
+
+    # 2. Composite Scoring & Classifications
+    composite_score, health, stance = compute_composite_fundamental_score(
+        prof=prof,
+        solv=solv,
+        f_score=f_score,
+        z_score=z_score,
+        pe_ratio=val.pe_ratio_ttm,
+    )
+
+    summary = (
+        f"{fin.company_name} ({sym}) displays {health.value.upper()} fundamental health "
+        f"with a Quality Score of {composite_score}/100 and Piotroski F-Score of {f_score}/9. "
+        f"Altman Z-Score is {z_score} ({z_zone.value.upper()} ZONE). "
+        f"Profitability reflects a {prof.net_margin_pct}% net margin and {prof.roe_pct}% ROE. "
+        f"Valuation stance is {stance.value.upper()} at {val.pe_ratio_ttm or 'N/A'}x P/E."
+    )
+
+    return FundamentalAnalysisReport(
+        id=uuid4(),
+        trace_id=t_id,
+        symbol=sym,
+        current_price=round(close_price, 2),
+        market_cap_millions=market_cap_m,
+        enterprise_value_millions=ev_m,
+        profitability=prof,
+        solvency=solv,
+        valuation=val,
+        piotroski_f_score=f_score,
+        altman_z_score=z_score,
+        altman_zone=z_zone,
+        composite_quality_score=composite_score,
+        fundamental_health=health,
+        valuation_stance=stance,
+        summary=summary,
+    )

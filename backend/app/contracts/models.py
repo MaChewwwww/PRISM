@@ -548,3 +548,111 @@ class IndustryAnalysisReport(ContractBase):
     tailwinds: list[str] = Field(default_factory=list)
     headwinds: list[str] = Field(default_factory=list)
     thesis: str
+
+
+class FundamentalHealth(StrEnum):
+    EXCELLENT = "excellent"
+    HEALTHY = "healthy"
+    MODERATE = "moderate"
+    VULNERABLE = "vulnerable"
+    DISTRESSED = "distressed"
+
+
+class ValuationStance(StrEnum):
+    UNDERVALUED = "undervalued"
+    FAIRLY_VALUED = "fairly_valued"
+    PREMIUM = "premium"
+    OVERVALUED = "overvalued"
+
+
+class AltmanZone(StrEnum):
+    SAFE = "safe"
+    GREY = "grey"
+    DISTRESS = "distress"
+
+
+class ProfitabilityMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    gross_margin_pct: DecimalString
+    operating_margin_pct: DecimalString
+    net_margin_pct: DecimalString
+    roe_pct: DecimalString
+    roa_pct: DecimalString
+
+
+class SolvencyMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_ratio: DecimalString
+    debt_to_equity: DecimalString
+    interest_coverage_ratio: DecimalString
+    net_debt_millions: DecimalString
+
+
+class ValuationMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pe_ratio_ttm: DecimalString | None = None
+    ev_to_ebitda: DecimalString | None = None
+    price_to_book: DecimalString | None = None
+    fcf_yield_pct: DecimalString | None = None
+    free_cash_flow_millions: DecimalString
+
+
+class FundamentalAnalysisReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    current_price: DecimalString = Field(ge=0)
+    market_cap_millions: DecimalString = Field(ge=0)
+    enterprise_value_millions: DecimalString = Field(ge=0)
+    profitability: ProfitabilityMetrics
+    solvency: SolvencyMetrics
+    valuation: ValuationMetrics
+    piotroski_f_score: int = Field(ge=0, le=9)
+    altman_z_score: DecimalString
+    altman_zone: AltmanZone
+    composite_quality_score: DecimalString = Field(ge=0, le=100)
+    fundamental_health: FundamentalHealth
+    valuation_stance: ValuationStance
+    summary: str
+
+
+class MacroRegime(StrEnum):
+    RISK_ON = "risk_on"
+    RISK_OFF = "risk_off"
+    EXPANSIONARY = "expansionary"
+    CONTRACTIONARY = "contractionary"
+    STAGFLATIONARY = "stagflationary"
+    TRANSITIONAL = "transitional"
+
+
+class RateEnvironment(StrEnum):
+    RATE_CUT_CYCLE = "rate_cut_cycle"
+    PAUSE_ELEVATED = "pause_elevated"
+    RISING_RATES = "rising_rates"
+    NEUTRAL = "neutral"
+
+
+class MarketStressLevel(StrEnum):
+    LOW = "low"
+    MODERATE = "moderate"
+    HIGH = "high"
+    EXTREME = "extreme"
+
+
+class MacroAssetPerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    asset_symbol: str
+    asset_name: str
+    price_change_5d_pct: DecimalString
+    price_change_20d_pct: DecimalString
+
+
+class MacroAnalysisReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    macro_regime: MacroRegime
+    rate_environment: RateEnvironment
+    market_stress_level: MarketStressLevel
+    macro_climate_score: DecimalString = Field(ge=0, le=100)
+    assets: list[MacroAssetPerformance]
+    macro_tailwinds: list[str] = Field(default_factory=list)
+    macro_headwinds: list[str] = Field(default_factory=list)
+    stock_macro_sensitivity: str
+    thesis: str

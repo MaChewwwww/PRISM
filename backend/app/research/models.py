@@ -93,3 +93,28 @@ class IndustryAnalysisModel(Base):
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+
+
+class MacroAnalysisModel(Base):
+    __tablename__ = "macro_analyses"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    trace_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    schema_version: Mapped[Literal["1.0"]] = mapped_column(
+        String(10), nullable=False, default="1.0"
+    )
+
+    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+    macro_regime: Mapped[str] = mapped_column(String(50), nullable=False)
+    rate_environment: Mapped[str] = mapped_column(String(50), nullable=False)
+    market_stress_level: Mapped[str] = mapped_column(String(50), nullable=False)
+    macro_climate_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    assets_json: Mapped[str] = mapped_column(Text, nullable=False)
+    macro_tailwinds_json: Mapped[str] = mapped_column(Text, nullable=False)
+    macro_headwinds_json: Mapped[str] = mapped_column(Text, nullable=False)
+    stock_macro_sensitivity: Mapped[str] = mapped_column(Text, nullable=False)
+    thesis: Mapped[str] = mapped_column(Text, nullable=False)
+
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

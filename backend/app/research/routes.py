@@ -11,8 +11,10 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
+    FundamentalAnalysisReport,
     IndustryAnalysisReport,
     LLMEventAnalysis,
+    MacroAnalysisReport,
     QuantitativeAnalysisReport,
     ResearchReport,
 )
@@ -21,7 +23,9 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.fundamental_engine import compute_fundamental_analysis
 from app.research.industry_agent import IndustryIntelligenceAgent
+from app.research.macro_agent import MacroeconomicAgent
 from app.research.news_agent import NewsIntelligenceAgent
 from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
@@ -79,6 +83,44 @@ class IndustryAnalysisRequest(BaseModel):
     custom_peers: list[str] | None = Field(
         default=None,
         description="Optional custom peer tickers to compare against",
+    )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
+
+
+class FundamentalAnalysisRequest(BaseModel):
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Ticker symbol to analyze fundamentals for, e.g. NVDA",
+    )
+    bar_limit: int = Field(
+        default=5,
+        ge=1,
+        le=30,
+        description="Number of recent price bars to retrieve for live valuation calculation",
+    )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
+
+
+class MacroAnalysisRequest(BaseModel):
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Target ticker symbol to assess macroeconomic impact for, e.g. NVDA",
     )
 
     @field_validator("symbol")
@@ -229,13 +271,40 @@ async def analyze_quantitative(
             detail=f"Failed to fetch market bars from Alpaca: {exc!s}",
         ) from exc
 
-    if not bars:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No market data bars available for symbol {symbol}",
+    return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
+
+
+@router.post("/fundamental/analyze", response_model=FundamentalAnalysisReport)
+async def analyze_fundamental(
+    request: FundamentalAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+) -> FundamentalAnalysisReport:
+    """Perform 100% deterministic fundamental financial statement and valuation analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    latest_close: Decimal | None = None
+    try:
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
+        if bars and len(bars) > 0 and "close" in bars[-1]:
+            latest_close = Decimal(str(bars[-1]["close"]))
+    except Exception as exc:
+        logger.warning(
+            "Alpaca price-bar provider warning for symbol=%s: %s (using baseline valuation)",
+            symbol,
+            type(exc).__name__,
         )
 
-    return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
+    return compute_fundamental_analysis(
+        symbol=symbol,
+        latest_close=latest_close,
+        trace_id=trace_id,
+    )
 
 
 @router.post("/industry/analyze", response_model=IndustryAnalysisReport)
@@ -262,11 +331,38 @@ async def analyze_industry(
         )
         return report
     except Exception as exc:
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.error(f"Industry analysis failed for {symbol}: {exc}", exc_info=True)
+        logger.error("Industry analysis failed for %s: %s", symbol, exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Industry analysis failed: {exc!s}",
+        ) from exc
+
+
+@router.post("/macro/analyze", response_model=MacroAnalysisReport)
+async def analyze_macro(
+    request: MacroAnalysisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> MacroAnalysisReport:
+    """Perform macroeconomic regime, interest rate, and cross-asset intelligence analysis."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    llm_gateway = LLMGateway(settings)
+    agent = MacroeconomicAgent(llm_gateway=llm_gateway, alpaca_gateway=gateway)
+
+    try:
+        report = await agent.analyze_macro(
+            symbol=symbol,
+            trace_id=trace_id,
+            db_session=db_session,
+        )
+        return report
+    except Exception as exc:
+        logger.error("Macroeconomic analysis failed for %s: %s", symbol, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Macroeconomic analysis failed: {exc!s}",
         ) from exc

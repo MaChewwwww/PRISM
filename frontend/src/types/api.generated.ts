@@ -276,6 +276,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/fundamental/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Fundamental
+         * @description Perform 100% deterministic fundamental financial statement and valuation analysis.
+         */
+        post: operations["analyze_fundamental_api_v1_research_fundamental_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/industry/analyze": {
         parameters: {
             query?: never;
@@ -290,6 +310,26 @@ export interface paths {
          * @description Perform industry, competitive landscape, and relative alpha intelligence analysis.
          */
         post: operations["analyze_industry_api_v1_research_industry_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/macro/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Macro
+         * @description Perform macroeconomic regime, interest rate, and cross-asset intelligence analysis.
+         */
+        post: operations["analyze_macro_api_v1_research_macro_analyze_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -659,6 +699,11 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * AltmanZone
+         * @enum {string}
+         */
+        AltmanZone: "safe" | "grey" | "distress";
         /** AuditEvent */
         AuditEvent: {
             /** Actor Type */
@@ -1052,6 +1097,86 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** FundamentalAnalysisReport */
+        FundamentalAnalysisReport: {
+            /**
+             * Altman Z Score
+             * Format: decimal-string
+             */
+            altman_z_score: string;
+            altman_zone: components["schemas"]["AltmanZone"];
+            /**
+             * Composite Quality Score
+             * Format: decimal-string
+             */
+            composite_quality_score: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Current Price
+             * Format: decimal-string
+             */
+            current_price: string;
+            /**
+             * Enterprise Value Millions
+             * Format: decimal-string
+             */
+            enterprise_value_millions: string;
+            fundamental_health: components["schemas"]["FundamentalHealth"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Market Cap Millions
+             * Format: decimal-string
+             */
+            market_cap_millions: string;
+            /** Piotroski F Score */
+            piotroski_f_score: number;
+            profitability: components["schemas"]["ProfitabilityMetrics"];
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            solvency: components["schemas"]["SolvencyMetrics"];
+            /** Summary */
+            summary: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            valuation: components["schemas"]["ValuationMetrics"];
+            valuation_stance: components["schemas"]["ValuationStance"];
+        };
+        /** FundamentalAnalysisRequest */
+        FundamentalAnalysisRequest: {
+            /**
+             * Bar Limit
+             * @description Number of recent price bars to retrieve for live valuation calculation
+             * @default 5
+             */
+            bar_limit: number;
+            /**
+             * Symbol
+             * @description Ticker symbol to analyze fundamentals for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /**
+         * FundamentalHealth
+         * @enum {string}
+         */
+        FundamentalHealth: "excellent" | "healthy" | "moderate" | "vulnerable" | "distressed";
         /** Governance */
         Governance: {
             /**
@@ -1459,6 +1584,80 @@ export interface components {
              */
             signal: string;
         };
+        /** MacroAnalysisReport */
+        MacroAnalysisReport: {
+            /** Assets */
+            assets: components["schemas"]["MacroAssetPerformance"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Macro Climate Score
+             * Format: decimal-string
+             */
+            macro_climate_score: string;
+            /** Macro Headwinds */
+            macro_headwinds?: string[];
+            macro_regime: components["schemas"]["MacroRegime"];
+            /** Macro Tailwinds */
+            macro_tailwinds?: string[];
+            market_stress_level: components["schemas"]["MarketStressLevel"];
+            rate_environment: components["schemas"]["RateEnvironment"];
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Stock Macro Sensitivity */
+            stock_macro_sensitivity: string;
+            /** Symbol */
+            symbol: string;
+            /** Thesis */
+            thesis: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** MacroAnalysisRequest */
+        MacroAnalysisRequest: {
+            /**
+             * Symbol
+             * @description Target ticker symbol to assess macroeconomic impact for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /** MacroAssetPerformance */
+        MacroAssetPerformance: {
+            /** Asset Name */
+            asset_name: string;
+            /** Asset Symbol */
+            asset_symbol: string;
+            /**
+             * Price Change 20D Pct
+             * Format: decimal-string
+             */
+            price_change_20d_pct: string;
+            /**
+             * Price Change 5D Pct
+             * Format: decimal-string
+             */
+            price_change_5d_pct: string;
+        };
+        /**
+         * MacroRegime
+         * @enum {string}
+         */
+        MacroRegime: "risk_on" | "risk_off" | "expansionary" | "contractionary" | "stagflationary" | "transitional";
         /**
          * MarketDataType
          * @enum {string}
@@ -1498,6 +1697,11 @@ export interface components {
          * @enum {string}
          */
         MarketRegime: "normal" | "volatile" | "event" | "crisis";
+        /**
+         * MarketStressLevel
+         * @enum {string}
+         */
+        MarketStressLevel: "low" | "moderate" | "high" | "extreme";
         /** MovingAverages */
         MovingAverages: {
             /** Price Vs Sma200 Pct */
@@ -1841,6 +2045,34 @@ export interface components {
              */
             status: "active" | "available";
         };
+        /** ProfitabilityMetrics */
+        ProfitabilityMetrics: {
+            /**
+             * Gross Margin Pct
+             * Format: decimal-string
+             */
+            gross_margin_pct: string;
+            /**
+             * Net Margin Pct
+             * Format: decimal-string
+             */
+            net_margin_pct: string;
+            /**
+             * Operating Margin Pct
+             * Format: decimal-string
+             */
+            operating_margin_pct: string;
+            /**
+             * Roa Pct
+             * Format: decimal-string
+             */
+            roa_pct: string;
+            /**
+             * Roe Pct
+             * Format: decimal-string
+             */
+            roe_pct: string;
+        };
         /**
          * Provenance
          * @enum {string}
@@ -1928,6 +2160,11 @@ export interface components {
          * @enum {string}
          */
         RSICondition: "oversold" | "overbought" | "neutral";
+        /**
+         * RateEnvironment
+         * @enum {string}
+         */
+        RateEnvironment: "rate_cut_cycle" | "pause_elevated" | "rising_rates" | "neutral";
         /**
          * ReactionClassification
          * @enum {string}
@@ -2205,6 +2442,29 @@ export interface components {
          * @enum {string}
          */
         ShadowState: "open" | "complete" | "incomplete";
+        /** SolvencyMetrics */
+        SolvencyMetrics: {
+            /**
+             * Current Ratio
+             * Format: decimal-string
+             */
+            current_ratio: string;
+            /**
+             * Debt To Equity
+             * Format: decimal-string
+             */
+            debt_to_equity: string;
+            /**
+             * Interest Coverage Ratio
+             * Format: decimal-string
+             */
+            interest_coverage_ratio: string;
+            /**
+             * Net Debt Millions
+             * Format: decimal-string
+             */
+            net_debt_millions: string;
+        };
         /** StoryDetail */
         StoryDetail: {
             /** Alternatives */
@@ -2460,6 +2720,27 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** ValuationMetrics */
+        ValuationMetrics: {
+            /** Ev To Ebitda */
+            ev_to_ebitda?: string | null;
+            /** Fcf Yield Pct */
+            fcf_yield_pct?: string | null;
+            /**
+             * Free Cash Flow Millions
+             * Format: decimal-string
+             */
+            free_cash_flow_millions: string;
+            /** Pe Ratio Ttm */
+            pe_ratio_ttm?: string | null;
+            /** Price To Book */
+            price_to_book?: string | null;
+        };
+        /**
+         * ValuationStance
+         * @enum {string}
+         */
+        ValuationStance: "undervalued" | "fairly_valued" | "premium" | "overvalued";
         /** WeeklySummary */
         WeeklySummary: {
             /** Illustrativenetpnl */
@@ -3001,6 +3282,43 @@ export interface operations {
             };
         };
     };
+    analyze_fundamental_api_v1_research_fundamental_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FundamentalAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundamentalAnalysisReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analyze_industry_api_v1_research_industry_analyze_post: {
         parameters: {
             query?: never;
@@ -3025,6 +3343,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IndustryAnalysisReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_macro_api_v1_research_macro_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MacroAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroAnalysisReport"];
                 };
             };
             /** @description Validation Error */
