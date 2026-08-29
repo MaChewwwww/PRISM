@@ -232,18 +232,18 @@
   font: 650 0.64rem/1 var(--font-mono);
 }
 .overview-chip-symbol {
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   font-weight: 650;
 }
 .overview-chip-date {
   margin-top: 0.1rem;
   color: var(--text-muted);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
 }
 .overview-outcome-tag {
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-chip);
-  font: 650 0.58rem/1.4 var(--font-mono);
+  font: 650 0.75rem/1.4 var(--font-mono);
   text-transform: uppercase;
 }
 .overview-outcome-modify {
@@ -264,7 +264,7 @@
   gap: 0.3rem;
   padding: 0.12rem 0.4rem 0.12rem 0.3rem;
   border-radius: var(--radius-pill);
-  font: 650 0.58rem/1.5 var(--font-sans);
+  font: 650 0.75rem/1.5 var(--font-sans);
 }
 .overview-agent-dot {
   width: 0.35rem;
@@ -290,14 +290,14 @@
 }
 .overview-chip-title {
   margin-top: 0.45rem;
-  font-size: 0.72rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.35;
 }
 .overview-chip-reasoning {
   margin-top: 0.25rem;
   color: var(--text-muted);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-style: italic;
   line-height: 1.4;
 }
@@ -305,13 +305,13 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   font-weight: 650;
 }
 .overview-chip-alt {
   color: var(--text-muted);
   font-weight: 550;
-  font-size: 0.64rem;
+  font-size: 0.75rem;
 }
 
 /* Chart panel */

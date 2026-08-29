@@ -27,9 +27,9 @@ export default async function StoriesPage({
   return (
     <>
       <PageHeader
-        eyebrow="Decision stories"
-        title="The full history, told as decisions"
-        description="Browse catalysts, agent debate, deterministic gates, illustrative outcomes, and counterfactual lessons without jumping between domain tables."
+        eyebrow="Decision log"
+        title="Decision Stories"
+        description="A scannable feed of the narrative takeaway and the counterfactual impact behind every call the agent stack made."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
