@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -37,8 +39,20 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-async def create_tables() -> None:
+async def check_database() -> bool:
     if not _engine:
-        raise RuntimeError("Database not initialized.")
-    async with _engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        return False
+    try:
+        async with _engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        return False
+    return True
+
+
+async def close_database() -> None:
+    global _engine, _sessionmaker
+    if _engine is not None:
+        await _engine.dispose()
+    _engine = None
+    _sessionmaker = None

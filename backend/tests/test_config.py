@@ -30,6 +30,11 @@ def test_llm_configuration_defaults() -> None:
     assert settings.ollama_base_url == "http://localhost:11434"
     assert settings.featherless_api_key is None
     assert settings.featherless_base_url == "https://api.featherless.ai/v1"
-    assert settings.auth_email == "operator@shadowfund.local"
-    assert settings.auth_password == "shadowfund2026!"
+    assert settings.auth_email == "operator@prism.local"
+    assert settings.auth_password == "prism-development-only"
     assert settings.auth_session_expire_hours == 24
+
+
+def test_staging_rejects_example_authentication_secrets() -> None:
+    with pytest.raises(ValidationError, match="non-example AUTH_PASSWORD"):
+        Settings(_env_file=None, environment="staging")

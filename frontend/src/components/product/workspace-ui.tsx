@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowRight, FlaskConical, LockKeyhole } from "lucide-rea
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { Provenance } from "@/features/story/story-data";
+import type { Provenance } from "@/features/story/presentation-api";
 
 export function DemoDataNotice() {
   return (
@@ -73,12 +73,12 @@ export function StateBadge({ state }: { state: string }) {
 }
 
 const provenanceLabels: Record<Provenance, string> = {
-  "active-portfolio": "Active Portfolio",
-  "shadow-portfolio": "Shadow Portfolio",
-  "market-benchmark": "Market Benchmark",
-  "illustrative-paper": "Active Portfolio",
-  simulated: "Shadow Portfolio",
-  "planned-integration": "Planned Integration",
+  illustrative_fixture: "Illustrative fixture",
+  alpaca_paper: "Alpaca paper",
+  shadow: "ShadowFund",
+  benchmark: "Benchmark",
+  simulated: "Simulated",
+  planned_integration: "Planned integration",
 };
 
 export function ProvenanceLabel({ provenance }: { provenance: Provenance }) {

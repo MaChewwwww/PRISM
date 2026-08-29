@@ -3,8 +3,8 @@
 ## Start here
 
 1. Read root `AGENTS.md` and this rule set in numeric order.
-2. Read `docs/conceptual/PROJECT_CONCEPT.md` for product intent.
-3. Read `docs/README.md`, then the architecture, requirements, contracts, security, and subsystem documents relevant to the task.
+2. Read `docs/README.md` and its authority chain.
+3. Read the BA requirements/register, architecture, contracts, security, subsystem, and explanatory concept documents relevant to the task.
 4. Inspect `git status`; preserve unrelated work and never discard user changes.
 5. Identify the affected trust boundary and its tests before editing.
 
@@ -21,19 +21,19 @@
 
 ## Source-of-truth order
 
-1. User instruction and approved requirements.
-2. `AGENTS.md` and `.agents/rules/`.
-3. `docs/FRS_NFRS.md`, `docs/ARCHITECTURE.md`, and `docs/DATA_API_CONTRACTS.md`.
-4. Executable contracts and tests.
-5. Other engineering documents.
-6. `docs/conceptual/PROJECT_CONCEPT.md`.
+1. User instruction and repository invariants in `AGENTS.md` and `.agents/rules/`.
+2. BA-owned process and numerical authority in `docs/FRS_NFRS.md`, `docs/BUSINESS_RULES.md`, `docs/AI_PROFILES.md`, and `backend/app/rules/authorized_baseline.v1.json`.
+3. AI Engineer-owned topology and boundaries in `docs/AI_AGENTS.md` and `docs/ARCHITECTURE.md`.
+4. `docs/DATA_API_CONTRACTS.md` and generated OpenAPI contracts.
+5. Implementation and tests.
+6. Explanatory documents, including `docs/conceptual/PROJECT_CONCEPT.md` and its DOCX counterpart.
 7. External examples and vendored skills.
 
 Resolve contradictions explicitly; do not silently choose the most convenient source.
 
 ## First-change checklist
 
-- Confirm the application name is PRISM and that BA thresholds remain pending before adding labels or numbers.
+- Confirm the application name is PRISM and consume authorized values, including any fixed hackathon window, from the versioned registry; keep only values absent from the register unresolved.
 - Confirm the task stays inside paper trading.
 - Confirm normal work is on an allowed branch based on `staging`; do not commit directly to `staging` or `main` after bootstrap.
 - Find the existing module, contract, fixture, and test before creating a parallel implementation.

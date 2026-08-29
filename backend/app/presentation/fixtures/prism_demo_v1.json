@@ -1,0 +1,2432 @@
+{
+  "asOf": "2026-08-28",
+  "stories": [
+    {
+      "id": "acme-earnings-gap",
+      "occurredAt": "2026-08-25T14:30:00Z",
+      "symbol": "ACME",
+      "category": "Earnings",
+      "title": "A muted earnings reaction became a smaller, safer idea",
+      "summary": "Research found a reaction gap, Risk AI challenged concentration, and the rules required reduced sizing before the idea could progress.",
+      "outcome": "modify",
+      "ruleResult": "MODIFY",
+      "chosenPathImpact": "+$184.00",
+      "bestAlternativeImpact": "+$241.00",
+      "lesson": "Earlier spread selection would have reduced volatility exposure.",
+      "catalyst": {
+        "headline": "ACME illustrative earnings update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-08-25T14:30:00Z",
+        "classification": "Potential reaction gap",
+        "observedMove": "+1.1%",
+        "expectedMove": "+2.8%"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "ready",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "complete",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "Candidate structured",
+          "actor": "Proposal agent",
+          "status": "complete",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "complete",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "MODIFY",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "acme-earnings-gap-step-1",
+          "occurredAt": "2026-08-25T14:30:04Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "acme-earnings-gap-step-2",
+          "occurredAt": "2026-08-25T14:30:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3240,
+          "outputTokens": 612,
+          "latencyMs": 4210,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "acme-earnings-gap-step-3",
+          "occurredAt": "2026-08-25T14:30:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 1910,
+          "outputTokens": 388,
+          "latencyMs": 2380,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "acme-earnings-gap-step-4",
+          "occurredAt": "2026-08-25T14:30:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "MODIFY result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "PASS",
+          "explanation": "The illustrative candidate stayed within the documented defined-risk envelope."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "MODIFY",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "TBD",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "Modified candidate retained for review",
+        "status": "modify",
+        "rationale": "Research found a reaction gap, Risk AI challenged concentration, and the rules required reduced sizing before the idea could progress.",
+        "observedAt": "2026-08-25T14:30:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$184.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "Earlier spread selection would have reduced volatility exposure.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-08-25T14:30:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-08-25T14:30:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-08-25T14:30:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    },
+    {
+      "id": "nova-product-no-trade",
+      "occurredAt": "2026-08-21T16:10:00Z",
+      "symbol": "NOVA",
+      "category": "Product",
+      "title": "The announcement looked important, but the market had already priced it",
+      "summary": "The agents found no durable reaction gap. NO_TRADE preserved capital and remained a successful governed outcome.",
+      "outcome": "no_trade",
+      "ruleResult": "NOT_EVALUATED",
+      "chosenPathImpact": "$0.00",
+      "bestAlternativeImpact": "-$96.00",
+      "lesson": "No action outperformed every simulated entry.",
+      "catalyst": {
+        "headline": "NOVA illustrative product update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-08-21T16:10:00Z",
+        "classification": "Potential reaction gap",
+        "observedMove": "+1.3%",
+        "expectedMove": "+2.9%"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "ready",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "complete",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "NO_TRADE returned",
+          "actor": "Proposal agent",
+          "status": "complete",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "not required",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "NOT_EVALUATED",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "nova-product-no-trade-step-1",
+          "occurredAt": "2026-08-21T16:10:00Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "nova-product-no-trade-step-2",
+          "occurredAt": "2026-08-21T16:10:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3310,
+          "outputTokens": 630,
+          "latencyMs": 4265,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "nova-product-no-trade-step-3",
+          "occurredAt": "2026-08-21T16:10:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 1955,
+          "outputTokens": 400,
+          "latencyMs": 2420,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "nova-product-no-trade-step-4",
+          "occurredAt": "2026-08-21T16:10:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "NOT EVALUATED result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "PASS",
+          "explanation": "The illustrative candidate stayed within the documented defined-risk envelope."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "TBD",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "TBD",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "No broker order created",
+        "status": "no_trade",
+        "rationale": "The agents found no durable reaction gap. NO_TRADE preserved capital and remained a successful governed outcome.",
+        "observedAt": "2026-08-21T16:10:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "$0.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "No action outperformed every simulated entry.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-08-21T16:10:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-08-21T16:10:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-08-21T16:10:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    },
+    {
+      "id": "orbt-macro-incomplete",
+      "occurredAt": "2026-08-12T13:05:00Z",
+      "symbol": "ORBT",
+      "category": "Macro",
+      "title": "Incomplete market context stopped the workflow before a proposal",
+      "summary": "A catalyst was detected, but stale comparison data prevented research from advancing into strategy generation.",
+      "outcome": "degraded",
+      "ruleResult": "NOT_EVALUATED",
+      "chosenPathImpact": "$0.00",
+      "bestAlternativeImpact": "Unavailable",
+      "lesson": "Freshness coverage needs to be explicit before the agent run starts.",
+      "catalyst": {
+        "headline": "ORBT illustrative macro update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-08-12T13:05:00Z",
+        "classification": "Incomplete evidence",
+        "observedMove": "Unavailable",
+        "expectedMove": "Unavailable"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "incomplete",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "stopped",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "Candidate structured",
+          "actor": "Proposal agent",
+          "status": "not run",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "not required",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "NOT_EVALUATED",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "orbt-macro-incomplete-step-1",
+          "occurredAt": "2026-08-12T13:05:00Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "orbt-macro-incomplete-step-2",
+          "occurredAt": "2026-08-12T13:05:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3380,
+          "outputTokens": 648,
+          "latencyMs": 4320,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "orbt-macro-incomplete-step-3",
+          "occurredAt": "2026-08-12T13:05:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 2000,
+          "outputTokens": 412,
+          "latencyMs": 2460,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "orbt-macro-incomplete-step-4",
+          "occurredAt": "2026-08-12T13:05:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "NOT EVALUATED result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "PASS",
+          "explanation": "The illustrative candidate stayed within the documented defined-risk envelope."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "TBD",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "FAIL",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "No broker order created",
+        "status": "degraded",
+        "rationale": "A catalyst was detected, but stale comparison data prevented research from advancing into strategy generation.",
+        "observedAt": "2026-08-12T13:05:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$184.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "Freshness coverage needs to be explicit before the agent run starts.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-08-12T13:05:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-08-12T13:05:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-08-12T13:05:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    },
+    {
+      "id": "vela-guidance-pass",
+      "occurredAt": "2026-07-29T15:20:00Z",
+      "symbol": "VELA",
+      "category": "Guidance",
+      "title": "A defined-risk structure passed every configured platform control",
+      "summary": "The proposal matched the synthetic evidence, used a bounded debit spread, and passed the illustrative rule trace.",
+      "outcome": "pass",
+      "ruleResult": "PASS",
+      "chosenPathImpact": "+$126.00",
+      "bestAlternativeImpact": "+$109.00",
+      "lesson": "The selected hedge improved the result after volatility contracted.",
+      "catalyst": {
+        "headline": "VELA illustrative guidance update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-07-29T15:20:00Z",
+        "classification": "Potential reaction gap",
+        "observedMove": "+1.7%",
+        "expectedMove": "+3.3%"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "ready",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "complete",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "Candidate structured",
+          "actor": "Proposal agent",
+          "status": "complete",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "complete",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "PASS",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "vela-guidance-pass-step-1",
+          "occurredAt": "2026-07-29T15:20:00Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "vela-guidance-pass-step-2",
+          "occurredAt": "2026-07-29T15:20:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3450,
+          "outputTokens": 666,
+          "latencyMs": 4375,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "vela-guidance-pass-step-3",
+          "occurredAt": "2026-07-29T15:20:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 2045,
+          "outputTokens": 424,
+          "latencyMs": 2500,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "vela-guidance-pass-step-4",
+          "occurredAt": "2026-07-29T15:20:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "PASS result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "PASS",
+          "explanation": "The illustrative candidate stayed within the documented defined-risk envelope."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "TBD",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "TBD",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "Illustrative governed outcome recorded",
+        "status": "pass",
+        "rationale": "The proposal matched the synthetic evidence, used a bounded debit spread, and passed the illustrative rule trace.",
+        "observedAt": "2026-07-29T15:20:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$184.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "The selected hedge improved the result after volatility contracted.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-07-29T15:20:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-07-29T15:20:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-07-29T15:20:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    },
+    {
+      "id": "kite-liquidity-fail",
+      "occurredAt": "2026-07-08T14:42:00Z",
+      "symbol": "KITE",
+      "category": "Corporate action",
+      "title": "Thin synthetic option markets turned a plausible thesis into a rejection",
+      "summary": "Risk AI flagged execution uncertainty and the deterministic gate failed because required liquidity configuration was absent.",
+      "outcome": "fail",
+      "ruleResult": "FAIL",
+      "chosenPathImpact": "$0.00",
+      "bestAlternativeImpact": "-$173.00",
+      "lesson": "The rejection avoided an optimistic midpoint assumption.",
+      "catalyst": {
+        "headline": "KITE illustrative corporate action update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-07-08T14:42:00Z",
+        "classification": "Potential reaction gap",
+        "observedMove": "+1.9%",
+        "expectedMove": "+3.4%"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "ready",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "complete",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "Candidate structured",
+          "actor": "Proposal agent",
+          "status": "complete",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "complete",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "FAIL",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "kite-liquidity-fail-step-1",
+          "occurredAt": "2026-07-08T14:42:00Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "kite-liquidity-fail-step-2",
+          "occurredAt": "2026-07-08T14:42:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3520,
+          "outputTokens": 684,
+          "latencyMs": 4430,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "kite-liquidity-fail-step-3",
+          "occurredAt": "2026-07-08T14:42:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 2090,
+          "outputTokens": 436,
+          "latencyMs": 2540,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "kite-liquidity-fail-step-4",
+          "occurredAt": "2026-07-08T14:42:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "FAIL result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "FAIL",
+          "explanation": "The synthetic record did not have enough verified structure to progress."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "TBD",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "TBD",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "No broker order created",
+        "status": "fail",
+        "rationale": "Risk AI flagged execution uncertainty and the deterministic gate failed because required liquidity configuration was absent.",
+        "observedAt": "2026-07-08T14:42:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$184.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "The rejection avoided an optimistic midpoint assumption.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-07-08T14:42:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-07-08T14:42:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-07-08T14:42:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    },
+    {
+      "id": "heli-sector-rotation",
+      "occurredAt": "2026-05-19T17:15:00Z",
+      "symbol": "HELI",
+      "category": "Sector",
+      "title": "A broad sector move weakened the single-name explanation",
+      "summary": "Historical analogs showed that the apparent reaction gap was mostly explained by a wider sector rotation.",
+      "outcome": "no_trade",
+      "ruleResult": "NOT_EVALUATED",
+      "chosenPathImpact": "$0.00",
+      "bestAlternativeImpact": "+$22.00",
+      "lesson": "Sector-adjusted analogs should be weighted before raw single-name moves.",
+      "catalyst": {
+        "headline": "HELI illustrative sector update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-05-19T17:15:00Z",
+        "classification": "Potential reaction gap",
+        "observedMove": "+2.1%",
+        "expectedMove": "+3.5%"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "ready",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "complete",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "NO_TRADE returned",
+          "actor": "Proposal agent",
+          "status": "complete",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "not required",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "NOT_EVALUATED",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "heli-sector-rotation-step-1",
+          "occurredAt": "2026-05-19T17:15:00Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "heli-sector-rotation-step-2",
+          "occurredAt": "2026-05-19T17:15:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3590,
+          "outputTokens": 702,
+          "latencyMs": 4485,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "heli-sector-rotation-step-3",
+          "occurredAt": "2026-05-19T17:15:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 2135,
+          "outputTokens": 448,
+          "latencyMs": 2580,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "heli-sector-rotation-step-4",
+          "occurredAt": "2026-05-19T17:15:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "NOT EVALUATED result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "PASS",
+          "explanation": "The illustrative candidate stayed within the documented defined-risk envelope."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "TBD",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "TBD",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "No broker order created",
+        "status": "no_trade",
+        "rationale": "Historical analogs showed that the apparent reaction gap was mostly explained by a wider sector rotation.",
+        "observedAt": "2026-05-19T17:15:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "$0.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "Sector-adjusted analogs should be weighted before raw single-name moves.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-05-19T17:15:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-05-19T17:15:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-05-19T17:15:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    },
+    {
+      "id": "acme-guidance-review",
+      "occurredAt": "2026-03-11T14:05:00Z",
+      "symbol": "ACME",
+      "category": "Guidance",
+      "title": "Conflicting guidance evidence produced a deliberate fail-closed result",
+      "summary": "The research record contained contradictory sources and the workflow did not create an executable candidate.",
+      "outcome": "fail",
+      "ruleResult": "FAIL",
+      "chosenPathImpact": "$0.00",
+      "bestAlternativeImpact": "+$31.00",
+      "lesson": "Source disagreement should be visible before confidence is summarized.",
+      "catalyst": {
+        "headline": "ACME illustrative guidance update changed the evidence set",
+        "source": "Illustrative news fixture",
+        "publishedAt": "2026-03-11T14:05:00Z",
+        "classification": "Potential reaction gap",
+        "observedMove": "+2.3%",
+        "expectedMove": "+3.7%"
+      },
+      "marketPath": [
+        {
+          "date": "Pre-event",
+          "chosenPath": "100.00",
+          "alternative": "100.00",
+          "benchmark": "100.00"
+        },
+        {
+          "date": "Catalyst",
+          "chosenPath": "101.10",
+          "alternative": "101.10",
+          "benchmark": "100.30"
+        },
+        {
+          "date": "+30m",
+          "chosenPath": "101.42",
+          "alternative": "101.58",
+          "benchmark": "100.44"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "102.16",
+          "alternative": "102.74",
+          "benchmark": "100.61"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "103.02",
+          "alternative": "103.86",
+          "benchmark": "100.92"
+        }
+      ],
+      "decisionTree": [
+        {
+          "id": "catalyst",
+          "parentId": null,
+          "label": "Catalyst normalized",
+          "actor": "Market context",
+          "status": "ready",
+          "detail": "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence."
+        },
+        {
+          "id": "research",
+          "parentId": "catalyst",
+          "label": "Reaction gap assessed",
+          "actor": "Research agent",
+          "status": "complete",
+          "detail": "Observed movement was compared with illustrative analog outcomes and limitations."
+        },
+        {
+          "id": "proposal",
+          "parentId": "research",
+          "label": "Candidate structured",
+          "actor": "Proposal agent",
+          "status": "complete",
+          "detail": "The agent emitted structured intent only; it did not claim authorization."
+        },
+        {
+          "id": "risk",
+          "parentId": "proposal",
+          "label": "Contradictory evidence reviewed",
+          "actor": "Risk AI",
+          "status": "complete",
+          "detail": "Portfolio context, volatility exposure, and incomplete inputs were challenged independently."
+        },
+        {
+          "id": "rules",
+          "parentId": "risk",
+          "label": "Deterministic gate",
+          "actor": "Rules engine",
+          "status": "FAIL",
+          "detail": "Only the rule result can permit progression; fixture evaluation never authorizes execution."
+        }
+      ],
+      "transcript": [
+        {
+          "id": "acme-guidance-review-step-1",
+          "occurredAt": "2026-03-11T14:05:00Z",
+          "kind": "tool-call",
+          "actor": "News gateway",
+          "title": "Normalized the catalyst",
+          "summary": "Captured headline, symbols, publication time, receipt time, and source without forwarding credentials.",
+          "latencyMs": 184,
+          "evidenceRefs": [
+            "News fixture 01"
+          ]
+        },
+        {
+          "id": "acme-guidance-review-step-2",
+          "occurredAt": "2026-03-11T14:05:00Z",
+          "kind": "agent-summary",
+          "actor": "Research agent",
+          "title": "Compared the reaction with synthetic analogs",
+          "summary": "The initial move appeared smaller than the illustrative analog range, with sector effects retained as a limitation.",
+          "model": "demo-reasoning-model",
+          "promptVersion": "reaction-research@1.4",
+          "inputTokens": 3660,
+          "outputTokens": 720,
+          "latencyMs": 4540,
+          "evidenceRefs": [
+            "News fixture 01",
+            "Bars fixture 07",
+            "Analog set 03"
+          ]
+        },
+        {
+          "id": "acme-guidance-review-step-3",
+          "occurredAt": "2026-03-11T14:05:00Z",
+          "kind": "agent-summary",
+          "actor": "Risk AI",
+          "title": "Challenged sizing and volatility exposure",
+          "summary": "The critique identified missing business configuration and preferred a bounded structure over unhedged exposure.",
+          "model": "demo-fast-model",
+          "promptVersion": "risk-critique@1.2",
+          "inputTokens": 2180,
+          "outputTokens": 460,
+          "latencyMs": 2620,
+          "evidenceRefs": [
+            "Portfolio snapshot fixture",
+            "Synthetic option context"
+          ]
+        },
+        {
+          "id": "acme-guidance-review-step-4",
+          "occurredAt": "2026-03-11T14:05:00Z",
+          "kind": "rule-gate",
+          "actor": "Deterministic rules",
+          "title": "FAIL result recorded",
+          "summary": "The exact synthetic inputs were checked against platform controls and unconfigured BA fields failed closed.",
+          "latencyMs": 18,
+          "evidenceRefs": [
+            "Ruleset demo-draft",
+            "Proposal digest fixture"
+          ]
+        }
+      ],
+      "ruleChecks": [
+        {
+          "name": "Execution environment",
+          "result": "PASS",
+          "explanation": "The prototype represents paper-only behavior and contains no broker action."
+        },
+        {
+          "name": "Supported strategy envelope",
+          "result": "FAIL",
+          "explanation": "The synthetic record did not have enough verified structure to progress."
+        },
+        {
+          "name": "BA-owned concentration policy",
+          "result": "TBD",
+          "explanation": "The approved business threshold is not configured; no example value is treated as authority."
+        },
+        {
+          "name": "Evidence freshness policy",
+          "result": "TBD",
+          "explanation": "Freshness remains a configurable business field and incomplete evidence stops progression."
+        }
+      ],
+      "illustrativeOutcome": {
+        "action": "No broker order created",
+        "status": "fail",
+        "rationale": "The research record contained contradictory sources and the workflow did not create an executable candidate.",
+        "observedAt": "2026-03-11T14:05:00Z"
+      },
+      "alternatives": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$184.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "lessons": [
+        "Source disagreement should be visible before confidence is summarized.",
+        "Show evidence disagreement before compressing it into a confidence summary.",
+        "Treat the no-action branch as a first-class result, not as a missing trade."
+      ],
+      "evidence": [
+        {
+          "label": "Catalyst article",
+          "source": "Illustrative news fixture",
+          "observedAt": "2026-03-11T14:05:00Z",
+          "provenance": "planned-integration"
+        },
+        {
+          "label": "Illustrative governed outcome path",
+          "source": "Illustrative governed outcome fixture",
+          "observedAt": "2026-03-11T14:05:00Z",
+          "provenance": "illustrative_fixture"
+        },
+        {
+          "label": "ShadowFund counterfactuals",
+          "source": "ShadowFund Simulation Engine",
+          "observedAt": "2026-03-11T14:05:00Z",
+          "provenance": "shadow"
+        }
+      ]
+    }
+  ],
+  "portfolioPoints": [
+    {
+      "date": "2026-01-02",
+      "chosenPath": "100000.00",
+      "agentAlternative": "100000.00",
+      "reducedSize": "100000.00",
+      "unhedged": "100000.00",
+      "cashBaseline": "100000.00",
+      "alternative": "100000.00",
+      "benchmark": "100000.00",
+      "pnl": "0.00",
+      "drawdown": "0.00"
+    },
+    {
+      "date": "2026-02-02",
+      "chosenPath": "100640.00",
+      "agentAlternative": "100410.00",
+      "reducedSize": "100320.00",
+      "unhedged": "100820.00",
+      "cashBaseline": "100000.00",
+      "alternative": "100410.00",
+      "benchmark": "100330.00",
+      "pnl": "640.00",
+      "drawdown": "-210.00"
+    },
+    {
+      "date": "2026-03-02",
+      "chosenPath": "100180.00",
+      "agentAlternative": "100760.00",
+      "reducedSize": "100090.00",
+      "unhedged": "99420.00",
+      "cashBaseline": "100000.00",
+      "alternative": "100760.00",
+      "benchmark": "100520.00",
+      "pnl": "180.00",
+      "drawdown": "-690.00"
+    },
+    {
+      "date": "2026-04-01",
+      "chosenPath": "101220.00",
+      "agentAlternative": "101090.00",
+      "reducedSize": "100610.00",
+      "unhedged": "100980.00",
+      "cashBaseline": "100000.00",
+      "alternative": "101090.00",
+      "benchmark": "100810.00",
+      "pnl": "1220.00",
+      "drawdown": "-260.00"
+    },
+    {
+      "date": "2026-05-01",
+      "chosenPath": "101080.00",
+      "agentAlternative": "101420.00",
+      "reducedSize": "100540.00",
+      "unhedged": "100360.00",
+      "cashBaseline": "100000.00",
+      "alternative": "101420.00",
+      "benchmark": "101120.00",
+      "pnl": "1080.00",
+      "drawdown": "-430.00"
+    },
+    {
+      "date": "2026-06-01",
+      "chosenPath": "101760.00",
+      "agentAlternative": "101980.00",
+      "reducedSize": "100880.00",
+      "unhedged": "101440.00",
+      "cashBaseline": "100000.00",
+      "alternative": "101980.00",
+      "benchmark": "101440.00",
+      "pnl": "1760.00",
+      "drawdown": "-220.00"
+    },
+    {
+      "date": "2026-07-01",
+      "chosenPath": "102140.00",
+      "agentAlternative": "102510.00",
+      "reducedSize": "101070.00",
+      "unhedged": "101820.00",
+      "cashBaseline": "100000.00",
+      "alternative": "102510.00",
+      "benchmark": "101720.00",
+      "pnl": "2140.00",
+      "drawdown": "-310.00"
+    },
+    {
+      "date": "2026-07-08",
+      "chosenPath": "102040.00",
+      "agentAlternative": "102620.00",
+      "reducedSize": "101020.00",
+      "unhedged": "101240.00",
+      "cashBaseline": "100000.00",
+      "alternative": "102620.00",
+      "benchmark": "101760.00",
+      "pnl": "2040.00",
+      "drawdown": "-410.00"
+    },
+    {
+      "date": "2026-07-22",
+      "chosenPath": "102480.00",
+      "agentAlternative": "102910.00",
+      "reducedSize": "101240.00",
+      "unhedged": "102180.00",
+      "cashBaseline": "100000.00",
+      "alternative": "102910.00",
+      "benchmark": "101880.00",
+      "pnl": "2480.00",
+      "drawdown": "-180.00"
+    },
+    {
+      "date": "2026-07-29",
+      "chosenPath": "102790.00",
+      "agentAlternative": "103030.00",
+      "reducedSize": "101395.00",
+      "unhedged": "102310.00",
+      "cashBaseline": "100000.00",
+      "alternative": "103030.00",
+      "benchmark": "101960.00",
+      "pnl": "2790.00",
+      "drawdown": "-140.00"
+    },
+    {
+      "date": "2026-08-05",
+      "chosenPath": "102610.00",
+      "agentAlternative": "103260.00",
+      "reducedSize": "101305.00",
+      "unhedged": "101690.00",
+      "cashBaseline": "100000.00",
+      "alternative": "103260.00",
+      "benchmark": "102020.00",
+      "pnl": "2610.00",
+      "drawdown": "-320.00"
+    },
+    {
+      "date": "2026-08-12",
+      "chosenPath": "102920.00",
+      "agentAlternative": "103410.00",
+      "reducedSize": "101460.00",
+      "unhedged": "102420.00",
+      "cashBaseline": "100000.00",
+      "alternative": "103410.00",
+      "benchmark": "102110.00",
+      "pnl": "2920.00",
+      "drawdown": "-110.00"
+    },
+    {
+      "date": "2026-08-18",
+      "chosenPath": "103070.00",
+      "agentAlternative": "103590.00",
+      "reducedSize": "101535.00",
+      "unhedged": "102680.00",
+      "cashBaseline": "100000.00",
+      "alternative": "103590.00",
+      "benchmark": "102160.00",
+      "pnl": "3070.00",
+      "drawdown": "-90.00"
+    },
+    {
+      "date": "2026-08-21",
+      "chosenPath": "103120.00",
+      "agentAlternative": "103720.00",
+      "reducedSize": "101560.00",
+      "unhedged": "102710.00",
+      "cashBaseline": "100000.00",
+      "alternative": "103720.00",
+      "benchmark": "102220.00",
+      "pnl": "3120.00",
+      "drawdown": "-76.00"
+    },
+    {
+      "date": "2026-08-22",
+      "chosenPath": "103180.00",
+      "agentAlternative": "103780.00",
+      "reducedSize": "101590.00",
+      "unhedged": "102830.00",
+      "cashBaseline": "100000.00",
+      "alternative": "103780.00",
+      "benchmark": "102240.00",
+      "pnl": "3180.00",
+      "drawdown": "-54.00"
+    },
+    {
+      "date": "2026-08-25",
+      "chosenPath": "103364.00",
+      "agentAlternative": "104021.00",
+      "reducedSize": "101682.00",
+      "unhedged": "102540.00",
+      "cashBaseline": "100000.00",
+      "alternative": "104021.00",
+      "benchmark": "102310.00",
+      "pnl": "3364.00",
+      "drawdown": "-76.00"
+    },
+    {
+      "date": "2026-08-28",
+      "chosenPath": "103840.00",
+      "agentAlternative": "104620.00",
+      "reducedSize": "101920.00",
+      "unhedged": "103210.00",
+      "cashBaseline": "100000.00",
+      "alternative": "104620.00",
+      "benchmark": "102440.00",
+      "pnl": "3840.00",
+      "drawdown": "-62.00"
+    }
+  ],
+  "alternatives": [
+    {
+      "id": "session-acme-earnings",
+      "storyId": "acme-earnings-gap",
+      "occurredAt": "2026-08-25T14:30:00Z",
+      "symbol": "ACME",
+      "title": "Which structure handled the volatility contraction best?",
+      "summary": "The agent alternative finished ahead, while the unhedged branch showed the largest adverse excursion.",
+      "chosenPathPnl": "+$184.00",
+      "bestBranch": "Shadow: Agent Counterfactual",
+      "alternativeLabel": "Shadow: Agent Counterfactual",
+      "bestDelta": "+$57.00",
+      "coverage": "94%",
+      "branches": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$184.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "path": [
+        {
+          "date": "Entry",
+          "chosenPath": "0.00",
+          "alternative": "0.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "+1h",
+          "chosenPath": "48.00",
+          "alternative": "64.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "92.00",
+          "alternative": "128.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "184.00",
+          "alternative": "241.00",
+          "benchmark": "0.00"
+        }
+      ],
+      "limitations": [
+        "All marks are synthetic and do not model queue position or market impact.",
+        "The unhedged branch has incomplete quote coverage and may be optimistic.",
+        "Simulated branches can inform review but can never become executable orders."
+      ]
+    },
+    {
+      "id": "session-vela-guidance",
+      "storyId": "vela-guidance-pass",
+      "occurredAt": "2026-07-29T15:20:00Z",
+      "symbol": "VELA",
+      "title": "Did the selected hedge improve the guidance trade?",
+      "summary": "The governed illustrative path retained more value than the unhedged branch after volatility contracted.",
+      "chosenPathPnl": "+$126.00",
+      "bestBranch": "Illustrative governed path",
+      "alternativeLabel": "Shadow: Unhedged Alternative",
+      "bestDelta": "+$17.00",
+      "coverage": "97%",
+      "branches": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "+$126.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "+$102.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "+$61.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "+$241.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "path": [
+        {
+          "date": "Entry",
+          "chosenPath": "0.00",
+          "alternative": "0.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "+1h",
+          "chosenPath": "34.00",
+          "alternative": "28.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "88.00",
+          "alternative": "77.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "126.00",
+          "alternative": "109.00",
+          "benchmark": "0.00"
+        }
+      ],
+      "limitations": [
+        "Synthetic marks omit fees and assignment risk.",
+        "The comparison uses one illustrative evaluation horizon."
+      ]
+    },
+    {
+      "id": "session-nova-no-trade",
+      "storyId": "nova-product-no-trade",
+      "occurredAt": "2026-08-21T16:10:00Z",
+      "symbol": "NOVA",
+      "title": "How much did no action protect after the announcement?",
+      "summary": "Every simulated entry finished below the cash baseline in this scenario.",
+      "chosenPathPnl": "$0.00",
+      "bestBranch": "No action",
+      "alternativeLabel": "Shadow: Unhedged Proposal",
+      "bestDelta": "+$96.00",
+      "coverage": "92%",
+      "branches": [
+        {
+          "id": "chosen",
+          "label": "Illustrative governed path",
+          "variation": "Recorded governed outcome",
+          "pnl": "$0.00",
+          "deltaVsChosen": "—",
+          "drawdown": "-$76.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "no-action",
+          "label": "Shadow: Cash Baseline",
+          "variation": "Remain entirely in cash",
+          "pnl": "$0.00",
+          "deltaVsChosen": "-$184.00",
+          "drawdown": "$0.00",
+          "coverage": "100%",
+          "status": "complete"
+        },
+        {
+          "id": "reduced-size",
+          "label": "Shadow: Reduced Sizing",
+          "variation": "Half the active allocation (50% risk)",
+          "pnl": "-$96.00",
+          "deltaVsChosen": "-$82.00",
+          "drawdown": "-$38.00",
+          "coverage": "96%",
+          "status": "complete"
+        },
+        {
+          "id": "unhedged",
+          "label": "Shadow: Unhedged Structure",
+          "variation": "Long option without the short spread leg",
+          "pnl": "-$96.00",
+          "deltaVsChosen": "-$123.00",
+          "drawdown": "-$164.00",
+          "coverage": "82%",
+          "status": "incomplete"
+        },
+        {
+          "id": "agent-alternative",
+          "label": "Shadow: Agent Counterfactual",
+          "variation": "Earlier expiry with the same bounded structure",
+          "pnl": "-$96.00",
+          "deltaVsChosen": "+$57.00",
+          "drawdown": "-$91.00",
+          "coverage": "94%",
+          "status": "complete"
+        }
+      ],
+      "path": [
+        {
+          "date": "Decision",
+          "chosenPath": "0.00",
+          "alternative": "0.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "+1h",
+          "chosenPath": "0.00",
+          "alternative": "-24.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "Close",
+          "chosenPath": "0.00",
+          "alternative": "-61.00",
+          "benchmark": "0.00"
+        },
+        {
+          "date": "+1 session",
+          "chosenPath": "0.00",
+          "alternative": "-96.00",
+          "benchmark": "0.00"
+        }
+      ],
+      "limitations": [
+        "No-action is a simulated comparison baseline, not an account order."
+      ]
+    }
+  ],
+  "news": [
+    {
+      "id": "news-acme",
+      "publishedAt": "2026-08-25T14:30:00Z",
+      "source": "Illustrative Market Wire",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "ACME"
+      ],
+      "headline": "ACME illustrative earnings update arrives above the synthetic comparison set",
+      "summary": "A deterministic article fixture used to demonstrate catalyst linkage and event-time filtering.",
+      "category": "Earnings",
+      "storyId": "acme-earnings-gap",
+      "significance": "high"
+    },
+    {
+      "id": "news-nova",
+      "publishedAt": "2026-08-21T16:10:00Z",
+      "source": "Illustrative Business Desk",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "NOVA"
+      ],
+      "headline": "NOVA announces a simulated product milestone",
+      "summary": "The synthetic market response already reflected the headline by the time research completed.",
+      "category": "Product",
+      "storyId": "nova-product-no-trade",
+      "significance": "medium"
+    },
+    {
+      "id": "news-orbt",
+      "publishedAt": "2026-08-12T13:05:00Z",
+      "source": "Illustrative Macro Desk",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "ORBT"
+      ],
+      "headline": "Synthetic macro release changes the sector context",
+      "summary": "Comparison bars were intentionally incomplete to exercise a degraded workflow.",
+      "category": "Macro",
+      "storyId": "orbt-macro-incomplete",
+      "significance": "high"
+    },
+    {
+      "id": "news-vela",
+      "publishedAt": "2026-07-29T15:20:00Z",
+      "source": "Illustrative Market Wire",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "VELA"
+      ],
+      "headline": "VELA raises illustrative guidance for the next reporting period",
+      "summary": "A bounded fixture scenario connected to a PASS story and ShadowFund comparison.",
+      "category": "Guidance",
+      "storyId": "vela-guidance-pass",
+      "significance": "high"
+    },
+    {
+      "id": "news-kite",
+      "publishedAt": "2026-07-08T14:42:00Z",
+      "source": "Illustrative Corporate Desk",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "KITE"
+      ],
+      "headline": "KITE files a simulated corporate-action update",
+      "summary": "The story demonstrates why a plausible thesis can still fail on missing liquidity configuration.",
+      "category": "Corporate action",
+      "storyId": "kite-liquidity-fail",
+      "significance": "medium"
+    },
+    {
+      "id": "news-heli",
+      "publishedAt": "2026-05-19T17:15:00Z",
+      "source": "Illustrative Sector Desk",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "HELI"
+      ],
+      "headline": "Synthetic sector rotation lifts multiple illustrative names",
+      "summary": "The wider move weakened the single-name explanation and produced NO_TRADE.",
+      "category": "Sector",
+      "storyId": "heli-sector-rotation",
+      "significance": "low"
+    },
+    {
+      "id": "news-acme-old",
+      "publishedAt": "2026-03-11T14:05:00Z",
+      "source": "Illustrative Business Desk",
+      "provider": "Alpaca News-shaped fixture",
+      "symbols": [
+        "ACME"
+      ],
+      "headline": "Conflicting illustrative guidance sources create an incomplete evidence set",
+      "summary": "The fixture retains source disagreement rather than collapsing it into certainty.",
+      "category": "Guidance",
+      "storyId": "acme-guidance-review",
+      "significance": "medium"
+    }
+  ]
+}

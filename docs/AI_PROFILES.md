@@ -1,91 +1,43 @@
 # AI Profiles
 
-## Definition
+Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
-An AI Profile is a versioned set of strategy and risk preferences that operates inside platform hard limits and deterministic business-rule boundaries. It is not the Alpaca portfolio or account state.
+An AI Profile is a versioned strategy-preference record inside deterministic hard limits. It is not portfolio/account state and cannot weaken a ruleset.
 
 ## Lifecycle
 
 ```text
-draft recommendation -> deterministic validation -> review/approval -> activation -> superseded
+draft recommendation -> deterministic validation -> manual review -> activation -> superseded
 ```
 
-Each profile records `profile_id`, version, status, effective time, source recommendation, configurable parameters, ruleset compatibility, activation mode, creator/approver, and audit metadata. Only one profile may be active for a decision time.
+The current skeleton exposes recommendations and validation states as read-only illustrative data. Profile persistence and activation APIs are deferred. Automatic switching is not authorized for the MVP.
 
-## Governance levels
+## Authorized fields and bounds
 
-1. Platform hard limits are non-bypassable engineering controls.
-2. Deterministic business rules define approved permissions, ceilings, floors, and configurable ranges.
-3. The active AI Profile selects values only within those ranges.
+| Field | Minimum | Maximum | Notes |
+| --- | ---: | ---: | --- |
+| `target_position_size_pct` | 1.50% | 2.50% | A target only; hard portfolio and per-trade risk caps still apply. |
+| `opportunity_score_threshold` | 75 | 95 | Minimum specialist synthesis score before proposal eligibility. |
+| `take_profit_pct` | 75.00% | 100.00% | Must also satisfy realistic reward/risk of at least 1.5:1. |
+| `stop_loss_pct` | 50.00% | 50.00% | Fixed hard exit; not tunable. |
 
-The BA has authorized the configurable parameters, their bounds, and the standardized profiles below (see [Authorized profile schema and standardized profiles](#authorized-profile-schema-and-standardized-profiles)). Additional profile-configurable preferences include active intraday `trading_windows` (within the 09:30–16:00 ET market boundary), opportunity confidence floor, preferred event categories, sizing preference within a hard cap, expected-value threshold, entry-quality preference, trade-frequency preference, and regime sensitivity. Profiles may tune these only within active ruleset-defined bounds; hard limits, loss caps, instrument restrictions, and mandatory exits remain outside AI control.
+## Standard profiles
 
-## Recommendation and activation
+| Field | Conservative | Balanced | Aggressive |
+| --- | ---: | ---: | ---: |
+| Target position size | 1.50% | 2.00% | 2.50% |
+| Opportunity score | 90 | 84 | 80 |
+| Take-profit | 75.00% | 75.00% | 100.00% |
+| Stop-loss | 50.00% | 50.00% | 50.00% |
 
-Post-Analysis AI may propose changes with evidence, expected effect, uncertainty, and affected parameters. A deterministic validator rejects unknown fields, values outside approved ranges, incompatible rulesets, missing evidence, or attempts to weaken hard controls.
+Balanced is the active default in ruleset `prism-authorized-baseline@1.0.0`. Final executable sizing is always the minimum of target allocation, per-trade stop-risk, ticker/sector/cluster/portfolio caps, regime, liquidity, and buying-power constraints.
 
-Manual Prescriptive mode is the initial supported activation model: an authorized operator applies, modifies, or rejects the recommendation. Automatic weekly activation is deferred and must not be inferred from scheduling infrastructure.
+## Compatibility and activation
 
-Every activation records the previous profile, new profile, recommendation, validation result, activation mode, actor, and timestamp. Historical decisions retain the profile version used at their decision time.
+Every profile identifies its version, lifecycle state, effective period, compatible ruleset, activation mode, and audit metadata. A deterministic validator rejects unknown fields, values outside the bounds, incompatible versions, missing evidence, or any attempt to change hard controls.
 
-## Authorized profile schema and standardized profiles
+Post-Analysis may recommend only the four fields above. Manual Prescriptive mode is the only authorized activation model. An operator may review, edit, or reject a recommendation, but any edit must be validated before activation. Scheduling infrastructure does not imply approval or activation.
 
-### 1. Profile scope and hard boundaries
+## Regime override
 
-Post-Analysis AI may recommend changes to these parameters, but recommendations can never exceed the deterministic limits.
-
-| Configurable parameter | Absolute minimum | Absolute maximum | Description |
-| :--- | :---: | :---: | :--- |
-| `target_position_size_pct` | $1.5\%$ | $2.5\%$ | Target capital allocation per trade; actual size remains subject to the $1.0\%$ normal / $0.75\%$ volatile risk caps and portfolio constraints. The authorized normal baseline (Balanced default) is $2.0\%$. |
-| `opportunity_score_threshold` | $75$ | $95$ | Minimum Research Agent score required to enter the Proposal stage; higher profiles may require more. |
-| `take_profit_pct` | $75.0\%$ | $100.0\%$ | Profit target measured against initial debit; the final target must satisfy the $1.5{:}1$ minimum realistic reward/risk. |
-| `stop_loss_pct` | $50.0\%$ | $50.0\%$ | Hard maximum-loss threshold on initial debit, fixed at $50\%$; sizing is constrained so this stop does not exceed the per-trade risk cap. |
-
-### 2. Standardized AI profiles
-
-The system supports three versioned profiles. **Balanced** is the default for the hackathon MVP.
-
-| Parameter | Conservative | Balanced (default) | Aggressive |
-| :--- | :---: | :---: | :---: |
-| `target_position_size_pct` | $1.5\%$ | $2.0\%$ | $2.5\%$ |
-| `opportunity_score_threshold` | $90$ | $84$ | $80$ |
-| `take_profit_pct` | $75.0\%$ | $75.0\%$ | $100.0\%$ |
-| `stop_loss_pct` | $50.0\%$ | $50.0\%$ | $50.0\%$ |
-
-> All profiles use a fixed $50\%$ hard stop-loss; sizing is constrained so this stop never exceeds the per-trade risk cap ($1.0\%$ normal / $0.75\%$ volatile). Profiles differ on allocation ($1.5\%$ / $2.0\%$ / $2.5\%$), selectivity (opportunity score $90$ / $84$ / $80$), and profit-taking (take-profit $75\%$ / $75\%$ / $100\%$). Final executable size for every profile remains the minimum of all applicable hard caps.
-
-### 3. Dynamic regime overrides
-
-Regardless of the active AI Profile, when the market regime is VOLATILE (underlying IV Rank $> 50\%$) the deterministic rules engine forces:
-
-- `target_position_size_pct` is hard-capped at $1.5\%$ maximum.
-- `option_structure` is restricted strictly to 1:1 debit spreads (no single-leg trades permitted).
-
-Hard limits, loss caps, instrument restrictions, and mandatory exits remain outside AI control at all times.
-
-## Deterministic profile validator gate
-
-Before a recommended profile `v(N+1)` can be made active, it must pass an automated validation check. If any parameter breaches its hard boundary, the recommendation is flagged REJECTED and discarded immediately.
-
-| Parameter | Allowed boundary range |
-| :--- | :---: |
-| Target position size | $[1.5\%, 2.5\%]$ |
-| Opportunity score threshold | $[75, 95]$ |
-| Take-profit target | $[75.0\%, 100.0\%]$ |
-| Stop-loss limit | $[50.0\%, 50.0\%]$ |
-
-## Activation modes
-
-- **Manual Prescriptive mode (mandatory MVP default):** Post-Analysis AI generates an `AIProfileRecommendation` from ShadowFund and paper-trade performance. An administrator manually reviews the evidence on the command center and clicks Apply, Edit, or Reject before parameters update for the upcoming trading week.
-- **Automatic Switching mode (opt-in):** If enabled by an admin, validated profile recommendations activate automatically ahead of Monday market open without human intervention. This mode remains deferred for the MVP and must not be inferred from scheduling infrastructure.
-
-## Immutable activation audit
-
-Every profile state change records an immutable row in PostgreSQL containing:
-
-- `previous_profile_id`
-- `new_profile_id`
-- `recommendation_id`
-- `activation_mode` (MANUAL vs AUTOMATIC)
-- `approver_id`
-- `timestamp`
+When the deterministic regime is VOLATILE, target position size is capped at 1.50%, planned risk is capped at 0.75% of current equity, and only supported 1:1 debit spreads are permitted. The override applies regardless of profile.

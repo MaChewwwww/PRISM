@@ -11,14 +11,14 @@ from app.core.config import Settings, get_settings
 async def get_current_user(
     settings: Annotated[Settings, Depends(get_settings)],
     authorization: Annotated[str | None, Header()] = None,
-    shadowfund_session: Annotated[str | None, Cookie()] = None,
+    prism_session: Annotated[str | None, Cookie()] = None,
 ) -> str:
     token: str | None = None
 
     if authorization is not None and authorization.startswith("Bearer "):
         token = authorization.removeprefix("Bearer ").strip()
-    elif shadowfund_session is not None and shadowfund_session.strip():
-        token = shadowfund_session.strip()
+    elif prism_session is not None and prism_session.strip():
+        token = prism_session.strip()
 
     if not token:
         raise HTTPException(

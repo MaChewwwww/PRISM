@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from app.contracts.models import (
     AuthorizationDecision,
-    AuthorizationState,
+    AuthorizationOutcome,
     OptionSide,
     OptionStrategy,
     OptionType,
@@ -75,10 +75,21 @@ def validate_authorization(
         raise ExecutionRejected("Paper execution is disabled or kill-switched")
     if not settings.active_ruleset_version:
         raise ExecutionRejected("No active ruleset")
-    if decision.state != AuthorizationState.ACCEPTED:
-        raise ExecutionRejected("Authorization is not accepted")
+    if decision.outcome != AuthorizationOutcome.APPROVE:
+        raise ExecutionRejected("Authorization is not approved")
     if decision.proposal_id != proposal.id or decision.proposal_digest != proposal.proposal_digest:
         raise ExecutionRejected("Authorization does not match the proposal")
+    if decision.allowed_order_payload_digest != proposal.proposal_digest:
+        raise ExecutionRejected("Authorized payload does not match the proposal digest")
+    payload = decision.allowed_order_payload
+    if payload is None:
+        raise ExecutionRejected("Authorized payload is missing")
+    if (
+        payload.symbol != proposal.symbol
+        or payload.quantity != proposal.quantity
+        or payload.strategy != proposal.strategy
+    ):
+        raise ExecutionRejected("Authorized payload does not match the proposal")
     if decision.trace_id != proposal.trace_id:
         raise ExecutionRejected("Authorization trace does not match the proposal")
     if decision.ruleset_version != settings.active_ruleset_version:

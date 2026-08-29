@@ -16,6 +16,13 @@ from app.core.config import Settings
 logger = logging.getLogger(__name__)
 
 
+def _is_transient_provider_error(exc: Exception) -> bool:
+    status_code = getattr(exc, "status_code", None)
+    if status_code in {408, 409, 425, 429, 500, 502, 503, 504}:
+        return True
+    return isinstance(exc, (ConnectionError, TimeoutError))
+
+
 class AlpacaPyGateway:
     """Typed, read-only Alpaca clients. Domain mapping belongs above this adapter."""
 
@@ -77,14 +84,13 @@ class AlpacaPyGateway:
                 ]
             except Exception as exc:
                 logger.warning(
-                    "Alpaca news fetch failed for %s (attempt %d/%d): %s",
+                    "Alpaca news fetch failed for %s (attempt %d/%d)",
                     symbol,
                     attempt + 1,
                     retries,
-                    exc,
                 )
-                if attempt == retries - 1:
-                    raise exc
+                if attempt == retries - 1 or not _is_transient_provider_error(exc):
+                    raise
                 time.sleep(delay)
                 delay *= 2.0
         return []

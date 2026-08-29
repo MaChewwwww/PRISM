@@ -9,19 +9,20 @@ import {
   PageHeader,
   Section,
 } from "@/components/product/workspace-ui";
-import { loadDashboard, readDateRange, type SearchValues } from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { loadDashboard } from "@/features/story/presentation-api";
 import { StoryList } from "@/features/story/story-list";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchValues> }) {
   const range = readDateRange(await searchParams);
-  const dashboard = loadDashboard(range);
+  const dashboard = await loadDashboard(range);
   const firstPoint = dashboard.portfolio.points[0];
   const lastPoint = dashboard.portfolio.points.at(-1);
   const alternativeLead = lastPoint
-    ? Number(lastPoint.alternative ?? lastPoint.actual) - Number(lastPoint.actual)
+    ? Number(lastPoint.alternative ?? lastPoint.chosenPath) - Number(lastPoint.chosenPath)
     : 0;
   const activeChange =
-    firstPoint && lastPoint ? Number(lastPoint.actual) - Number(firstPoint.actual) : 0;
+    firstPoint && lastPoint ? Number(lastPoint.chosenPath) - Number(firstPoint.chosenPath) : 0;
 
   return (
     <>
@@ -31,7 +32,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         description="One market signal. Multiple autonomous AI perspectives. Deterministic governance. Continuous counterfactual learning."
       >
         <div className="mode-stamp">
-          <ShieldCheck aria-hidden="true" className="text-[#00D084]" /> Active Paper Trading
+          <ShieldCheck aria-hidden="true" className="text-[#00D084]" /> Illustrative fixture
         </div>
       </PageHeader>
       <DemoDataNotice />
@@ -56,12 +57,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <div className="flex flex-col gap-1 p-3 rounded-lg bg-[#547D83]/10 border border-[#547D83]/20">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#00D084]" />
-              <strong className="text-white font-medium">What Happened (Active Path)</strong>
+              <strong className="text-white font-medium">Chosen Illustrative Path</strong>
             </div>
             <p className="text-slate-300 text-xs leading-relaxed">
-              Every signal was analyzed by Research, converted to candidate strategy by Proposal AI,
-              challenged by Risk AI, and authorized by the deterministic Rules Gate before paper
-              execution.
+              Seven bounded specialists contribute evidence and a decision candidate. Risk
+              Management critiques it before the deterministic Rules Engine records the fixture
+              result.
             </p>
           </div>
           <div className="flex flex-col gap-1 p-3 rounded-lg bg-[#818CF8]/10 border border-[#818CF8]/20">
@@ -73,8 +74,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </div>
             <p className="text-slate-300 text-xs leading-relaxed">
               {alternativeLead > 0
-                ? `The optimal Shadow Portfolio (Agent Counterfactual) finished $${alternativeLead.toFixed(2)} ahead of the active path. This delta generates adaptation feedback for the next AI Profile version.`
-                : "The active governed paper path outperformed all parallel Shadow Portfolios (Cash Baseline, Reduced Sizing, and Unhedged)."}
+                ? `The optimal Shadow Portfolio (Agent Counterfactual) finished $${alternativeLead.toFixed(2)} ahead of the chosen illustrative path. This delta generates adaptation feedback for the next AI Profile version.`
+                : "The chosen illustrative path outperformed all parallel ShadowFund portfolios (Cash Baseline, Reduced Sizing, and Unhedged)."}
             </p>
           </div>
         </div>
@@ -83,12 +84,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <MetricStrip
         metrics={[
           {
-            label: "Active Portfolio Equity",
-            value: lastPoint ? `$${lastPoint.actual}` : "No data",
-            detail: "Funded paper account",
+            label: "Illustrative Path Equity",
+            value: lastPoint ? `$${lastPoint.chosenPath}` : "No data",
+            detail: "Versioned demonstration snapshot",
           },
           {
-            label: "Active Period P&L",
+            label: "Illustrative Period P&L",
             value: `${activeChange >= 0 ? "+" : ""}$${activeChange.toFixed(2)}`,
             detail: `${range.from} to ${range.to}`,
           },
@@ -101,28 +102,28 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             label: "ShadowFund Comparison",
             value:
               alternativeLead > 0 ? `-$${alternativeLead.toFixed(2)} Regret` : "+$184.00 Alpha",
-            detail: "Active vs. Parallel Paths",
+            detail: "Chosen vs. parallel paths",
           },
         ]}
       />
 
       <Section
         id="portfolio-path"
-        title="Active Portfolio vs. Shadow Multiverse"
-        description="Compare the real Active Paper trajectory with parallel Shadow Portfolios across the identical market timeline."
+        title="Chosen Path vs. Shadow Multiverse"
+        description="Compare the illustrative governed trajectory with non-executable ShadowFund branches across the same fixture timeline."
       >
         <StoryLineChart
-          title="Active Equity vs. Shadow Multiverse Trajectories"
+          title="Chosen Equity vs. ShadowFund Trajectories"
           description="Interactive multi-branch trajectory. Click any trajectory button to toggle individual shadow branches on or off."
           summary={
             alternativeLead > 0
               ? `Shadow Lead: +$${alternativeLead.toFixed(2)}`
-              : "Active Portfolio Leads"
+              : "Chosen illustrative path leads"
           }
           data={dashboard.portfolio.points}
           valuePrefix="$"
           series={[
-            { key: "actual", label: "Active Portfolio (Paper)", color: "#547D83" },
+            { key: "chosenPath", label: "Illustrative governed path", color: "#547D83" },
             {
               key: "agentAlternative",
               label: "Shadow: Agent Counterfactual",
@@ -172,8 +173,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </Section>
         <Section
           id="exposure"
-          title="Active Portfolio Allocation"
-          description="Capital allocation breakdown across cash and defined-risk option spreads."
+          title="Illustrative Allocation"
+          description="Fixture allocation across cash and defined-risk option spreads."
         >
           <div className="exposure-list">
             {dashboard.portfolio.exposure.map((item) => (
@@ -203,7 +204,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <Section
         id="latest-stories"
         title="Recent Decision Stories"
-        description="Each story links news catalyst, research gap, strategy proposal, deterministic rule trace, active outcome, and counterfactual lessons."
+        description="Each story links news catalyst, research gap, strategy proposal, deterministic rule trace, illustrative outcome, and counterfactual lessons."
       >
         <StoryList stories={dashboard.stories.slice(0, 3)} />
         <Link
@@ -217,7 +218,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <Section
         id="improvements"
         title="ShadowFund Insights & AI Profile Evolution"
-        description="Actionable learnings derived from comparing Active execution with Shadow counterfactuals."
+        description="Actionable learnings derived from comparing the chosen illustrative path with ShadowFund counterfactuals."
       >
         <ol className="improvement-list">
           {dashboard.recommendations.map((recommendation, index) => (

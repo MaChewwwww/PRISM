@@ -11,11 +11,13 @@ import pytest
 
 from app.contracts.models import (
     AuthorizationDecision,
-    AuthorizationState,
+    AuthorizationOutcome,
+    MarketRegime,
     OptionLeg,
     OptionSide,
     OptionStrategy,
     OptionType,
+    PortfolioRiskState,
     StrategyKind,
     TradeProposal,
 )
@@ -89,9 +91,23 @@ def build_decision(proposal: TradeProposal, **updates: object) -> AuthorizationD
     values: dict[str, object] = {
         "trace_id": proposal.trace_id,
         "proposal_id": proposal.id,
+        "proposal_version": proposal.proposal_version,
         "proposal_digest": proposal.proposal_digest,
+        "ruleset_id": "prism-authorized-baseline",
         "ruleset_version": "rules-v1",
-        "state": AuthorizationState.ACCEPTED,
+        "profile_id": uuid4(),
+        "profile_version": 1,
+        "outcome": AuthorizationOutcome.APPROVE,
+        "allowed_order_payload_digest": proposal.proposal_digest,
+        "allowed_order_payload": {
+            "symbol": proposal.symbol,
+            "strategy": proposal.strategy,
+            "quantity": proposal.quantity,
+        },
+        "market_snapshot_digest": "1" * 64,
+        "portfolio_snapshot_digest": "2" * 64,
+        "market_regime": MarketRegime.NORMAL,
+        "portfolio_risk_state": PortfolioRiskState.NORMAL,
         "expires_at": datetime.now(UTC) + timedelta(minutes=1),
         "account_observed_at": datetime.now(UTC),
         "supported_options_level": 3,
@@ -117,9 +133,22 @@ def execution_settings(**updates: Any) -> Settings:
 @pytest.mark.parametrize(
     ("decision_updates", "message"),
     [
-        ({"state": AuthorizationState.REJECTED}, "not accepted"),
-        ({"state": AuthorizationState.MODIFIED_PENDING_ACCEPTANCE}, "not accepted"),
+        ({"outcome": AuthorizationOutcome.REJECT}, "not approved"),
+        (
+            {"outcome": AuthorizationOutcome.MODIFIED_PENDING_ACCEPTANCE},
+            "not approved",
+        ),
         ({"proposal_digest": "0" * 64}, "does not match"),
+        (
+            {
+                "allowed_order_payload": {
+                    "symbol": "SPY",
+                    "strategy": build_proposal().strategy,
+                    "quantity": 2,
+                }
+            },
+            "Authorized payload does not match",
+        ),
         ({"expires_at": datetime.now(UTC) - timedelta(seconds=1)}, "expired"),
         ({"account_observed_at": datetime.now(UTC) - timedelta(minutes=5)}, "not fresh"),
         ({"supported_options_level": 1}, "insufficient"),

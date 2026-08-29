@@ -12,7 +12,7 @@ import {
   StateBadge,
 } from "@/components/product/workspace-ui";
 import { formatDateTime, formatTokens } from "@/features/story/formatters";
-import { getStory } from "@/features/story/story-data";
+import { getStory } from "@/features/story/presentation-api";
 
 export default async function StoryDetailPage({
   params,
@@ -20,7 +20,7 @@ export default async function StoryDetailPage({
   params: Promise<{ storyId: string }>;
 }) {
   const { storyId } = await params;
-  const story = getStory(storyId);
+  const story = await getStory(storyId);
   if (!story) notFound();
   const tokens = story.transcript.reduce(
     (total, step) => total + (step.inputTokens ?? 0) + (step.outputTokens ?? 0),
@@ -47,7 +47,11 @@ export default async function StoryDetailPage({
             value: story.ruleResult,
             detail: "Authoritative deterministic trace",
           },
-          { label: "Active Outcome", value: story.paperImpact, detail: "Paper execution P&L" },
+          {
+            label: "Chosen Outcome",
+            value: story.chosenPathImpact,
+            detail: "Illustrative fixture result",
+          },
           {
             label: "Best Shadow Path",
             value: story.bestAlternativeImpact,
@@ -68,7 +72,7 @@ export default async function StoryDetailPage({
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#547D83]/15 border border-[#547D83]/30 w-fit">
               <span className="h-2 w-2 rounded-full bg-[#00D084]" />
               <span className="text-xs font-semibold uppercase tracking-wider text-[#B2D8DC]">
-                Part I · What Happened (The Active Path)
+                Part I · What Happened (The Chosen Illustrative Path)
               </span>
             </div>
 
@@ -101,7 +105,7 @@ export default async function StoryDetailPage({
                 summary={`${story.catalyst.observedMove} observed vs. ${story.catalyst.expectedMove} historical median`}
                 data={story.marketPath}
                 series={[
-                  { key: "actual", label: "Observed Reaction", color: "#38BDF8" },
+                  { key: "chosenPath", label: "Observed Reaction", color: "#38BDF8" },
                   {
                     key: "alternative",
                     label: "Analog Expectation",
@@ -121,7 +125,7 @@ export default async function StoryDetailPage({
             <Section
               id="chapter-tree"
               title="02 · Autonomous Agent Perspective Chain"
-              description="How the decision evolved through sequential analytical angles: Market Context → Research → Proposal → Risk AI → Deterministic Rule Gate."
+              description="Seven specialist perspectives feed Trading Decision, then Risk Management and the deterministic Rules Engine."
             >
               <ol className="decision-tree">
                 {story.decisionTree.map((node, index) => (
@@ -158,9 +162,9 @@ export default async function StoryDetailPage({
                     className="prism-glass-card p-4 mb-3 transition-all hover:border-white/20"
                   >
                     <div className="transcript-icon" data-kind={step.kind}>
-                      {step.kind === "tool-call" ? (
+                      {step.kind === "tool_call" ? (
                         <GitCompareArrows aria-hidden="true" />
-                      ) : step.kind === "rule-gate" ? (
+                      ) : step.kind === "rule_gate" ? (
                         <ShieldCheck aria-hidden="true" />
                       ) : (
                         <MessageSquareText aria-hidden="true" />
@@ -197,7 +201,7 @@ export default async function StoryDetailPage({
                           <dd className="font-mono text-xs">{step.promptVersion}</dd>
                         </div>
                       )}
-                      {step.inputTokens !== undefined && (
+                      {step.inputTokens != null && (
                         <div>
                           <dt>Tokens</dt>
                           <dd className="font-mono text-xs">
@@ -227,6 +231,9 @@ export default async function StoryDetailPage({
                   <div key={check.name} className="prism-glass-card p-3 flex items-start gap-3">
                     <StateBadge state={check.result} />
                     <div>
+                      <p className="font-mono text-[0.68rem] text-[#547D83]">
+                        {check.priority} · {check.ruleId} · {check.reasonCode}
+                      </p>
                       <h3 className="text-sm font-medium text-white">{check.name}</h3>
                       <p className="text-xs text-slate-300 mt-0.5">{check.explanation}</p>
                     </div>
@@ -237,19 +244,21 @@ export default async function StoryDetailPage({
 
             <Section
               id="chapter-outcome"
-              title="05 · Active Paper Execution Outcome"
-              description="The authorized paper order submission, fill execution, and active P&L progression."
+              title="05 · Illustrative Governed Outcome"
+              description="An illustrative fixture result for interface validation. It is not an authorization or broker receipt."
             >
               <div className="outcome-statement prism-glass-card p-4 border-l-4 border-l-[#00D084]">
                 <Check aria-hidden="true" className="text-[#00D084]" />
                 <div>
                   <span className="text-xs font-mono text-[#00D084] uppercase tracking-wider">
-                    {story.paperOutcome.status}
+                    {story.illustrativeOutcome.status}
                   </span>
                   <h3 className="text-base font-semibold text-white">
-                    {story.paperOutcome.action}
+                    {story.illustrativeOutcome.action}
                   </h3>
-                  <p className="text-sm text-slate-300 mt-1">{story.paperOutcome.rationale}</p>
+                  <p className="text-sm text-slate-300 mt-1">
+                    {story.illustrativeOutcome.rationale}
+                  </p>
                 </div>
               </div>
             </Section>
@@ -271,7 +280,7 @@ export default async function StoryDetailPage({
             >
               <div className="branch-table table-wrap prism-glass-card">
                 <table>
-                  <caption>Active vs. Shadow Branch Performance Comparison</caption>
+                  <caption>Chosen illustrative path vs. ShadowFund branch comparison</caption>
                   <thead>
                     <tr>
                       <th>Branch</th>
@@ -285,7 +294,7 @@ export default async function StoryDetailPage({
                     {story.alternatives.map((branch) => (
                       <tr
                         key={branch.id}
-                        className={branch.id === "actual" ? "bg-[#547D83]/10 font-semibold" : ""}
+                        className={branch.id === "chosen" ? "bg-[#547D83]/10 font-semibold" : ""}
                       >
                         <th scope="row">
                           {branch.label}

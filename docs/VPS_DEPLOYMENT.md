@@ -1,33 +1,28 @@
-# VPS Deployment
+# VPS deployment
 
 ## Prerequisites
 
-- A maintained Linux VPS with Docker Engine and Compose v2.
-- DNS and TLS certificates for the deployment hostname.
-- A non-root deploy account with narrowly scoped Docker access.
-- Alpaca paper credentials only: personal/dummy paper account for staging (`.env.staging`), and official Hackathon paper account ($100,000 baseline) for production (`.env.production`). Execution remains disabled for initial deployment.
+- Maintained Linux VPS with Docker Engine and Compose v2.
+- DNS/TLS termination at Nginx or an approved upstream proxy.
+- Non-root deploy account with narrowly scoped Docker access.
+- Protected, distinct staging and production configuration.
+- Alpaca paper credentials only when a later integration requires them; execution stays disabled by default.
 
-## Deployment flow
+## Automated flow
 
-1. Feature branches reach `staging` only through reviewed pull requests and required CI checks.
-2. A successful push CI run on `staging` may deploy automatically to the protected staging environment when `STAGING_DEPLOY_ENABLED=true`.
+1. A reviewed typed branch merges into `staging` and passes CI.
+2. Staging deploys when the repository switch is enabled, or through manual dispatch.
 3. A reviewed promotion pull request moves `staging` into `main`.
-4. An authorized operator starts the protected manual production workflow with the exact `main` commit SHA.
-5. The workflow builds immutable images, records digests, and deploys the exact revision.
-6. Compose applies database migrations as a one-shot operation before application readiness.
-7. Smoke checks verify Nginx routing, liveness, readiness, and the redacted system-status payload.
-8. The operator confirms the kill switch and execution-disabled state.
+4. Successful `main` CI triggers the protected production workflow automatically; manual dispatch remains a fallback.
+5. The workflow deploys the exact verified revision.
+6. Compose runs `alembic upgrade head` as a one-shot dependency.
+7. FastAPI readiness validates configuration and database access.
+8. The workflow checks `/api/v1/health/ready`; an operator may separately authenticate and inspect `/api/v1/system/status`.
 
-See [CI/CD and Branch Promotion](CI_CD.md) for branch protections, environment configuration, and the bootstrap procedure.
+Production publishes only ports 80/443 at the edge. PostgreSQL and Redis have no public host ports. Staging defaults to edge port 3005 and must use a distinct path, project name, database, and secrets.
 
-## Network and storage
+## Rollback and operations
 
-Expose only ports 80/443 through Nginx. PostgreSQL and Redis use private Compose networks and persistent named volumes; no database host port is allowed. Backups are encrypted, access-controlled, tested for restoration, and retained according to a BA/security-owned policy (**TBD**).
+Rollback redeploys a prior verified revision/image. Migrations must be forward-compatible; destructive recovery needs a separately tested plan. Rollback never deletes audit or execution evidence.
 
-## Rollback
-
-Application rollback redeploys the prior image digests. Database migrations must be forward-compatible; destructive migrations require a separately tested recovery plan. Rollback never deletes audit or execution records.
-
-## Operations
-
-Monitor host capacity, container health, database storage, certificate expiry, provider failures, and execution kill-switch state. Define alert thresholds and RTO/RPO before production authentication is enabled; these values are **TBD** and tracked in [FRS_NFRS.md](FRS_NFRS.md).
+Monitor host capacity, container health, database storage, certificate expiry, provider failure rates, readiness, and kill-switch state. Availability/latency SLOs, backup retention, RPO, and RTO remain unresolved and must be approved before they become operational requirements.

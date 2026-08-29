@@ -11,7 +11,8 @@ import {
   StateBadge,
 } from "@/components/product/workspace-ui";
 import { formatDateTime, formatTokens } from "@/features/story/formatters";
-import { getAgent, readDateRange, type SearchValues } from "@/features/story/story-data";
+import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { getAgent } from "@/features/story/presentation-api";
 
 export default async function AgentDetailPage({
   params,
@@ -21,7 +22,7 @@ export default async function AgentDetailPage({
   searchParams: Promise<SearchValues>;
 }) {
   const { agentId } = await params;
-  const agent = getAgent(agentId);
+  const agent = await getAgent(agentId);
   if (!agent) notFound();
   const range = readDateRange(await searchParams);
   const runs = agent.runs.filter(

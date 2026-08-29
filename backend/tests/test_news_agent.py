@@ -94,8 +94,8 @@ async def test_alpaca_gateway_get_news_retry_exponential() -> None:
     mock_response.data = {"TSLA": [mock_article]}
 
     mock_news_client.get_news.side_effect = [
-        Exception("Rate Limit 429"),
-        Exception("Transient network issue"),
+        TimeoutError("provider timeout"),
+        ConnectionError("provider connection reset"),
         mock_response,
     ]
 

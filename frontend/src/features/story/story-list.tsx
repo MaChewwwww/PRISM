@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { StateBadge } from "@/components/product/workspace-ui";
 import { formatDate } from "@/features/story/formatters";
-import type { StorySummary } from "@/features/story/story-data";
+import type { StorySummary } from "@/features/story/presentation-api";
 
 export function StoryList({ stories }: { stories: StorySummary[] }) {
   if (stories.length === 0) {
@@ -51,7 +51,7 @@ export function StoryList({ stories }: { stories: StorySummary[] }) {
               <div>
                 <dt>Active Outcome</dt>
                 <dd className="font-mono tabular-nums font-semibold text-[#00D084]">
-                  {story.paperImpact}
+                  {story.chosenPathImpact}
                 </dd>
               </div>
               <div>

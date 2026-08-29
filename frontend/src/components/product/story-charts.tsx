@@ -14,10 +14,12 @@ import {
   YAxis,
 } from "recharts";
 
-import type { ChartPoint } from "@/features/story/story-data";
+import type { ChartPoint } from "@/features/story/presentation-api";
+
+type ChartSeriesKey = Exclude<keyof ChartPoint, "date">;
 
 export type SeriesDefinition = {
-  key: string;
+  key: ChartSeriesKey;
   label: string;
   color: string;
   dashed?: boolean;
@@ -38,11 +40,11 @@ export function StoryLineChart({
   series: SeriesDefinition[];
   valuePrefix?: string;
 }) {
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
+  const [visibleKeys, setVisibleKeys] = useState<Set<ChartSeriesKey>>(
     () => new Set(series.map((s) => s.key)),
   );
 
-  const toggleKey = (key: string) => {
+  const toggleKey = (key: ChartSeriesKey) => {
     setVisibleKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) {
@@ -58,7 +60,7 @@ export function StoryLineChart({
 
   const toggleAll = () => {
     if (visibleKeys.size === series.length) {
-      setVisibleKeys(new Set([series[0]?.key ?? ""]));
+      setVisibleKeys(new Set([series[0]?.key ?? "chosenPath"]));
     } else {
       setVisibleKeys(new Set(series.map((s) => s.key)));
     }
@@ -158,7 +160,7 @@ export function StoryLineChart({
                   dataKey={item.key}
                   name={item.label}
                   stroke={item.color}
-                  strokeWidth={item.key === "actual" ? 2.5 : 2}
+                  strokeWidth={item.key === "chosenPath" ? 2.5 : 2}
                   strokeDasharray={item.dashed ? "6 6" : undefined}
                   dot={false}
                   activeDot={{ r: 4 }}

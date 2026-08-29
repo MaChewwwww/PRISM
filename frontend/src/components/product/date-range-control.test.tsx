@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DateRangeControl } from "@/components/product/date-range-control";
-import { rangeForPreset } from "@/features/story/story-data";
+import { rangeForPreset } from "@/features/story/date-range";
 
 const replaceMock = vi.fn();
 
@@ -18,7 +18,7 @@ describe("DateRangeControl", () => {
 
   it("FRS-019 writes preset UTC boundaries to URL state", async () => {
     const user = userEvent.setup();
-    render(<DateRangeControl range={rangeForPreset("1m")} />);
+    render(<DateRangeControl range={rangeForPreset("1m", "2026-08-28")} />);
     await user.click(screen.getByRole("button", { name: "7D" }));
     expect(replaceMock).toHaveBeenCalledWith(
       "/stories?outcome=pass&range=7d&from=2026-08-21&to=2026-08-28",

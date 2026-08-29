@@ -9,10 +9,10 @@ from app.main import app
 
 def test_token_creation_and_verification() -> None:
     secret = "test-secret-key-12345"
-    token = create_access_token("trader@shadowfund.local", secret, expires_in_hours=1)
+    token = create_access_token("trader@prism.local", secret, expires_in_hours=1)
     payload = verify_access_token(token, secret)
     assert payload is not None
-    assert payload["sub"] == "trader@shadowfund.local"
+    assert payload["sub"] == "trader@prism.local"
 
     # Wrong secret fails
     assert verify_access_token(token, "wrong-secret") is None
@@ -26,14 +26,14 @@ def test_token_creation_and_verification() -> None:
 def test_token_expiration() -> None:
     secret = "test-secret-key-12345"
     # Create token that expired in the past
-    token = create_access_token("trader@shadowfund.local", secret, expires_in_hours=-1)
+    token = create_access_token("trader@prism.local", secret, expires_in_hours=-1)
     assert verify_access_token(token, secret) is None
 
 
 def test_auth_login_success() -> None:
     settings = Settings(
         _env_file=None,
-        auth_email="custom@shadowfund.local",
+        auth_email="custom@prism.local",
         auth_password="correct-password-99",
         auth_secret_key="custom-secret",
     )
@@ -41,14 +41,14 @@ def test_auth_login_success() -> None:
     with TestClient(app) as client:
         res = client.post(
             "/api/v1/auth/login",
-            json={"email": " CUSTOM@shadowfund.local ", "password": "correct-password-99"},
+            json={"email": " CUSTOM@prism.local ", "password": "correct-password-99"},
         )
         assert res.status_code == 200
         data = res.json()
-        assert data["email"] == "custom@shadowfund.local"
-        assert "token" in data
+        assert data["email"] == "custom@prism.local"
+        assert "token" not in data
         assert "expires_at" in data
-        assert "shadowfund_session" in res.cookies
+        assert "prism_session" in res.cookies
     app.dependency_overrides.clear()
 
 
@@ -77,7 +77,7 @@ def test_auth_me_bearer_and_cookie() -> None:
     settings = Settings(_env_file=None, auth_secret_key="my-key")
     app.dependency_overrides[get_settings] = lambda: settings
     token = create_access_token(
-        "operator@shadowfund.local", settings.auth_secret_key, expires_in_hours=1
+        "operator@prism.local", settings.auth_secret_key, expires_in_hours=1
     )
 
     with TestClient(app) as client:
@@ -90,13 +90,13 @@ def test_auth_me_bearer_and_cookie() -> None:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert res_bearer.status_code == 200
-        assert res_bearer.json() == {"email": "operator@shadowfund.local", "authenticated": True}
+        assert res_bearer.json() == {"email": "operator@prism.local", "authenticated": True}
 
         # Cookie
-        client.cookies.set("shadowfund_session", token)
+        client.cookies.set("prism_session", token)
         res_cookie = client.get("/api/v1/auth/me")
         assert res_cookie.status_code == 200
-        assert res_cookie.json() == {"email": "operator@shadowfund.local", "authenticated": True}
+        assert res_cookie.json() == {"email": "operator@prism.local", "authenticated": True}
     app.dependency_overrides.clear()
 
 
