@@ -335,7 +335,7 @@ export default async function StoryDetailPage({
           <div className="inspector-note">
             <ShieldCheck aria-hidden="true" />
             <p>
-              All evidence is fictional. No provider, brokerage account, MCP server, or LLM was
+              All evidence is illustrative. No provider, brokerage account, MCP server, or LLM was
               contacted to render this story.
             </p>
           </div>

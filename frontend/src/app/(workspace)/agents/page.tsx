@@ -57,7 +57,7 @@ export default async function AgentsPage({
           {
             label: "Runs in period",
             value: String(allRuns.length),
-            detail: "Fixed fictional history",
+            detail: "Fixed illustrative history",
           },
           {
             label: "Visible tokens",

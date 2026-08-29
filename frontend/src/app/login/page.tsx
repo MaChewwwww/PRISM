@@ -196,7 +196,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-2 text-[0.7rem] text-[var(--muted-foreground)]">
               <UserCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
-                Authentication is live. All product stories beyond sign-in use fictional demo data.
+                Authentication is live. All product stories beyond sign-in use illustrative demo data.
               </span>
             </div>
           </div>

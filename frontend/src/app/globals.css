@@ -1120,6 +1120,81 @@ tbody th span {
   background: rgba(15, 23, 42, 0.4);
 }
 
+/* Alternatives outcome comparison grid */
+.alt-outcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+.alt-outcome-actual,
+.alt-outcome-shadow {
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.alt-outcome-actual {
+  border-top: 2px solid #547D83 !important;
+}
+.alt-outcome-label {
+  font-size: 0.65rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.alt-outcome-pnl {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #00D084;
+}
+.alt-outcome-pnl--shadow {
+  font-size: 1.1rem;
+  color: var(--foreground);
+}
+.alt-outcome-sub {
+  font-size: 0.62rem;
+  color: var(--muted-foreground);
+}
+.alt-outcome-delta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+/* Delta badges */
+.delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 650;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+.delta-badge[data-sign="positive"] {
+  color: #34D399;
+  background: rgba(52, 211, 153, 0.08);
+}
+.delta-badge[data-sign="negative"] {
+  color: #FB923C;
+  background: rgba(251, 146, 60, 0.08);
+}
+.delta-badge[data-sign="neutral"] {
+  color: var(--muted-foreground);
+  background: rgba(148, 163, 184, 0.08);
+}
+.delta-badge-icon {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex-shrink: 0;
+}
+
 /* Specular Glass Classes */
 .prism-glass-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);

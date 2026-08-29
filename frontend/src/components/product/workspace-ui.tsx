@@ -11,7 +11,7 @@ export function DemoDataNotice() {
       <div>
         <strong>Illustrative story</strong>
         <span>
-          Fixed fictional market, portfolio, agent, and usage data. No provider request was made.
+          Fixed illustrative market, portfolio, agent, and usage data. No provider request was made.
         </span>
       </div>
     </div>

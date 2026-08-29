@@ -27,7 +27,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
       <PageHeader
         eyebrow="News and catalysts"
         title="See the evidence before the interpretation"
-        description="A fictional Alpaca-shaped feed connects source timestamps and symbols to the decision stories they influenced."
+        description="An illustrative Alpaca-shaped feed connects source timestamps and symbols to the decision stories they influenced."
       />
       <DemoDataNotice />
       <DateRangeControl range={range} />
@@ -98,7 +98,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
           ))}
         </ol>
       ) : (
-        <p className="inline-empty">No fictional news falls inside these filters.</p>
+        <p className="inline-empty">No illustrative news falls inside these filters.</p>
       )}
     </>
   );

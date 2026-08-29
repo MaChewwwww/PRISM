@@ -81,6 +81,7 @@ export type AlternativeBranch = {
   label: string;
   variation: string;
   pnl: string;
+  deltaVsActual: string;
   drawdown: string;
   coverage: string;
   status: "complete" | "incomplete";
@@ -348,6 +349,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Active Portfolio (Paper)",
     variation: "Recorded governed outcome",
     pnl: "+$184.00",
+    deltaVsActual: "—",
     drawdown: "-$76.00",
     coverage: "96%",
     status: "complete",
@@ -357,6 +359,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Cash Baseline",
     variation: "Remain entirely in cash",
     pnl: "$0.00",
+    deltaVsActual: "-$184.00",
     drawdown: "$0.00",
     coverage: "100%",
     status: "complete",
@@ -366,6 +369,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Reduced Sizing",
     variation: "Half the active allocation (50% risk)",
     pnl: "+$102.00",
+    deltaVsActual: "-$82.00",
     drawdown: "-$38.00",
     coverage: "96%",
     status: "complete",
@@ -375,6 +379,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Unhedged Structure",
     variation: "Long option without the short spread leg",
     pnl: "+$61.00",
+    deltaVsActual: "-$123.00",
     drawdown: "-$164.00",
     coverage: "82%",
     status: "incomplete",
@@ -384,6 +389,7 @@ const sharedAlternatives: AlternativeBranch[] = [
     label: "Shadow: Agent Counterfactual",
     variation: "Earlier expiry with the same bounded structure",
     pnl: "+$241.00",
+    deltaVsActual: "+$57.00",
     drawdown: "-$91.00",
     coverage: "94%",
     status: "complete",
@@ -397,7 +403,7 @@ function detailFor(summary: StorySummary, index: number): StoryDetail {
   return {
     ...summary,
     catalyst: {
-      headline: `${summary.symbol} fictional ${summary.category.toLowerCase()} update changed the evidence set`,
+      headline: `${summary.symbol} illustrative ${summary.category.toLowerCase()} update changed the evidence set`,
       source: "Illustrative Alpaca News-shaped fixture",
       publishedAt: summary.occurredAt,
       classification:
@@ -422,7 +428,7 @@ function detailFor(summary: StorySummary, index: number): StoryDetail {
         actor: "Market context",
         status: summary.outcome === "degraded" ? "incomplete" : "ready",
         detail:
-          "Fictional news and synthetic bars were timestamped and treated as untrusted evidence.",
+          "Illustrative news and synthetic bars were timestamped and treated as untrusted evidence.",
       },
       {
         id: "research",
@@ -873,7 +879,7 @@ export const alternativeSessions: AlternativeSession[] = [
     storyId: "acme-earnings-gap",
     occurredAt: "2026-08-25T14:30:00Z",
     symbol: "ACME",
-    title: "Which structure handled the fictional volatility contraction best?",
+    title: "Which structure handled the volatility contraction best?",
     summary:
       "The agent alternative finished ahead, while the unhedged branch showed the largest adverse excursion.",
     actualPnl: "+$184.00",
@@ -899,7 +905,7 @@ export const alternativeSessions: AlternativeSession[] = [
     storyId: "vela-guidance-pass",
     occurredAt: "2026-07-29T15:20:00Z",
     symbol: "VELA",
-    title: "Did the selected hedge improve the fictional guidance trade?",
+    title: "Did the selected hedge improve the guidance trade?",
     summary:
       "The governed paper path retained more value than the unhedged branch after volatility contracted.",
     actualPnl: "+$126.00",
@@ -928,7 +934,7 @@ export const alternativeSessions: AlternativeSession[] = [
     occurredAt: "2026-08-21T16:10:00Z",
     symbol: "NOVA",
     title: "How much did no action protect after the announcement?",
-    summary: "Every simulated entry finished below the cash baseline in this fictional scenario.",
+    summary: "Every simulated entry finished below the cash baseline in this scenario.",
     actualPnl: "$0.00",
     bestBranch: "No action",
     alternativeLabel: "Shadow: Unhedged Proposal",
@@ -1104,7 +1110,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Market Wire",
     provider: "Alpaca News-shaped fixture",
     symbols: ["ACME"],
-    headline: "ACME fictional earnings update arrives above the synthetic comparison set",
+    headline: "ACME illustrative earnings update arrives above the synthetic comparison set",
     summary:
       "A deterministic article fixture used to demonstrate catalyst linkage and event-time filtering.",
     category: "Earnings",
@@ -1117,7 +1123,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Business Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["NOVA"],
-    headline: "NOVA announces a fictional product milestone",
+    headline: "NOVA announces a simulated product milestone",
     summary:
       "The synthetic market response already reflected the headline by the time research completed.",
     category: "Product",
@@ -1142,7 +1148,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Market Wire",
     provider: "Alpaca News-shaped fixture",
     symbols: ["VELA"],
-    headline: "VELA raises fictional guidance for the next reporting period",
+    headline: "VELA raises illustrative guidance for the next reporting period",
     summary: "A bounded fixture scenario connected to a PASS story and ShadowFund comparison.",
     category: "Guidance",
     storyId: "vela-guidance-pass",
@@ -1154,7 +1160,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Corporate Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["KITE"],
-    headline: "KITE files a fictional corporate-action update",
+    headline: "KITE files a simulated corporate-action update",
     summary:
       "The story demonstrates why a plausible thesis can still fail on missing liquidity configuration.",
     category: "Corporate action",
@@ -1167,7 +1173,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Sector Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["HELI"],
-    headline: "Synthetic sector rotation lifts multiple fictional names",
+    headline: "Synthetic sector rotation lifts multiple illustrative names",
     summary: "The wider move weakened the single-name explanation and produced NO_TRADE.",
     category: "Sector",
     storyId: "heli-sector-rotation",
@@ -1179,7 +1185,7 @@ export const newsRecords: NewsRecord[] = [
     source: "Illustrative Business Desk",
     provider: "Alpaca News-shaped fixture",
     symbols: ["ACME"],
-    headline: "Conflicting fictional guidance sources create an incomplete evidence set",
+    headline: "Conflicting illustrative guidance sources create an incomplete evidence set",
     summary: "The fixture retains source disagreement rather than collapsing it into certainty.",
     category: "Guidance",
     storyId: "acme-guidance-review",
