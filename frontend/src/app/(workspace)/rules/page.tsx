@@ -3,7 +3,12 @@ import { CalendarCheck, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react"
 
 import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/product/workspace-ui";
 import { RuleStudio } from "@/features/rules/rule-studio";
-import { configurableRules, hardRules, ruleVersions, getWeeklySummary } from "@/features/story/story-data";
+import {
+  configurableRules,
+  hardRules,
+  ruleVersions,
+  getWeeklySummary,
+} from "@/features/story/story-data";
 
 export default function RulesPage() {
   const summary = getWeeklySummary();
@@ -23,19 +28,27 @@ export default function RulesPage() {
       <DemoDataNotice />
 
       {/* AI callout */}
-      <Link href="/weekly-summary" className="rules-callout" aria-label="View weekly AI calibration suggestions">
+      <Link
+        href="/weekly-summary"
+        className="rules-callout"
+        aria-label="View weekly AI calibration suggestions"
+      >
         <span className="rules-callout-icon">
           <Sparkles aria-hidden="true" />
         </span>
         <div>
           <strong>
-            {suggestionCount} AI calibration suggestion{suggestionCount !== 1 ? "s" : ""} from this week
+            {suggestionCount} AI calibration suggestion{suggestionCount !== 1 ? "s" : ""} from this
+            week
           </strong>
           <span>
-            Post-analysis identified potential improvements. View Weekly Summary to accept or dismiss.
+            Post-analysis identified potential improvements. View Weekly Summary to accept or
+            dismiss.
           </span>
         </div>
-        <span className="rules-callout-arrow" aria-hidden="true">→</span>
+        <span className="rules-callout-arrow" aria-hidden="true">
+          →
+        </span>
       </Link>
 
       {/* Rule semantics legend */}

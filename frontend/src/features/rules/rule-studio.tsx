@@ -80,7 +80,12 @@ export function RuleStudio({ rules }: { rules: ConfigurableRule[] }) {
                 <span>{rule.unit}</span>
               </div>
               <small id={`${rule.id}-help`}>
-                Active value: <strong>{rule.activeValue} {rule.unit}</strong>. Entering a new value creates a draft candidate — it does not modify the active ruleset.
+                Active value:{" "}
+                <strong>
+                  {rule.activeValue} {rule.unit}
+                </strong>
+                . Entering a new value creates a draft candidate — it does not modify the active
+                ruleset.
               </small>
             </div>
           </section>

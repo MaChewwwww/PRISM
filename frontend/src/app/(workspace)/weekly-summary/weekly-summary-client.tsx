@@ -46,7 +46,6 @@ export function WeeklySummaryClient({ summary }: { summary: WeeklySummary }) {
     setDismissed(new Set());
   }
 
-  const pendingSuggestions = summary.suggestions.filter((s) => !dismissed.has(s.id));
   const stagedSuggestions = summary.suggestions.filter(
     (s) => mode === "auto" || accepted.has(s.id),
   );
@@ -67,11 +66,7 @@ export function WeeklySummaryClient({ summary }: { summary: WeeklySummary }) {
             Choose how AI suggestions are applied to your next draft ruleset.
           </p>
         </div>
-        <div
-          className="calibration-mode-toggle"
-          role="group"
-          aria-label="Calibration mode"
-        >
+        <div className="calibration-mode-toggle" role="group" aria-label="Calibration mode">
           <button
             type="button"
             className="calibration-mode-btn"

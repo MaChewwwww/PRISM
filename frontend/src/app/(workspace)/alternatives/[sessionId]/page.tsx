@@ -3,12 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StoryLineChart } from "@/components/product/story-charts";
-import {
-  DemoDataNotice,
-  PageHeader,
-  Section,
-  StateBadge,
-} from "@/components/product/workspace-ui";
+import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/product/workspace-ui";
 import { getAlternativeSession } from "@/features/story/story-data";
 
 function DeltaBadge({ delta }: { delta: string }) {
@@ -39,7 +34,6 @@ export default async function AlternativeDetailPage({
   const session = getAlternativeSession(sessionId);
   if (!session) notFound();
 
-  const activeBranch = session.branches.find((b) => b.id === "actual");
   const shadowBranches = session.branches.filter((b) => b.id !== "actual");
 
   return (

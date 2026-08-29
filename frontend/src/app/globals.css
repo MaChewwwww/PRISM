@@ -1135,7 +1135,7 @@ tbody th span {
   gap: 0.25rem;
 }
 .alt-outcome-actual {
-  border-top: 2px solid #547D83 !important;
+  border-top: 2px solid #547d83 !important;
 }
 .alt-outcome-label {
   font-size: 0.65rem;
@@ -1149,7 +1149,7 @@ tbody th span {
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #00D084;
+  color: #00d084;
 }
 .alt-outcome-pnl--shadow {
   font-size: 1.1rem;
@@ -1178,11 +1178,11 @@ tbody th span {
   border-radius: 3px;
 }
 .delta-badge[data-sign="positive"] {
-  color: #34D399;
+  color: #34d399;
   background: rgba(52, 211, 153, 0.08);
 }
 .delta-badge[data-sign="negative"] {
-  color: #FB923C;
+  color: #fb923c;
   background: rgba(251, 146, 60, 0.08);
 }
 .delta-badge[data-sign="neutral"] {
@@ -1938,11 +1938,13 @@ tbody th span {
   margin-bottom: 1.5rem;
   background: linear-gradient(135deg, rgba(84, 125, 131, 0.12) 0%, rgba(84, 125, 131, 0.04) 100%);
   border: 1px solid rgba(84, 125, 131, 0.35);
-  border-left: 3px solid #547D83;
+  border-left: 3px solid #547d83;
   border-radius: 8px;
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 .rules-callout:hover {
   background: linear-gradient(135deg, rgba(84, 125, 131, 0.18) 0%, rgba(84, 125, 131, 0.07) 100%);
@@ -1950,7 +1952,7 @@ tbody th span {
   border-left-color: #6fa8ae;
 }
 .rules-callout-icon {
-  color: #547D83;
+  color: #547d83;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -1968,7 +1970,7 @@ tbody th span {
 .rules-callout-arrow {
   margin-left: auto;
   font-size: 1rem;
-  color: #547D83;
+  color: #547d83;
   flex-shrink: 0;
 }
 .hard-controls-details > summary {
@@ -1983,7 +1985,9 @@ tbody th span {
   padding: 0.5rem 0;
   border-top: 1px solid var(--border);
 }
-.hard-controls-details > summary::-webkit-details-marker { display: none; }
+.hard-controls-details > summary::-webkit-details-marker {
+  display: none;
+}
 .hard-controls-details[open] > summary {
   color: var(--foreground);
   border-bottom: 1px solid var(--border);
@@ -2059,7 +2063,7 @@ tbody th span {
   color: var(--foreground);
 }
 .calibration-mode-notice svg {
-  color: #547D83;
+  color: #547d83;
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
@@ -2073,14 +2077,14 @@ tbody th span {
 }
 .suggestion-card {
   padding: 1rem 1.1rem;
-  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
   border: 1px solid var(--border);
   border-radius: 10px;
   transition: border-color 0.15s ease;
 }
 .suggestion-card[data-accepted="true"] {
   border-color: rgba(52, 211, 153, 0.3);
-  background: linear-gradient(180deg, rgba(52,211,153,0.05) 0%, rgba(52,211,153,0.01) 100%);
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.05) 0%, rgba(52, 211, 153, 0.01) 100%);
 }
 .suggestion-card-header {
   display: flex;
@@ -2110,15 +2114,15 @@ tbody th span {
 }
 .suggestion-confidence[data-level="high"] {
   background: rgba(52, 211, 153, 0.1);
-  color: #34D399;
+  color: #34d399;
 }
 .suggestion-confidence[data-level="medium"] {
   background: rgba(251, 191, 36, 0.1);
-  color: #FBBF24;
+  color: #fbbf24;
 }
 .suggestion-confidence[data-level="low"] {
   background: rgba(148, 163, 184, 0.1);
-  color: #94A3B8;
+  color: #94a3b8;
 }
 .suggestion-actions {
   display: flex;
@@ -2137,14 +2141,17 @@ tbody th span {
   background: rgba(52, 211, 153, 0.1);
   border: 1px solid rgba(52, 211, 153, 0.3);
   border-radius: 4px;
-  color: #34D399;
+  color: #34d399;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .suggestion-accept-btn:hover {
   background: rgba(52, 211, 153, 0.18);
 }
-.suggestion-accept-btn svg { width: 0.8rem; height: 0.8rem; }
+.suggestion-accept-btn svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
 .suggestion-dismiss-btn {
   display: flex;
   align-items: center;
@@ -2156,33 +2163,44 @@ tbody th span {
   border-radius: 4px;
   transition: color 0.15s ease;
 }
-.suggestion-dismiss-btn:hover { color: #FF6B6B; }
-.suggestion-dismiss-btn svg { width: 0.85rem; height: 0.85rem; }
+.suggestion-dismiss-btn:hover {
+  color: #ff6b6b;
+}
+.suggestion-dismiss-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
 .suggestion-accepted-label {
   display: flex;
   align-items: center;
   gap: 0.3rem;
   font-size: 0.7rem;
   font-weight: 650;
-  color: #34D399;
+  color: #34d399;
 }
-.suggestion-accepted-label svg { width: 0.8rem; height: 0.8rem; }
+.suggestion-accepted-label svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
 .suggestion-auto-label {
   display: flex;
   align-items: center;
   gap: 0.3rem;
   font-size: 0.7rem;
-  color: #547D83;
+  color: #547d83;
   flex-shrink: 0;
 }
-.suggestion-auto-label svg { width: 0.8rem; height: 0.8rem; }
+.suggestion-auto-label svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
 .suggestion-value-row {
   display: flex;
   align-items: center;
   gap: 1rem;
   margin-bottom: 0.7rem;
   padding: 0.55rem 0.75rem;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 6px;
   width: fit-content;
 }
@@ -2202,8 +2220,12 @@ tbody th span {
   font-size: 1rem;
   font-weight: 700;
 }
-.suggestion-value--current { color: var(--muted-foreground); }
-.suggestion-value--proposed { color: #34D399; }
+.suggestion-value--current {
+  color: var(--muted-foreground);
+}
+.suggestion-value--proposed {
+  color: #34d399;
+}
 .suggestion-arrow {
   color: var(--muted-foreground);
   width: 0.9rem;
@@ -2230,7 +2252,7 @@ tbody th span {
   align-items: flex-start;
   gap: 0.85rem;
   padding: 0.75rem 1rem;
-  background: rgba(255,255,255,0.02);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border);
   border-radius: 8px;
 }
@@ -2238,7 +2260,7 @@ tbody th span {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #547D83;
+  color: #547d83;
   flex-shrink: 0;
   padding-top: 0.1rem;
 }
@@ -2251,7 +2273,7 @@ tbody th span {
 /* Staged changes */
 .staged-changes {
   padding: 1.1rem;
-  background: rgba(255,255,255,0.02);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border);
   border-radius: 10px;
 }
@@ -2276,7 +2298,7 @@ tbody th span {
   justify-content: center;
   width: 1.3rem;
   height: 1.3rem;
-  background: rgba(84,125,131,0.2);
+  background: rgba(84, 125, 131, 0.2);
   color: #6fa8ae;
   border-radius: 50%;
   font-size: 0.68rem;
@@ -2290,9 +2312,9 @@ tbody th span {
 .staged-stage-all {
   margin-left: auto;
   font-size: 0.7rem;
-  color: #547D83;
+  color: #547d83;
   background: none;
-  border: 1px solid rgba(84,125,131,0.3);
+  border: 1px solid rgba(84, 125, 131, 0.3);
   border-radius: 4px;
   padding: 0.2rem 0.55rem;
   cursor: pointer;
@@ -2300,7 +2322,7 @@ tbody th span {
   transition: all 0.15s ease;
 }
 .staged-stage-all:hover {
-  background: rgba(84,125,131,0.1);
+  background: rgba(84, 125, 131, 0.1);
 }
 .staged-list {
   list-style: none;
@@ -2318,7 +2340,7 @@ tbody th span {
   color: var(--foreground);
 }
 .staged-check {
-  color: #34D399;
+  color: #34d399;
   width: 0.9rem;
   height: 0.9rem;
   flex-shrink: 0;
@@ -2335,8 +2357,13 @@ tbody th span {
   align-items: center;
   transition: color 0.15s ease;
 }
-.staged-remove:hover { color: #FF6B6B; }
-.staged-remove svg { width: 0.8rem; height: 0.8rem; }
+.staged-remove:hover {
+  color: #ff6b6b;
+}
+.staged-remove svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
 .staged-footer {
   border-top: 1px solid var(--border);
   padding-top: 0.75rem;
@@ -2367,7 +2394,9 @@ tbody th span {
   color: var(--muted-foreground);
   margin: 0;
 }
-.weekly-rules-link > :nth-child(2) { flex: 1; }
+.weekly-rules-link > :nth-child(2) {
+  flex: 1;
+}
 
 .rule-studio {
   padding: 2.6rem 0;
