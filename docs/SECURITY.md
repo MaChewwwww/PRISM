@@ -28,7 +28,7 @@ To safeguard staging and production deployments during hackathon evaluation and 
 
 CI performs linting, type checks, tests, contract-diff checks, vendored-skill checksum verification, dependency audit, secret scan, and container scan. Production deployment is manual and protected by a GitHub environment. Build provenance and image digests are retained.
 
-`staging` and `main` require reviewed PRs and branch-policy checks. Staging and production deployments use distinct protected GitHub environments, VPS checkout paths, Compose project names, ports (8080 for staging, 80 for production), secrets, credentials, and databases. Specifically, **staging uses a personal/dummy Alpaca paper account** for pre-release simulations and test trades, while **production uses the official Hackathon-provided Alpaca paper account** ($100,000 baseline). A staging credential must never be promoted by copying its environment file into production.
+`staging` and `main` require reviewed PRs and branch-policy checks. Staging and production deployments use distinct protected GitHub environments, VPS checkout paths, Compose project names, ports (3005 for staging, 80 for production), secrets, credentials, and databases. Specifically, **staging uses a personal/dummy Alpaca paper account** for pre-release simulations and test trades, while **production uses the official Hackathon-provided Alpaca paper account** ($100,000 baseline). A staging credential must never be promoted by copying its environment file into production.
 
 ## Incident posture
 

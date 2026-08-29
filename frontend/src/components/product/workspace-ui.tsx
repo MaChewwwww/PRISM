@@ -73,15 +73,18 @@ export function StateBadge({ state }: { state: string }) {
 }
 
 const provenanceLabels: Record<Provenance, string> = {
-  "illustrative-paper": "Illustrative paper result",
-  simulated: "Simulated alternative",
-  "planned-integration": "Planned integration",
+  "active-portfolio": "Active Portfolio",
+  "shadow-portfolio": "Shadow Portfolio",
+  "market-benchmark": "Market Benchmark",
+  "illustrative-paper": "Active Portfolio",
+  simulated: "Shadow Portfolio",
+  "planned-integration": "Planned Integration",
 };
 
 export function ProvenanceLabel({ provenance }: { provenance: Provenance }) {
   return (
     <span className="provenance-label" data-provenance={provenance}>
-      {provenanceLabels[provenance]}
+      {provenanceLabels[provenance] ?? provenance}
     </span>
   );
 }
