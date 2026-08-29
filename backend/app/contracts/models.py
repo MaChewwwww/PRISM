@@ -301,3 +301,64 @@ class LLMEventAnalysis(ContractBase):
     model_name: str
     prompt_version: str
     raw_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class TrendDirection(StrEnum):
+    BULLISH = "bullish"
+    BEARISH = "bearish"
+    NEUTRAL = "neutral"
+
+
+class RSICondition(StrEnum):
+    OVERSOLD = "oversold"
+    OVERBOUGHT = "overbought"
+    NEUTRAL = "neutral"
+
+
+class MACDCrossover(StrEnum):
+    BULLISH_CROSS = "bullish_cross"
+    BEARISH_CROSS = "bearish_cross"
+    NONE = "none"
+
+
+class MACDSignal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    macd: DecimalString
+    signal: DecimalString
+    histogram: DecimalString
+    crossover: MACDCrossover
+
+
+class MovingAverages(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sma_20: DecimalString | None = None
+    sma_50: DecimalString | None = None
+    sma_200: DecimalString | None = None
+    price_vs_sma20_pct: DecimalString | None = None
+    price_vs_sma50_pct: DecimalString | None = None
+    price_vs_sma200_pct: DecimalString | None = None
+
+
+class BollingerBands(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    upper: DecimalString
+    middle: DecimalString
+    lower: DecimalString
+    bandwidth_pct: DecimalString
+    percent_b: DecimalString
+
+
+class QuantitativeAnalysisReport(ContractBase):
+    symbol: str
+    current_price: DecimalString
+    trend: TrendDirection
+    momentum_score: DecimalString = Field(ge=0, le=100)
+    rsi_14: DecimalString = Field(ge=0, le=100)
+    rsi_condition: RSICondition
+    macd: MACDSignal
+    moving_averages: MovingAverages
+    bollinger_bands: BollingerBands
+    atr_14: DecimalString
+    volatility_annualized_pct: DecimalString
+    volume_surge_ratio: DecimalString
+    summary: str
