@@ -3,9 +3,6 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import uuid4
 
-import pytest
-from fastapi import HTTPException
-
 from app.contracts.models import (
     MACDCrossover,
     RSICondition,
@@ -19,7 +16,6 @@ from app.research.quant_engine import (
     compute_rsi,
     compute_sma,
 )
-from app.research.routes import QuantitativeAnalysisRequest, analyze_quantitative
 
 
 def test_compute_sma() -> None:

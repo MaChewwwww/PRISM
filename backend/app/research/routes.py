@@ -80,6 +80,7 @@ class IndustryAnalysisRequest(BaseModel):
         default=None,
         description="Optional custom peer tickers to compare against",
     )
+
     @field_validator("symbol")
     @classmethod
     def normalize_symbol(cls, value: str) -> str:
@@ -207,34 +208,6 @@ async def analyze_reaction(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Market reaction analysis is temporarily unavailable",
-        ) from exc
-
-
-@router.post("/quant/analyze", response_model=QuantitativeAnalysisReport)
-async def analyze_quantitative(
-    request: QuantitativeAnalysisRequest,
-    current_user: Annotated[str, Depends(get_current_user)],
-    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
-) -> QuantitativeAnalysisReport:
-    """Perform 100% deterministic quantitative and technical momentum analysis."""
-    trace_id = uuid4()
-    symbol = request.symbol.strip().upper()
-
-    try:
-        bars = await run_in_threadpool(
-            gateway.get_stock_bars,
-            symbol=symbol,
-            limit=request.bar_limit,
-        )
-    except Exception as exc:
-        logger.warning(
-            "Alpaca quantitative-bar provider failed for symbol=%s: %s",
-            symbol,
-            type(exc).__name__,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Alpaca market data provider is temporarily unavailable",
         ) from exc
 
 

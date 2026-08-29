@@ -548,7 +548,3 @@ class IndustryAnalysisReport(ContractBase):
     tailwinds: list[str] = Field(default_factory=list)
     headwinds: list[str] = Field(default_factory=list)
     thesis: str
-    atr_14: DecimalString = Field(ge=0)
-    volatility_annualized_pct: DecimalString = Field(ge=0)
-    volume_surge_ratio: DecimalString = Field(ge=0)
-    summary: str
