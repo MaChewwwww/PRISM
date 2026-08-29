@@ -276,6 +276,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/decision/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Decision
+         * @description Perform master 7-agent consensus synthesis to emit TradeProposal or NO_TRADE.
+         */
+        post: operations["synthesize_decision_api_v1_research_decision_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/fundamental/analyze": {
         parameters: {
             query?: never;
@@ -959,6 +979,14 @@ export interface components {
             parentId: string | null;
             /** Status */
             status: string;
+        };
+        /** DecisionSynthesisRequest */
+        DecisionSynthesisRequest: {
+            /**
+             * Symbol
+             * @description Target ticker symbol to run master 7-agent synthesis on, e.g. NVDA
+             */
+            symbol: string;
         };
         /** Evidence */
         Evidence: {
@@ -1833,6 +1861,11 @@ export interface components {
             time_in_force: "day";
         };
         /**
+         * OptionStructure
+         * @enum {string}
+         */
+        OptionStructure: "long_call" | "long_put" | "bull_call_spread" | "bear_put_spread" | "no_trade";
+        /**
          * OptionType
          * @enum {string}
          */
@@ -2465,6 +2498,39 @@ export interface components {
              */
             net_debt_millions: string;
         };
+        /** SpecialistScores */
+        SpecialistScores: {
+            /**
+             * Fundamental Quality Score
+             * Format: decimal-string
+             */
+            fundamental_quality_score: string;
+            /**
+             * Macro Climate Score
+             * Format: decimal-string
+             */
+            macro_climate_score: string;
+            /**
+             * News Sentiment Score
+             * Format: decimal-string
+             */
+            news_sentiment_score: string;
+            /**
+             * Quant Momentum Score
+             * Format: decimal-string
+             */
+            quant_momentum_score: string;
+            /**
+             * Reaction Opportunity Score
+             * Format: decimal-string
+             */
+            reaction_opportunity_score: string;
+            /**
+             * Sector Health Score
+             * Format: decimal-string
+             */
+            sector_health_score: string;
+        };
         /** StoryDetail */
         StoryDetail: {
             /** Alternatives */
@@ -2623,6 +2689,75 @@ export interface components {
             /** Successrate */
             successRate: string;
         };
+        /** TradeDecisionReport */
+        TradeDecisionReport: {
+            /**
+             * Composite Opportunity Score
+             * Format: decimal-string
+             */
+            composite_opportunity_score: string;
+            /**
+             * Confidence Score
+             * Format: decimal-string
+             */
+            confidence_score: string;
+            /** Contradiction Analysis */
+            contradiction_analysis: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Current Price
+             * Format: decimal-string
+             */
+            current_price: string;
+            direction: components["schemas"]["TradeDirection"];
+            exit_policy: components["schemas"]["ExitPolicy"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Key Risks */
+            key_risks?: string[];
+            /**
+             * Net Ev R
+             * Format: decimal-string
+             */
+            net_ev_r: string;
+            recommended_structure: components["schemas"]["OptionStructure"];
+            /**
+             * Reward Risk Ratio
+             * Format: decimal-string
+             */
+            reward_risk_ratio: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            specialist_scores: components["schemas"]["SpecialistScores"];
+            /** Symbol */
+            symbol: string;
+            /** Synthesis Rationale */
+            synthesis_rationale: string;
+            /** Target Price */
+            target_price?: string | null;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            verdict: components["schemas"]["TradeVerdict"];
+        };
+        /**
+         * TradeDirection
+         * @enum {string}
+         */
+        TradeDirection: "bullish" | "bearish" | "neutral";
         /** TradeProposal */
         TradeProposal: {
             /**
@@ -2669,6 +2804,11 @@ export interface components {
              */
             trace_id: string;
         };
+        /**
+         * TradeVerdict
+         * @enum {string}
+         */
+        TradeVerdict: "propose_trade" | "no_trade";
         /** TranscriptStep */
         TranscriptStep: {
             /** Actor */
@@ -3269,6 +3409,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_decision_api_v1_research_decision_synthesize_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionSynthesisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeDecisionReport"];
                 };
             };
             /** @description Validation Error */

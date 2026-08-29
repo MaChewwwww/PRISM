@@ -142,14 +142,14 @@ class MarketReactionAgent:
         catalyst_summary: str,
         expected_reaction_pct: Decimal | float | None,
         trace_id: UUID,
-        db_session: AsyncSession,
+        db_session: AsyncSession | None = None,
         article_id: str | None = None,
     ) -> ResearchReport:
         """Evaluate the market reaction and produce a formal ResearchReport contract."""
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB cache first
-        if article_id:
+        if article_id and db_session is not None:
             try:
                 query = select(ResearchReportModel).where(
                     ResearchReportModel.symbol == symbol,
@@ -303,11 +303,13 @@ class MarketReactionAgent:
                 model_name=completion.model,
                 raw_digest=completion.raw_digest,
             )
-            db_session.add(db_model)
-            await db_session.commit()
+            if db_session is not None:
+                db_session.add(db_model)
+                await db_session.commit()
         except Exception:
             # A cache write must never turn a non-authoritative research result into an error.
-            await db_session.rollback()
+            if db_session is not None:
+                await db_session.rollback()
             logger.warning("Market reaction cache write failed for symbol=%s", symbol)
 
         return report
