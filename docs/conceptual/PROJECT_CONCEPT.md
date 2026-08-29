@@ -4,117 +4,186 @@ Revision: `2026-08-29 / ecosystem-consolidation-v1`
 
 **One signal. Multiple perspectives. Better decisions.**
 
-## Executive summary
+## Executive overview
 
-PRISM is a paper-only market intelligence and governed decision platform. It decomposes one market signal into seven specialist AI perspectives, challenges the resulting proposal with AI-assisted Risk Management, and delegates all execution authority to deterministic code. ShadowFund compares alternatives on the same subsequent market path, and asynchronous Post-Analysis may recommend bounded AI Profile changes for manual review.
+PRISM helps an authenticated operator turn a fast-moving market event into a decision that can be understood, challenged, and audited. It combines several AI perspectives with a deterministic safety gate, then records why the outcome was to act, change the proposal, reject it, or do nothing.
 
-The current product is a contract-aligned skeleton. It implements versioned governance data, typed contracts, authenticated news, deterministic quantitative, and market-reaction research slices, backend-owned illustrative presentation APIs, a story-first frontend, and deployment/migration foundations. It does not yet implement full specialist orchestration, durable portfolio/authorization/ShadowFund engines, or broker order submission.
+**The core idea:** AI broadens the analysis; deterministic code controls authorization. Any order is Alpaca paper-only. Live trading is prohibited.
 
-Every current demonstration response is labeled **Illustrative fixture**. It does not represent an Alpaca account, paper order, fill, holding, P&L record, or model/provider call.
+PRISM brings the full decision lifecycle into one governed product: evidence gathering, multi-perspective analysis, trade proposal or `NO_TRADE`, adversarial risk review, deterministic authorization, paper execution, counterfactual comparison, and controlled learning.
 
-## Authority chain
+This document describes the complete product concept. Delivery progress is tracked separately in the [Implementation Plan](../IMPLEMENTATION_PLAN.md). During development and demonstrations, any `illustrative_fixture` data must be clearly labeled and must never be represented as an Alpaca account, paper order, fill, holding, profit-and-loss record, or model invocation.
 
-PRISM resolves conflicts in this order:
+## The problem PRISM addresses
 
-1. Repository invariants.
-2. BA-owned business process and versioned numerical register.
-3. AI Engineer-owned topology and responsibility boundaries.
-4. API contracts and generated transport types.
-5. Implementation and tests.
-6. This explanatory concept and its synchronized DOCX form.
+Market events are easy to oversimplify. A positive headline does not automatically mean buy, and a negative headline does not automatically mean sell. A useful decision also depends on questions such as:
 
-BA-authorized values override older examples, and the seven-specialist architecture is canonical. SLOs, backup retention, RPO, RTO, and other values absent from the register remain unresolved.
+- Is the event important enough to matter?
+- Has the market already priced it in?
+- Does price, volume, volatility, or peer behavior confirm the story?
+- Is the trade economically attractive after spread and execution costs?
+- Does the position fit the portfolio's risk, concentration, liquidity, and time limits?
 
-## Problem and product thesis
+Most tools answer only part of this chain. PRISM is designed to connect the evidence, the recommendation, the challenge, the governing rules, and the eventual outcome into one decision story.
 
-Simple sentiment systems reduce market events to positive news -> buy and negative news -> sell. They miss whether the event is material, whether the market already priced it, whether the reaction differs from comparable events, and whether a theoretically attractive position is executable within portfolio constraints.
+## Product vision
 
-PRISM treats each candidate as a decision story:
+PRISM is a governed decision journal for paper trading. Its purpose is to:
+
+- reduce single-perspective and headline-driven decisions;
+- make both action and restraint explainable;
+- enforce risk controls consistently, even when AI is unavailable or wrong;
+- preserve a reviewable record of the evidence, rule checks, and outcome;
+- compare the chosen path with credible alternatives without risking capital; and
+- turn completed decisions into bounded, reviewable improvement proposals.
+
+PRISM is not a live-trading product, a promise of profit, or a black-box system that lets an AI place orders. It is also not designed to maximize trade frequency. `NO_TRADE`, `REJECT`, and incomplete evidence are valid outcomes.
+
+## Who the product serves
+
+| Audience | What they need | What PRISM provides |
+| --- | --- | --- |
+| Operator | A clear view of what happened, what the system recommends, and what is allowed | An authenticated, story-first workspace with evidence, decisions, rules, and outcomes |
+| Reviewer or judge | Confidence that the demonstration is truthful and governed | Explicit data provenance, fixed rules, paper-only boundaries, and auditable decision traces |
+| Product, risk, and engineering team | A shared view of scope, controls, and progress | Versioned requirements, contracts, tests, and one consistent product baseline |
+
+## How a decision moves through PRISM
 
 ```text
-catalyst and market snapshot
-  -> specialist evidence
-  -> reaction-gap synthesis
-  -> proposal or NO_TRADE
-  -> adversarial risk critique
-  -> deterministic authorization
-  -> paper-only execution when genuinely enabled
-  -> counterfactual evaluation
-  -> bounded learning recommendation
+market signal and current context
+  -> seven specialist perspectives
+  -> TradeProposal or NO_TRADE
+  -> AI-assisted risk challenge
+  -> deterministic rule checks
+  -> APPROVE | REJECT | MODIFIED_PENDING_ACCEPTANCE
+  -> Alpaca paper execution only for APPROVE
+  -> ShadowFund comparison
+  -> Post-Analysis recommendation for manual review
 ```
 
-The objective is not maximum trade frequency. It is a traceable record of why action or restraint was appropriate under a specific version of evidence, rules, and profile.
+In plain language:
 
-## Canonical agent topology
+1. PRISM captures a catalyst and the relevant market context.
+2. Seven specialists examine the same opportunity from different angles.
+3. The Trading Decision Agent proposes a supported paper option structure or ends with `NO_TRADE`.
+4. AI-assisted Risk Management challenges the proposal and highlights portfolio or market concerns.
+5. Deterministic rules decide whether the exact proposal is permitted.
+6. Only `APPROVE` may proceed to paper execution.
+7. ShadowFund compares alternative choices on the same subsequent market path.
+8. Post-Analysis may recommend limited AI Profile adjustments, but a human must review them.
 
-The specialist order is canonical:
+Every stage uses structured, versioned records. Missing, stale, contradictory, or invalid evidence reduces confidence or stops the workflow; it never creates permission to trade.
 
-1. **News Agent** classifies catalysts, sources, event time, uncertainty, and evidence provenance.
-2. **Quantitative Agent** evaluates price, volume, volatility, options, liquidity, and historical analogs.
-3. **Industry Agent** evaluates sector, peer, supply-chain, and competitive context.
-4. **Fundamental Agent** evaluates issuer economics, guidance, valuation, balance-sheet, and quality.
-5. **Macroeconomic Agent** evaluates rates, policy, indexes, volatility regime, and cross-asset context.
-6. **Market Reaction/Mispricing Agent** compares expected and observed reaction and determines whether a defensible reaction gap exists.
-7. **Trading Decision Agent** produces a versioned `TradeProposal` or `NO_TRADE`, including structure, economics, evidence, exit policy, and limitations.
+## The seven specialist perspectives
 
-The specialist chain is followed by:
+The order and responsibilities below are canonical.
 
-- **Risk Management**, an AI-assisted adversarial critique of portfolio, regime, liquidity, drawdown, and tail risk.
-- **Deterministic Rules Engine**, the sole authorization authority.
-- **Paper Execution**, a deterministic adapter that may translate only a current `APPROVE`; it is disabled and not implemented in this skeleton.
-- **ShadowFund**, deterministic counterfactual evaluation; only illustrative views exist in this skeleton.
-- **Post-Analysis**, asynchronous recommendations limited to authorized AI Profile fields and pending deterministic validation/manual review.
+| Specialist | Question it answers | Limit |
+| --- | --- | --- |
+| News Agent | What happened, when, from which source, and with what uncertainty? | Research only |
+| Quantitative Agent | What do price, volume, volatility, liquidity, options data, and historical behavior show? | Research only |
+| Industry Agent | How does the event compare with peers, the sector, supply chain, and competitors? | Research only |
+| Fundamental Agent | What does it mean for earnings, valuation, balance-sheet quality, and company outlook? | Research only |
+| Macroeconomic Agent | How do rates, policy, indexes, volatility, and the wider regime affect the opportunity? | Research only |
+| Market Reaction/Mispricing Agent | Is the observed market reaction justified, excessive, insufficient, or unclear? | May identify an edge or `NO_CLEAR_EDGE`; cannot authorize |
+| Trading Decision Agent | Is there a supported, economically credible proposal, or should the system choose `NO_TRADE`? | Proposal only |
 
-No AI agent, browser route, prompt, MCP tool, or maintenance script can authorize or place an order.
+These specialists are followed by distinct responsibilities:
 
-## Decision vocabulary
+- **Risk Management** challenges the proposal but cannot approve it.
+- **Rules Engine** is deterministic and owns authorization.
+- **Execution** may translate only an approved, unchanged payload into a paper order.
+- **ShadowFund** evaluates alternatives and has no trading authority.
+- **Post-Analysis** recommends bounded profile changes that still require validation and manual review.
 
-Individual rules return one of:
+No AI agent, browser route, prompt, developer tool, or maintenance script may bypass the Rules Engine.
 
-- `PASS`: the evaluated input satisfies the rule.
-- `MODIFY`: a safe deterministic revision is possible, such as reducing size.
-- `FAIL`: the proposal cannot proceed under the active rule.
+## Decision outcomes in plain language
 
-Aggregation returns one of:
+Each rule returns one result:
 
-- `APPROVE`: every required rule permits the exact bound proposal.
-- `REJECT`: the proposal is terminally blocked.
-- `MODIFIED_PENDING_ACCEPTANCE`: proposed changes carry no execution authority.
+- `PASS`: the proposal satisfies that rule.
+- `MODIFY`: a specific safe change is possible, such as reducing position size.
+- `FAIL`: the proposal cannot proceed under the active rules.
 
-Only `APPROVE` may continue toward execution. Accepting a modification creates a new proposal version and digest; it must be authorized again.
+The combined decision is:
 
-## Governance baseline
+- `APPROVE`: the exact proposal is authorized.
+- `REJECT`: the proposal is blocked.
+- `MODIFIED_PENDING_ACCEPTANCE`: a safer revision has been suggested, but it has no authority yet.
 
-Ruleset `prism-authorized-baseline@1.0.0` is active from `2026-08-29T00:00:00Z`, remains open-ended until superseded, and uses Balanced as its default profile. The machine-readable authority is `backend/app/rules/authorized_baseline.v1.json`.
+A modification is never treated as approval. If the operator accepts it, PRISM creates a new proposal and evaluates it again.
 
-| Parameter | Authorized value |
-| --- | ---: |
-| Starting-capital baseline | 100,000.00 USD |
-| Maximum risk per trade, NORMAL | 1.00% of current equity |
-| Maximum risk per trade, VOLATILE | 0.75% of current equity |
-| Normal / volatile target allocation | 2.00% / 1.50% maximum |
-| Drawdown CAUTION / DEFENSIVE / HALT | 1.50% / 2.25% / 3.00% |
-| Minimum cash reserve | 5.00% |
-| Ticker / sector / correlated-cluster concentration | 5.00% / 10.00% / 7.50% maximum |
-| Aggregate modeled hard-stop risk | 3.00% maximum |
-| Maximum open positions | 6 |
-| Maximum bid/ask spread | 10.00% of premium |
-| Evidence and market-data freshness | 30 seconds maximum |
-| Opportunity score | 75 absolute floor; Balanced 84 |
-| Net expected value / realistic reward-risk | +0.15R minimum / 1.50:1 minimum |
-| Balanced take-profit / fixed stop-loss | 75.00% / 50.00% of initial debit |
-| Authorized take-profit range | 75.00% through 100.00% |
-| DTE exit | 7 days default; range 2 through 14 days |
-| Baseline maximum hold | 14 days; range 3 through 45 days |
-| Hackathon maximum-hold override | 4 trading days |
+## Safety model
 
-The 14-day value is the reusable baseline holding limit. The four-trading-day value is a tighter hackathon operating override and must not overwrite or masquerade as the baseline.
+Safety is a product feature, not a background technical detail.
 
-### Hackathon evaluation window
+- **Paper-only:** every genuine execution target must be an Alpaca paper account. Live mode is rejected.
+- **Disabled by default:** execution and autonomous scheduling are off unless explicitly configured.
+- **AI cannot authorize:** AI produces research, proposals, critiques, or recommendations. Deterministic code makes the final decision.
+- **Fail closed:** stale data, missing configuration, invalid output, mismatched records, unsupported permissions, or uncertain provider state results in no order.
+- **Exact binding:** an authorization is tied to the proposal, ruleset, AI Profile, market and portfolio snapshots, allowed order payload, decision time, and expiry.
+- **Last-moment checks:** execution must recheck paper mode, kill switch, freshness, permissions, buying power, contract activity, and the exact payload.
+- **No credentials in the browser:** Alpaca and LLM secrets remain server-side.
+- **Auditable and repeatable:** versioned inputs and rules produce a traceable result; ambiguous submissions are reconciled by client order ID instead of blindly retried.
 
-The BA-authorized hackathon window starts Monday Aug 31, 2026 at 09:30 ET. Official P&L is measured on total account equity at EOD Thursday Sep 3, 2026. Friday Sep 4 at 09:30 ET is only the outer window boundary. The new-entry cutoff is Wednesday Sep 2, 2026 16:00 ET, and every position is force-flattened by Thursday's close. The effective hold is the minimum of four trading days and the Thursday scoring point; 0-DTE and Sep-3 settlement exposure are blocked. These dates are represented as UTC in the versioned ruleset registry.
+## What the operator experiences
 
-## AI Profiles
+PRISM presents decisions as stories rather than as backend modules.
+
+| Surface | Purpose |
+| --- | --- |
+| Overview | Summarize decision activity, portfolio context, outcomes, and recommendations |
+| Decision Stories | Explain catalyst -> perspectives -> proposal -> risk -> rule outcome -> lesson |
+| Portfolio | Compare the chosen path with other tracked paths and exposures |
+| Alternatives | Review ShadowFund counterfactual branches, results, and limitations |
+| News and catalysts | Inspect event evidence, significance, and related decisions |
+| Market Tracker | Pair price charts with fills, orders, proposals, decisions, `NO_TRADE`, and shadow events |
+| Agents and tools | Show specialist roles, concise rationale, versions, latency, and recorded tool use |
+| Rules | Explain the active ruleset, decision meanings, profiles, and hackathon window |
+| Weekly Summary | Present Post-Analysis findings and profile suggestions for manual review |
+
+The workspace is authenticated, uses a consistent UTC date range, supports responsive layouts, and treats provenance as part of the content. Labels such as **Alpaca paper**, **ShadowFund**, **Benchmark**, and **Simulated** are reserved for data that genuinely came from those sources.
+
+## Authorized operating guardrails
+
+The active ruleset is `prism-authorized-baseline@1.0.0`, with Balanced as the default AI Profile. The machine-readable source is `backend/app/rules/authorized_baseline.v1.json`.
+
+| Area | Authorized guardrail |
+| --- | --- |
+| Capital baseline | 100,000.00 USD reference baseline; not a claim about an account balance |
+| Position target | 2.00% of equity in NORMAL conditions; 1.50% maximum in VOLATILE conditions |
+| Risk per trade | 1.00% of current equity in NORMAL; 0.75% in VOLATILE |
+| Portfolio protection | At least 5.00% cash reserve; no more than 6 open positions; modeled hard-stop risk no more than 3.00% |
+| Concentration | Ticker 5.00%; sector 10.00%; correlated cluster 7.50% maximum |
+| Drawdown response | CAUTION at 1.50%; DEFENSIVE at 2.25%; HALT at 3.00% start-of-day drawdown |
+| Evidence quality | Market and evidence freshness no more than 30 seconds |
+| Execution quality | Bid/ask spread no more than 10.00% of premium |
+| Opportunity quality | Absolute score floor 75; Balanced threshold 84 |
+| Economics | Net expected value at least +0.15R and realistic reward/risk at least 1.50:1 |
+| Standard exit | Balanced take-profit 75.00%; fixed stop-loss 50.00%; DTE exit default 7 days |
+| Holding period | Reusable baseline 14 days; separate hackathon override 4 trading days |
+
+The initial instrument scope is deliberately narrow: long calls, long puts, and two-leg 1:1 long call or put debit spreads. Options use whole contracts, `day` time in force, active contracts, and no extended-hours trading. Naked shorts, credit spreads, equity legs, rolls, unsupported permissions, and unverified account capabilities are rejected.
+
+When IV Rank is above 50%, deterministic policy requires a defined-risk 1:1 debit spread and applies the tighter volatile allocation and risk caps.
+
+## Hackathon operating window
+
+The fixed hackathon window is separate from the reusable baseline rules.
+
+| Control | Authorized time and meaning |
+| --- | --- |
+| Trading start | Monday Aug 31, 2026 at 09:30 ET |
+| New-entry cutoff | Wednesday Sep 2, 2026 at 16:00 ET; no new positions after the close |
+| Official scoring and force-flatten | EOD Thursday Sep 3, 2026; close all positions and score total account equity |
+| Outer boundary | Friday Sep 4, 2026 at 09:30 ET; a window edge only, not extra holding or scoring time |
+
+The new-entry cutoff preserves enough time for positions to be managed before scoring. The effective hold is the earlier of 4 trading days or the Sep 3 scoring point. Take-profit, fixed stop-loss, DTE, thesis invalidation, and the block on settlement exposure may close a position sooner.
+
+## AI Profiles and controlled learning
+
+AI Profiles express strategy preference inside non-negotiable rules. They cannot weaken a hard safety limit.
 
 | Profile | Target allocation | Opportunity threshold | Take-profit | Stop-loss |
 | --- | ---: | ---: | ---: | ---: |
@@ -122,81 +191,58 @@ The BA-authorized hackathon window starts Monday Aug 31, 2026 at 09:30 ET. Offic
 | Balanced | 2.00% | 84 | 75.00% | 50.00% fixed |
 | Aggressive | 2.50% | 80 | 100.00% | 50.00% fixed |
 
-Post-Analysis may recommend changes only to target position size (1.50% through 2.50%), opportunity threshold (75 through 95), take-profit (75.00% through 100.00%), and the fixed 50.00% stop-loss field. The validator rejects unknown fields, incompatible versions, and out-of-bounds changes.
+Post-Analysis may recommend changes only to target size, opportunity threshold, take-profit, and the fixed stop-loss field. Recommendations must stay within authorized bounds, pass deterministic validation, and receive manual review. Automatic profile switching is not authorized.
 
-Manual Prescriptive mode is the only authorized activation model. The current skeleton is read-only and does not persist or activate recommendations. Automatic switching is deferred.
+## Technology and trust boundaries
 
-## Market regime and option envelope
+The product uses a Next.js web application, a FastAPI backend, PostgreSQL with Alembic migrations, and optional Redis caching. Alpaca and LLM providers sit behind server-side adapters.
 
-The initial instrument envelope contains long calls, long puts, and two-leg 1:1 long call/put debit spreads. Options use whole contracts, `day` time in force, active OCC contracts, and no extended-hours trading. Naked shorts, credit spreads, equity legs, rolls, more than two legs, unsupported permissions, and unverified account capabilities fail closed.
+```text
+operator browser
+  -> authenticated Next.js server
+  -> FastAPI application
+  -> database, provider-neutral AI adapters, and server-only Alpaca adapters
+```
 
-When IV Rank is above 50%, the deterministic VOLATILE rule restricts proposals to 1:1 debit spreads, caps target allocation at 1.50%, and caps planned stop risk at 0.75% of equity. AI may identify context, but code applies the rule.
+The browser never receives Alpaca or LLM credentials and never calls Alpaca directly. Financial values cross API boundaries as decimal strings, timestamps are UTC, and generated contracts keep the frontend and backend aligned.
 
-Every proposal requires a take-profit, fixed stop-loss, DTE exit, time exit, and thesis-invalidation path. Balanced take-profit is 75%; stop-loss is fixed at 50%.
+## Delivery workstreams
 
-## Authorization and execution boundary
+1. **Governed foundation:** business-rule registry, contracts, authentication, migrations, CI/CD, deployment, and audit-ready records.
+2. **Decision intelligence:** all seven specialists, structured evidence, proposals, risk assessments, and the full deterministic evaluator.
+3. **Portfolio and alternatives:** portfolio snapshots, exposure calculations, and ShadowFund valuation on a shared market path.
+4. **Paper execution:** Alpaca paper submission, reconciliation, kill-switch behavior, authorization rechecks, monitoring, and opt-in integration tests.
+5. **Controlled learning:** Post-Analysis evidence, bounded profile recommendations, deterministic validation, and manual activation.
 
-Authorization binds proposal identifier/version/digest, ruleset and profile versions, market and portfolio snapshot digests, allowed payload digest, rule trace, decision time, and expiration. Before any future submission, execution must recheck paper mode, execution-enabled state, kill switch, authorization currency, matching payload, freshness, account permissions, buying-power inputs, contract activity, and client order ID.
-
-Live trading is prohibited. Execution defaults off and fails closed. The current skeleton contains validation boundaries but no broker submission implementation.
-
-## ShadowFund and learning
-
-ShadowFund will evaluate cash/no-action, half-size, unhedged or contrarian, and declared specialist alternatives on the same market path. It records comparable net outcome, drawdown, adverse/favorable excursion, exposure duration, valuation confidence, and data completeness. Simulations must disclose limitations and never imply executable returns.
-
-The reusable evaluation policy includes intraday and five-trading-day horizons. The hackathon configuration uses a primary four-trading-day horizon through the EOD Sep 3 scoring point while retaining the intraday view. ShadowFund never extends the scoring window or creates an execution path.
-
-Completed evaluations may feed asynchronous Post-Analysis. Recommendations are evidence, not configuration authority.
-
-## Data, API, and provenance
-
-Financial and percentage values cross API boundaries as decimal strings. Timestamps are timezone-aware UTC. Contracts use closed enums, schema versions, stable identifiers, typed reason codes, and immutable authorization bindings.
-
-The frontend uses generated OpenAPI types through one server-side adapter and forwards only the authenticated session. It preserves UTC `from`/`to` URLs and stable decision IDs across overview, decisions, portfolio, alternatives, news, agents, governance, and weekly-summary routes.
-
-Every presentation response includes `generated_at`, `as_of`, requested range, `data_mode`, and fixture version. Current `data_mode` is always `illustrative_fixture`. Labels **Alpaca paper**, **ShadowFund**, **Benchmark**, and **Simulated** are reserved for data that genuinely matches those sources.
-
-## Security and operations
-
-The backend sets an HTTP-only `prism_session` cookie; login does not return a token. Example passwords and session secrets are rejected outside development. The browser has no endpoint that reveals a configured login password.
-
-Alembic owns schema creation. Compose runs a one-shot migration before FastAPI. Readiness validates required configuration and database access; liveness only reports process response. Local direct ports are 3000/8000, while base Compose defaults are 3005/8005. Production publishes Nginx only and deploys automatically after successful protected `main` CI; staging is separately gated.
-
-Provider errors are classified and redacted. The implemented news, deterministic quantitative, and market-reaction endpoints run non-authoritative research with structured validation, bounded provider reads, and non-blocking classified retries. Quantitative output is a typed technical report and never an authorization signal.
-
-## Frontend concept
-
-PRISM presents an authenticated, story-first journal rather than raw infrastructure entities. Core surfaces are Overview, Decision Stories, Portfolio, Alternatives, News, Agents, Governance, and Weekly Summary. Each surface handles loading, error, empty, and success states and preserves keyboard access, focus visibility, responsive navigation, and WCAG 2.2 AA contrast.
-
-The visual skeleton uses Plus Jakarta Sans, monospace tabular financial values, obsidian/specular-glass surfaces, mineral teal, and stable spectral identities for the seven specialists. Decorative polish remains frontend-developer work; data boundaries and authority semantics do not.
-
-Governance is read-only. Weekly Summary shows bounded Post-Analysis recommendations awaiting manual review and provides no threshold mutation or automatic activation path.
-
-### Market Tracker
-
-Market Tracker is an authenticated Inspect surface for a future interactive price/time chart, symbol watchlist, timeframe controls, and activity overlays. Its skeleton is intentionally provider-free: it preserves the shared UTC range and default `1Day` timeframe, but shows an explicit integration-deferred state with no fabricated symbols, prices, positions, orders, fills, or provider claims. Future overlays distinguish confirmed `fill`, `order`, `proposal`, `decision`, `no_trade`, and `shadow` events; only confirmed fills qualify as actual trades. The planned flow remains Browser -> authenticated Next.js server adapter -> FastAPI -> server-only Alpaca and persisted PRISM repositories. Historical bars and snapshots are the first future milestone, followed by server-owned streams and reconciliation; the browser never receives provider credentials.
-
-## Delivery scope
-
-### Implemented skeleton
-
-- versioned BA registry and typed profile/ruleset contracts;
-- FastAPI-generated OpenAPI paths and generated TypeScript;
-- authenticated illustrative presentation APIs and stable decision IDs;
-- story-first frontend connected only to backend APIs;
-- canonical agent/governance/provenance presentation;
-- implemented news, deterministic quantitative, and market-reaction research slices with redacted failures;
-- authentication hardening, Alembic baseline, migration service, readiness, CORS, and port alignment.
-
-### Deferred engines
-
-- full seven-agent orchestration;
-- durable proposal/risk/rules/profile/audit persistence;
-- portfolio and Alpaca-backed repositories;
-- broker paper execution and reconciliation;
-- ShadowFund valuation engine;
-- profile activation and automatic switching.
+Each milestone must preserve paper-only operation, truthful provenance, deterministic authority, and testable failure behavior.
 
 ## Success criteria
 
-The skeleton succeeds when contracts, rules, docs, Markdown/DOCX concept formats, generated artifacts, frontend data flows, migrations, and tests agree; every fixture surface identifies illustrative provenance; and no AI/browser path can bypass deterministic paper-only controls.
+PRISM succeeds when:
+
+- an operator can understand why the system acted, changed course, rejected a proposal, or chose `NO_TRADE`;
+- every decision is traceable to timestamped evidence, a ruleset version, and an AI Profile version;
+- the same valid inputs and rules produce the same authorization result;
+- no AI or browser path can bypass deterministic controls;
+- every real provider, paper, shadow, benchmark, and simulated result is labeled truthfully;
+- rejected and modified opportunities remain available for learning without forcing execution;
+- Markdown, DOCX, requirements, contracts, generated types, implementation, and tests stay synchronized; and
+- the product remains usable and accessible on mobile, tablet, and desktop.
+
+Availability and latency SLOs, backup retention, RPO, and RTO are still unresolved. They must not be guessed or presented as commitments until their owners approve them.
+
+## Key risks and dependencies
+
+- **Data access and freshness:** Alpaca entitlements, provider availability, and thin options markets can limit evidence quality.
+- **Provenance confusion:** illustrative data could be mistaken for real performance unless labels remain prominent.
+- **AI variability:** structured validation, evidence requirements, and fail-closed behavior are essential because model output can be incomplete or wrong.
+- **Execution risk:** paper submission must remain disabled until authorization, reconciliation, monitoring, and negative-path tests are complete.
+- **Operational decisions:** service targets and recovery objectives remain owner decisions.
+
+## Source of truth
+
+This concept is an explanatory document. If it conflicts with a higher-authority source, the higher-authority source wins and both concept formats must be updated.
+
+The authority order is repository invariants -> BA requirements and versioned numerical register -> AI architecture -> API contracts -> implementation and tests -> this concept.
+
+Start with the [documentation index](../README.md), then use [Governance Traceability](../GOVERNANCE_TRACEABILITY.md), [Functional and Non-Functional Requirements](../FRS_NFRS.md), [Business Rules](../BUSINESS_RULES.md), [AI Agents](../AI_AGENTS.md), [AI Profiles](../AI_PROFILES.md), [Architecture](../ARCHITECTURE.md), and [Data and API Contracts](../DATA_API_CONTRACTS.md) for authoritative detail.
