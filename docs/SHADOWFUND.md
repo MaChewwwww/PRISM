@@ -15,7 +15,7 @@ ShadowFund organizes counterfactual analysis into three complementary tiers:
 │ • Unhedged Structure: Single Long Option (Isolates IV crush & spread hedge)    │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │ LAYER 2: Agent-Level Divergent Perspectives (Single-Prompt LLM Extraction)     │
-│ • Extracted in the same Proposal Agent LLM pass with zero extra token roundtrip│
+│ • Extracted in the same Trading Decision Agent LLM pass with zero extra token roundtrip│
 │ • Contrarian Fade: Directional reversal thesis (e.g. Put Debit Spread)         │
 │ • Alternative Delta/DTE: Alternate expiry / strike candidate                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤

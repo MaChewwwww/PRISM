@@ -10,9 +10,11 @@ from app.api.auth import router as auth_router
 from app.api.models import HealthResponse, SystemStatus
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
+from app.research.routes import router as research_router
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth_router)
+router.include_router(research_router)
 
 
 def cli_status(settings: Settings) -> tuple[bool, str | None]:
