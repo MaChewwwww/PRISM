@@ -724,6 +724,11 @@ export interface components {
          * @enum {string}
          */
         AltmanZone: "safe" | "grey" | "distress";
+        /**
+         * AssetMacroImpact
+         * @enum {string}
+         */
+        AssetMacroImpact: "strong_tailwind" | "moderate_tailwind" | "neutral" | "moderate_headwind" | "severe_headwind";
         /** AuditEvent */
         AuditEvent: {
             /** Actor Type */
@@ -856,6 +861,11 @@ export interface components {
          * @enum {string}
          */
         AuthorizationOutcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+        /**
+         * BalanceSheetRedFlag
+         * @enum {string}
+         */
+        BalanceSheetRedFlag: "accrual_earnings_divergence" | "working_capital_deficit" | "high_leverage_burden" | "interest_coverage_strain" | "altman_distress_risk" | "none_detected";
         /** BollingerBands */
         BollingerBands: {
             /**
@@ -902,6 +912,16 @@ export interface components {
             /** Source */
             source: string;
         };
+        /**
+         * CatalystDecayStatus
+         * @enum {string}
+         */
+        CatalystDecayStatus: "fresh_catalyst" | "active_digestion" | "aging_catalyst" | "priced_in";
+        /**
+         * CatalystMateriality
+         * @enum {string}
+         */
+        CatalystMateriality: "critical" | "high" | "medium" | "low" | "noise";
         /** ChartPoint */
         ChartPoint: {
             /** Agentalternative */
@@ -988,6 +1008,86 @@ export interface components {
              */
             symbol: string;
         };
+        /** EarningsSurpriseData */
+        EarningsSurpriseData: {
+            /**
+             * Eps Surprise Pct
+             * @default null
+             */
+            eps_surprise_pct: (number | string) | null;
+            /**
+             * Quarter
+             * @default null
+             */
+            quarter: string | null;
+            /**
+             * Revenue Surprise Pct
+             * @default null
+             */
+            revenue_surprise_pct: (number | string) | null;
+        };
+        /** EarningsSurpriseEvent */
+        EarningsSurpriseEvent: {
+            /**
+             * Eps Actual
+             * @default null
+             */
+            eps_actual: (number | string) | null;
+            /**
+             * Eps Consensus
+             * @default null
+             */
+            eps_consensus: (number | string) | null;
+            /**
+             * Eps Surprise Pct
+             * @default null
+             */
+            eps_surprise_pct: (number | string) | null;
+            /** @default neutral */
+            estimate_revision_trend: components["schemas"]["EstimateRevisionTrend"];
+            /**
+             * Gross Margin Surprise Bps
+             * @default null
+             */
+            gross_margin_surprise_bps: (number | string) | null;
+            /** @default not_applicable */
+            guidance_change: components["schemas"]["GuidanceChange"];
+            /**
+             * Operating Margin Surprise Bps
+             * @default null
+             */
+            operating_margin_surprise_bps: (number | string) | null;
+            /**
+             * Quarter
+             * @default null
+             */
+            quarter: string | null;
+            /**
+             * Revenue Actual Millions
+             * @default null
+             */
+            revenue_actual_millions: (number | string) | null;
+            /**
+             * Revenue Consensus Millions
+             * @default null
+             */
+            revenue_consensus_millions: (number | string) | null;
+            /**
+             * Revenue Surprise Pct
+             * @default null
+             */
+            revenue_surprise_pct: (number | string) | null;
+        };
+        /**
+         * EconomicEventProximity
+         * @enum {string}
+         */
+        EconomicEventProximity: "fomc_decision_near" | "cpi_inflation_near" | "jobs_payrolls_near" | "high_impact_event_ahead" | "standard_calendar";
+        /**
+         * EstimateRevisionTrend
+         * @enum {string}
+         */
+        EstimateRevisionTrend: "upward" | "downward" | "mixed" | "neutral";
         /** Evidence */
         Evidence: {
             /** Label */
@@ -1148,6 +1248,7 @@ export interface components {
              * Format: decimal-string
              */
             current_price: string;
+            earnings_event?: components["schemas"]["EarningsSurpriseEvent"] | null;
             /**
              * Enterprise Value Millions
              * Format: decimal-string
@@ -1167,6 +1268,8 @@ export interface components {
             /** Piotroski F Score */
             piotroski_f_score: number;
             profitability: components["schemas"]["ProfitabilityMetrics"];
+            /** Red Flags */
+            red_flags?: components["schemas"]["BalanceSheetRedFlag"][];
             /**
              * Schema Version
              * @default 1.0
@@ -1247,6 +1350,11 @@ export interface components {
             /** Version */
             version: string;
         };
+        /**
+         * GuidanceChange
+         * @enum {string}
+         */
+        GuidanceChange: "raised" | "lowered" | "reaffirmed" | "withdrawn" | "not_applicable";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1435,6 +1543,14 @@ export interface components {
              */
             id?: string;
             overall_sentiment: components["schemas"]["IndustrySentiment"];
+            /**
+             * Peer Dispersion 20D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            peer_dispersion_20d_pct: string;
+            /** @default isolated_reaction */
+            peer_reaction_dynamics: components["schemas"]["PeerReactionDynamics"];
             peer_relative_performance: components["schemas"]["RelativePerformance"];
             /** Peers */
             peers: components["schemas"]["PeerPerformance"][];
@@ -1463,6 +1579,8 @@ export interface components {
             sector_health_score: string;
             /** Sector Name */
             sector_name: string;
+            /** @default broad_beta_convergence */
+            sector_regime_confirmation: components["schemas"]["SectorRegimeConfirmation"];
             sector_relative_performance: components["schemas"]["RelativePerformance"];
             /**
              * Sector Return 20D Pct
@@ -1475,6 +1593,18 @@ export interface components {
              */
             sector_return_5d_pct: string;
             /**
+             * Spy Return 20D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            spy_return_20d_pct: string;
+            /**
+             * Spy Return 5D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            spy_return_5d_pct: string;
+            /**
              * Stock Return 20D Pct
              * Format: decimal-string
              */
@@ -1484,6 +1614,12 @@ export interface components {
              * Format: decimal-string
              */
             stock_return_5d_pct: string;
+            /**
+             * Stock Vs Spy Alpha 20D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            stock_vs_spy_alpha_20d_pct: string;
             /** Symbol */
             symbol: string;
             /** Tailwinds */
@@ -1518,18 +1654,44 @@ export interface components {
         LLMEventAnalysis: {
             /** Article Id */
             article_id: string;
+            /** @default medium */
+            catalyst_materiality: components["schemas"]["CatalystMateriality"];
+            /**
+             * Contradiction Notes
+             * @default null
+             */
+            contradiction_notes: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at?: string;
-            /** Event Type */
+            /** @default null */
+            earnings_surprise: components["schemas"]["EarningsSurpriseData"] | null;
+            /**
+             * Event Age Seconds
+             * @default 0
+             */
+            event_age_seconds: number;
+            /** @default other */
+            event_category: components["schemas"]["NewsEventCategory"];
+            /**
+             * Event Type
+             * @default other
+             */
             event_type: string;
             /**
              * Expected Reaction Pct
              * @default null
              */
             expected_reaction_pct: (number | string) | null;
+            /** @default not_applicable */
+            guidance_change: components["schemas"]["GuidanceChange"];
+            /**
+             * Has Contradictory Signals
+             * @default false
+             */
+            has_contradictory_signals: boolean;
             /** Headline */
             headline: string;
             /**
@@ -1558,6 +1720,17 @@ export interface components {
              * Format: decimal-string
              */
             significance_score: number | string;
+            /**
+             * Source
+             * @default unknown
+             */
+            source: string;
+            /**
+             * Source Confidence
+             * Format: decimal-string
+             * @default 50.0
+             */
+            source_confidence: number | string;
             /** Symbol */
             symbol: string;
             /**
@@ -1614,6 +1787,8 @@ export interface components {
         };
         /** MacroAnalysisReport */
         MacroAnalysisReport: {
+            /** @default neutral */
+            asset_macro_impact: components["schemas"]["AssetMacroImpact"];
             /** Assets */
             assets: components["schemas"]["MacroAssetPerformance"][];
             /**
@@ -1621,6 +1796,8 @@ export interface components {
              * Format: date-time
              */
             created_at?: string;
+            /** @default standard_calendar */
+            economic_event_proximity: components["schemas"]["EconomicEventProximity"];
             /**
              * Id
              * Format: uuid
@@ -1636,8 +1813,16 @@ export interface components {
             macro_regime: components["schemas"]["MacroRegime"];
             /** Macro Tailwinds */
             macro_tailwinds?: string[];
+            /** @default stable */
+            market_stress_direction: components["schemas"]["MarketStressDirection"];
             market_stress_level: components["schemas"]["MarketStressLevel"];
             rate_environment: components["schemas"]["RateEnvironment"];
+            /**
+             * Realized Volatility Pct
+             * Format: decimal-string
+             * @default 15.0
+             */
+            realized_volatility_pct: string;
             /**
              * Schema Version
              * @default 1.0
@@ -1655,6 +1840,12 @@ export interface components {
              * Format: uuid
              */
             trace_id: string;
+            /**
+             * Volatility Change 5D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            volatility_change_5d_pct: string;
         };
         /** MacroAnalysisRequest */
         MacroAnalysisRequest: {
@@ -1726,6 +1917,11 @@ export interface components {
          */
         MarketRegime: "normal" | "volatile" | "event" | "crisis";
         /**
+         * MarketStressDirection
+         * @enum {string}
+         */
+        MarketStressDirection: "escalating" | "stable" | "easing";
+        /**
          * MarketStressLevel
          * @enum {string}
          */
@@ -1766,6 +1962,11 @@ export interface components {
             /** Symbols */
             symbols: string[];
         };
+        /**
+         * NewsEventCategory
+         * @enum {string}
+         */
+        NewsEventCategory: "earnings" | "guidance" | "m_and_a" | "regulatory_legal" | "product_innovation" | "analyst_action" | "management_change" | "macro_geopolitical" | "routine_pr" | "other";
         /** NewsRecord */
         NewsRecord: {
             /** Category */
@@ -1902,6 +2103,11 @@ export interface components {
             /** Symbol */
             symbol: string;
         };
+        /**
+         * PeerReactionDynamics
+         * @enum {string}
+         */
+        PeerReactionDynamics: "divergent_winner" | "sympathetic_sector_surge" | "isolated_reaction" | "peer_dragged_down";
         /** Portfolio */
         Portfolio: {
             /** Activities */
@@ -2006,6 +2212,36 @@ export interface components {
              */
             generatedAt: string;
             range?: components["schemas"]["DateRange"] | null;
+        };
+        /** PriceDisplacement */
+        PriceDisplacement: {
+            /**
+             * Displacement 1D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            displacement_1d_pct: number | string;
+            /**
+             * Displacement 20D Pct
+             * @default null
+             */
+            displacement_20d_pct: (number | string) | null;
+            /**
+             * Displacement 3D Pct
+             * @default null
+             */
+            displacement_3d_pct: (number | string) | null;
+            /**
+             * Displacement 5D Pct
+             * @default null
+             */
+            displacement_5d_pct: (number | string) | null;
+            /**
+             * Gap Size Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            gap_size_pct: number | string;
         };
         /** ProfileParameter */
         ProfileParameter: {
@@ -2141,6 +2377,7 @@ export interface components {
              */
             momentum_score: string;
             moving_averages: components["schemas"]["MovingAverages"];
+            price_displacement?: components["schemas"]["PriceDisplacement"];
             /**
              * Rsi 14
              * Format: decimal-string
@@ -2163,6 +2400,8 @@ export interface components {
              */
             trace_id: string;
             trend: components["schemas"]["TrendDirection"];
+            /** @default range_bound */
+            trend_confirmation: components["schemas"]["TrendConfirmation"];
             /**
              * Volatility Annualized Pct
              * Format: decimal-string
@@ -2225,6 +2464,25 @@ export interface components {
              * @default null
              */
             actual_reaction_pct: (number | string) | null;
+            /**
+             * Analog Count
+             * @default 0
+             */
+            analog_count: number;
+            /**
+             * Analog Similarity Score
+             * Format: decimal-string
+             * @default 50.0
+             */
+            analog_similarity_score: number | string;
+            /**
+             * Catalyst Decay Factor
+             * Format: decimal-string
+             * @default 1.0
+             */
+            catalyst_decay_factor: number | string;
+            /** @default fresh_catalyst */
+            catalyst_decay_status: components["schemas"]["CatalystDecayStatus"];
             /** @default null */
             classification: components["schemas"]["ReactionClassification"] | null;
             /**
@@ -2237,6 +2495,17 @@ export interface components {
              * Format: date-time
              */
             created_at?: string;
+            /**
+             * Direction Adjusted Gap Pct
+             * @default null
+             */
+            direction_adjusted_gap_pct: (number | string) | null;
+            /**
+             * Event Age Hours
+             * Format: decimal-string
+             * @default 0.0
+             */
+            event_age_hours: number | string;
             /** Evidence */
             evidence: components["schemas"]["EvidenceItem"][];
             /**
@@ -2247,10 +2516,35 @@ export interface components {
             /** Freshness Seconds */
             freshness_seconds: number;
             /**
+             * Historical Dispersion Pct
+             * @default null
+             */
+            historical_dispersion_pct: (number | string) | null;
+            /**
+             * Historical Median Reaction Pct
+             * @default null
+             */
+            historical_median_reaction_pct: (number | string) | null;
+            /**
+             * Historical Volatility Pct
+             * @default null
+             */
+            historical_volatility_pct: (number | string) | null;
+            /**
              * Id
              * Format: uuid
              */
             id?: string;
+            /**
+             * Implied Volatility Pct
+             * @default null
+             */
+            implied_volatility_pct: (number | string) | null;
+            /**
+             * Iv Hv Ratio
+             * @default null
+             */
+            iv_hv_ratio: (number | string) | null;
             /** Limitations */
             limitations?: string[];
             /**
@@ -2258,6 +2552,11 @@ export interface components {
              * @default null
              */
             opportunity_score: (number | string) | null;
+            /**
+             * Options Implied Move Pct
+             * @default null
+             */
+            options_implied_move_pct: (number | string) | null;
             /**
              * Reaction Gap Pct
              * @default null
@@ -2405,6 +2704,11 @@ export interface components {
          * @enum {string}
          */
         RulePriority: "P0" | "P1" | "P2" | "P3" | "P4" | "P5";
+        /**
+         * SectorRegimeConfirmation
+         * @enum {string}
+         */
+        SectorRegimeConfirmation: "leading_sector_outperformer" | "idiosyncratic_decoupling" | "broad_beta_convergence" | "sector_under_pressure" | "lagging_in_bull_sector";
         /** ShadowCandidate */
         ShadowCandidate: {
             /**
@@ -2504,32 +2808,32 @@ export interface components {
              * Fundamental Quality Score
              * Format: decimal-string
              */
-            fundamental_quality_score: string;
+            fundamental_quality_score: number | string;
             /**
              * Macro Climate Score
              * Format: decimal-string
              */
-            macro_climate_score: string;
+            macro_climate_score: number | string;
             /**
              * News Sentiment Score
              * Format: decimal-string
              */
-            news_sentiment_score: string;
+            news_sentiment_score: number | string;
             /**
              * Quant Momentum Score
              * Format: decimal-string
              */
-            quant_momentum_score: string;
+            quant_momentum_score: number | string;
             /**
              * Reaction Opportunity Score
              * Format: decimal-string
              */
-            reaction_opportunity_score: string;
+            reaction_opportunity_score: number | string;
             /**
              * Sector Health Score
              * Format: decimal-string
              */
-            sector_health_score: string;
+            sector_health_score: number | string;
         };
         /** StoryDetail */
         StoryDetail: {
@@ -2695,14 +2999,16 @@ export interface components {
              * Composite Opportunity Score
              * Format: decimal-string
              */
-            composite_opportunity_score: string;
+            composite_opportunity_score: number | string;
             /**
              * Confidence Score
              * Format: decimal-string
              */
-            confidence_score: string;
+            confidence_score: number | string;
             /** Contradiction Analysis */
             contradiction_analysis: string;
+            /** Contradictions */
+            contradictions?: string[];
             /**
              * Created At
              * Format: date-time
@@ -2712,8 +3018,10 @@ export interface components {
              * Current Price
              * Format: decimal-string
              */
-            current_price: string;
+            current_price: number | string;
             direction: components["schemas"]["TradeDirection"];
+            /** Evidence Summary */
+            evidence_summary?: string[];
             exit_policy: components["schemas"]["ExitPolicy"];
             /**
              * Id
@@ -2726,13 +3034,23 @@ export interface components {
              * Net Ev R
              * Format: decimal-string
              */
-            net_ev_r: string;
+            net_ev_r: number | string;
+            /**
+             * Options Only Constraint Acknowledged
+             * @default true
+             */
+            options_only_constraint_acknowledged: boolean;
+            /**
+             * Portfolio Fit
+             * @default
+             */
+            portfolio_fit: string;
             recommended_structure: components["schemas"]["OptionStructure"];
             /**
              * Reward Risk Ratio
              * Format: decimal-string
              */
-            reward_risk_ratio: string;
+            reward_risk_ratio: number | string;
             /**
              * Schema Version
              * @default 1.0
@@ -2744,8 +3062,11 @@ export interface components {
             symbol: string;
             /** Synthesis Rationale */
             synthesis_rationale: string;
-            /** Target Price */
-            target_price?: string | null;
+            /**
+             * Target Price
+             * @default null
+             */
+            target_price: (number | string) | null;
             /**
              * Trace Id
              * Format: uuid
@@ -2808,7 +3129,7 @@ export interface components {
          * TradeVerdict
          * @enum {string}
          */
-        TradeVerdict: "propose_trade" | "no_trade";
+        TradeVerdict: "proceed_to_options_proposal" | "no_trade" | "propose_trade";
         /** TranscriptStep */
         TranscriptStep: {
             /** Actor */
@@ -2842,6 +3163,11 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * TrendConfirmation
+         * @enum {string}
+         */
+        TrendConfirmation: "strong_uptrend_confirmed" | "pullback_in_uptrend" | "golden_cross" | "range_bound" | "oversold_bounce" | "death_cross" | "breakdown_confirmed";
         /**
          * TrendDirection
          * @enum {string}

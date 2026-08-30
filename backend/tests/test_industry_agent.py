@@ -12,7 +12,9 @@ from app.contracts.models import (
     CompetitiveMoat,
     IndustryAnalysisReport,
     IndustrySentiment,
+    PeerReactionDynamics,
     RelativePerformance,
+    SectorRegimeConfirmation,
 )
 from app.core.llm_gateway import LLMCompletionResult
 from app.research.industry_agent import (
@@ -20,8 +22,11 @@ from app.research.industry_agent import (
     IndustryIntelligenceAgent,
     classify_peer_relative_performance,
     classify_relative_performance,
+    compute_peer_dispersion,
+    compute_peer_reaction_dynamics,
     compute_period_return,
     compute_sector_health_score,
+    compute_sector_regime_confirmation,
 )
 from app.research.models import IndustryAnalysisModel
 
@@ -32,6 +37,95 @@ def test_compute_period_return() -> None:
     assert compute_period_return(bars, 5) == Decimal("4.81")  # (109 - 104) / 104 * 100 = 4.81%
     assert compute_period_return([], 5) == Decimal("0.0")
     assert compute_period_return([{"close": Decimal("100.0")}], 5) == Decimal("0.0")
+
+
+def test_compute_peer_dispersion() -> None:
+    # 3 peers with identical returns: std dev = 0
+    assert compute_peer_dispersion([Decimal("5.0"), Decimal("5.0"), Decimal("5.0")]) == Decimal(
+        "0.0"
+    )
+    # 3 peers with returns 0%, 5%, 10%: mean=5%, var = (25+0+25)/2 = 25, std dev = 5.0
+    assert compute_peer_dispersion([Decimal("0.0"), Decimal("5.0"), Decimal("10.0")]) == Decimal(
+        "5.0"
+    )
+    assert compute_peer_dispersion([Decimal("5.0")]) == Decimal("0.0")
+    assert compute_peer_dispersion([]) == Decimal("0.0")
+
+
+def test_compute_sector_regime_confirmation() -> None:
+    # Leading sector outperformer: stock 15%, sector 10%, SPY 5%
+    assert (
+        compute_sector_regime_confirmation(
+            stock_20d=Decimal("15.0"), sector_20d=Decimal("10.0"), spy_20d=Decimal("5.0")
+        )
+        == SectorRegimeConfirmation.LEADING_SECTOR_OUTPERFORMER
+    )
+
+    # Idiosyncratic decoupling: stock 8%, sector -2%, SPY 2%
+    assert (
+        compute_sector_regime_confirmation(
+            stock_20d=Decimal("8.0"), sector_20d=Decimal("-2.0"), spy_20d=Decimal("2.0")
+        )
+        == SectorRegimeConfirmation.IDIOSYNCRATIC_DECOUPLING
+    )
+
+    # Lagging in bull sector: stock 2%, sector 12%, SPY 4%
+    assert (
+        compute_sector_regime_confirmation(
+            stock_20d=Decimal("2.0"), sector_20d=Decimal("12.0"), spy_20d=Decimal("4.0")
+        )
+        == SectorRegimeConfirmation.LAGGING_IN_BULL_SECTOR
+    )
+
+    # Sector under pressure: stock -5%, sector -6%, SPY 2%
+    assert (
+        compute_sector_regime_confirmation(
+            stock_20d=Decimal("-5.0"), sector_20d=Decimal("-6.0"), spy_20d=Decimal("2.0")
+        )
+        == SectorRegimeConfirmation.SECTOR_UNDER_PRESSURE
+    )
+
+    # Broad beta convergence
+    assert (
+        compute_sector_regime_confirmation(
+            stock_20d=Decimal("3.0"), sector_20d=Decimal("3.2"), spy_20d=Decimal("3.0")
+        )
+        == SectorRegimeConfirmation.BROAD_BETA_CONVERGENCE
+    )
+
+
+def test_compute_peer_reaction_dynamics() -> None:
+    # Divergent winner: stock +5%, peers avg -2%
+    assert (
+        compute_peer_reaction_dynamics(
+            stock_5d=Decimal("5.0"), peer_returns_5d=[Decimal("-2.0"), Decimal("-1.0")]
+        )
+        == PeerReactionDynamics.DIVERGENT_WINNER
+    )
+
+    # Sympathetic surge: stock +4%, peers avg +3%
+    assert (
+        compute_peer_reaction_dynamics(
+            stock_5d=Decimal("4.0"), peer_returns_5d=[Decimal("3.0"), Decimal("3.5")]
+        )
+        == PeerReactionDynamics.SYMPATHETIC_SECTOR_SURGE
+    )
+
+    # Peer dragged down: stock -3%, peers avg -3%
+    assert (
+        compute_peer_reaction_dynamics(
+            stock_5d=Decimal("-3.0"), peer_returns_5d=[Decimal("-4.0"), Decimal("-2.5")]
+        )
+        == PeerReactionDynamics.PEER_DRAGGED_DOWN
+    )
+
+    # Isolated / neutral
+    assert (
+        compute_peer_reaction_dynamics(
+            stock_5d=Decimal("0.2"), peer_returns_5d=[Decimal("0.1"), Decimal("-0.1")]
+        )
+        == PeerReactionDynamics.ISOLATED_REACTION
+    )
 
 
 def test_compute_sector_health_score_and_classifications() -> None:
@@ -181,10 +275,16 @@ async def test_industry_intelligence_agent_db_cache_hit_and_miss() -> None:
         stock_return_20d_pct=Decimal("10.0"),
         sector_return_5d_pct=Decimal("3.0"),
         sector_return_20d_pct=Decimal("7.0"),
+        spy_return_5d_pct=Decimal("1.0"),
+        spy_return_20d_pct=Decimal("4.0"),
         relative_alpha_5d_pct=Decimal("2.0"),
         relative_alpha_20d_pct=Decimal("3.0"),
+        stock_vs_spy_alpha_20d_pct=Decimal("6.0"),
+        peer_dispersion_20d_pct=Decimal("2.5"),
         sector_relative_performance="outperforming",
         peer_relative_performance="outperforming",
+        sector_regime_confirmation="leading_sector_outperformer",
+        peer_reaction_dynamics="divergent_winner",
         peers_json=json.dumps(sample_peers),
         sector_health_score=Decimal("90.0"),
         competitive_moat="wide",
@@ -195,6 +295,7 @@ async def test_industry_intelligence_agent_db_cache_hit_and_miss() -> None:
         model_name="deepseek-ai/DeepSeek-V3",
         raw_digest="b" * 64,
     )
+
     mock_scalar.scalar_one_or_none.return_value = cached_record
 
     cached_report = await agent.analyze_industry(

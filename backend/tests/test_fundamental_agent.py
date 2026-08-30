@@ -126,3 +126,78 @@ def test_compute_fundamental_analysis_known_and_unlisted_symbols() -> None:
     assert unlisted_report.symbol == "PLTR"
     assert unlisted_report.profitability.gross_margin_pct == Decimal("45.00")
     assert unlisted_report.composite_quality_score > Decimal("0.0")
+    assert unlisted_report.red_flags is not None
+
+
+def test_detect_balance_sheet_red_flags() -> None:
+    from app.contracts.models import BalanceSheetRedFlag, SolvencyMetrics
+    from app.research.fundamental_data import CompanyFinancials
+    from app.research.fundamental_engine import detect_balance_sheet_red_flags
+
+    # 1. Healthy financial profile
+    healthy_fin = get_company_financials("NVDA")
+    healthy_solv = compute_solvency_metrics(healthy_fin)
+    healthy_flags = detect_balance_sheet_red_flags(
+        healthy_fin, healthy_solv, z_score=Decimal("4.5")
+    )
+    assert healthy_flags == [BalanceSheetRedFlag.NONE_DETECTED]
+
+    # 2. Distressed profile with multiple warning flags
+    distressed_fin = CompanyFinancials(
+        symbol="DIST",
+        company_name="Distressed Corp",
+        shares_outstanding_millions=Decimal("100.0"),
+        revenue_ttm=Decimal("1000.0"),
+        gross_profit_ttm=Decimal("200.0"),
+        operating_income_ttm=Decimal("20.0"),
+        net_income_ttm=Decimal("50.0"),  # Positive Net Income
+        diluted_eps_ttm=Decimal("0.50"),
+        total_assets=Decimal("2000.0"),
+        current_assets=Decimal("400.0"),
+        current_liabilities=Decimal("600.0"),  # Current Ratio < 1.0
+        total_debt=Decimal("1500.0"),
+        cash_and_equivalents=Decimal("50.0"),
+        stockholders_equity=Decimal("400.0"),  # Debt/Equity = 1500/400 = 3.75 (> 2.0)
+        operating_cash_flow_ttm=Decimal("-20.0"),  # Negative OCF < Net Income (accruals risk)
+        capex_ttm=Decimal("100.0"),
+        ebitda_ttm=Decimal("50.0"),
+        interest_expense_ttm=Decimal("40.0"),  # EBIT/Interest = 20/40 = 0.5x (< 2.0x)
+        prior_net_income=Decimal("40.0"),
+        prior_operating_cash_flow=Decimal("10.0"),
+        prior_total_assets=Decimal("1900.0"),
+        prior_current_ratio=Decimal("0.8"),
+        prior_gross_margin_pct=Decimal("20.0"),
+    )
+    distressed_solv = SolvencyMetrics(
+        current_ratio=Decimal("0.67"),
+        debt_to_equity=Decimal("3.75"),
+        interest_coverage_ratio=Decimal("0.50"),
+        net_debt_millions=Decimal("1450.0"),
+    )
+    distressed_flags = detect_balance_sheet_red_flags(
+        distressed_fin, distressed_solv, z_score=Decimal("1.20")
+    )
+
+    assert BalanceSheetRedFlag.ACCRUAL_EARNINGS_DIVERGENCE in distressed_flags
+    assert BalanceSheetRedFlag.WORKING_CAPITAL_DEFICIT in distressed_flags
+    assert BalanceSheetRedFlag.HIGH_LEVERAGE_BURDEN in distressed_flags
+    assert BalanceSheetRedFlag.INTEREST_COVERAGE_STRAIN in distressed_flags
+    assert BalanceSheetRedFlag.ALTMAN_DISTRESS_RISK in distressed_flags
+
+
+def test_compute_earnings_surprise_event() -> None:
+    from app.contracts.models import GuidanceChange
+    from app.research.fundamental_engine import compute_earnings_surprise_event
+
+    nvda_fin = get_company_financials("NVDA")
+    event = compute_earnings_surprise_event(nvda_fin)
+
+    assert event is not None
+    assert event.quarter == "Q2 2026"
+    assert event.eps_actual == Decimal("0.68")
+    assert event.eps_consensus == Decimal("0.64")
+    assert event.eps_surprise_pct == Decimal("6.25")  # (0.68 - 0.64) / 0.64 * 100 = 6.25%
+    assert event.revenue_actual_millions == Decimal("30040.0")
+    assert event.revenue_surprise_pct == Decimal("4.67")
+    assert event.guidance_change == GuidanceChange.RAISED
+    assert event.gross_margin_surprise_bps == Decimal("120.0")

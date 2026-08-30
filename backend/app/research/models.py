@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from sqlalchemy import DateTime, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -23,10 +23,23 @@ class LLMEventAnalysisModel(Base):
     article_id: Mapped[str] = mapped_column(String(100), nullable=False)
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     headline: Mapped[str] = mapped_column(String(255), nullable=False)
-    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    source: Mapped[str] = mapped_column(String(100), nullable=False, default="unknown")
+    source_confidence: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("50.0")
+    )
+    event_age_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    event_category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    catalyst_materiality: Mapped[str] = mapped_column(String(50), nullable=False, default="medium")
     sentiment: Mapped[str] = mapped_column(String(20), nullable=False)
     significance_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     expected_reaction_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    guidance_change: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="not_applicable"
+    )
+    earnings_surprise_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    has_contradictory_signals: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    contradiction_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -54,9 +67,29 @@ class ResearchReportModel(Base):
     actual_reaction_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     expected_reaction_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     reaction_gap_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    direction_adjusted_gap_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     volume_ratio: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     classification: Mapped[str | None] = mapped_column(String(50), nullable=True)
     opportunity_score: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    historical_median_reaction_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    historical_dispersion_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    analog_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    analog_similarity_score: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("50.0")
+    )
+    historical_volatility_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    implied_volatility_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    iv_hv_ratio: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    options_implied_move_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    event_age_hours: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0.0")
+    )
+    catalyst_decay_factor: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("1.0")
+    )
+    catalyst_decay_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="fresh_catalyst"
+    )
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
@@ -79,10 +112,28 @@ class IndustryAnalysisModel(Base):
     stock_return_20d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     sector_return_5d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     sector_return_20d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    spy_return_5d_pct: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0.0")
+    )
+    spy_return_20d_pct: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0.0")
+    )
     relative_alpha_5d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     relative_alpha_20d_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    stock_vs_spy_alpha_20d_pct: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0.0")
+    )
+    peer_dispersion_20d_pct: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0.0")
+    )
     sector_relative_performance: Mapped[str] = mapped_column(String(50), nullable=False)
     peer_relative_performance: Mapped[str] = mapped_column(String(50), nullable=False)
+    sector_regime_confirmation: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="broad_beta_convergence"
+    )
+    peer_reaction_dynamics: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="isolated_reaction"
+    )
     peers_json: Mapped[str] = mapped_column(Text, nullable=False)
     sector_health_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     competitive_moat: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -109,7 +160,20 @@ class MacroAnalysisModel(Base):
     macro_regime: Mapped[str] = mapped_column(String(50), nullable=False)
     rate_environment: Mapped[str] = mapped_column(String(50), nullable=False)
     market_stress_level: Mapped[str] = mapped_column(String(50), nullable=False)
+    market_stress_direction: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="stable"
+    )
+    realized_volatility_pct: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("15.0")
+    )
+    volatility_change_5d_pct: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0.0")
+    )
     macro_climate_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    economic_event_proximity: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="standard_calendar"
+    )
+    asset_macro_impact: Mapped[str] = mapped_column(String(50), nullable=False, default="neutral")
     assets_json: Mapped[str] = mapped_column(Text, nullable=False)
     macro_tailwinds_json: Mapped[str] = mapped_column(Text, nullable=False)
     macro_headwinds_json: Mapped[str] = mapped_column(Text, nullable=False)
@@ -143,8 +207,12 @@ class TradeDecisionModel(Base):
 
     exit_policy_json: Mapped[str] = mapped_column(Text, nullable=False)
     specialist_scores_json: Mapped[str] = mapped_column(Text, nullable=False)
-    synthesis_rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_summary_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    contradictions_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     contradiction_analysis: Mapped[str] = mapped_column(Text, nullable=False)
+    portfolio_fit: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    options_only_constraint: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    synthesis_rationale: Mapped[str] = mapped_column(Text, nullable=False)
     key_risks_json: Mapped[str] = mapped_column(Text, nullable=False)
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)

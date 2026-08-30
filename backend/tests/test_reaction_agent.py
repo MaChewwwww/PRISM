@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.contracts.models import CatalystDecayStatus, NewsEventCategory
 from app.core.config import Settings
 from app.core.llm_gateway import LLMCompletionResult, LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
@@ -15,8 +16,55 @@ from app.research.models import ResearchReportModel
 from app.research.reaction_agent import (
     MarketReactionAgent,
     ReactionAnalysisLLMOutput,
+    compute_catalyst_decay,
     compute_reaction_metrics,
+    compute_volatility_and_implied_move,
 )
+
+
+def test_compute_catalyst_decay() -> None:
+    # 1. Fresh catalyst (1 hour old)
+    age_1h, factor_1h, status_1h = compute_catalyst_decay(
+        event_age_seconds=3600, half_life_hours=24.0
+    )
+    assert age_1h == Decimal("1.00")
+    assert factor_1h > Decimal("0.95")
+    assert status_1h == CatalystDecayStatus.FRESH_CATALYST
+
+    # 2. Active digestion (12 hours old)
+    age_12h, factor_12h, status_12h = compute_catalyst_decay(
+        event_age_seconds=43200, half_life_hours=24.0
+    )
+    assert age_12h == Decimal("12.00")
+    assert Decimal("0.65") <= factor_12h <= Decimal("0.75")
+    assert status_12h == CatalystDecayStatus.ACTIVE_DIGESTION
+
+    # 3. Aging catalyst (48 hours old)
+    age_48h, factor_48h, status_48h = compute_catalyst_decay(
+        event_age_seconds=172800, half_life_hours=24.0
+    )
+    assert age_48h == Decimal("48.00")
+    assert Decimal("0.20") <= factor_48h <= Decimal("0.30")
+    assert status_48h == CatalystDecayStatus.AGING_CATALYST
+
+    # 4. Priced in (96 hours old)
+    age_96h, factor_96h, status_96h = compute_catalyst_decay(
+        event_age_seconds=345600, half_life_hours=24.0
+    )
+    assert age_96h == Decimal("96.00")
+    assert factor_96h <= Decimal("0.10")
+    assert status_96h == CatalystDecayStatus.PRICED_IN
+
+
+def test_compute_volatility_and_implied_move() -> None:
+    bars = [{"close": 100 + (i * 0.5)} for i in range(25)]
+    hv, iv, iv_hv, implied_move = compute_volatility_and_implied_move(
+        bars, expected_reaction_pct=Decimal("4.0")
+    )
+    assert hv >= Decimal("10.0")
+    assert iv >= hv
+    assert iv_hv >= Decimal("1.0")
+    assert implied_move > Decimal("0.5")
 
 
 def test_compute_reaction_metrics_underreaction() -> None:
@@ -27,23 +75,62 @@ def test_compute_reaction_metrics_underreaction() -> None:
         {"close": Decimal("100.5"), "volume": 1200},
         {"close": Decimal("101.0"), "volume": 2500},
     ]
-    metrics = compute_reaction_metrics(bars, expected_reaction_pct=Decimal("4.0"))
+    metrics = compute_reaction_metrics(
+        bars,
+        expected_reaction_pct=Decimal("4.0"),
+        event_age_seconds=1800,
+        event_category=NewsEventCategory.EARNINGS,
+    )
 
     assert metrics["actual_reaction_pct"] == Decimal("1.0")
     assert metrics["expected_reaction_pct"] == Decimal("4.0")
     assert metrics["reaction_gap_pct"] == Decimal("3.0")
+    assert metrics["direction_adjusted_gap_pct"] == Decimal("3.0")
     assert metrics["classification"] == "UNDERREACTION"
     assert metrics["volume_ratio"] > Decimal("1.5")
     assert metrics["opportunity_score"] > Decimal("50.0")
+    assert metrics["historical_median_reaction_pct"] == Decimal("4.5")
+    assert metrics["analog_count"] == 16
+    assert metrics["catalyst_decay_status"] == CatalystDecayStatus.FRESH_CATALYST
+
+
+def test_compute_reaction_metrics_bearish_underreaction() -> None:
+    # Expected: -5.0% (Bearish catalyst), Actual: -1.0% -> underreaction to downside
+    bars = [
+        {"close": Decimal("100.0"), "volume": 1000},
+        {"close": Decimal("99.0"), "volume": 2000},
+    ]
+    metrics = compute_reaction_metrics(
+        bars,
+        expected_reaction_pct=Decimal("-5.0"),
+        event_age_seconds=3600,
+        event_category=NewsEventCategory.GUIDANCE,
+    )
+
+    assert metrics["actual_reaction_pct"] == Decimal("-1.0")
+    assert metrics["direction_adjusted_gap_pct"] == Decimal("4.0")
+    assert metrics["classification"] == "UNDERREACTION"
+
+
+def test_compute_reaction_metrics_counter_reaction_gap() -> None:
+    # Expected: -4.0% (Bearish catalyst), Actual: +1.0% (Rallied on bad news) -> 5.0% mispricing gap
+    bars = [
+        {"close": Decimal("100.0"), "volume": 1000},
+        {"close": Decimal("101.0"), "volume": 2000},
+    ]
+    metrics = compute_reaction_metrics(
+        bars,
+        expected_reaction_pct=Decimal("-4.0"),
+        event_age_seconds=1800,
+        event_category=NewsEventCategory.EARNINGS,
+    )
+
+    assert metrics["actual_reaction_pct"] == Decimal("1.0")
+    assert metrics["direction_adjusted_gap_pct"] == Decimal("5.0")
+    assert metrics["classification"] == "UNDERREACTION"
 
 
 def test_compute_reaction_metrics_overreaction() -> None:
-    # Pre-price: 100.0, Current-price: 94.0 -> actual: -6.0%
-    # Expected: -1.0% -> gap: -1 - (-6) = +5.0 or gap: -1 - (-6) = +5
-    # When expected is -1 and actual is -6, gap = -1 - (-6) = +5.0
-    # Wait, in the formula: gap = expected - actual = -1 - (-6) = +5.0
-    # If expected is 1.0 and actual is 6.0 (bullish overreaction):
-    # gap = 1.0 - 6.0 = -5.0
     bars = [
         {"close": Decimal("100.0"), "volume": 1000},
         {"close": Decimal("106.0"), "volume": 2000},
@@ -52,6 +139,7 @@ def test_compute_reaction_metrics_overreaction() -> None:
 
     assert metrics["actual_reaction_pct"] == Decimal("6.0")
     assert metrics["reaction_gap_pct"] == Decimal("-5.0")
+    assert metrics["direction_adjusted_gap_pct"] == Decimal("-5.0")
     assert metrics["classification"] == "OVERREACTION"
 
 
@@ -71,6 +159,7 @@ def test_compute_reaction_metrics_empty_bars() -> None:
     metrics = compute_reaction_metrics([], expected_reaction_pct=Decimal("2.0"))
     assert metrics["actual_reaction_pct"] == Decimal("0.0")
     assert metrics["reaction_gap_pct"] == Decimal("0.0")
+    assert metrics["direction_adjusted_gap_pct"] == Decimal("0.0")
     assert metrics["classification"] == "FAIR_REACTION"
 
 
@@ -217,8 +306,21 @@ async def test_market_reaction_agent_analysis_and_caching() -> None:
         actual_reaction_pct=Decimal("1.0"),
         expected_reaction_pct=Decimal("4.0"),
         reaction_gap_pct=Decimal("3.0"),
+        direction_adjusted_gap_pct=Decimal("3.0"),
+        volume_ratio=Decimal("2.0"),
         classification="UNDERREACTION",
         opportunity_score=Decimal("80.0"),
+        historical_median_reaction_pct=Decimal("4.5"),
+        historical_dispersion_pct=Decimal("3.2"),
+        analog_count=16,
+        analog_similarity_score=Decimal("75.0"),
+        historical_volatility_pct=Decimal("22.0"),
+        implied_volatility_pct=Decimal("27.5"),
+        iv_hv_ratio=Decimal("1.25"),
+        options_implied_move_pct=Decimal("2.8"),
+        event_age_hours=Decimal("1.5"),
+        catalyst_decay_factor=Decimal("0.95"),
+        catalyst_decay_status="fresh_catalyst",
         model_name=mock_completion.model,
         raw_digest=mock_completion.raw_digest,
     )

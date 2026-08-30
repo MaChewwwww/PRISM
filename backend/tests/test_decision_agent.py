@@ -7,9 +7,13 @@ from uuid import uuid4
 import pytest
 
 from app.contracts.models import (
+    AssetMacroImpact,
+    CatalystMateriality,
     CompetitiveMoat,
+    GuidanceChange,
     IndustrySentiment,
     MacroRegime,
+    NewsEventCategory,
     OptionStructure,
     RateEnvironment,
     TradeDirection,
@@ -70,23 +74,40 @@ async def test_decision_agent_synthesize_mocked() -> None:
     llm_gateway = LLMGateway(settings)
 
     mock_trade_output = TradeProposalLLMOutput(
-        verdict=TradeVerdict.PROPOSE_TRADE,
+        verdict=TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL,
         direction=TradeDirection.BULLISH,
         recommended_structure=OptionStructure.BULL_CALL_SPREAD,
         net_ev_r=Decimal("0.45"),
         reward_risk_ratio=Decimal("2.20"),
         confidence_score=Decimal("88.0"),
         target_price=Decimal("135.00"),
-        synthesis_rationale="Multi-agent consensus across Quant and Fundamental.",
-        contradiction_analysis="Quant slightly overbought but Fundamental remains robust.",
+        evidence_summary=[
+            "Quant momentum score is 84/100 with RSI confirming continuation",
+            "Market reaction shows underreaction with +3.0% direction-adjusted gap",
+            "Macro rate-cut cycle provides strong duration asset tailwind",
+        ],
+        contradictions=["Quant 5-day displacement is stretched vs 20-day historical mean"],
+        contradiction_analysis=(
+            "Short-term quantitative stretch is outweighed by robust fundamentals."
+        ),
+        portfolio_fit="Semiconductor beta is 1.15x with available delta/vega capacity.",
+        options_only_constraint_acknowledged=True,
+        synthesis_rationale="Multi-agent consensus across Quant, News, and Fundamental.",
         key_risks=["Potential rate hike headline risk", "Short-term profit taking"],
     )
 
     mock_news_output = NewsAnalysisLLMOutput(
-        event_type="product_launch",
+        event_category=NewsEventCategory.PRODUCT_INNOVATION,
+        catalyst_materiality=CatalystMateriality.MEDIUM,
         sentiment="bullish",
         significance_score=Decimal("85.0"),
         expected_reaction_pct=Decimal("3.5"),
+        guidance_change=GuidanceChange.NOT_APPLICABLE,
+        eps_surprise_pct=None,
+        revenue_surprise_pct=None,
+        quarter=None,
+        has_contradictory_signals=False,
+        contradiction_notes=None,
         rationale="Strong demand reported",
     )
 
@@ -101,6 +122,7 @@ async def test_decision_agent_synthesize_mocked() -> None:
     mock_macro_output = MacroAnalysisLLMOutput(
         macro_regime=MacroRegime.RISK_ON,
         rate_environment=RateEnvironment.RATE_CUT_CYCLE,
+        asset_macro_impact=AssetMacroImpact.STRONG_TAILWIND,
         macro_tailwinds=["Lower rates"],
         macro_headwinds=["Inflation stickiness"],
         stock_macro_sensitivity="High sensitivity",
@@ -166,7 +188,15 @@ async def test_decision_agent_synthesize_mocked() -> None:
     proposal = await agent.synthesize_decision(symbol="NVDA", trace_id=trace_id)
 
     assert proposal.symbol == "NVDA"
-    assert proposal.verdict in {TradeVerdict.PROPOSE_TRADE, TradeVerdict.NO_TRADE}
+    assert proposal.verdict in {
+        TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL,
+        TradeVerdict.PROPOSE_TRADE,
+        TradeVerdict.NO_TRADE,
+    }
+    assert len(proposal.evidence_summary) == 3
+    assert len(proposal.contradictions) == 1
+    assert proposal.options_only_constraint_acknowledged is True
+    assert "Semiconductor" in proposal.portfolio_fit
     assert proposal.exit_policy.take_profit_pct == Decimal("75.0")
     assert proposal.exit_policy.stop_loss_pct == Decimal("50.0")
     assert proposal.exit_policy.dte_threshold == 7

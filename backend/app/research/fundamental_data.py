@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.contracts.models import EstimateRevisionTrend, GuidanceChange
+
 
 class CompanyFinancials(BaseModel):
     """Audited corporate financial statement metrics (in millions USD except EPS)."""
@@ -34,6 +36,17 @@ class CompanyFinancials(BaseModel):
     prior_current_ratio: Decimal
     prior_gross_margin_pct: Decimal
 
+    # Event-specific quarterly earnings and guidance details
+    quarter: str | None = None
+    eps_actual: Decimal | None = None
+    eps_consensus: Decimal | None = None
+    revenue_actual: Decimal | None = None
+    revenue_consensus: Decimal | None = None
+    guidance_change: GuidanceChange = GuidanceChange.NOT_APPLICABLE
+    gross_margin_surprise_bps: Decimal | None = None
+    operating_margin_surprise_bps: Decimal | None = None
+    estimate_revision_trend: EstimateRevisionTrend = EstimateRevisionTrend.NEUTRAL
+
 
 # Curated SEC-audited financial statement database for active equity universe
 COMPANY_FINANCIALS_REGISTRY: dict[str, CompanyFinancials] = {
@@ -61,6 +74,15 @@ COMPANY_FINANCIALS_REGISTRY: dict[str, CompanyFinancials] = {
         prior_total_assets=Decimal("65728.0"),
         prior_current_ratio=Decimal("3.2"),
         prior_gross_margin_pct=Decimal("72.7"),
+        quarter="Q2 2026",
+        eps_actual=Decimal("0.68"),
+        eps_consensus=Decimal("0.64"),
+        revenue_actual=Decimal("30040.0"),
+        revenue_consensus=Decimal("28700.0"),
+        guidance_change=GuidanceChange.RAISED,
+        gross_margin_surprise_bps=Decimal("120.0"),
+        operating_margin_surprise_bps=Decimal("150.0"),
+        estimate_revision_trend=EstimateRevisionTrend.UPWARD,
     ),
     "TSLA": CompanyFinancials(
         symbol="TSLA",
