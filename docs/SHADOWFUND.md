@@ -18,7 +18,7 @@ Each session has the canonical branch set:
 
 Sessions with no viable proposal remain cash-only `INCOMPLETE` evidence rather than being omitted. Branch entry/marks use timestamped bid/ask observations, the authorized freshness and spread controls, approved option economics, and deterministic take-profit, stop-loss, DTE, and horizon exits. Missing, stale, incomplete, unauthorized, or entitlement-blocked observations become `INCOMPLETE` / `DATA_UNAVAILABLE`; no midpoint, fill, or favorable mark is invented.
 
-The production observation cadence is entry, each 15-minute autonomous cycle, virtual exit, and horizon close. The official four-trading-day scoring horizon is the BA-owned scoring/force-flatten timestamp. Staging invokes the same configured Agent 1-7 research pipeline against point-in-time historical bars, news, and SEC filings; unavailable historical option contracts/quotes remain a visible `DATA_UNAVAILABLE` / cash-only result rather than an invented trade.
+The production observation cadence is entry, each 5-minute autonomous cycle, virtual exit, and horizon close. The official four-trading-day scoring horizon is the BA-owned scoring/force-flatten timestamp. Staging invokes the same configured Agent 1-7 research pipeline against point-in-time historical bars, news, and SEC filings; unavailable historical option contracts/quotes remain a visible `DATA_UNAVAILABLE` / cash-only result rather than an invented trade.
 
 ## Persistence and presentation
 
@@ -28,7 +28,7 @@ The existing authenticated `/presentation/alternatives` routes project these rec
 
 ## Post-Analysis
 
-One consolidated post-analysis batch is persisted after production official scoring/force-flatten or a completed staging backtest. The current backend writes a `NO_RECOMMENDATION` batch unless an evidence-qualified recommendation producer supplies validated recommendations. A future batch may recommend only BA-authorized AI Profile fields and cannot amend a ruleset or influence its originating decision. The profile-governance service may create a successor profile from a complete validated draft batch through authenticated manual activation or the authenticated operator's persisted database `automatic` preference. Insufficient completed evidence records a no-recommendation outcome.
+Consolidated post-analysis runs automatically every Friday after the US equity market closes (`weekly_friday_post_analysis`), at the production hackathon official scoring/force-flatten milestone (`official_scoring`), and upon completion of a staging historical backtest (`completed_historical_backtest`). The evidence-qualified `PostAnalysisAgent` gathers weekly paper executions, risk metrics, and ShadowFund counterfactual branch marks to synthesize structured findings and propose calibrations strictly within BA-authorized AI Profile fields (`target_position_size_pct`, `opportunity_score_threshold`, `take_profit_pct`, `stop_loss_pct`). When trading/shadow evidence is empty or insufficient, the system safely records an explicit fail-closed `NO_RECOMMENDATION` batch without mutating profile state. The profile-governance service validates batches deterministically and creates successor profiles through authenticated manual activation or the operator's persisted `automatic` calibration preference. Neither mode can amend an immutable ruleset or execute orders.
 
 ## Alpaca and data limits
 

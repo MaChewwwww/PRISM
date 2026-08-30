@@ -45,4 +45,4 @@ Portfolio snapshots, five-year historical analogs, PostgreSQL execution receipts
 
 ## Later: operations and evaluation
 
-Add restore drills, SLOs after owner approval, full observability, threat modeling, and complete Post-Analysis recommendation generation/evaluation. Backend profile activation persistence, manual activation, and user-configured automatic calibration from a supplied validated draft batch are implemented; evidence-qualified Post-Analysis recommendation generation and frontend controls remain pending. Live trading remains outside scope.
+Add restore drills, SLOs after owner approval, full observability, and threat modeling. Backend profile activation persistence, manual activation, user-configured automatic calibration, weekly Friday post-close Post-Analysis triggers, and evidence-qualified `PostAnalysisAgent` recommendation generation are implemented; manual frontend profile-activation controls remain pending. Live trading remains outside scope.
