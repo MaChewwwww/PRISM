@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     execution_kill_switch: bool = True
     active_ruleset_version: str | None = None
     autonomous_trading_enabled: bool = False
+    backtest_simulation_enabled: bool = False
+    backtest_output_dir: str = "/app/backtest-runs"
     autonomous_trading_start_at: datetime | None = None
     autonomous_trading_end_at: datetime | None = None
     autonomous_symbol_allowlist: list[str] = [
@@ -109,6 +111,10 @@ class Settings(BaseSettings):
         ):
             raise ValueError("AUTONOMOUS_TRADING_START_AT must precede AUTONOMOUS_TRADING_END_AT")
         if self.autonomous_trading_enabled:
+            if self.environment == "staging":
+                raise ValueError(
+                    "Staging autonomous trading is prohibited; use historical backtest simulation"
+                )
             if not self.execution_enabled:
                 raise ValueError("AUTONOMOUS_TRADING_ENABLED requires EXECUTION_ENABLED")
             if not self.credentials_present:

@@ -14,9 +14,9 @@ Provider errors are classified and redacted. Logs and API responses may expose c
 
 ## Execution controls
 
-Live trading is rejected by configuration. Paper execution defaults off and additionally requires a verified paper endpoint, active ruleset/profile compatibility, unexpired `APPROVE`, matching proposal and payload digests, fresh snapshots, supported permissions/contracts, sufficient buying-power inputs, kill-switch clearance, and a client order ID. When autonomous trading is enabled, a configured UTC start/end interval is an additional gate. Production intervals must remain inside the BA-authorized hackathon window; staging may use a separate bounded paper-account rehearsal interval. `REJECT` and `MODIFIED_PENDING_ACCEPTANCE` cannot reach execution.
+Live trading is rejected by configuration. Paper execution defaults off and additionally requires a verified paper endpoint, active ruleset/profile compatibility, unexpired `APPROVE`, matching proposal and payload digests, fresh snapshots, supported permissions/contracts, sufficient buying-power inputs, kill-switch clearance, and a client order ID. Production autonomous trading additionally requires a configured UTC start/end interval within the BA-authorized hackathon window. Staging rejects autonomous trading configuration and uses a separate non-executing historical backtest boundary. `REJECT` and `MODIFIED_PENDING_ACCEPTANCE` cannot reach execution.
 
-The production-shaped autonomous worker is implemented but remains fail-closed until readiness and deterministic authorization are green. Staging and production use separately protected paper credentials; environment selection does not bypass deterministic authorization, paper mode, or the production BA window. Illustrative presentation data never claims a paper account, order, or fill.
+The production autonomous worker remains fail-closed until readiness and deterministic authorization are green. Staging and production use separately protected paper credentials when configured; staging credentials cannot enable the autonomous worker. Environment selection does not bypass deterministic authorization, paper mode, or the production BA window. Illustrative presentation data never claims a paper account, order, or fill.
 
 ## Network and supply chain
 

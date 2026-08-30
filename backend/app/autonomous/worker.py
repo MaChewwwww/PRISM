@@ -118,12 +118,11 @@ def _timestamp_iso(value: Any) -> str | None:
 
 
 class AutonomousWorker:
-    """Shared staging/production autonomous paper-trading worker.
+    """Production-only autonomous paper-trading worker.
 
-    The worker has one behavior in both environments. Credentials select the
-    paper account, while the same research, analog, risk, authorization, and
-    execution gates apply. Any unavailable dependency produces a durable
-    ``NO_TRADE`` cycle and never reaches the CLI.
+    Staging is reserved for historical backtest simulation and is prohibited
+    from instantiating this order-capable worker. Any unavailable dependency
+    produces a durable ``NO_TRADE`` cycle and never reaches the CLI.
     """
 
     def __init__(self, settings: Settings) -> None:
@@ -135,8 +134,8 @@ class AutonomousWorker:
             now = datetime.now(UTC)
             in_window = self.settings.autonomous_trading_window_active(now)
             # The configured environment window is a hard boundary for new
-            # work.  We still run one final cycle at its end so a bounded
-            # staging rehearsal cannot leave paper positions behind.
+            # work. We still run one final cycle at its end so paper positions
+            # cannot remain after the authorized production window.
             environment_end = self.settings.autonomous_trading_end_at
             flatten_due = (
                 now >= get_authorized_ruleset().parameters.hackathon_window.force_flatten_by
