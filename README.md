@@ -57,7 +57,7 @@ flowchart LR
     B --> C{"TradeProposal or NO_TRADE"}
     C --> D["Adversarial Risk Management Critique"]
     D --> E["Deterministic Rules Engine"]
-    E --> F{"APPROVE, REJECT, or MODIFIED_PENDING_ACCEPTANCE"}
+    E --> F{"Authorization Gate: APPROVE or REJECT"}
     F -->|APPROVE only| G["Alpaca Paper Order Execution"]
     F --> H["Immutable Decision Story"]
     G --> H
@@ -73,21 +73,22 @@ Every stage produces typed, versioned records. Stale market data (>30s), invalid
 
 | Specialist Agent | Domain & Focus Question | Authoritative Role |
 | --- | --- | --- |
-| **News Agent** | *What happened, when, from which source, and with what credibility?* | Analyzes news catalysts via Alpaca News API; outputs structured sentiment, significance, and confidence. |
-| **Quantitative Agent** | *What do price action, momentum, volatility, and volume trends show?* | 100% deterministic technical computation (RSI, MACD, Bollinger Bands, ATR, annualized volatility, volume surge). |
+| **News Agent** | *What happened, when, from which source, and with what credibility?* | Ingests news catalysts via Alpaca News API; performs SHA-256 deduplication; outputs structured sentiment, significance, and confidence. |
+| **Quantitative Agent** | *What do price action, momentum, volatility, and volume trends show?* | 100% deterministic technical computation (RSI, MACD, Bollinger Bands, ATR, 20/50/200 SMAs, annualized volatility). |
 | **Industry Agent** | *How does this event affect sector peers, competitors, and supply chains?* | Benchmarks sector dynamics, competitor sympathy moves, and industry-level catalysts. |
-| **Fundamental Agent** | *What are the implications for earnings, valuation, balance sheet, and outlook?* | Evaluates financial health, valuation multiples, and fundamental resilience. |
+| **Fundamental Agent** | *What are the implications for earnings, valuation, balance sheet, and outlook?* | Evaluates financial health via live SEC EDGAR companyfacts (operating margin, debt-to-equity, free cash flow). |
 | **Macroeconomic Agent** | *How do interest rates, monetary policy, market regimes, and VIX influence risk?* | Assesses macro regime, yields, index trends, and systemic volatility. |
-| **Market Reaction / Mispricing Agent** | *Is the market reaction justified, overdone, underdone, or uncertain?* | Measures expected vs. observed price delta; calculates the quantitative **Opportunity Score**. |
+| **Market Reaction/Mispricing Agent** | *Is the market reaction justified, overdone, underdone, or uncertain?* | Measures expected vs. observed price delta; calculates the quantitative **Opportunity Score** (0–100). |
 | **Trading Decision Agent** | *Is there a viable options trade with positive net EV, or should we choose `NO_TRADE`?* | Formulates structured `TradeProposal` (structure, strikes, DTE, limit prices, and exit policy) or emits `NO_TRADE`. |
 
-### Downstream Governance & Learning Stages
+### Downstream Governance, Execution & Learning Stages
 
 - **Adversarial Risk Management Agent:** Challenges trade proposals against portfolio concentration, drawdown levels, liquidity constraints, and contradictory evidence. Suggests safer parameters but cannot approve execution.
-- **Deterministic Rules Engine:** Evaluates proposals against mathematical rules (`PASS`, `MODIFY`, `FAIL`). Aggregates results into `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
+- **Deterministic Rules Engine (P0–P5):** Evaluates proposals against mathematical rules (`PASS`, `MODIFY`, `FAIL`). Aggregates results into strict `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
 - **Alpaca Paper Execution Gate:** Re-validates paper mode, kill switch, freshness, and payload integrity before submitting orders via the Alpaca API and CLI.
-- **ShadowFund Counterfactual Simulator:** Continuously simulates alternative decisions (e.g., No Action, Half Size, Contrarian/Inverse) on the identical market path without capital risk.
-- **Post-Analysis Learning Engine:** Asynchronously analyzes closed trades and ShadowFund outcomes to recommend bounded AI Profile adjustments for human review.
+- **Autonomous Worker (5-Minute Cadence):** Scans the 7 allowlisted mega-cap tickers (`NVDA`, `TSLA`, `AAPL`, `MSFT`, `AMD`, `GOOGL`, `AMZN`) every 300 seconds, acquiring PostgreSQL advisory locks and enforcing mandatory exit rules (75% TP, 50% SL, 7 DTE, 4-day max hold).
+- **ShadowFund Counterfactual Simulator:** Continuously simulates alternative decisions (Cash / No Action, Half Size, Contrarian/Inverse, Specialist Alternative) on the identical market timeline without capital risk.
+- **Post-Analysis Learning Engine:** Asynchronously reflects on closed trades and ShadowFund outcomes every Friday post-close and at hackathon scoring milestones to recommend bounded AI Profile adjustments (`target_position_size_pct`, `opportunity_score_threshold`, `take_profit_pct`, `stop_loss_pct`).
 
 ---
 
@@ -100,7 +101,8 @@ flowchart TD
     subgraph MarketData["1. Market Intelligence - alpaca-py 0.44.0"]
         A1["News Stream (/v2/news)"] -->|Catalyst Ingestion| B1["News Intelligence Agent"]
         A2["Historical Bars (/v2/stocks/bars)"] -->|OHLCV Computations| B2["Quantitative Engine (RSI, MACD, ATR, Vol)"]
-        A3["Multi-Symbol Snapshots (/v2/stocks/snapshots)"] -->|Real-Time Quotes| B3["Market Reaction & Mispricing Agent"]
+        A3["Multi-Symbol Snapshots (/v2/stocks/snapshots)"] -->|Real-Time Quotes| B3["Market Reaction/Mispricing Agent"]
+        A4["Option Chains (/v1beta1/options/chains)"] -->|Greeks & Quotes| B4["Option Selection & Payoff Engine"]
     end
 
     subgraph PaperExecution["2. Governed Options Execution - Paper API & CLI"]
@@ -117,7 +119,7 @@ flowchart TD
 
 | Alpaca Component | Endpoints & Scope | PRISM Architectural Role | Safety & Governance Envelope |
 | --- | --- | --- | --- |
-| **`alpaca-py` Market Data API** | `/v2/news`<br>`/v2/stocks/bars`<br>`/v2/stocks/snapshots` | Ingests real-time catalysts for **News Agent**; feeds OHLCV bars into **Quantitative Engine** (RSI, MACD, Bollinger Bands, ATR); provides live spreads to **Reaction Agent**. | Read-only market intelligence; freshness strictly checked (<= 30s) before any trade proposal. |
+| **`alpaca-py` Market Data API** | `/v2/news`<br>`/v2/stocks/bars`<br>`/v2/stocks/snapshots`<br>`/v1beta1/options/chains` | Ingests real-time catalysts for **News Agent**; feeds OHLCV bars into **Quantitative Engine**; provides live option chains, bid/ask spreads, and Greeks to **Trading Decision Agent**. | Read-only market intelligence; freshness strictly checked (<= 30s) before any trade proposal. |
 | **Alpaca Paper Trading API** | `/v2/orders`<br>`/v2/positions`<br>`/v2/account` | Executes approved option contracts (Level 2 Long Calls/Puts and Level 3 Multi-Leg 1:1 Debit Spreads via `order_class=mleg`). | Restricted to paper endpoints (`paper-api.alpaca.markets`); limit pricing within <= 10% spread; day TIF. |
 | **Alpaca CLI (v0.0.13)** | Subprocess order gateway | Secure server-side order submission receiving typed JSON over standard input; handles client-order-id idempotency and disconnect reconciliation. | Prevents shell injection; keeps credentials strictly isolated in backend memory (never exposed to browser or LLMs). |
 | **Alpaca MCP Server** | `account`, `assets`, `stock-data`, `options-data`, `news` | Provides structured market and asset discovery tools for developer workflows and research agents. | Read-only tools only; mutating trading tools are excluded to prevent LLMs from bypassing deterministic rules. |
@@ -132,7 +134,7 @@ In PRISM, safety is an architectural core, not an afterthought. AI models produc
 
 - **Paper-Only Invariant:** Execution is restricted to Alpaca's paper trading environment (`https://paper-api.alpaca.markets/v2`). Any live-trading configuration causes an immediate startup halt.
 - **Fail-Closed Execution Gate:** Orders require an active ruleset, complete paper credentials, fresh market data (<= 30s), and a valid `APPROVE` verdict. If data is stale, unparseable, or contradictory, execution safely halts.
-- **Autonomous Schedule Bounding:** Production autonomous trading is bounded by half-open UTC scheduling windows (`AUTONOMOUS_TRADING_START_AT` to `AUTONOMOUS_TRADING_END_AT`) strictly contained within authorized hackathon market hours. Staging rejects autonomous trading and uses historical simulation only.
+- **Autonomous Schedule Bounding:** Production autonomous trading operates on a 5-minute (300-second) cadence bounded by half-open UTC scheduling windows (`AUTONOMOUS_TRADING_START_AT` to `AUTONOMOUS_TRADING_END_AT`) strictly contained within authorized hackathon market hours. Staging rejects autonomous trading and uses historical simulation only.
 - **Global Kill Switch:** Instantly suspends all new paper order submissions while preserving real-time portfolio monitoring, telemetry, and audit logging.
 - **Zero Client Credentials:** Alpaca keys and LLM tokens remain strictly on the backend server—never exposed to the browser.
 
@@ -141,18 +143,17 @@ In PRISM, safety is an architectural core, not an afterthought. AI models produc
 | Parameter | Authorized Baseline | Operational Description |
 | --- | ---: | --- |
 | **Reference Capital** | `100,000.00 USD` | Standard sizing reference baseline |
-| **Target Allocation** | `2.00%` | Normal target position sizing (max `1.50%` in Volatile regime) |
-| **Risk per Trade** | `1.00%` | Max equity risk per trade (max `0.75%` in Volatile regime) |
-| **Cash Reserve** | `5.00%` | Minimum unallocated buying-power floor |
-| **Position Limit** | `6` | Maximum simultaneous active positions |
-| **Concentration Limits** | `5.00%` / `10.00%` / `7.50%` | Maximum Ticker / Sector / Correlated Cluster exposure |
-| **Drawdown Controls** | `1.50%` / `2.25%` / `3.00%` | Circuit breakers: CAUTION -> DEFENSIVE -> HALT |
+| **Target Allocation** | `2.00%` (Balanced) | Normal target position sizing (`1.50%` Conservative, `2.50%` Aggressive; max `1.50%` in Volatile regime) |
+| **Max Risk per Trade** | `0.75%` – `1.00%` | Max equity risk per trade (capped at `0.75%` in Volatile regime) |
+| **Cash Reserve Floor** | `10.00%` | Minimum unallocated cash reserve required before new entries |
+| **Position Limit** | `6 positions` | Maximum simultaneous active positions |
+| **Concentration Limits** | `25.00%` / `50.00%` / `40.00%` | Maximum Ticker / Sector / Correlated Cluster exposure |
 | **Data Freshness** | `<= 30 seconds` | Max allowable age for market quotes and catalyst evidence |
 | **Bid/Ask Spread Cap** | `<= 10.00%` | Maximum allowable spread width relative to option premium |
-| **Opportunity Score Floor** | `75` min / `84` Balanced | Minimum research score required for proposal generation |
+| **Opportunity Score Floor** | `75` min / `84` Balanced | Minimum research score required for proposal generation (`90` Conservative, `80` Aggressive) |
 | **Trade Economics** | Net EV `>= +0.15R`, R:R `>= 1.50:1` | Mandatory mathematical edge and reward-to-risk ratio |
-| **Exit Strategy** | `75.00%` TP / `50.00%` SL | Fixed take-profit and stop-loss targets |
-| **DTE Exit** | `7 days` | Default expiration exit to mitigate extreme gamma risk |
+| **Exit Strategy** | `75.00%` TP / `50.00%` SL | Fixed take-profit and stop-loss targets (take-profit tunable up to 100%) |
+| **DTE Exit Threshold** | `7 days` | Default expiration exit to mitigate extreme gamma risk |
 | **Baseline Maximum Hold** | `14 days` | Standard multi-day position holding cap |
 | **Hackathon Hold Override** | `4 trading days` | Tightened holding cap tailored to the hackathon window |
 
@@ -178,7 +179,7 @@ One of the greatest challenges in quantitative trading is counterfactual validat
 - **Contrarian / Inverse:** Evaluates the opposite market thesis.
 - **Specialist Alternative:** Tracks secondary options structures generated during agent debate.
 
-ShadowFund calculates counterfactual P&L, Maximum Adverse Excursion (MAE), Maximum Favorable Excursion (MFE), and Sharpe tracking—feeding actionable data into the Weekly Summary for continuous learning.
+ShadowFund calculates counterfactual P&L, Maximum Adverse Excursion (MAE), Maximum Favorable Excursion (MFE), and Sharpe tracking—feeding actionable data into the Weekly Summary and `PostAnalysisAgent` for continuous learning.
 
 ---
 
@@ -212,14 +213,14 @@ flowchart TD
     
     API --> DB[("PostgreSQL 17 Database")]
     API --> Cache[("Redis Coordination Cache")]
-    API --> LLM["Provider-Neutral AI Gateway (DeepSeek, Claude, Gemini)"]
+    API --> LLM["Provider-Neutral AI Gateway (Featherless, DeepSeek, Claude, Gemini)"]
     API --> Alpaca["Alpaca Paper Gateway & CLI (alpaca-py 0.44.0)"]
 ```
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, Radix UI primitives, Lucide Icons, WCAG 2.2 AA Dark Cyber-Crystalline theme.
 - **Backend:** FastAPI, Python 3.12, Pydantic 2, SQLAlchemy 2 (asyncpg), Alembic migrations, PostgreSQL 17.
 - **Alpaca Platform:** `alpaca-py` 0.44.0 (Market Data & Trading APIs), Alpaca CLI v0.0.13, Alpaca MCP server.
-- **AI Gateway:** Provider-neutral adapter supporting DeepSeek-V4, Anthropic Claude 3.5, Google Gemini, OpenAI GPT-4o, Featherless AI, and Ollama.
+- **AI Gateway:** Provider-neutral adapter supporting Featherless AI, DeepSeek, Anthropic Claude 3.5, Google Gemini, OpenAI GPT-4o, and Ollama.
 - **Deployment:** Docker Compose, Nginx, Azure VM, GitHub Actions CI/CD with automated quality, linting, contract synchronization, and test gates.
 
 ---
@@ -237,8 +238,8 @@ flowchart TD
 
 ```bash
 # Clone repository
-git clone https://github.com/MaChewwwww/Alpaca_AI_Hackaton.git
-cd Alpaca_AI_Hackaton
+git clone https://github.com/MaChewwwww/PRISM.git
+cd PRISM
 
 # Enable package manager and configure environment
 corepack enable
@@ -272,7 +273,7 @@ pnpm docker:down
 | Command | Description |
 | --- | --- |
 | `pnpm dev` | Run Next.js frontend and FastAPI backend concurrently |
-| `pnpm test` | Run complete unit and component test suites (Vitest & Pytest) |
+| `pnpm test` | Run complete unit and component test suites (25 Vitest & 146 Pytest) |
 | `pnpm contracts` | Regenerate FastAPI OpenAPI schema and TypeScript transport types |
 | `pnpm verify` | Run full governance, linting, contract, and test verification gate |
 | `pnpm docker:up` | Build and launch containerized stack via Docker Compose |
