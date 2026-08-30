@@ -16,81 +16,94 @@ import { useMemo, useState } from "react";
  * added to globals.css.
  */
 
-type SpecialistKey =
+type AgentKey =
   | "news"
   | "quantitative"
   | "industry"
   | "fundamental"
   | "macroeconomic"
-  | "technical"
-  | "sentiment";
+  | "market_reaction"
+  | "trading_decision";
 
-type Specialist = {
-  key: SpecialistKey;
+type Agent = {
+  key: AgentKey;
   label: string;
   color: string;
   model: string;
   prompt: string;
-  summary: string;
+  /** The agent's recorded decision headline shown in the detail column. */
+  headline: string;
+  /** Supporting description for the decision. */
+  description: string;
 };
 
-// DESIGN.md Section 3.3 spectral perspective accents.
-const SPECIALISTS: Specialist[] = [
+const ILLUSTRATIVE_NOTE =
+  "Illustrative structured output; no model provider was contacted for this fixture.";
+
+// Roster and spectral accents follow DESIGN.md Section 3.3.
+const AGENTS: Agent[] = [
   {
     key: "news",
-    label: "News",
+    label: "News Agent",
     color: "#38BDF8",
     model: "Claude 4.5 Sonnet",
     prompt: "catalyst-summary-v3",
-    summary: "Headline beat with a cautious tone; sell-side recaps hedge the pop.",
+    headline: "Catalyst evidence",
+    description: ILLUSTRATIVE_NOTE,
   },
   {
     key: "quantitative",
-    label: "Quantitative",
+    label: "Quantitative Agent",
     color: "#22D3EE",
     model: "Claude 4.5 Sonnet",
     prompt: "vol-surface-v2",
-    summary: "Realized move sits inside the implied band; edge is thin but positive.",
+    headline: "Market and option statistics",
+    description: ILLUSTRATIVE_NOTE,
   },
   {
     key: "industry",
-    label: "Industry",
+    label: "Industry Agent",
     color: "#F59E0B",
     model: "Claude 4.5 Sonnet",
     prompt: "peer-context-v2",
-    summary: "Peers drifted flat into the print; no sector-wide confirmation yet.",
+    headline: "Sector and peer context",
+    description: ILLUSTRATIVE_NOTE,
   },
   {
     key: "fundamental",
-    label: "Fundamental",
+    label: "Fundamental Agent",
     color: "#A78BFA",
     model: "Claude 4.5 Sonnet",
     prompt: "quality-scan-v4",
-    summary: "Guidance trim is modest; balance-sheet quality remains intact.",
+    headline: "Company fundamentals",
+    description: ILLUSTRATIVE_NOTE,
   },
   {
     key: "macroeconomic",
-    label: "Macroeconomic",
+    label: "Macroeconomic Agent",
     color: "#F472B6",
     model: "Claude 4.5 Sonnet",
     prompt: "regime-detector",
-    summary: "Rates backdrop neutral — no macro driver to amplify the move.",
+    headline: "Macro regime evidence",
+    description: ILLUSTRATIVE_NOTE,
   },
   {
-    key: "technical",
-    label: "Technical",
-    color: "#60A5FA",
+    key: "market_reaction",
+    label: "Market Reaction/Mispricing Agent",
+    color: "#10B981",
     model: "Claude 4.5 Sonnet",
-    prompt: "level-map-v1",
-    summary: "Price reclaimed the prior range high but volume confirmation is light.",
+    prompt: "reaction-gap-v2",
+    headline: "Reaction-gap synthesis",
+    description: ILLUSTRATIVE_NOTE,
   },
   {
-    key: "sentiment",
-    label: "Sentiment",
+    key: "trading_decision",
+    label: "Trading Decision Agent",
     color: "#34D399",
     model: "Claude 4.5 Sonnet",
-    prompt: "flow-read-v2",
-    summary: "Retail chatter is upbeat while options flow leans defensive.",
+    prompt: "decision-proposal-v3",
+    headline: "Proposal or NO_TRADE",
+    description: ILLUSTRATIVE_NOTE,
   },
 ];
 
@@ -113,9 +126,8 @@ function seededMetric(seed: string, lo: number, hi: number): number {
   return Math.round(lo + normalized * (hi - lo));
 }
 
-function metricsFor(key: SpecialistKey, storyId: string) {
+function metricsFor(key: AgentKey, storyId: string) {
   return {
-    score: seededMetric(`${storyId}:${key}:score`, 48, 88),
     signal: seededMetric(`${storyId}:${key}:signal`, 38, 72),
     accuracy: seededMetric(`${storyId}:${key}:accuracy`, 62, 92),
     recency: seededMetric(`${storyId}:${key}:recency`, 74, 98),
@@ -167,57 +179,51 @@ export function AgentPerspectiveChain({
   storyId: string;
   synthesis: SynthesisDetail;
 }) {
-  const [activeKey, setActiveKey] = useState<SpecialistKey>("news");
-  const active = SPECIALISTS.find((s) => s.key === activeKey) ?? SPECIALISTS[0];
+  const [activeKey, setActiveKey] = useState<AgentKey>("news");
+  const active = AGENTS.find((agent) => agent.key === activeKey) ?? AGENTS[0];
   const metrics = useMemo(() => metricsFor(active.key, storyId), [active.key, storyId]);
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
-      {/* Column 1 — specialist list */}
-      <ul className="flex flex-col gap-2" aria-label="Specialist perspectives">
-        {SPECIALISTS.map((specialist) => {
-          const isActive = specialist.key === active.key;
-          const score = metricsFor(specialist.key, storyId).score;
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)] lg:items-stretch">
+      {/* Column 1 — one card per agent so all seven choices read as distinct */}
+      <ul className="flex flex-col gap-2" aria-label="Agent perspectives">
+        {AGENTS.map((agent) => {
+          const isActive = agent.key === active.key;
           return (
-            <li key={specialist.key}>
+            <li key={agent.key} className="flex-1">
               <button
                 type="button"
-                onClick={() => setActiveKey(specialist.key)}
+                onClick={() => setActiveKey(agent.key)}
                 aria-pressed={isActive}
-                className="w-full rounded-xl border p-3 text-left outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+                className="flex h-full w-full items-center gap-2.5 rounded-xl border border-t-white/16 px-3.5 py-3 text-left backdrop-blur-xl transition-all duration-200 outline-none hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
                 style={{
                   borderColor: isActive ? "rgba(84,125,131,0.5)" : "rgba(255,255,255,0.08)",
                   background: isActive
-                    ? "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
-                    : "rgba(255,255,255,0.02)",
+                    ? "linear-gradient(180deg, rgba(84,125,131,0.18), rgba(84,125,131,0.06))"
+                    : "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+                  boxShadow: isActive
+                    ? "0 12px 40px -8px rgba(84,125,131,0.25)"
+                    : "0 8px 32px 0 rgba(0,0,0,0.37)",
                 }}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[13px] font-semibold text-[#F8FAFC]">
-                    <span
-                      aria-hidden="true"
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: specialist.color }}
-                    />
-                    {specialist.label}
-                  </span>
-                  <span className="font-mono text-[13px] font-semibold tabular-nums text-[#CBD5E1]">
-                    {score}
-                  </span>
-                </div>
-                <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/8">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${score}%`, background: specialist.color }}
-                  />
-                </div>
+                <span
+                  aria-hidden="true"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: agent.color }}
+                />
+                <span
+                  className="text-[13px] font-semibold"
+                  style={{ color: isActive ? "#F8FAFC" : "#CBD5E1" }}
+                >
+                  {agent.label}
+                </span>
               </button>
             </li>
           );
         })}
       </ul>
 
-      {/* Column 2 — selected specialist detail */}
+      {/* Column 2 — selected agent decision */}
       <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -231,11 +237,14 @@ export function AgentPerspectiveChain({
             {active.label}
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            Specialist · Perspective {active.label}
+            Agent decision
           </span>
         </div>
 
-        <p className="mt-4 text-[15px] leading-snug text-[#F8FAFC]">{active.summary}</p>
+        <h3 className="mt-4 text-[17px] font-semibold leading-snug text-[#F8FAFC]">
+          {active.headline}
+        </h3>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-[#94A3B8]">{active.description}</p>
 
         <div className="mt-5 space-y-3">
           <MetricBar label="Signal strength" value={metrics.signal} color={active.color} />
