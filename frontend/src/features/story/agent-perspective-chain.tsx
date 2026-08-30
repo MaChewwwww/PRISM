@@ -1,6 +1,20 @@
 "use client";
 
-import { Bot, FileCode2, Gauge, ShieldCheck, Timer } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Bot,
+  Building2,
+  Factory,
+  FileCode2,
+  Gauge,
+  Globe,
+  Newspaper,
+  Scale,
+  Sparkles,
+  Timer,
+  type LucideIcon,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 /**
@@ -28,6 +42,7 @@ type AgentKey =
 type Agent = {
   key: AgentKey;
   label: string;
+  icon: LucideIcon;
   color: string;
   model: string;
   prompt: string;
@@ -45,6 +60,7 @@ const AGENTS: Agent[] = [
   {
     key: "news",
     label: "News Agent",
+    icon: Newspaper,
     color: "#38BDF8",
     model: "Claude 4.5 Sonnet",
     prompt: "catalyst-summary-v3",
@@ -54,6 +70,7 @@ const AGENTS: Agent[] = [
   {
     key: "quantitative",
     label: "Quantitative Agent",
+    icon: BarChart3,
     color: "#22D3EE",
     model: "Claude 4.5 Sonnet",
     prompt: "vol-surface-v2",
@@ -63,6 +80,7 @@ const AGENTS: Agent[] = [
   {
     key: "industry",
     label: "Industry Agent",
+    icon: Factory,
     color: "#F59E0B",
     model: "Claude 4.5 Sonnet",
     prompt: "peer-context-v2",
@@ -72,6 +90,7 @@ const AGENTS: Agent[] = [
   {
     key: "fundamental",
     label: "Fundamental Agent",
+    icon: Building2,
     color: "#A78BFA",
     model: "Claude 4.5 Sonnet",
     prompt: "quality-scan-v4",
@@ -81,6 +100,7 @@ const AGENTS: Agent[] = [
   {
     key: "macroeconomic",
     label: "Macroeconomic Agent",
+    icon: Globe,
     color: "#F472B6",
     model: "Claude 4.5 Sonnet",
     prompt: "regime-detector",
@@ -90,6 +110,7 @@ const AGENTS: Agent[] = [
   {
     key: "market_reaction",
     label: "Market Reaction/Mispricing Agent",
+    icon: Activity,
     color: "#10B981",
     model: "Claude 4.5 Sonnet",
     prompt: "reaction-gap-v2",
@@ -99,6 +120,7 @@ const AGENTS: Agent[] = [
   {
     key: "trading_decision",
     label: "Trading Decision Agent",
+    icon: Scale,
     color: "#34D399",
     model: "Claude 4.5 Sonnet",
     prompt: "decision-proposal-v3",
@@ -112,7 +134,6 @@ export type SynthesisDetail = {
   structure: string;
   notional: string;
   consensus: string;
-  authority: string;
   note: string;
 };
 
@@ -189,6 +210,7 @@ export function AgentPerspectiveChain({
       <ul className="flex flex-col gap-2" aria-label="Agent perspectives">
         {AGENTS.map((agent) => {
           const isActive = agent.key === active.key;
+          const Icon = agent.icon;
           return (
             <li key={agent.key} className="flex-1">
               <button
@@ -206,10 +228,10 @@ export function AgentPerspectiveChain({
                     : "0 8px 32px 0 rgba(0,0,0,0.37)",
                 }}
               >
-                <span
+                <Icon
                   aria-hidden="true"
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: agent.color }}
+                  className="h-4 w-4 shrink-0"
+                  style={{ color: agent.color }}
                 />
                 <span
                   className="text-[13px] font-semibold"
@@ -260,23 +282,31 @@ export function AgentPerspectiveChain({
         </div>
       </div>
 
-      {/* Column 3 — synthesis */}
-      <aside className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl">
-        <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">
-          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#34D399]" />
-          03 · Synthesis
+      {/* Column 3 — synthesis: the single candidate action the agents converge on */}
+      <aside className="rounded-xl border border-[#34D399]/25 border-t-[#34D399]/40 bg-linear-to-b from-[#34D399]/8 to-white/2 p-5 backdrop-blur-xl">
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#34D399]/30 bg-[#34D399]/15 text-[#34D399]"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>
+          <div>
+            <p className="text-[13px] font-semibold text-[#F8FAFC]">Synthesis</p>
+            <p className="text-[11px] text-[#94A3B8]">Overall decision</p>
+          </div>
         </div>
 
-        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#547D83]/40 bg-[#547D83]/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#B2D8DC]">
-          <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-          {synthesis.authority}
-        </span>
-
-        <div className="mt-4 flex items-center gap-2">
-          <span className="rounded-md bg-[#00D084]/15 px-2 py-1 font-mono text-[11px] font-bold uppercase text-[#00D084]">
-            {actionVerb(synthesis.action)}
-          </span>
-          <span className="text-[15px] font-semibold text-[#F8FAFC]">{synthesis.structure}</span>
+        <div className="mt-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#64748B]">
+            Candidate action
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="rounded-md bg-[#00D084]/15 px-2 py-1 font-mono text-[11px] font-bold uppercase text-[#00D084]">
+              {actionVerb(synthesis.action)}
+            </span>
+            <span className="text-[15px] font-semibold text-[#F8FAFC]">{synthesis.structure}</span>
+          </div>
         </div>
 
         <dl className="mt-4 space-y-2 border-t border-white/8 pt-4">
@@ -287,13 +317,7 @@ export function AgentPerspectiveChain({
             </dd>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-[12px] text-[#94A3B8]">Structure</dt>
-            <dd className="m-0 font-mono text-[13px] font-semibold tabular-nums text-[#CBD5E1]">
-              {synthesis.structure}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-[12px] text-[#94A3B8]">Consensus</dt>
+            <dt className="text-[12px] text-[#94A3B8]">Agent agreement</dt>
             <dd className="m-0 font-mono text-[13px] font-semibold tabular-nums text-[#818CF8]">
               {synthesis.consensus}
             </dd>
@@ -301,6 +325,7 @@ export function AgentPerspectiveChain({
         </dl>
 
         <p className="mt-4 border-t border-white/8 pt-4 text-[12px] leading-relaxed text-[#94A3B8]">
+          <span className="font-semibold text-[#CBD5E1]">Why: </span>
           {synthesis.note}
         </p>
       </aside>
