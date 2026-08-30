@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
@@ -311,42 +312,53 @@ class MacroeconomicAgent:
             except Exception as exc:
                 logger.warning("Error checking macro cache: %s", type(exc).__name__)
 
-        # 1. Fetch Market Bars for Macro Asset Basket
-        asset_performances: list[MacroAssetPerformance] = []
-        asset_returns_map: dict[str, tuple[Decimal, Decimal]] = {}
-
-        for ticker, name in MACRO_BENCHMARK_REGISTRY:
+        # 1. Fetch the independent macro basket concurrently. Each failed
+        # observation remains a hard failure in strict/autonomous workflows.
+        async def _fetch_macro_asset(
+            ticker: str, name: str
+        ) -> tuple[str, list[dict[str, Any]], MacroAssetPerformance, tuple[Decimal, Decimal]]:
             try:
-                bars = self.alpaca_gateway.get_stock_bars(ticker, limit=30)
+                bars = await asyncio.to_thread(self.alpaca_gateway.get_stock_bars, ticker, limit=30)
                 if strict and len(bars) < 20:
                     raise ValueError("Macro evidence coverage is insufficient")
                 r_5d = compute_period_return(bars, 5)
                 r_20d = compute_period_return(bars, 20)
-                asset_performances.append(
+                return (
+                    ticker,
+                    bars,
                     MacroAssetPerformance(
                         asset_symbol=ticker,
                         asset_name=name,
                         price_change_5d_pct=r_5d,
                         price_change_20d_pct=r_20d,
-                    )
+                    ),
+                    (r_5d, r_20d),
                 )
-                asset_returns_map[ticker] = (r_5d, r_20d)
             except Exception as exc:
                 if strict:
                     raise ValueError("Macro evidence is unavailable") from exc
                 logger.warning("Could not fetch macro bars for %s: %s", ticker, type(exc).__name__)
-                asset_performances.append(
+                return (
+                    ticker,
+                    [],
                     MacroAssetPerformance(
                         asset_symbol=ticker,
                         asset_name=name,
                         price_change_5d_pct=Decimal("0.0"),
                         price_change_20d_pct=Decimal("0.0"),
-                    )
+                    ),
+                    (Decimal("0.0"), Decimal("0.0")),
                 )
-                asset_returns_map[ticker] = (Decimal("0.0"), Decimal("0.0"))
+
+        asset_results = await asyncio.gather(
+            *[_fetch_macro_asset(ticker, name) for ticker, name in MACRO_BENCHMARK_REGISTRY]
+        )
+        asset_performances = [result[2] for result in asset_results]
+        asset_returns_map = {result[0]: result[3] for result in asset_results}
+        bars_by_ticker = {result[0]: result[1] for result in asset_results}
 
         # 2. Compute Volatility Stress, Direction, and Climate Score
-        spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
+        spy_bars = bars_by_ticker.get("SPY", [])
         if strict and len(spy_bars) < 20:
             raise ValueError("Macro benchmark evidence coverage is insufficient")
         stress_level, stress_direction, vol_pct, vol_delta = compute_market_stress_level(spy_bars)

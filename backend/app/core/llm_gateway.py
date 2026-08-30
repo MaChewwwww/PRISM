@@ -49,6 +49,19 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 
+_shared_client: httpx.AsyncClient | None = None
+
+
+def _get_shared_client() -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(
+            timeout=60.0,
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+        )
+    return _shared_client
+
+
 class LLMGateway:
     """Provider-neutral gateway for LLM completions with structured contract validation.
 
@@ -107,6 +120,7 @@ class LLMGateway:
         temperature: float = 0.0,
         trace_id: UUID | None = None,
         timeout_seconds: float = 30.0,
+        max_tokens: int | None = None,
     ) -> LLMCompletionResult[T]:
         """Execute a completion with strict Pydantic response validation and SHA256 audit digest."""
         resolved_trace_id = trace_id or uuid4()
@@ -138,18 +152,15 @@ class LLMGateway:
             "temperature": temperature,
             "response_format": {"type": "json_object"},
         }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
 
         start_time = time.perf_counter()
         try:
-            if self._client:
-                response = await self._client.post(
-                    endpoint, json=payload, headers=headers, timeout=timeout_seconds
-                )
-            else:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        endpoint, json=payload, headers=headers, timeout=timeout_seconds
-                    )
+            client = self._client or _get_shared_client()
+            response = await client.post(
+                endpoint, json=payload, headers=headers, timeout=timeout_seconds
+            )
         except httpx.TimeoutException as exc:
             raise LLMNetworkError(f"LLM request timed out after {timeout_seconds}s") from exc
         except httpx.RequestError as exc:
@@ -162,7 +173,8 @@ class LLMGateway:
 
         resp_json = response.json()
         try:
-            raw_content = resp_json["choices"][0]["message"]["content"]
+            choice_msg = resp_json["choices"][0]["message"]
+            raw_content = choice_msg.get("content") or choice_msg.get("reasoning_content") or ""
         except (KeyError, IndexError) as exc:
             raise LLMValidationError("Malformed LLM response structure") from exc
 
