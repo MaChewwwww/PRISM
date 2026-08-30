@@ -11,7 +11,8 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { Governance } from "@/features/story/presentation-api";
@@ -92,13 +93,33 @@ export function ProfileEditor({
     [profileParameters],
   );
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [fields, setFields] = useState<Record<string, FieldState>>(initial);
+  // A recommendation may be carried from Weekly Summary via ?apply=<id>&value=<v>.
+  const searchParams = useSearchParams();
+  const applyId = searchParams.get("apply");
+  const applyValue = searchParams.get("value");
+  const applied = useMemo(() => {
+    if (!applyId || applyValue === null) return null;
+    const parameter = profileParameters.find((item) => item.id === applyId);
+    if (!parameter || isLocked(parameter)) return null;
+    return { parameter, value: applyValue };
+  }, [applyId, applyValue, profileParameters]);
+
+  const activeProfile = profiles.find((profile) => profile.status === "active");
+
+  // Seed open/fields/preset directly from the applied recommendation so the
+  // editor is already expanded and pre-filled on the first render.
+  const [isOpen, setIsOpen] = useState(applied !== null);
+  const [fields, setFields] = useState<Record<string, FieldState>>(() =>
+    applied
+      ? { ...initial, [applied.parameter.id]: evaluate(applied.parameter, applied.value) }
+      : initial,
+  );
   const [savedAt, setSavedAt] = useState<null | "staged" | "blocked">(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
-  const activeProfile = profiles.find((profile) => profile.status === "active");
-  const [selectedPreset, setSelectedPreset] = useState<string>(activeProfile?.key ?? "");
+  const [selectedPreset, setSelectedPreset] = useState<string>(
+    applied ? "" : (activeProfile?.key ?? ""),
+  );
 
   /** True when any editable field is currently out of bounds or invalid. */
   const anyBlocked = profileParameters.some((parameter) => {
@@ -106,6 +127,23 @@ export function ProfileEditor({
     const state = fields[parameter.id];
     return state.status === "out_of_bounds" || state.status === "invalid";
   });
+
+  // If the applied recommendation changes after mount (client-side nav), re-open
+  // + pre-fill. Guarded by a ref so we only react to a genuinely new value,
+  // never re-run setState on every render.
+  const lastAppliedKey = useRef(applied ? `${applied.parameter.id}:${applied.value}` : null);
+  useEffect(() => {
+    const key = applied ? `${applied.parameter.id}:${applied.value}` : null;
+    if (!applied || key === lastAppliedKey.current) return;
+    lastAppliedKey.current = key;
+    setIsOpen(true);
+    setSavedAt(null);
+    setSelectedPreset("");
+    setFields((prev) => ({
+      ...prev,
+      [applied.parameter.id]: evaluate(applied.parameter, applied.value),
+    }));
+  }, [applied]);
 
   function updateField(parameter: ProfileParameter, raw: string) {
     setSavedAt(null);

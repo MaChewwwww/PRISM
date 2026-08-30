@@ -17,7 +17,7 @@ import { AgentPerspectiveChain } from "@/features/story/agent-perspective-chain"
 import { StoryBranchChart } from "@/features/story/story-branch-chart";
 import { StoryCatalystChart } from "@/features/story/story-catalyst-chart";
 import { StateBadge } from "@/components/workspace/workspace-ui";
-import { formatDateTime, formatTokens } from "@/features/story/formatters";
+import { formatDateTime, formatTokens, storyDecisionLabel } from "@/features/story/formatters";
 import { getStory, type StoryDetail } from "@/features/story/presentation-api";
 
 const RULE_RESULT_TONE: Record<string, string> = {
@@ -126,13 +126,16 @@ export default async function StoryDetailPage({
       <header className="mt-3">
         <div className="flex items-start justify-between gap-4">
           <h1 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[clamp(1.5rem,3vw,2rem)] font-semibold leading-tight tracking-tight text-[#F8FAFC]">
-            {story.title}
+            {storyDecisionLabel(story.symbol, story.outcome)}
             <span className="rounded-full border border-[#547D83]/40 bg-[#547D83]/20 px-2.5 py-0.5 text-[11px] font-semibold text-[#B2D8DC]">
               {story.category}
             </span>
           </h1>
           <StateBadge state={story.ruleResult === "MODIFY" ? "MODIFY" : story.outcome} />
         </div>
+
+        {/* Analytical title kept as a secondary line */}
+        <p className="mt-2 text-[15px] font-medium leading-snug text-[#CBD5E1]">{story.title}</p>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
           <span className="font-semibold text-[#CBD5E1]">{story.symbol}</span>

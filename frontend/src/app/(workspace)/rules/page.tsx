@@ -1,4 +1,5 @@
 import { ArrowDownWideNarrow, GaugeCircle, Gavel, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Suspense } from "react";
 
 import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
@@ -138,10 +139,12 @@ export default async function RulesPage() {
 
       {/* Configure AI profile (Tier 2, operator-configurable) */}
       <section aria-labelledby="configure-profile" className="mt-6">
-        <ProfileEditor
-          profileParameters={governance.profileParameters}
-          profiles={governance.profiles}
-        />
+        <Suspense fallback={null}>
+          <ProfileEditor
+            profileParameters={governance.profileParameters}
+            profiles={governance.profiles}
+          />
+        </Suspense>
       </section>
 
       {/* Sizing resolution explainer (compact) — ties Tier 1 to Tier 2 */}
