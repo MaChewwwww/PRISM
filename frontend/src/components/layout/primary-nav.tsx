@@ -3,6 +3,7 @@
 import {
   BookOpenCheck,
   BriefcaseBusiness,
+  CalendarCheck,
   GitBranch,
   LayoutDashboard,
   LineChart,
@@ -26,6 +27,7 @@ const navigation = [
   { label: "Market Tracker", icon: LineChart, href: "/market-tracker" },
   { label: "Agents & tools", icon: Sparkles, href: "/agents" },
   { label: "Rules", icon: BookOpenCheck, href: "/rules" },
+  { label: "Weekly Summary", icon: CalendarCheck, href: "/weekly-summary" },
 ];
 
 export type PrimaryNavProps = {
