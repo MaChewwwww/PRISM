@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { Governance } from "@/features/story/presentation-api";
@@ -128,9 +128,14 @@ export function ProfileEditor({
     return state.status === "out_of_bounds" || state.status === "invalid";
   });
 
-  // If the applied recommendation changes after mount (client-side nav), re-open + pre-fill.
+  // If the applied recommendation changes after mount (client-side nav), re-open
+  // + pre-fill. Guarded by a ref so we only react to a genuinely new value,
+  // never re-run setState on every render.
+  const lastAppliedKey = useRef(applied ? `${applied.parameter.id}:${applied.value}` : null);
   useEffect(() => {
-    if (!applied) return;
+    const key = applied ? `${applied.parameter.id}:${applied.value}` : null;
+    if (!applied || key === lastAppliedKey.current) return;
+    lastAppliedKey.current = key;
     setIsOpen(true);
     setSavedAt(null);
     setSelectedPreset("");
