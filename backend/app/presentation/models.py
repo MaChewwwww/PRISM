@@ -17,6 +17,8 @@ class PresentationModel(BaseModel):
 
 class DataMode(StrEnum):
     ILLUSTRATIVE_FIXTURE = "illustrative_fixture"
+    RECORDED = "recorded"
+    SIMULATED = "simulated"
 
 
 class Provenance(StrEnum):
@@ -39,7 +41,8 @@ class PresentationMeta(PresentationModel):
     generated_at: datetime
     as_of: datetime
     data_mode: DataMode = DataMode.ILLUSTRATIVE_FIXTURE
-    fixture_version: Literal["prism-demo-v1"] = "prism-demo-v1"
+    fixture_version: str | None = "prism-demo-v1"
+    provenance_notice: str | None = None
     range: DateRange | None = None
 
 
@@ -125,7 +128,18 @@ class AlternativeBranch(PresentationModel):
     delta_vs_chosen: str
     drawdown: str
     coverage: str
-    status: Literal["complete", "incomplete"]
+    status: Literal["open", "complete", "incomplete"]
+    gross_pnl: str | None = None
+    net_pnl: str | None = None
+    mae: str | None = None
+    mfe: str | None = None
+    duration: str | None = None
+    capital_at_risk: str | None = None
+    allocation_multiplier: str | None = None
+    entry_exit_policy: str | None = None
+    valuation_confidence: str | None = None
+    refusal_reason: str | None = None
+    chosen_path: bool = False
 
 
 class Catalyst(PresentationModel):
@@ -223,10 +237,22 @@ class AlternativeSession(PresentationModel):
     branches: list[AlternativeBranch]
     path: list[ChartPoint]
     limitations: list[str]
+    state: Literal["open", "complete", "incomplete"] = "incomplete"
+    terminal_outcome: str | None = None
+    source_mode: Literal["production", "staging"] | None = None
+    evaluation_root_digest: str | None = None
+    ruleset_version: str | None = None
+    profile_version: int | None = None
+    valuation_policy_version: str | None = None
+    refusal_reasons: list[str] = Field(default_factory=list)
 
 
 class AlternativeCollection(PresentationModel):
     sessions: list[AlternativeSession]
+    aggregate_path: list[ChartPoint] = Field(default_factory=list)
+    completed_sessions: int = Field(default=0, ge=0)
+    incomplete_sessions: int = Field(default=0, ge=0)
+    empty_message: str | None = None
 
 
 class AgentRun(PresentationModel):

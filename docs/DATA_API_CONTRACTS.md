@@ -63,6 +63,10 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/presentation/agents/{agent_id}` | Agent detail | Yes |
 | GET | `/api/v1/presentation/governance` | Active ruleset, profile, and semantics | Yes |
 | GET | `/api/v1/presentation/weekly-summary` | Manual-review profile recommendations | Yes |
+| GET | `/api/v1/profiles/governance` | Active persisted profile and authenticated operator calibration preference | Yes |
+| PUT | `/api/v1/profiles/calibration-preference` | Select manual or automatic calibration preference | Yes |
+| POST | `/api/v1/profiles/activate-post-analysis` | Manually activate a complete, validated Post-Analysis batch | Yes |
+| GET | `/api/v1/llm-usage/summary` | Aggregated provider-reported LLM tokens and optional estimated cost | Yes |
 | GET | `/api/v1/market-tracker` | **Planned, deferred** normalized bars, watchlist, and activity markers | Yes |
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
@@ -103,5 +107,13 @@ The implemented news endpoint is non-authoritative research. It uses authenticat
 Errors expose stable, safe machine codes and redacted summaries. Provider response bodies, credentials, account details, and raw exception strings are not returned. Authorization binds proposal and payload digests, ruleset/profile versions, snapshot digests, rule trace, decision time, and allowed payload.
 
 ## Generation workflow
+
+Contract generation derives the FastAPI control-plane paths and the domain schemas before emitting committed OpenAPI and TypeScript artifacts.
+
+## Profile calibration control plane
+
+`/profiles/governance` returns the active profile ID/version and bounded decimal parameters alongside the authenticated operator preference. `PUT /profiles/calibration-preference` persists `manual` or `automatic`; it does not itself activate a profile. `POST /profiles/activate-post-analysis` accepts only a draft batch UUID with one or more uniquely named authorized recommendations already within the registry bounds; unspecified fields retain their active values. The server rejects duplicated or out-of-bounds batches. Automatic activation follows the persisted operator preference. Every activation creates a successor profile and immutable audit event, while existing authorization records remain bound to the profile version they used.
+
+For `/presentation/alternatives`, production now projects persisted ShadowFund sessions with `data_mode=recorded`. Staging projects only the active completed backtest run with `data_mode=simulated` and `Historical simulation` provenance. The collection and detail expose evaluation-root digest, ruleset/profile and valuation-policy versions, terminal outcome, branch gross/net P&L, delta, MAE/MFE, drawdown, duration, capital at risk, allocation multiplier, confidence, coverage, and refusal reasons. No completed staging run returns a valid explicit empty collection, never an illustrative fixture.
 
 Run `pnpm contracts` after contract changes. CI runs `pnpm contracts:check`; any generated diff fails the check. Repository governance checks compare the presentation catalog with OpenAPI paths and verify registry/document consistency.

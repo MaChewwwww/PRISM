@@ -5,6 +5,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,6 +21,7 @@ from app.contracts.models import (
     OptionStructure,
     QuantitativeAnalysisReport,
     ResearchReport,
+    ShadowAlternativeIntent,
     SpecialistScores,
     TradeDecisionReport,
     TradeDirection,
@@ -59,6 +61,9 @@ SYSTEM_PROMPT = (
     "('long_call' or 'long_put').\n"
     "- Explicitly state 3-5 concise evidence summary points, list cross-agent contradictions, "
     "and evaluate portfolio fit.\n"
+    "- Optionally provide one non-executable ShadowFund alternative intent with only a direction, "
+    "supported structure, and rationale. Never provide option symbols, strikes, prices, "
+    "or orders.\n"
     "Output strictly valid JSON matching the schema."
 )
 
@@ -116,6 +121,14 @@ class TradeProposalLLMOutput(BaseModel):
     )
     key_risks: list[str] = Field(
         default_factory=list, description="Top 2-4 primary risks identified across agents"
+    )
+    shadow_alternative_intent: ShadowAlternativeIntent | None = Field(
+        default=None,
+        description=(
+            "Optional non-executable ShadowFund alternative. Provide only direction, "
+            "supported structure, and rationale; never contract symbols, strikes, prices, "
+            "or orders."
+        ),
     )
 
 
@@ -196,11 +209,15 @@ class TradingDecisionAgent:
         *,
         allow_illustrative: bool = True,
         financials: CompanyFinancials | None = None,
+        as_of: datetime | None = None,
+        provenance: (
+            Literal["live_research", "historical_simulation", "illustrative_fixture"] | None
+        ) = None,
     ) -> TradeDecisionReport:
         sym = symbol.strip().upper()
         settings = self.llm_gateway._settings
         active_model = f"{settings.llm_provider}:{settings.llm_model or 'default'}"
-        now_utc = datetime.now(UTC)
+        now_utc = (as_of or datetime.now(UTC)).astimezone(UTC)
         freshness_cutoff = now_utc.timestamp() - 30
 
         # Check DB Cache
@@ -589,7 +606,10 @@ class TradingDecisionAgent:
             options_only_constraint_acknowledged=output.options_only_constraint_acknowledged,
             synthesis_rationale=output.synthesis_rationale,
             key_risks=output.key_risks,
-            provenance=("illustrative_fixture" if allow_illustrative else "live_research"),
+            shadow_alternative_intent=output.shadow_alternative_intent,
+            provenance=(
+                provenance or ("illustrative_fixture" if allow_illustrative else "live_research")
+            ),
             evidence_freshness_seconds=30,
         )
 

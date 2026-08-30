@@ -8,6 +8,7 @@ raised so the caller can record ``NO_TRADE`` rather than filling values in.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -81,12 +82,23 @@ def _value(
     return current, prior, current_at
 
 
+def _filed_by_checkpoint(value: Any, checkpoint: datetime) -> bool:
+    if not isinstance(value, dict):
+        return False
+    filed = value.get("filed", value.get("end"))
+    try:
+        return datetime.fromisoformat(str(filed)).replace(tzinfo=UTC) <= checkpoint
+    except (TypeError, ValueError):
+        return False
+
+
 def fetch_sec_company_financials(
     symbol: str,
     *,
     user_agent: str = "PRISM autonomous research contact: operator@prism.local",
     timeout_seconds: float = 10.0,
     client: httpx.Client | None = None,
+    as_of: datetime | None = None,
 ) -> CompanyFinancials:
     sym = symbol.strip().upper()
     cik = SEC_CIK_BY_SYMBOL.get(sym)
@@ -107,6 +119,21 @@ def fetch_sec_company_financials(
             request_client.close()
     if not isinstance(facts, dict):
         raise SecFundamentalsUnavailable("SEC companyfacts response is malformed")
+    if as_of is not None:
+        checkpoint = as_of.astimezone(UTC)
+        facts = deepcopy(facts)
+        for taxonomy in facts.get("facts", {}).values():
+            if not isinstance(taxonomy, dict):
+                continue
+            for fact in taxonomy.values():
+                if not isinstance(fact, dict):
+                    continue
+                for values in fact.get("units", {}).values():
+                    if not isinstance(values, list):
+                        continue
+                    values[:] = [
+                        value for value in values if _filed_by_checkpoint(value, checkpoint)
+                    ]
 
     revenue, prior_revenue, as_of = _value(
         facts,

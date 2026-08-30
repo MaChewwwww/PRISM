@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -33,6 +34,7 @@ class Settings(BaseSettings):
     execution_kill_switch: bool = True
     active_ruleset_version: str | None = None
     autonomous_trading_enabled: bool = False
+    shadowfund_enabled: bool = False
     backtest_simulation_enabled: bool = False
     backtest_output_dir: str = "/app/backtest-runs"
     autonomous_trading_start_at: datetime | None = None
@@ -69,6 +71,11 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     featherless_api_key: str | None = None
     featherless_base_url: str = "https://api.featherless.ai/v1"
+    llm_usage_tracking_enabled: bool = True
+    # Optional operator-maintained rate card. No estimate is emitted until
+    # both values are explicitly configured for the selected provider/model.
+    llm_input_price_per_million_usd: Decimal | None = None
+    llm_output_price_per_million_usd: Decimal | None = None
     sec_user_agent: str = "PRISM autonomous research contact: operator@prism.local"
 
     # Seeded Authentication
@@ -134,6 +141,14 @@ class Settings(BaseSettings):
                         "Production autonomous trading window must remain within the "
                         "BA-authorized hackathon window"
                     )
+        if self.shadowfund_enabled:
+            if self.environment == "staging" and not self.backtest_simulation_enabled:
+                raise ValueError(
+                    "Staging ShadowFund requires BACKTEST_SIMULATION_ENABLED; it cannot "
+                    "observe an autonomous worker"
+                )
+            if self.environment == "staging" and self.autonomous_trading_enabled:
+                raise ValueError("Staging ShadowFund cannot run beside autonomous trading")
         if self.environment in {"staging", "production"}:
             insecure_passwords = {
                 "prism-development-only",

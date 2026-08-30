@@ -12,7 +12,7 @@ export default async function AlternativesPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const sessions = await listAlternativeSessions(range);
+  const alternatives = await listAlternativeSessions(range);
 
   return (
     <>
@@ -25,7 +25,7 @@ export default async function AlternativesPage({
       {/* ShadowFund sessions */}
       <section aria-labelledby="sessions" className="mt-6">
         <AlternativesList
-          sessions={sessions}
+          sessions={alternatives.sessions}
           rangeControl={<RangePresets range={range} />}
           heading={
             <div>

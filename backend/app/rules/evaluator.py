@@ -7,7 +7,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Literal
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.contracts.models import (
     AllowedOrderPayload,
@@ -24,7 +24,7 @@ from app.contracts.models import (
     TradeProposal,
 )
 from app.core.config import Settings
-from app.rules.registry import AuthorizedRuleset, get_authorized_ruleset
+from app.rules.registry import AuthorizedRuleset, ProfileParameters, get_authorized_ruleset
 
 
 def _json_value(value: Any) -> Any:
@@ -88,6 +88,9 @@ def authorize_proposal(
     inputs: dict[str, Any],
     now: datetime | None = None,
     profile_key: Literal["conservative", "balanced", "aggressive"] = "balanced",
+    profile_parameters: ProfileParameters | None = None,
+    profile_id: UUID | None = None,
+    profile_version: int = 1,
     kill_switch_active: bool | None = None,
 ) -> AuthorizationDecision:
     """Evaluate all P0-P5 controls and return a fully bound decision.
@@ -99,7 +102,7 @@ def authorize_proposal(
     ruleset = get_authorized_ruleset()
     snapshot = input_digest(inputs)
     params = ruleset.parameters
-    profile = ruleset.profiles[profile_key]
+    profile = profile_parameters or ruleset.profiles[profile_key]
     effective_kill_switch = (
         settings.execution_kill_switch if kill_switch_active is None else kill_switch_active
     )
@@ -299,7 +302,9 @@ def authorize_proposal(
     )
     exit_policy = proposal.exit_policy
     exit_valid = (
-        params.take_profit_min_pct <= exit_policy.take_profit_pct <= params.take_profit_max_pct
+        exit_policy.take_profit_pct == profile.take_profit_pct
+        and exit_policy.stop_loss_pct == profile.stop_loss_pct
+        and params.take_profit_min_pct <= exit_policy.take_profit_pct <= params.take_profit_max_pct
         and exit_policy.stop_loss_pct == params.stop_loss_pct
         and params.dte_threshold_min_days
         <= exit_policy.dte_threshold
@@ -321,7 +326,7 @@ def authorize_proposal(
             []
             if strategy_valid and exit_valid and settings.active_ruleset_version == ruleset.version
             else [ReasonCode.PAYLOAD_MISMATCH],
-            "Exit policy, active ruleset, and option payload must validate exactly.",
+            "Profile-bound exit policy, active ruleset, and option payload must validate exactly.",
             snapshot,
         )
     )
@@ -341,8 +346,8 @@ def authorize_proposal(
         proposal_digest=proposal.proposal_digest,
         ruleset_id=ruleset.ruleset_id,
         ruleset_version=ruleset.version,
-        profile_id=uuid5(NAMESPACE_URL, f"{ruleset.ruleset_id}:{profile_key}"),
-        profile_version=1,
+        profile_id=profile_id or uuid5(NAMESPACE_URL, f"{ruleset.ruleset_id}:{profile_key}"),
+        profile_version=profile_version,
         outcome=AuthorizationOutcome.APPROVE if approved else AuthorizationOutcome.REJECT,
         allowed_order_payload_digest=allowed_payload_digest(allowed) if approved else None,
         allowed_order_payload=allowed if approved else None,

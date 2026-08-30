@@ -25,8 +25,10 @@ Specialist work may be concurrent where inputs are independent, but synthesis co
 | Risk Management | AI-assisted | Challenge portfolio concentration, drawdown, liquidity, volatility, tail risk, and contradictory evidence; recommend changes but do not authorize. |
 | Rules Engine | Deterministic | Evaluate typed rules as `PASS`, `MODIFY`, or `FAIL`; produce aggregate `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`. |
 | Execution | Deterministic integration | Recheck immutable bindings and changing state, then translate only a current `APPROVE` into an Alpaca paper order. MLeg position intents and paper-only CLI translation are implemented; submission remains gated. |
-| ShadowFund | Deterministic evaluation | Track non-executable counterfactual branches against the same subsequent market path. Evaluation roots and shadow candidates are persisted; valuation/fill ingestion remains deferred. |
-| Post-Analysis | Asynchronous AI-assisted | Compare completed chosen/ShadowFund evidence and recommend changes only to authorized AI Profile fields. Recommendations require validation and manual review. |
+| ShadowFund | Deterministic evaluation | Persist a session for every terminal decision and value cash, 0.5x virtual sizing, contrarian, and Agent 7 alternative branches from timestamped bid/ask observations. It is non-executable and fails closed to incomplete data. |
+| Post-Analysis | Asynchronous AI-assisted | Compare completed chosen/ShadowFund evidence after scoring or a completed backtest and recommend only authorized AI Profile fields. A separate deterministic profile service validates the full batch and supports authenticated manual activation or user-configured automatic calibration; neither changes execution authority. |
+
+Agent 7's optional ShadowFund intent is strict structured research evidence: direction, supported structure, and rationale only. It cannot contain a contract, strike, price, quantity, or order instruction; deterministic code selects an eligible virtual contract or records an incomplete branch.
 
 ## Structured records
 
