@@ -14,7 +14,7 @@
 - Governance/document semantic checks and synchronized Markdown/DOCX concept deliverables.
 - BA-authorized hackathon window is registry-backed: start Aug 31 09:30 ET, new-entry cutoff Sep 2 16:00 ET, total-equity scoring and force-flatten at Sep 3 close, and Sep 4 09:30 ET outer boundary.
 
-The presentation dataset remains `illustrative_fixture` and does not represent provider, Alpaca account, paper order, fill, holding, or P&L activity. Autonomous execution uses the separate server-side paper account configured for each environment and remains fail-closed until readiness, evidence, authorization, and CLI capability gates pass.
+The general presentation dataset remains `illustrative_fixture` outside production/staging persistence. Shadow Portfolio alternatives are now a deliberate exception: production projects recorded ShadowFund sessions, and staging projects only the active completed historical-backtest run with `data_mode=simulated` and historical-simulation provenance. Neither variant represents an Alpaca paper fill or alters the Active Portfolio. Autonomous execution is production-only, uses a separate server-side paper account, and remains fail-closed until readiness, evidence, authorization, and CLI capability gates pass. Staging rejects autonomous trading and uses the separate non-executing historical backtest boundary.
 
 ## Stabilization pass: implemented safeguards
 
@@ -22,7 +22,7 @@ The presentation dataset remains `illustrative_fixture` and does not represent p
 - Illustrative fundamentals are rejected by executable research paths; provider errors are redacted.
 - Option contracts and option-chain quote/Greek adapters enforce fresh server-side inputs; strategy selection enforces DTE, NBBO, spread, and positive-debit rules.
 - P0-P5 deterministic authorization, durable kill-switch controls, advisory-locked cycle audit rows, and strict autonomous readiness are implemented. Missing state, stale quotes, missing Greeks, non-paper mode, drawdown limits, and broker-closed timing fail closed.
-- The shared autonomous worker runs the same staging/production sequence: restart reconciliation, account/portfolio snapshot, SEC-sourced fundamentals, specialist research, five-year/30-event analog coverage, live option selection, AI risk assessment, deterministic authorization, mandatory exits, durable receipt submission, and audit.
+- The production autonomous worker performs restart reconciliation, account/portfolio snapshot, SEC-sourced fundamentals, specialist research, five-year/30-event analog coverage, live option selection, AI risk assessment, deterministic authorization, mandatory exits, durable receipt submission, and audit. Staging rejects autonomous trading and validates through a separate historical backtest that must not invoke this worker or its execution adapter.
 - Frontend fixture labels and invocation metadata are truthful.
 
 Submission remains a release-gated capability. The worker records `NO_TRADE` when IV history, option-payoff evidence, concentration/Greeks inputs, or deployment/readiness evidence is unavailable. A PR and a fresh staging deployment are required before `EXECUTION_KILL_SWITCH` can be disabled. Existing option positions are OCC-parsed and refreshed from the live chain; sector/cluster/ticker and same-expiry exposure are calculated from their observed market values, while net Delta/Vega stress is included in the aggregate risk budget.
@@ -41,8 +41,8 @@ The worker persists canonical `TradeProposal`, `RiskAssessment`, portfolio snaps
 
 ## Portfolio and paper execution
 
-Portfolio snapshots, five-year historical analogs, PostgreSQL execution receipts, restart reconciliation, mandatory paper exits, and CLI capability probes are implemented. ShadowFund is intentionally out of this stabilization scope; its later valuation/fill ingestion must consume the immutable evaluation roots without changing execution authority. Networked tests remain opt-in and must not place an order without explicit user authorization.
+Portfolio snapshots, five-year historical analogs, PostgreSQL execution receipts, restart reconciliation, mandatory paper exits, and CLI capability probes are implemented. ShadowFund sessions/branches/observations/valuations and their no-execution presentation projection consume immutable evaluation roots without changing execution authority. Networked tests remain opt-in and must not place an order without explicit user authorization.
 
 ## Later: operations and evaluation
 
-Add restore drills, SLOs after owner approval, full observability, threat modeling, profile activation persistence, and post-analysis evaluation. Automatic profile switching and live trading remain outside scope.
+Add restore drills, SLOs after owner approval, full observability, and threat modeling. Backend profile activation persistence, manual activation, user-configured automatic calibration, weekly Friday post-close Post-Analysis triggers, and evidence-qualified `PostAnalysisAgent` recommendation generation are implemented; manual frontend profile-activation controls remain pending. Live trading remains outside scope.

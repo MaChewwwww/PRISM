@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/llm-usage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Llm Usage Summary */
+        get: operations["llm_usage_summary_api_v1_llm_usage_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/presentation/agents": {
         parameters: {
             query?: never;
@@ -302,6 +319,57 @@ export interface paths {
         };
         /** Weekly Summary */
         get: operations["weekly_summary_api_v1_presentation_weekly_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/activate-post-analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate Post Analysis Profile */
+        post: operations["activate_post_analysis_profile_api_v1_profiles_activate_post_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/calibration-preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Calibration Preference */
+        put: operations["update_calibration_preference_api_v1_profiles_calibration_preference_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profile Governance Status */
+        get: operations["profile_governance_status_api_v1_profiles_governance_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -602,6 +670,27 @@ export interface components {
          * @enum {string}
          */
         ActivationMode: "manual";
+        /** ActiveProfileResponse */
+        ActiveProfileResponse: {
+            /**
+             * Activation Mode
+             * @enum {string}
+             */
+            activation_mode: "manual" | "automatic";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            parameters: components["schemas"]["ProfileParameters"];
+            /**
+             * Profile Key
+             * @enum {string}
+             */
+            profile_key: "conservative" | "balanced" | "aggressive";
+            /** Version */
+            version: number;
+        };
         /** Activity */
         Activity: {
             /** Amount */
@@ -694,28 +783,67 @@ export interface components {
         };
         /** AlternativeBranch */
         AlternativeBranch: {
+            /** Allocationmultiplier */
+            allocationMultiplier?: string | null;
+            /** Capitalatrisk */
+            capitalAtRisk?: string | null;
+            /**
+             * Chosenpath
+             * @default false
+             */
+            chosenPath: boolean;
             /** Coverage */
             coverage: string;
             /** Deltavschosen */
             deltaVsChosen: string;
             /** Drawdown */
             drawdown: string;
+            /** Duration */
+            duration?: string | null;
+            /** Entryexitpolicy */
+            entryExitPolicy?: string | null;
+            /** Grosspnl */
+            grossPnl?: string | null;
             /** Id */
             id: string;
             /** Label */
             label: string;
+            /** Mae */
+            mae?: string | null;
+            /** Mfe */
+            mfe?: string | null;
+            /** Netpnl */
+            netPnl?: string | null;
             /** Pnl */
             pnl: string;
+            /** Refusalreason */
+            refusalReason?: string | null;
             /**
              * Status
              * @enum {string}
              */
-            status: "complete" | "incomplete";
+            status: "open" | "complete" | "incomplete";
+            /** Valuationconfidence */
+            valuationConfidence?: string | null;
             /** Variation */
             variation: string;
         };
         /** AlternativeCollection */
         AlternativeCollection: {
+            /** Aggregatepath */
+            aggregatePath?: components["schemas"]["ChartPoint"][];
+            /**
+             * Completedsessions
+             * @default 0
+             */
+            completedSessions: number;
+            /** Emptymessage */
+            emptyMessage?: string | null;
+            /**
+             * Incompletesessions
+             * @default 0
+             */
+            incompleteSessions: number;
             /** Sessions */
             sessions: components["schemas"]["AlternativeSession"][];
         };
@@ -733,6 +861,8 @@ export interface components {
             chosenPathPnl: string;
             /** Coverage */
             coverage: string;
+            /** Evaluationrootdigest */
+            evaluationRootDigest?: string | null;
             /** Id */
             id: string;
             /** Limitations */
@@ -744,14 +874,32 @@ export interface components {
             occurredAt: string;
             /** Path */
             path: components["schemas"]["ChartPoint"][];
+            /** Profileversion */
+            profileVersion?: number | null;
+            /** Refusalreasons */
+            refusalReasons?: string[];
+            /** Rulesetversion */
+            rulesetVersion?: string | null;
+            /** Sourcemode */
+            sourceMode?: ("production" | "staging") | null;
+            /**
+             * State
+             * @default incomplete
+             * @enum {string}
+             */
+            state: "open" | "complete" | "incomplete";
             /** Storyid */
             storyId: string;
             /** Summary */
             summary: string;
             /** Symbol */
             symbol: string;
+            /** Terminaloutcome */
+            terminalOutcome?: string | null;
             /** Title */
             title: string;
+            /** Valuationpolicyversion */
+            valuationPolicyVersion?: string | null;
         };
         /**
          * AltmanZone
@@ -946,6 +1094,31 @@ export interface components {
              */
             upper: string;
         };
+        /** CalibrationPreferenceRequest */
+        CalibrationPreferenceRequest: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "manual" | "automatic";
+        };
+        /** CalibrationPreferenceResponse */
+        CalibrationPreferenceResponse: {
+            /** Automatic Opt In */
+            automatic_opt_in: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "manual" | "automatic";
+            /** Operator Id */
+            operator_id: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** Catalyst */
         Catalyst: {
             /** Classification */
@@ -1006,7 +1179,7 @@ export interface components {
          * DataMode
          * @enum {string}
          */
-        DataMode: "illustrative_fixture";
+        DataMode: "illustrative_fixture" | "recorded" | "simulated";
         /** DateRange */
         DateRange: {
             /** From */
@@ -1854,6 +2027,21 @@ export interface components {
              */
             trace_id: string;
         };
+        /** LLMUsageSummaryResponse */
+        LLMUsageSummaryResponse: {
+            /** Completion Tokens */
+            completion_tokens: number;
+            /** Estimated Cost Usd */
+            estimated_cost_usd?: string | null;
+            /** Prompt Tokens */
+            prompt_tokens: number;
+            /** Request Count */
+            request_count: number;
+            /** Total Tokens */
+            total_tokens: number;
+            /** Usage Available Count */
+            usage_available_count: number;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Email */
@@ -2409,14 +2597,15 @@ export interface components {
             /**
              * Fixtureversion
              * @default prism-demo-v1
-             * @constant
              */
-            fixtureVersion: "prism-demo-v1";
+            fixtureVersion: string | null;
             /**
              * Generatedat
              * Format: date-time
              */
             generatedAt: string;
+            /** Provenancenotice */
+            provenanceNotice?: string | null;
             range?: components["schemas"]["DateRange"] | null;
         };
         /** PriceDisplacement */
@@ -2449,6 +2638,28 @@ export interface components {
              */
             gap_size_pct: number | string;
         };
+        /** ProfileActivationRequest */
+        ProfileActivationRequest: {
+            /**
+             * Batch Id
+             * Format: uuid
+             */
+            batch_id: string;
+        };
+        /** ProfileActivationResponse */
+        ProfileActivationResponse: {
+            /**
+             * Activated From Batch Id
+             * Format: uuid
+             */
+            activated_from_batch_id: string;
+            active_profile: components["schemas"]["ActiveProfileResponse"];
+        };
+        /** ProfileGovernanceStatusResponse */
+        ProfileGovernanceStatusResponse: {
+            active_profile: components["schemas"]["ActiveProfileResponse"];
+            preference: components["schemas"]["CalibrationPreferenceResponse"];
+        };
         /** ProfileParameter */
         ProfileParameter: {
             /** Activevalue */
@@ -2465,6 +2676,29 @@ export interface components {
             name: string;
             /** Unit */
             unit: string;
+        };
+        /** ProfileParameters */
+        ProfileParameters: {
+            /**
+             * Opportunity Score Threshold
+             * Format: decimal-string
+             */
+            opportunity_score_threshold: string;
+            /**
+             * Stop Loss Pct
+             * Format: decimal-string
+             */
+            stop_loss_pct: string;
+            /**
+             * Take Profit Pct
+             * Format: decimal-string
+             */
+            take_profit_pct: string;
+            /**
+             * Target Position Size Pct
+             * Format: decimal-string
+             */
+            target_position_size_pct: string;
         };
         /** ProfileSuggestion */
         ProfileSuggestion: {
@@ -2950,6 +3184,28 @@ export interface components {
          * @enum {string}
          */
         SectorRegimeConfirmation: "leading_sector_outperformer" | "idiosyncratic_decoupling" | "broad_beta_convergence" | "sector_under_pressure" | "lagging_in_bull_sector";
+        /**
+         * ShadowAlternativeIntent
+         * @description AI research intent for a non-executable ShadowFund branch.
+         *
+         *     Contract symbols and prices are deliberately absent. Deterministic code
+         *     selects them from the same eligible option universe as the primary
+         *     proposal, and this model can never become an order payload.
+         */
+        ShadowAlternativeIntent: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "bullish" | "bearish";
+            /**
+             * Preferred Structure
+             * @enum {string}
+             */
+            preferred_structure: "long_call" | "long_put" | "bull_call_spread" | "bear_put_spread";
+            /** Rationale */
+            rationale: string;
+        };
         /** ShadowCandidate */
         ShadowCandidate: {
             /**
@@ -3296,7 +3552,7 @@ export interface components {
              * @default live_research
              * @enum {string}
              */
-            provenance: "live_research" | "illustrative_fixture";
+            provenance: "live_research" | "historical_simulation" | "illustrative_fixture";
             recommended_structure: components["schemas"]["OptionStructure"];
             /**
              * Reward Risk Ratio
@@ -3309,6 +3565,8 @@ export interface components {
              * @constant
              */
             schema_version: "1.0";
+            /** @default null */
+            shadow_alternative_intent: components["schemas"]["ShadowAlternativeIntent"] | null;
             specialist_scores: components["schemas"]["SpecialistScores"];
             /** Symbol */
             symbol: string;
@@ -3682,6 +3940,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    llm_usage_summary_api_v1_llm_usage_summary_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMUsageSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4064,6 +4358,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_post_analysis_profile_api_v1_profiles_activate_post_analysis_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileActivationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileActivationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_calibration_preference_api_v1_profiles_calibration_preference_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalibrationPreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationPreferenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    profile_governance_status_api_v1_profiles_governance_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileGovernanceStatusResponse"];
                 };
             };
             /** @description Validation Error */

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from app.autonomous.audit import build_evaluation_root
 from app.contracts.models import (
@@ -16,6 +16,7 @@ from app.contracts.models import (
 from app.core.config import Settings
 from app.market.option_selection import select_option_strategy
 from app.rules.evaluator import authorize_proposal
+from app.rules.registry import ProfileParameters
 
 
 def _proposal() -> TradeProposal:
@@ -166,6 +167,73 @@ def test_balanced_profile_threshold_is_84() -> None:
     assert authorize_proposal(proposal, risk, settings, inputs=inputs).outcome == "REJECT"
     inputs["opportunity_score"] = "84"
     assert authorize_proposal(proposal, risk, settings, inputs=inputs).outcome == "APPROVE"
+
+
+def test_persisted_profile_parameters_remain_bounded_by_the_same_rule_engine() -> None:
+    proposal = _proposal()
+    risk = RiskAssessment(
+        trace_id=proposal.trace_id,
+        proposal_id=proposal.id,
+        verdict="acceptable",
+        max_loss=Decimal("1"),
+        findings=[],
+        data_fresh=True,
+    )
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="1.0.0",
+    )
+    inputs = {
+        "market_fresh": True,
+        "analog_count": 30,
+        "fundamentals_sourced": True,
+        "account_verified": True,
+        "open_positions": 0,
+        "buying_power_ok": True,
+        "cash_buffer_ok": True,
+        "concentration_ok": True,
+        "position_size_ok": True,
+        "aggregate_risk_ok": True,
+        "portfolio_controls_complete": True,
+        "sector_concentration_ok": True,
+        "cluster_concentration_ok": True,
+        "greeks_risk_ok": True,
+        "expiration_concentration_ok": True,
+        "market_open": True,
+        "iv_rank_available": True,
+        "iv_rank": "25",
+        "market_regime": "normal",
+        "portfolio_risk_state": "normal",
+        "quote_age_seconds": 1,
+        "spread_pct": "5",
+        "within_entry_window": True,
+        "before_force_flatten": True,
+        "net_ev_r": "0.15",
+        "reward_risk_ratio": "1.50",
+        "supported_options_level": 2,
+        "opportunity_score": "84",
+    }
+    conservative = ProfileParameters(
+        target_position_size_pct=Decimal("1.50"),
+        opportunity_score_threshold=Decimal("90"),
+        take_profit_pct=Decimal("75"),
+        stop_loss_pct=Decimal("50"),
+    )
+    decision = authorize_proposal(
+        proposal,
+        risk,
+        settings,
+        inputs=inputs,
+        profile_key="conservative",
+        profile_parameters=conservative,
+        profile_id=UUID("00000000-0000-0000-0000-000000000001"),
+        profile_version=7,
+    )
+    assert decision.outcome == "REJECT"
+    assert decision.profile_id == UUID("00000000-0000-0000-0000-000000000001")
+    assert decision.profile_version == 7
 
 
 def test_missing_operational_controls_fail_closed_even_at_threshold() -> None:

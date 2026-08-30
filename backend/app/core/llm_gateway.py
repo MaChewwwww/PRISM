@@ -11,6 +11,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings, get_settings
+from app.observability.usage import record_llm_usage
 
 
 class LLMError(Exception):
@@ -36,9 +37,9 @@ class LLMCompletionResult[T: BaseModel]:
     raw_digest: str
     model: str
     provider: str
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    total_tokens: int | None
     latency_ms: int
     trace_id: UUID
 
@@ -184,9 +185,26 @@ class LLMGateway:
         raw_digest = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()
 
         usage = resp_json.get("usage", {})
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+        usage_available = "prompt_tokens" in usage and "completion_tokens" in usage
+        prompt_tokens = int(usage["prompt_tokens"]) if usage_available else None
+        completion_tokens = int(usage["completion_tokens"]) if usage_available else None
+        total_tokens = (
+            int(usage.get("total_tokens", (prompt_tokens or 0) + (completion_tokens or 0)))
+            if usage_available
+            else None
+        )
+        await record_llm_usage(
+            settings=self._settings,
+            trace_id=resolved_trace_id,
+            provider=provider,
+            model=target_model,
+            operation=response_model.__name__,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            latency_ms=latency_ms,
+            raw_digest=raw_digest,
+        )
 
         # Robust JSON substring extraction
         clean_text = raw_content.strip()

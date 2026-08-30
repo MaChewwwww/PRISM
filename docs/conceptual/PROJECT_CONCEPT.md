@@ -58,7 +58,7 @@ market signal and current context
   -> APPROVE | REJECT | MODIFIED_PENDING_ACCEPTANCE
   -> Alpaca paper execution only for APPROVE
   -> ShadowFund comparison
-  -> Post-Analysis recommendation for manual review
+  -> Post-Analysis batch and bounded profile-review path
 ```
 
 In plain language:
@@ -70,7 +70,7 @@ In plain language:
 5. Deterministic rules decide whether the exact proposal is permitted.
 6. Only `APPROVE` may proceed to paper execution.
 7. ShadowFund compares alternative choices on the same subsequent market path.
-8. Post-Analysis may recommend limited AI Profile adjustments, but a human must review them.
+8. Post-Analysis persists one immutable batch; the current implementation records `NO_RECOMMENDATION` until evidence-qualified recommendations are available.
 
 Every stage uses structured, versioned records. Missing, stale, contradictory, or invalid evidence reduces confidence or stops the workflow; it never creates permission to trade.
 
@@ -94,7 +94,7 @@ These specialists are followed by distinct responsibilities:
 - **Rules Engine** is deterministic and owns authorization.
 - **Execution** may translate only an approved, unchanged payload into a paper order.
 - **ShadowFund** evaluates alternatives and has no trading authority.
-- **Post-Analysis** recommends bounded profile changes that still require validation and manual review.
+- **Post-Analysis** persists a bounded batch after scoring or a completed backtest. The current implementation records `NO_RECOMMENDATION` until an evidence-qualified recommendation producer is available.
 
 No AI agent, browser route, prompt, developer tool, or maintenance script may bypass the Rules Engine.
 
@@ -191,7 +191,7 @@ AI Profiles express strategy preference inside non-negotiable rules. They cannot
 | Balanced | 2.00% | 84 | 75.00% | 50.00% fixed |
 | Aggressive | 2.50% | 80 | 100.00% | 50.00% fixed |
 
-Post-Analysis may recommend changes only to target size, opportunity threshold, take-profit, and the fixed stop-loss field. Recommendations must stay within authorized bounds, pass deterministic validation, and receive manual review. Automatic profile switching is not authorized.
+Post-Analysis may recommend changes only to target size, opportunity threshold, take-profit, and the fixed stop-loss field. Recommendations must stay within authorized bounds and pass deterministic validation. A supplied, complete draft batch may be activated manually or automatically only when the authenticated operator's persisted preference is automatic; the current implementation records `NO_RECOMMENDATION` until an evidence-qualified recommendation producer is available.
 
 ## Technology and trust boundaries
 
@@ -212,7 +212,7 @@ The browser never receives Alpaca or LLM credentials and never calls Alpaca dire
 2. **Decision intelligence:** all seven specialists, structured evidence, proposals, risk assessments, and the full deterministic evaluator.
 3. **Portfolio and alternatives:** portfolio snapshots, exposure calculations, and ShadowFund valuation on a shared market path.
 4. **Paper execution:** Alpaca paper submission, reconciliation, kill-switch behavior, authorization rechecks, monitoring, and opt-in integration tests.
-5. **Controlled learning:** Post-Analysis evidence, bounded profile recommendations, deterministic validation, and manual activation.
+5. **Controlled learning:** Post-Analysis batch evidence, bounded profile recommendations when available, deterministic validation, and manual or operator-configured automatic activation.
 
 Each milestone must preserve paper-only operation, truthful provenance, deterministic authority, and testable failure behavior.
 

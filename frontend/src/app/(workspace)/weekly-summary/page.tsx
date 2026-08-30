@@ -1,5 +1,4 @@
-import { BookOpenCheck, Lightbulb, ShieldCheck, SlidersHorizontal, TrendingUp } from "lucide-react";
-import Link from "next/link";
+import { Lightbulb, ShieldCheck, SlidersHorizontal, TrendingUp } from "lucide-react";
 
 import { PageHeader } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
@@ -116,28 +115,6 @@ export default async function WeeklySummaryPage() {
         />
         <WeeklySummaryClient summary={summary} />
       </section>
-
-      {/* Link to rules */}
-      <Link
-        href="/rules"
-        className={`group mt-6 flex flex-wrap items-center gap-4 ${SECTION_CARD} p-5 outline-none transition-all duration-200 hover:border-[#547D83]/40 focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]`}
-      >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
-          <BookOpenCheck className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <strong className="block text-[14px] font-semibold text-[#F8FAFC]">
-            Ready to configure?
-          </strong>
-          <p className="mt-0.5 text-[13px] leading-relaxed text-[#94A3B8]">
-            The Rules page shows the active version and approved bounds. Recommendations cannot
-            activate until persistence, validation, and approval APIs are implemented.
-          </p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#B2D8DC] transition-transform group-hover:translate-x-0.5">
-          Go to Business Rules {"->"}
-        </span>
-      </Link>
     </>
   );
 }

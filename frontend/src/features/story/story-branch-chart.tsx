@@ -8,14 +8,13 @@ import type { ChartPoint } from "@/features/story/presentation-api";
 
 /**
  * ShadowFund branch comparison chart (DESIGN.md Section 7.1 step 11, Section 3.3
- * spectral accents, Section 5.2 glass). The Active Portfolio path is the solid
+ * spectral accents, Section 5.2 glass). The chosen path is the solid
  * steel line; each counterfactual branch is a dashed spectral line. Branches can
  * be toggled on and off via the chips above the plot.
  *
- * marketPath only carries the observed Active Portfolio path, so the three
- * counterfactual branches are derived deterministically from it purely as an
- * illustrative demo surface (stable per render, never network-sourced). Styling
- * is inline per request; nothing is added to globals.css.
+ * Every series is supplied by persisted ShadowFund observations. Missing values
+ * remain absent rather than being synthesized from the chosen path. Styling is
+ * inline per request; nothing is added to globals.css.
  */
 
 type BranchKey = "active" | "cash" | "reduced" | "agent";
@@ -28,13 +27,13 @@ type BranchSeries = {
 };
 
 const BRANCHES: BranchSeries[] = [
-  { key: "active", label: "Active Portfolio", color: "#94A3B8", dashed: false },
+  { key: "active", label: "Chosen Path", color: "#94A3B8", dashed: false },
   { key: "cash", label: "Cash Baseline", color: "#818CF8", dashed: true },
   { key: "reduced", label: "Reduced Sizing", color: "#F59E0B", dashed: true },
   { key: "agent", label: "Agent Counterfactual", color: "#34D399", dashed: true },
 ];
 
-// Branches the trader can toggle (Active Portfolio is the fixed reference).
+// Branches the operator can toggle (the chosen path is the fixed reference).
 const TOGGLEABLE: BranchSeries[] = BRANCHES.filter((branch) => branch.key !== "active");
 
 type BranchRow = Record<BranchKey, number | null> & { date: string };
@@ -47,19 +46,14 @@ function toNumber(value: string | null | undefined): number | null {
 
 export function StoryBranchChart({ data }: { data: ChartPoint[] }) {
   const rows = useMemo<BranchRow[]>(() => {
-    const base = 100;
-    return data.map((point, index) => {
+    return data.map((point) => {
       const active = toNumber(point.chosenPath);
-      const progress = data.length > 1 ? index / (data.length - 1) : 0;
-      const activeDelta = active === null ? 0 : active - base;
       return {
         date: point.date,
         active,
-        // Cash baseline never moves; reduced sizing captures ~half the active
-        // delta; the agent counterfactual runs a fuller-size version.
-        cash: toNumber(point.cashBaseline) ?? base,
-        reduced: toNumber(point.reducedSize) ?? base + activeDelta * 0.5,
-        agent: toNumber(point.agentAlternative) ?? base + activeDelta * 1.35 - progress * 0.6,
+        cash: toNumber(point.cashBaseline),
+        reduced: toNumber(point.reducedSize),
+        agent: toNumber(point.agentAlternative),
       };
     });
   }, [data]);
@@ -128,7 +122,7 @@ export function StoryBranchChart({ data }: { data: ChartPoint[] }) {
           <div
             className="mt-4 min-h-72 w-full flex-1 [&_*:focus]:outline-none sm:min-h-80"
             role="img"
-            aria-label="Active Portfolio path versus ShadowFund counterfactual branches"
+            aria-label="Chosen path versus ShadowFund counterfactual branches"
           >
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <LineChart
