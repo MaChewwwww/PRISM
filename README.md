@@ -13,7 +13,7 @@
 [![Trading Environment](https://img.shields.io/badge/trading-Alpaca%20Paper%20Only-547D83?style=for-the-badge)](docs/SECURITY.md)
 [![Governance](https://img.shields.io/badge/governance-deterministic-0F172A?style=for-the-badge)](docs/BUSINESS_RULES.md)
 [![Accessibility](https://img.shields.io/badge/accessibility-WCAG%202.2%20AA-6B8E93?style=for-the-badge)](docs/DESIGN.md)
-[![CI](https://img.shields.io/github/actions/workflow/status/MaChewwwww/Alpaca_AI_Hackaton/ci.yml?branch=main&label=CI&style=for-the-badge)](https://github.com/MaChewwwww/Alpaca_AI_Hackaton/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/MaChewwwww/PRISM/ci.yml?branch=main&label=CI&style=for-the-badge)](https://github.com/MaChewwwww/PRISM/actions/workflows/ci.yml)
 
 <p align="center">
   <a href="https://prism-ai.japanwest.cloudapp.azure.com"><strong>Explore Live Platform</strong></a> ·
