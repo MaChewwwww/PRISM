@@ -23,7 +23,9 @@ services:
   backend:
     ports: !reset []
     restart: unless-stopped
-    networks: [application, data]
+    # Backend needs outbound HTTPS for the server-side Alpaca/LLM/SEC reads,
+    # while application and data networks remain isolated from the internet.
+    networks: [application, data, egress]
 
   migrate:
     restart: "no"
@@ -45,3 +47,5 @@ networks:
     internal: true
   data:
     internal: true
+  egress:
+    internal: false
