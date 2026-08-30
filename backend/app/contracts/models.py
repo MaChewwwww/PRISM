@@ -656,3 +656,50 @@ class MacroAnalysisReport(ContractBase):
     macro_headwinds: list[str] = Field(default_factory=list)
     stock_macro_sensitivity: str
     thesis: str
+
+
+class TradeDirection(StrEnum):
+    BULLISH = "bullish"
+    BEARISH = "bearish"
+    NEUTRAL = "neutral"
+
+
+class TradeVerdict(StrEnum):
+    PROPOSE_TRADE = "propose_trade"
+    NO_TRADE = "no_trade"
+
+
+class OptionStructure(StrEnum):
+    LONG_CALL = "long_call"
+    LONG_PUT = "long_put"
+    BULL_CALL_SPREAD = "bull_call_spread"
+    BEAR_PUT_SPREAD = "bear_put_spread"
+    NO_TRADE = "no_trade"
+
+
+class SpecialistScores(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reaction_opportunity_score: DecimalString
+    quant_momentum_score: DecimalString
+    fundamental_quality_score: DecimalString
+    sector_health_score: DecimalString
+    macro_climate_score: DecimalString
+    news_sentiment_score: DecimalString
+
+
+class TradeDecisionReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    verdict: TradeVerdict
+    direction: TradeDirection
+    recommended_structure: OptionStructure
+    composite_opportunity_score: DecimalString = Field(ge=0, le=100)
+    net_ev_r: DecimalString
+    reward_risk_ratio: DecimalString
+    confidence_score: DecimalString = Field(ge=0, le=100)
+    current_price: DecimalString = Field(ge=0)
+    target_price: DecimalString | None = None
+    exit_policy: ExitPolicy
+    specialist_scores: SpecialistScores
+    synthesis_rationale: str
+    contradiction_analysis: str
+    key_risks: list[str] = Field(default_factory=list)

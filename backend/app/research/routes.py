@@ -17,12 +17,14 @@ from app.contracts.models import (
     MacroAnalysisReport,
     QuantitativeAnalysisReport,
     ResearchReport,
+    TradeDecisionReport,
 )
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.decision_agent import TradingDecisionAgent
 from app.research.fundamental_engine import compute_fundamental_analysis
 from app.research.industry_agent import IndustryIntelligenceAgent
 from app.research.macro_agent import MacroeconomicAgent
@@ -121,6 +123,22 @@ class MacroAnalysisRequest(BaseModel):
         ...,
         min_length=1,
         description="Target ticker symbol to assess macroeconomic impact for, e.g. NVDA",
+    )
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("symbol must not be blank")
+        return normalized
+
+
+class DecisionSynthesisRequest(BaseModel):
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        description="Target ticker symbol to run master 7-agent synthesis on, e.g. NVDA",
     )
 
     @field_validator("symbol")
@@ -365,4 +383,34 @@ async def analyze_macro(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Macroeconomic analysis failed: {exc!s}",
+        ) from exc
+
+
+@router.post("/decision/synthesize", response_model=TradeDecisionReport)
+async def synthesize_decision(
+    request: DecisionSynthesisRequest,
+    current_user: Annotated[str, Depends(get_current_user)],
+    gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> TradeDecisionReport:
+    """Perform master 7-agent consensus synthesis to emit TradeProposal or NO_TRADE."""
+    trace_id = uuid4()
+    symbol = request.symbol.strip().upper()
+
+    llm_gateway = LLMGateway(settings)
+    agent = TradingDecisionAgent(llm_gateway=llm_gateway, alpaca_gateway=gateway)
+
+    try:
+        proposal = await agent.synthesize_decision(
+            symbol=symbol,
+            trace_id=trace_id,
+            db_session=db_session,
+        )
+        return proposal
+    except Exception as exc:
+        logger.error("Decision synthesis failed for %s: %s", symbol, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Trading decision synthesis failed: {exc!s}",
         ) from exc

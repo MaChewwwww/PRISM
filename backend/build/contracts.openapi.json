@@ -1257,6 +1257,21 @@
         "title": "DecisionNode",
         "type": "object"
       },
+      "DecisionSynthesisRequest": {
+        "properties": {
+          "symbol": {
+            "description": "Target ticker symbol to run master 7-agent synthesis on, e.g. NVDA",
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "DecisionSynthesisRequest",
+        "type": "object"
+      },
       "Evidence": {
         "additionalProperties": false,
         "properties": {
@@ -3090,6 +3105,17 @@
         "title": "OptionStrategy",
         "type": "object"
       },
+      "OptionStructure": {
+        "enum": [
+          "long_call",
+          "long_put",
+          "bull_call_spread",
+          "bear_put_spread",
+          "no_trade"
+        ],
+        "title": "OptionStructure",
+        "type": "string"
+      },
       "OptionType": {
         "enum": [
           "call",
@@ -4505,6 +4531,51 @@
         "title": "SolvencyMetrics",
         "type": "object"
       },
+      "SpecialistScores": {
+        "additionalProperties": false,
+        "properties": {
+          "fundamental_quality_score": {
+            "format": "decimal-string",
+            "title": "Fundamental Quality Score",
+            "type": "string"
+          },
+          "macro_climate_score": {
+            "format": "decimal-string",
+            "title": "Macro Climate Score",
+            "type": "string"
+          },
+          "news_sentiment_score": {
+            "format": "decimal-string",
+            "title": "News Sentiment Score",
+            "type": "string"
+          },
+          "quant_momentum_score": {
+            "format": "decimal-string",
+            "title": "Quant Momentum Score",
+            "type": "string"
+          },
+          "reaction_opportunity_score": {
+            "format": "decimal-string",
+            "title": "Reaction Opportunity Score",
+            "type": "string"
+          },
+          "sector_health_score": {
+            "format": "decimal-string",
+            "title": "Sector Health Score",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reaction_opportunity_score",
+          "quant_momentum_score",
+          "fundamental_quality_score",
+          "sector_health_score",
+          "macro_climate_score",
+          "news_sentiment_score"
+        ],
+        "title": "SpecialistScores",
+        "type": "object"
+      },
       "StoryDetail": {
         "additionalProperties": false,
         "properties": {
@@ -4922,6 +4993,131 @@
         "title": "ToolRecord",
         "type": "object"
       },
+      "TradeDecisionReport": {
+        "additionalProperties": false,
+        "properties": {
+          "composite_opportunity_score": {
+            "format": "decimal-string",
+            "title": "Composite Opportunity Score",
+            "type": "string"
+          },
+          "confidence_score": {
+            "format": "decimal-string",
+            "title": "Confidence Score",
+            "type": "string"
+          },
+          "contradiction_analysis": {
+            "title": "Contradiction Analysis",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_price": {
+            "format": "decimal-string",
+            "title": "Current Price",
+            "type": "string"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/TradeDirection"
+          },
+          "exit_policy": {
+            "$ref": "#/components/schemas/ExitPolicy"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_risks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Risks",
+            "type": "array"
+          },
+          "net_ev_r": {
+            "format": "decimal-string",
+            "title": "Net Ev R",
+            "type": "string"
+          },
+          "recommended_structure": {
+            "$ref": "#/components/schemas/OptionStructure"
+          },
+          "reward_risk_ratio": {
+            "format": "decimal-string",
+            "title": "Reward Risk Ratio",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "specialist_scores": {
+            "$ref": "#/components/schemas/SpecialistScores"
+          },
+          "symbol": {
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "synthesis_rationale": {
+            "title": "Synthesis Rationale",
+            "type": "string"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Price"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/TradeVerdict"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "verdict",
+          "direction",
+          "recommended_structure",
+          "composite_opportunity_score",
+          "net_ev_r",
+          "reward_risk_ratio",
+          "confidence_score",
+          "current_price",
+          "exit_policy",
+          "specialist_scores",
+          "synthesis_rationale",
+          "contradiction_analysis"
+        ],
+        "title": "TradeDecisionReport",
+        "type": "object"
+      },
+      "TradeDirection": {
+        "enum": [
+          "bullish",
+          "bearish",
+          "neutral"
+        ],
+        "title": "TradeDirection",
+        "type": "string"
+      },
       "TradeProposal": {
         "additionalProperties": false,
         "properties": {
@@ -5000,6 +5196,14 @@
         ],
         "title": "TradeProposal",
         "type": "object"
+      },
+      "TradeVerdict": {
+        "enum": [
+          "propose_trade",
+          "no_trade"
+        ],
+        "title": "TradeVerdict",
+        "type": "string"
       },
       "TranscriptStep": {
         "additionalProperties": false,
@@ -6371,6 +6575,82 @@
         "summary": "Weekly Summary",
         "tags": [
           "presentation"
+        ]
+      }
+    },
+    "/api/v1/research/decision/synthesize": {
+      "post": {
+        "description": "Perform master 7-agent consensus synthesis to emit TradeProposal or NO_TRADE.",
+        "operationId": "synthesize_decision_api_v1_research_decision_synthesize_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionSynthesisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeDecisionReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Synthesize Decision",
+        "tags": [
+          "research"
         ]
       }
     },

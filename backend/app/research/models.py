@@ -118,3 +118,34 @@ class MacroAnalysisModel(Base):
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+
+
+class TradeDecisionModel(Base):
+    __tablename__ = "trade_decisions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    trace_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    schema_version: Mapped[Literal["1.0"]] = mapped_column(
+        String(10), nullable=False, default="1.0"
+    )
+
+    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+    verdict: Mapped[str] = mapped_column(String(50), nullable=False)
+    direction: Mapped[str] = mapped_column(String(50), nullable=False)
+    recommended_structure: Mapped[str] = mapped_column(String(50), nullable=False)
+    composite_opportunity_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    net_ev_r: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    reward_risk_ratio: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    current_price: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    target_price: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+
+    exit_policy_json: Mapped[str] = mapped_column(Text, nullable=False)
+    specialist_scores_json: Mapped[str] = mapped_column(Text, nullable=False)
+    synthesis_rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    contradiction_analysis: Mapped[str] = mapped_column(Text, nullable=False)
+    key_risks_json: Mapped[str] = mapped_column(Text, nullable=False)
+
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

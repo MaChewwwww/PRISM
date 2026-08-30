@@ -85,7 +85,7 @@ class NewsIntelligenceAgent:
         article: dict[str, Any],
         symbol: str,
         trace_id: UUID,
-        db_session: AsyncSession,
+        db_session: AsyncSession | None = None,
     ) -> LLMEventAnalysis:
         """Analyze a single news article, checking cache first to prevent duplicate LLM cost."""
         article_id = str(article["id"])
@@ -98,40 +98,41 @@ class NewsIntelligenceAgent:
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB cache first
-        try:
-            query = select(LLMEventAnalysisModel).where(
-                LLMEventAnalysisModel.article_id == article_id,
-                LLMEventAnalysisModel.model_name == active_model,
-            )
-            result = await db_session.execute(query)
-            cached_model = result.scalar_one_or_none()
-
-            if cached_model:
-                # Cache hit: build LLMEventAnalysis directly from database model fields
-                return LLMEventAnalysis(
-                    schema_version=cached_model.schema_version,
-                    id=UUID(cached_model.id),
-                    trace_id=UUID(cached_model.trace_id),
-                    created_at=cached_model.created_at,
-                    article_id=cached_model.article_id,
-                    symbol=cached_model.symbol,
-                    headline=cached_model.headline,
-                    event_type=cached_model.event_type,
-                    sentiment=cached_model.sentiment,
-                    significance_score=Decimal(str(cached_model.significance_score)),
-                    expected_reaction_pct=(
-                        Decimal(str(cached_model.expected_reaction_pct))
-                        if cached_model.expected_reaction_pct is not None
-                        else None
-                    ),
-                    rationale=cached_model.rationale,
-                    model_name=cached_model.model_name,
-                    prompt_version=cached_model.prompt_version,
-                    raw_digest=cached_model.raw_digest,
+        if db_session is not None:
+            try:
+                query = select(LLMEventAnalysisModel).where(
+                    LLMEventAnalysisModel.article_id == article_id,
+                    LLMEventAnalysisModel.model_name == active_model,
                 )
-        except Exception:
-            # Database cache read failed (e.g. offline DB); proceed with live LLM analysis
-            pass
+                result = await db_session.execute(query)
+                cached_model = result.scalar_one_or_none()
+
+                if cached_model:
+                    # Cache hit: build LLMEventAnalysis directly from database model fields
+                    return LLMEventAnalysis(
+                        schema_version=cached_model.schema_version,
+                        id=UUID(cached_model.id),
+                        trace_id=UUID(cached_model.trace_id),
+                        created_at=cached_model.created_at,
+                        article_id=cached_model.article_id,
+                        symbol=cached_model.symbol,
+                        headline=cached_model.headline,
+                        event_type=cached_model.event_type,
+                        sentiment=cached_model.sentiment,
+                        significance_score=Decimal(str(cached_model.significance_score)),
+                        expected_reaction_pct=(
+                            Decimal(str(cached_model.expected_reaction_pct))
+                            if cached_model.expected_reaction_pct is not None
+                            else None
+                        ),
+                        rationale=cached_model.rationale,
+                        model_name=cached_model.model_name,
+                        prompt_version=cached_model.prompt_version,
+                        raw_digest=cached_model.raw_digest,
+                    )
+            except Exception:
+                # Database cache read failed (e.g. offline DB); proceed with live LLM analysis
+                pass
 
         # Cache miss: run LLM completion
         prompt = (
@@ -171,28 +172,29 @@ class NewsIntelligenceAgent:
         )
 
         # Write to SQL Database cache (if available)
-        try:
-            db_model = LLMEventAnalysisModel(
-                id=str(analysis_contract.id),
-                trace_id=str(analysis_contract.trace_id),
-                created_at=analysis_contract.created_at,
-                schema_version=analysis_contract.schema_version,
-                article_id=analysis_contract.article_id,
-                symbol=analysis_contract.symbol,
-                headline=analysis_contract.headline,
-                event_type=analysis_contract.event_type,
-                sentiment=analysis_contract.sentiment,
-                significance_score=analysis_contract.significance_score,
-                expected_reaction_pct=analysis_contract.expected_reaction_pct,
-                rationale=analysis_contract.rationale,
-                model_name=analysis_contract.model_name,
-                prompt_version=analysis_contract.prompt_version,
-                raw_digest=analysis_contract.raw_digest,
-            )
-            db_session.add(db_model)
-            await db_session.commit()
-        except Exception:
-            # Database cache write failed; ignore and return result
-            pass
+        if db_session is not None:
+            try:
+                db_model = LLMEventAnalysisModel(
+                    id=str(analysis_contract.id),
+                    trace_id=str(analysis_contract.trace_id),
+                    created_at=analysis_contract.created_at,
+                    schema_version=analysis_contract.schema_version,
+                    article_id=analysis_contract.article_id,
+                    symbol=analysis_contract.symbol,
+                    headline=analysis_contract.headline,
+                    event_type=analysis_contract.event_type,
+                    sentiment=analysis_contract.sentiment,
+                    significance_score=analysis_contract.significance_score,
+                    expected_reaction_pct=analysis_contract.expected_reaction_pct,
+                    rationale=analysis_contract.rationale,
+                    model_name=analysis_contract.model_name,
+                    prompt_version=analysis_contract.prompt_version,
+                    raw_digest=analysis_contract.raw_digest,
+                )
+                db_session.add(db_model)
+                await db_session.commit()
+            except Exception:
+                # Database cache write failed; ignore and return result
+                pass
 
         return analysis_contract
