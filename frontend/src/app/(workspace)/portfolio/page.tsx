@@ -65,19 +65,17 @@ export default async function PortfolioPage({
   const last = portfolio.points.at(-1);
   const periodPnl = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
 
-  // Gross exposure is the sum of all invested (non-cash) sleeves; net exposure is the
-  // directional balance of those sleeves. Both are derived from the labelled fixture
-  // exposure ledger rather than invented figures.
+  // Gross exposure is available in the fixture. Directional net exposure is
+  // intentionally not inferred because it is not recorded.
   const nonCash = portfolio.exposure.filter((item) => !item.label.toLowerCase().includes("cash"));
   const grossExposure = nonCash.reduce((total, item) => total + toPercent(item.value), 0);
-  const netExposure = grossExposure;
 
   return (
     <>
       <PageHeader
-        eyebrow="Real Holdings"
+        eyebrow="Illustrative Portfolio"
         title="Portfolio"
-        description="Live-capital sleeve with capital allocation, exposure breakdown, and the running decision ledger — all sized against the Deterministic Validator Gate."
+        description="Recorded fixture showing allocation, exposure, and the decision ledger; it is not live capital or broker holdings."
       >
         <RangePresets range={range} />
       </PageHeader>
@@ -97,11 +95,8 @@ export default async function PortfolioPage({
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Net Exposure
           </dt>
-          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
-            {netExposure >= 0 ? "+" : ""}
-            {netExposure.toFixed(2)}%
-          </dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Directional balance</p>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">—</dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">Not recorded in fixture</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -139,7 +134,7 @@ export default async function PortfolioPage({
           id="allocation"
           icon={PieChart}
           title="Capital Allocation & Exposure"
-          subtitle="Risk distribution across live notional."
+          subtitle="Risk distribution across recorded fixture values."
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <ul className="space-y-5">

@@ -1,1 +1,1 @@
-"""Normalized account and portfolio state boundary."""
+"""Portfolio normalization and exposure metadata."""

@@ -2,8 +2,8 @@
 
 ## Responsibility split
 
-- `alpaca-py` is the selected typed read gateway. The current implemented provider slices are authenticated news analysis, deterministic quantitative analysis, and read-only historical stock bars for market-reaction research; broader account, asset, and option reads remain adapter work.
-- Alpaca CLI v0.0.13 is the selected future order-submission adapter. The current skeleton does not submit orders.
+- `alpaca-py` is the selected typed read gateway. Implemented reads include authenticated news, historical stock bars (the gateway explicitly requests the IEX feed so a paper-only/Basic account is supported), active option contracts, option-chain quotes, and Greeks; autonomous authorization still requires fresh snapshots and entitlement checks.
+- Alpaca CLI v0.0.13 is the selected order-submission adapter. Translation, durable receipts, and reconciliation are implemented; readiness keeps the worker at `NO_TRADE` until CLI `version`, `--help`, `--schema`, and `--dry-run` checks pass in the built container.
 - Alpaca MCP may be used by developers for read-only investigation with toolsets limited to `account`, `assets`, `stock-data`, `options-data`, and `news`. Trading tools are excluded and credentials are never committed.
 
 No frontend or AI agent calls a trading surface directly.
@@ -14,7 +14,7 @@ Configuration must target Alpaca's paper endpoint. Live mode is a startup error.
 
 Initial strategies are long calls, long puts, and two-leg call/put debit spreads. Single long options require Level 2; spreads require Level 3. Spread legs must use the same underlying and expiration, simplified 1:1 ratios, `order_class=mleg`, limit pricing, and `day` time-in-force. The system rejects uncovered shorts, credit spreads, equity-option combinations, inactive/non-tradable contracts, extended-hours options, exercise requests, and other strategies.
 
-The BA rules require defined-risk debit spreads when IV Rank exceeds 50%. The market-reaction slice retrieves bounded historical stock bars for research only; it does not compute IV Rank, authorize a proposal, or submit an order. The future market adapter must source and validate the inputs needed for that rule.
+The BA rules require defined-risk debit spreads when IV Rank exceeds 50%. Alpaca's chain supplies current IV/Greeks but not an IV-rank time series. PRISM therefore accepts a declared server-side historical IV provider (`IV_RANK_HISTORY_URL`) or derives historical IV observations from Alpaca option/underlying bars with an explicit Decimal Black-Scholes inversion; all observations are immutable and timestamped. The deterministic percentile calculation rejects insufficient or unsourced history and never substitutes a realized-volatility proxy.
 
 The Quantitative Agent retrieves normalized historical stock bars through `AlpacaPyGateway`, then computes deterministic RSI, MACD, moving averages, Bollinger Bands, ATR, annualized volatility, volume surge, and momentum. `POST /api/v1/research/quant/analyze` is authenticated and research-only; it cannot authorize or submit an order. Provider errors are logged by exception class and returned as a redacted temporary-unavailability response.
 
@@ -33,9 +33,11 @@ The system persists the client order identifier and intent before invoking the C
 
 ## Historical data caching and persistence
 
-The repository interfaces reserve a cache-aside boundary for future market-data adapters. Persisted historical bars, quote snapshots, Redis warming, and deterministic replay storage are not implemented in this skeleton. The market-reaction report cache is persisted research output, not a market-data replay store, and must not be represented as an account or execution record. When broader adapters are added, they must preserve immutable query digests, bounded provider requests, and reproducible replay fixtures without changing the paper-only execution boundary.
+The repository interfaces reserve a cache-aside boundary for future market-data adapters. Decision/proposal, risk, portfolio, authorization, execution-receipt, reconciliation, autonomous-cycle, and option-IV-observation roots are Alembic-managed. Persisted historical bars, broad quote snapshots, Redis warming, and deterministic replay storage are not implemented in this skeleton. The market-reaction report cache is persisted research output, not a market-data replay store, and must not be represented as an account or execution record. When broader adapters are added, they must preserve immutable query digests, bounded provider requests, and reproducible replay fixtures without changing the paper-only execution boundary.
 
-Autonomous paper execution is controlled by server-only `AUTONOMOUS_TRADING_ENABLED`, `AUTONOMOUS_TRADING_START_AT`, and `AUTONOMOUS_TRADING_END_AT` settings. A future orchestration loop may run only when the explicit flag is enabled, the UTC interval is active, and all deterministic authorization checks pass. Production intervals are bounded by the BA registry's hackathon start and force-flatten timestamps; staging may use its separate paper account for a bounded rehearsal interval. No scheduler or autonomous Alpaca order path is implemented in the current skeleton.
+Autonomous paper execution is controlled by server-only `AUTONOMOUS_TRADING_ENABLED`, `AUTONOMOUS_TRADING_START_AT`, and `AUTONOMOUS_TRADING_END_AT` settings. The shared worker runs in both staging and production, uses an advisory lock and durable kill switch, and records `NO_TRADE` until all deterministic authorization prerequisites pass. Production intervals are bounded by the BA registry's hackathon start and force-flatten timestamps; staging may use its separate paper account for a bounded rehearsal interval with identical behavior.
+
+The autonomous research path reads timestamped SEC companyfacts records for fundamentals, Alpaca stock bars/news for the six specialist inputs, and active option contracts plus complete, fresh option-chain quotes/Greeks for selection. A missing SEC record, stale or incomplete quote, unavailable provider, closed broker clock, unavailable portfolio/regime state, insufficient IV history, or fewer than thirty comparable five-year events is a deterministic `NO_TRADE`; no illustrative registry value is eligible for paper authorization. Historical analog returns are revalued through the selected option legs at intrinsic exit value, with observed premium, NBBO slippage, and spread-derived fill probability included in net EV and reward/risk.
 
 
 ## Official-source workflow
@@ -67,3 +69,5 @@ Verified against official Alpaca US documentation on `2026-08-29`. The future se
 - optional `trade_updates` for later account/order streaming: [working with orders](https://docs.alpaca.markets/us/docs/working-with-orders).
 
 The market-data API supports HTTP and WebSocket delivery: [market data overview](https://docs.alpaca.markets/us/docs/about-market-data-api.md). Feed entitlement, symbol limits, historical lookback, and freshness vary by subscription; the server selects an authorized feed and exposes capability/freshness metadata. The browser receives normalized server events only and never receives Alpaca credentials. Historical REST loading is the first milestone; streams, persistence, reconciliation, and cache warming are deferred. No Alpaca call is made by the current Market Tracker skeleton.
+
+Paper-only credentials are a separate key pair from any live account and must be used with the paper trading endpoint. Alpaca's Basic paper entitlement provides IEX equity data and the indicative options feed; a request for recent SIP equity data returns `403 subscription does not permit querying recent SIP data`, while `401` means the authentication headers are missing or invalid. These are credential/entitlement responses, not market-hours responses. The current worker remains paper-only and fails closed when the available feed cannot satisfy its freshness and options requirements.

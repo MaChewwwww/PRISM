@@ -1,0 +1,1395 @@
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import logging
+import re
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal
+from uuid import UUID, uuid4
+
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.autonomous.audit import build_evaluation_root
+from app.autonomous.control import get_or_create_control
+from app.autonomous.models import (
+    AuthorizationModel,
+    AutonomousAuditEventModel,
+    AutonomousCycleModel,
+    OptionIvObservationModel,
+    PortfolioSnapshotModel,
+    ReconciliationEventModel,
+    ResearchBundleModel,
+    RiskAssessmentModel,
+    TradeProposalModel,
+)
+from app.contracts.models import (
+    AuthorizationOutcome,
+    MarketRegime,
+    OptionPayoffEconomics,
+    PortfolioRiskState,
+    TradeProposal,
+    TradeVerdict,
+)
+from app.core.config import Settings
+from app.core.database import get_db_session
+from app.core.llm_gateway import LLMGateway
+from app.execution.cli_gateway import (
+    AlpacaCliExecutionGateway,
+    SqlAlchemyReceiptRepository,
+    SubprocessRunner,
+)
+from app.execution.models import ExecutionReceiptModel
+from app.market.alpaca_gateway import AlpacaPyGateway
+from app.market.option_selection import OptionSelectionError, select_option_strategy
+from app.portfolio.metadata import metadata_complete, parse_instrument
+from app.research.decision_agent import TradingDecisionAgent
+from app.research.historical_analogs import (
+    HistoricalAnalogSummary,
+    HistoricalAnalogUnavailable,
+    compute_historical_analogs,
+    compute_option_payoff_ev,
+)
+from app.research.iv_rank import (
+    IvObservation,
+    IvRankUnavailable,
+    compute_iv_rank,
+    infer_iv_observations,
+)
+from app.research.risk_agent import RiskManagementAgent
+from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
+from app.rules.evaluator import authorize_proposal, input_digest
+from app.rules.registry import get_authorized_ruleset
+
+logger = logging.getLogger(__name__)
+
+AUTONOMOUS_SYMBOLS = ("NVDA", "TSLA", "AAPL", "MSFT", "AMD", "GOOGL", "AMZN")
+WORKER_VERSION = "production-parity-v3"
+
+
+def _field(value: Any, *names: str, default: Any = None) -> Any:
+    for name in names:
+        if isinstance(value, dict) and name in value:
+            return value[name]
+        if hasattr(value, name):
+            return getattr(value, name)
+    return default
+
+
+def _decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+
+
+def _finite_decimal(value: Any) -> Decimal | None:
+    """Parse a provider value without turning a missing field into a zero."""
+
+    if value is None:
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return parsed if parsed.is_finite() else None
+
+
+def _string_or_none(value: Any) -> str | None:
+    return None if value is None else str(value)
+
+
+def _option_level(value: Any) -> int | None:
+    try:
+        text = str(value)
+        digits = "".join(character for character in text if character.isdigit())
+        return int(digits) if digits else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _timestamp_iso(value: Any) -> str | None:
+    if not isinstance(value, datetime) or value.tzinfo is None:
+        return None
+    return value.astimezone(UTC).isoformat()
+
+
+class AutonomousWorker:
+    """Shared staging/production autonomous paper-trading worker.
+
+    The worker has one behavior in both environments. Credentials select the
+    paper account, while the same research, analog, risk, authorization, and
+    execution gates apply. Any unavailable dependency produces a durable
+    ``NO_TRADE`` cycle and never reaches the CLI.
+    """
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    async def run_forever(self, stop_event: asyncio.Event) -> None:
+        flatten_attempted = False
+        while not stop_event.is_set():
+            now = datetime.now(UTC)
+            in_window = self.settings.autonomous_trading_window_active(now)
+            # The configured environment window is a hard boundary for new
+            # work.  We still run one final cycle at its end so a bounded
+            # staging rehearsal cannot leave paper positions behind.
+            environment_end = self.settings.autonomous_trading_end_at
+            flatten_due = (
+                now >= get_authorized_ruleset().parameters.hackathon_window.force_flatten_by
+                or (environment_end is not None and now >= environment_end)
+            )
+            if in_window or (flatten_due and not flatten_attempted):
+                try:
+                    outcome = await self.run_cycle(now=now)
+                except Exception:
+                    logger.exception("Autonomous cycle failed closed")
+                    outcome = "FAILED"
+                if flatten_due and outcome == "FLATTENED":
+                    flatten_attempted = True
+                await self._wait(stop_event, self.settings.autonomous_scan_interval_seconds)
+            else:
+                await self._wait(
+                    stop_event, min(self.settings.autonomous_scan_interval_seconds, 60)
+                )
+
+    async def _wait(self, stop_event: asyncio.Event, seconds: int) -> None:
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=seconds)
+        except TimeoutError:
+            return
+
+    async def run_cycle(self, *, now: datetime | None = None) -> str:
+        now = (now or datetime.now(UTC)).astimezone(UTC)
+        symbols = tuple(self.settings.autonomous_symbol_allowlist)
+        if symbols != AUTONOMOUS_SYMBOLS:
+            return "NO_TRADE"
+        window = get_authorized_ruleset().parameters.hackathon_window
+        in_window = self.settings.autonomous_trading_window_active(now)
+        environment_end = self.settings.autonomous_trading_end_at
+        flatten_due = now >= window.force_flatten_by or (
+            environment_end is not None and now >= environment_end
+        )
+        if not in_window and not flatten_due:
+            return "NO_TRADE"
+
+        async for session in get_db_session():
+            if not await self._acquire_cycle_lock(session):
+                return "NO_TRADE"
+            control = await get_or_create_control(session, self.settings)
+            kill_switch_active = self.settings.execution_kill_switch or control.kill_switch_active
+            # Reconciliation is always attempted before the static/durable
+            # kill switch short-circuits new submissions.  A restart must not
+            # strand an ambiguous paper order merely because execution was
+            # disabled for the current cycle.
+            try:
+                await self._reconcile_unfinished(session)
+            except Exception:
+                await session.rollback()
+                logger.exception("Autonomous reconciliation failed closed")
+                await self._record(
+                    session, now, "FAILED", "Unfinished submission reconciliation failed"
+                )
+                await session.commit()
+                return "FAILED"
+            if kill_switch_active:
+                await self._record(session, now, "NO_TRADE", "Kill switch active")
+                await session.commit()
+                return "NO_TRADE"
+            try:
+                gateway = AlpacaPyGateway(self.settings)
+                if not flatten_due and not await asyncio.to_thread(self._market_is_open, gateway):
+                    await self._record(session, now, "NO_TRADE", "Broker market is closed")
+                    await session.commit()
+                    return "NO_TRADE"
+                account, positions = await asyncio.gather(
+                    asyncio.to_thread(gateway.get_account),
+                    asyncio.to_thread(gateway.get_positions),
+                )
+                portfolio = self._portfolio_snapshot(account, positions, now)
+                portfolio = await self._refresh_position_metadata(gateway, portfolio, now)
+                await self._persist_portfolio_snapshot(session, portfolio)
+                if flatten_due:
+                    if not await self._force_flatten(positions):
+                        await self._record(session, now, "FAILED", "Force-flatten command failed")
+                        await session.commit()
+                        return "FAILED"
+                    await self._record(session, now, "NO_TRADE", "Hackathon force-flatten executed")
+                    await session.commit()
+                    return "FLATTENED"
+                exits_ok, exited_symbols = await self._manage_exits(positions, now)
+                if not exits_ok:
+                    await self._record(session, now, "FAILED", "Mandatory position exit failed")
+                    await session.commit()
+                    return "FAILED"
+                if exited_symbols:
+                    positions = [
+                        position
+                        for position in positions
+                        if str(_field(position, "symbol", default="")) not in exited_symbols
+                    ]
+                    portfolio = self._portfolio_snapshot(account, positions, now)
+                    portfolio = await self._refresh_position_metadata(gateway, portfolio, now)
+                    await self._persist_portfolio_snapshot(session, portfolio)
+
+                candidates: list[tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]]] = []
+                for symbol in symbols:
+                    candidate = await self._research_candidate(
+                        session, gateway, symbol, portfolio, now
+                    )
+                    if candidate is not None:
+                        candidates.append(candidate)
+                candidates.sort(
+                    key=lambda item: _decimal(item[2].get("opportunity_score")), reverse=True
+                )
+
+                open_positions = len(positions)
+                if open_positions >= self.settings.autonomous_max_open_positions:
+                    await self._record(session, now, "NO_TRADE", "Six-position cap reached")
+                    await session.commit()
+                    return "NO_TRADE"
+
+                executor = AlpacaCliExecutionGateway(self.settings, SubprocessRunner(), None)  # type: ignore[arg-type]
+                submitted = False
+                for proposal, analog, context in candidates:
+                    if open_positions >= self.settings.autonomous_max_open_positions:
+                        break
+                    try:
+                        risk = await RiskManagementAgent(LLMGateway(self.settings)).assess(
+                            proposal, context=context
+                        )
+                    except Exception as exc:
+                        await self._persist_no_trade(
+                            session, proposal, f"Risk assessment unavailable: {type(exc).__name__}"
+                        )
+                        continue
+                    session.add(
+                        RiskAssessmentModel(
+                            id=str(risk.id),
+                            trace_id=str(risk.trace_id),
+                            created_at=risk.created_at,
+                            proposal_id=str(risk.proposal_id),
+                            verdict=risk.verdict.value,
+                            payload_json=risk.model_dump_json(),
+                        )
+                    )
+                    decision = authorize_proposal(
+                        proposal,
+                        risk,
+                        self.settings,
+                        inputs={**context, "analog_count": analog.count},
+                        now=now,
+                        kill_switch_active=kill_switch_active,
+                    )
+                    await self._persist_authorization(session, decision)
+                    root = build_evaluation_root(
+                        trace_id=proposal.trace_id,
+                        outcome=decision.outcome.value,
+                        evidence=context,
+                        proposal_digest=proposal.proposal_digest,
+                        market_snapshot=context.get("market_snapshot", "unavailable"),
+                        portfolio_snapshot=portfolio,
+                    )
+                    await self._persist_root(session, proposal.id, root)
+                    if decision.outcome is not AuthorizationOutcome.APPROVE:
+                        continue
+                    receipt = await executor.submit_async(
+                        proposal,
+                        decision,
+                        SqlAlchemyReceiptRepository(session),
+                        kill_switch_active=kill_switch_active,
+                    )
+                    submitted = receipt.status.value in {"submitted", "filled"}
+                    if submitted:
+                        open_positions += 1
+                outcome = "SUBMITTED" if submitted else "NO_TRADE"
+                await self._record(session, now, outcome, "Production-parity cycle completed")
+                await session.commit()
+                return outcome
+            except (
+                SecFundamentalsUnavailable,
+                HistoricalAnalogUnavailable,
+                OptionSelectionError,
+            ) as exc:
+                await session.rollback()
+                await self._record(session, now, "NO_TRADE", type(exc).__name__)
+                await session.commit()
+                return "NO_TRADE"
+            except Exception as exc:
+                await session.rollback()
+                logger.exception("Autonomous cycle failed closed: %s", type(exc).__name__)
+                await self._record(session, now, "FAILED", "Autonomous dependency failure")
+                await session.commit()
+                return "FAILED"
+        return "NO_TRADE"
+
+    async def _research_candidate(
+        self,
+        session: AsyncSession,
+        gateway: AlpacaPyGateway,
+        symbol: str,
+        portfolio: dict[str, Any],
+        now: datetime,
+    ) -> tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]] | None:
+        trace_id = uuid4()
+        try:
+            bars = await asyncio.to_thread(
+                gateway.get_stock_bars,
+                symbol,
+                start=now - timedelta(days=365 * 5 + 30),
+                end=now,
+                limit=2000,
+            )
+            if len(bars) < 40:
+                raise HistoricalAnalogUnavailable("Five-year bars are unavailable")
+            financials = await asyncio.to_thread(
+                fetch_sec_company_financials,
+                symbol,
+                user_agent=self.settings.sec_user_agent,
+            )
+            report = await TradingDecisionAgent(
+                LLMGateway(self.settings), gateway
+            ).synthesize_decision(
+                symbol,
+                trace_id,
+                db_session=session,
+                allow_illustrative=False,
+                financials=financials,
+            )
+            if report.verdict is not TradeVerdict.PROPOSE_TRADE or report.direction.value not in {
+                "bullish",
+                "bearish",
+            }:
+                return None
+            direction: Literal["bullish", "bearish"] = (
+                "bullish" if report.direction.value == "bullish" else "bearish"
+            )
+            analog = compute_historical_analogs(bars, direction=direction, now=now)
+            structure: Literal["long", "debit_spread"] = (
+                "long"
+                if report.recommended_structure.value in {"long_call", "long_put"}
+                else "debit_spread"
+            )
+            min_expiry = now.date() + timedelta(days=report.exit_policy.dte_threshold)
+            contracts = await asyncio.to_thread(
+                gateway.get_option_contracts,
+                symbol,
+                expiration_date_gte=min_expiry,
+                expiration_date_lte=window_date(now),
+            )
+            quotes = await asyncio.to_thread(
+                gateway.get_option_chain,
+                symbol,
+                expiration_date_gte=min_expiry,
+                expiration_date_lte=window_date(now),
+            )
+            # The contracts endpoint is authoritative for the valid price
+            # increment; carry it into the quote records before midpoint
+            # rounding and option-payoff economics are calculated.
+            for contract in contracts:
+                contract_symbol = str(contract.get("symbol", ""))
+                quote = quotes.get(contract_symbol)
+                if quote is not None and "price_increment" not in quote:
+                    quote["price_increment"] = contract.get("price_increment", "0.01")
+            strategy = select_option_strategy(
+                contracts,
+                quotes,
+                underlying_price=report.current_price,
+                direction=direction,
+                structure=structure,
+                now=now,
+                exit_dte_threshold=report.exit_policy.dte_threshold,
+                force_flatten_at=get_authorized_ruleset().parameters.hackathon_window.force_flatten_by,
+            )
+            iv_rank_by_leg, _iv_observations = await self._resolve_iv_rank(
+                session, gateway, symbol, strategy, quotes, bars, now
+            )
+            option_economics = compute_option_payoff_ev(
+                analog,
+                strategy,
+                underlying_price=report.current_price,
+                quotes=quotes,
+                max_spread_pct=get_authorized_ruleset().parameters.max_bid_ask_spread_pct,
+            )
+            # The option-payoff model is the only EV that reaches the
+            # authorization context.  The underlying-return fields remain a
+            # descriptive audit of the analog sample.
+            analog = option_economics
+            proposal_economics = OptionPayoffEconomics(
+                method=analog.ev_method,
+                expected_profit_per_contract=analog.expected_profit_per_contract or Decimal("0"),
+                expected_loss_per_contract=analog.expected_loss_per_contract or Decimal("0"),
+                max_loss_per_contract=analog.max_loss_per_contract or Decimal("0"),
+                premium_per_contract=analog.premium_per_contract or Decimal("0"),
+                slippage_per_contract=analog.slippage_per_contract or Decimal("0"),
+                fill_probability=analog.fill_probability or Decimal("0"),
+                net_ev_r=analog.net_ev_r,
+                reward_risk_ratio=analog.reward_risk_ratio or Decimal("0"),
+            )
+            payload = {
+                "trace_id": str(trace_id),
+                "research_report_id": str(report.id),
+                "symbol": symbol,
+                "strategy": strategy.model_dump(mode="json"),
+                "quantity": 1,
+                "rationale": report.synthesis_rationale,
+                "exit_policy": report.exit_policy.model_dump(mode="json"),
+                "shadow_candidates": [],
+                "option_economics": proposal_economics.model_dump(mode="json"),
+                "iv_rank_by_leg": {key: str(value) for key, value in iv_rank_by_leg.items()},
+            }
+            bundle_payload = {
+                "decision": report.model_dump(mode="json"),
+                "analog": analog.__dict__,
+                "market": {
+                    "symbol": symbol,
+                    "underlying_price": str(report.current_price),
+                    "strategy": strategy.model_dump(mode="json"),
+                },
+            }
+            bundle_digest = input_digest(bundle_payload)
+            payload["research_bundle_digest"] = bundle_digest
+            proposal_digest = hashlib.sha256(
+                json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            proposal = TradeProposal(
+                trace_id=trace_id,
+                research_report_id=report.id,
+                symbol=symbol,
+                strategy=strategy,
+                quantity=1,
+                rationale=report.synthesis_rationale,
+                exit_policy=report.exit_policy,
+                shadow_candidates=[],
+                option_economics=proposal_economics,
+                research_bundle_digest=bundle_digest,
+                proposal_digest=proposal_digest,
+            )
+            context = self._authorization_inputs(
+                report,
+                analog,
+                strategy,
+                portfolio,
+                now,
+                quotes,
+                financials,
+                iv_rank_by_leg=iv_rank_by_leg,
+            )
+            bundle_id = str(uuid4())
+            session.add(
+                ResearchBundleModel(
+                    id=bundle_id,
+                    trace_id=str(trace_id),
+                    created_at=now,
+                    symbol=symbol,
+                    bundle_digest=bundle_digest,
+                    payload_json=json.dumps(bundle_payload, default=str, sort_keys=True),
+                    is_immutable=True,
+                )
+            )
+            session.add(
+                TradeProposalModel(
+                    id=str(proposal.id),
+                    trace_id=str(proposal.trace_id),
+                    created_at=proposal.created_at,
+                    proposal_version=proposal.proposal_version,
+                    research_bundle_id=bundle_id,
+                    symbol=proposal.symbol,
+                    proposal_digest=proposal.proposal_digest,
+                    payload_json=proposal.model_dump_json(),
+                )
+            )
+            await session.flush()
+            context["research_bundle_digest"] = bundle_digest
+            return proposal, analog, context
+        except (
+            SecFundamentalsUnavailable,
+            HistoricalAnalogUnavailable,
+            OptionSelectionError,
+            IvRankUnavailable,
+        ):
+            return None
+        except Exception as exc:
+            logger.warning("Research candidate rejected for %s: %s", symbol, type(exc).__name__)
+            return None
+
+    async def _resolve_iv_rank(
+        self,
+        session: AsyncSession,
+        gateway: AlpacaPyGateway,
+        underlying: str,
+        strategy: Any,
+        quotes: dict[str, dict[str, Any]],
+        underlying_bars: list[dict[str, Any]],
+        now: datetime,
+    ) -> tuple[dict[str, Decimal], list[IvObservation]]:
+        """Resolve a rank for every leg from live or timestamped history.
+
+        A provider-supplied ``iv_rank`` on a current chain snapshot is already
+        a sourced value.  Otherwise we combine the current Alpaca IV with
+        durable observations and, when configured, a server-side historical
+        provider.  Every observation is returned for immutable persistence.
+        """
+
+        history_start = now - timedelta(days=self.settings.iv_rank_lookback_days)
+        provider_rows: list[dict[str, Any]] = []
+        if self.settings.iv_rank_history_url:
+            provider_rows = await asyncio.to_thread(
+                gateway.get_iv_rank_history,
+                underlying,
+                start=history_start,
+                end=now,
+            )
+        provider_observations = [IvObservation(**row) for row in provider_rows]
+        result_by_leg: dict[str, Decimal] = {}
+        persisted: list[IvObservation] = list(provider_observations)
+        # Persist provider observations before attempting rank calculation so
+        # an otherwise safe NO_TRADE cycle still warms the durable history.
+        for observation in provider_observations:
+            await self._persist_iv_observation(session, underlying, observation)
+        for leg in strategy.legs:
+            quote = quotes.get(leg.symbol)
+            if not isinstance(quote, dict):
+                raise IvRankUnavailable("Option quote is unavailable for IV rank")
+            current_iv = _decimal(quote.get("iv"), Decimal("NaN"))
+            if not current_iv.is_finite() or current_iv <= 0:
+                raise IvRankUnavailable("Current implied volatility is unavailable")
+            raw_rank = quote.get("iv_rank")
+            try:
+                direct_rank = Decimal(str(raw_rank)) if raw_rank is not None else Decimal("NaN")
+            except (InvalidOperation, TypeError, ValueError):
+                direct_rank = Decimal("NaN")
+            quote_timestamp = quote.get("quote_timestamp")
+            current_observation = IvObservation(
+                observed_at=quote_timestamp if isinstance(quote_timestamp, datetime) else now,
+                implied_volatility=current_iv,
+                source="alpaca_option_chain",
+                option_symbol=leg.symbol,
+            )
+            persisted.append(current_observation)
+            await self._persist_iv_observation(session, underlying, current_observation)
+            if direct_rank.is_finite() and Decimal("0") <= direct_rank <= Decimal("100"):
+                result_by_leg[leg.symbol] = direct_rank
+                continue
+            result, derived_observations = await self._compute_persisted_iv_rank(
+                session,
+                underlying,
+                current_iv,
+                now,
+                provider_observations,
+                option_symbol=leg.symbol,
+                gateway=gateway,
+                underlying_bars=underlying_bars,
+                leg=leg,
+            )
+            result_by_leg[leg.symbol] = result.rank
+            persisted.extend(derived_observations)
+            for observation in derived_observations:
+                await self._persist_iv_observation(session, underlying, observation)
+        return result_by_leg, persisted
+
+    async def _compute_persisted_iv_rank(
+        self,
+        session: AsyncSession,
+        underlying: str,
+        current_iv: Decimal,
+        now: datetime,
+        provider_observations: list[IvObservation],
+        *,
+        option_symbol: str,
+        gateway: AlpacaPyGateway,
+        underlying_bars: list[dict[str, Any]],
+        leg: Any,
+    ) -> tuple[Any, list[IvObservation]]:
+        cutoff = now - timedelta(days=self.settings.iv_rank_lookback_days)
+        result = await session.execute(
+            select(OptionIvObservationModel).where(
+                OptionIvObservationModel.underlying == underlying,
+                OptionIvObservationModel.observed_at >= cutoff,
+                OptionIvObservationModel.observed_at <= now,
+            )
+        )
+        observations = [
+            IvObservation(
+                observed_at=row.observed_at,
+                implied_volatility=row.implied_volatility,
+                source=row.source,
+                option_symbol=row.option_symbol,
+            )
+            for row in result.scalars()
+        ]
+        # A provider may publish underlying-level observations.  Prefer a
+        # contract-specific history when it has enough rows; otherwise use
+        # only rows explicitly scoped to the underlying.  Unrelated
+        # strikes/expiries are never mixed into a rank.
+        contract_observations = [
+            item for item in observations if item.option_symbol == option_symbol
+        ]
+        provider_contract = [
+            item for item in provider_observations if item.option_symbol == option_symbol
+        ]
+        contract_observations.extend(provider_contract)
+        if len(contract_observations) >= self.settings.iv_rank_min_observations:
+            observations = contract_observations
+        else:
+            observations = [
+                item
+                for item in observations + provider_observations
+                if item.option_symbol in {None, underlying}
+            ]
+        derived_observations: list[IvObservation] = []
+        if len(observations) < self.settings.iv_rank_min_observations:
+            option_bars = await asyncio.to_thread(
+                gateway.get_option_bars,
+                option_symbol,
+                start=cutoff,
+                end=now,
+                limit=2000,
+            )
+            derived_observations = infer_iv_observations(
+                option_bars,
+                underlying_bars,
+                leg=leg,
+            )
+            observations.extend(derived_observations)
+        observations.append(
+            IvObservation(
+                observed_at=now,
+                implied_volatility=current_iv,
+                source="alpaca_option_chain",
+                option_symbol=option_symbol,
+            )
+        )
+        return (
+            compute_iv_rank(
+                current_iv,
+                observations,
+                now=now,
+                lookback_days=self.settings.iv_rank_lookback_days,
+                minimum_observations=self.settings.iv_rank_min_observations,
+            ),
+            derived_observations,
+        )
+
+    async def _persist_iv_observation(
+        self, session: AsyncSession, underlying: str, observation: IvObservation
+    ) -> None:
+        option_symbol = observation.option_symbol or underlying
+        digest = input_digest(
+            {
+                "underlying": underlying,
+                "option_symbol": option_symbol,
+                "observed_at": observation.observed_at,
+                "implied_volatility": observation.implied_volatility,
+                "source": observation.source,
+            }
+        )
+        existing = await session.execute(
+            select(OptionIvObservationModel).where(
+                OptionIvObservationModel.observation_digest == digest
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            return
+        session.add(
+            OptionIvObservationModel(
+                id=str(uuid4()),
+                underlying=underlying,
+                option_symbol=option_symbol,
+                observed_at=observation.observed_at,
+                implied_volatility=observation.implied_volatility,
+                source=observation.source,
+                observation_digest=digest,
+            )
+        )
+        await session.flush()
+
+    @staticmethod
+    def _portfolio_snapshot(account: Any, positions: list[Any], now: datetime) -> dict[str, Any]:
+        status_value = _field(account, "status", default="")
+        status = str(getattr(status_value, "value", status_value)).lower()
+        level_raw = _field(account, "options_trading_level", "options_level")
+        level = _option_level(level_raw)
+        normalized_positions = []
+        for position in positions:
+            symbol = str(_field(position, "symbol", default="")).strip().upper()
+            try:
+                parsed = parse_instrument(symbol)
+            except ValueError:
+                parsed = None
+            qty_raw = _field(position, "qty", default=None)
+            market_value_raw = _field(position, "market_value", default=None)
+            avg_entry_price_raw = _field(position, "avg_entry_price", default=None)
+            delta_raw = _field(position, "delta", default=None)
+            vega_raw = _field(position, "vega", default=None)
+            expiration_raw = _field(
+                position,
+                "expiration",
+                default=(parsed.expiration.isoformat() if parsed and parsed.expiration else None),
+            )
+            position_values_complete = all(
+                value is not None
+                for value in (
+                    _finite_decimal(qty_raw),
+                    _finite_decimal(market_value_raw),
+                    _finite_decimal(avg_entry_price_raw),
+                )
+            )
+            normalized_positions.append(
+                {
+                    "symbol": symbol,
+                    "underlying": parsed.underlying if parsed else symbol,
+                    "asset_class": parsed.asset_class if parsed else "unknown",
+                    "qty": _string_or_none(qty_raw),
+                    "market_value": _string_or_none(market_value_raw),
+                    "avg_entry_price": _string_or_none(avg_entry_price_raw),
+                    "unrealized_pl": str(_field(position, "unrealized_pl", default="0")),
+                    "unrealized_plpc": str(_field(position, "unrealized_plpc", default="")),
+                    "opened_at": _timestamp_iso(
+                        _field(position, "opened_at", "created_at", default=None)
+                    ),
+                    "sector": _field(position, "sector", default=parsed.sector if parsed else None),
+                    "correlated_cluster": _field(
+                        position,
+                        "correlated_cluster",
+                        default=parsed.correlated_cluster if parsed else None,
+                    ),
+                    "delta": _string_or_none(delta_raw),
+                    "vega": _string_or_none(vega_raw),
+                    "expiration": (
+                        expiration_raw.isoformat()
+                        if hasattr(expiration_raw, "isoformat")
+                        else _string_or_none(expiration_raw)
+                    ),
+                    "option_type": parsed.option_type if parsed else None,
+                    "strike": str(parsed.strike) if parsed and parsed.strike is not None else None,
+                    "metadata_source": "alpaca_position+prism_occ_parser",
+                    "position_values_complete": position_values_complete,
+                }
+            )
+        account_values = (
+            _field(account, "cash", default=None),
+            _field(account, "buying_power", default=None),
+            _field(account, "portfolio_value", "equity", default=None),
+            _field(account, "last_equity", "last_day_equity", default=None),
+        )
+        account_values_complete = all(
+            _finite_decimal(value) is not None for value in account_values
+        )
+        return {
+            "observed_at": now.isoformat(),
+            "account_status": status,
+            "account_verified": status == "active",
+            "supported_options_level": level,
+            "cash": _string_or_none(account_values[0]),
+            "buying_power": _string_or_none(account_values[1]),
+            "portfolio_value": _string_or_none(account_values[2]),
+            "start_of_day_equity": _string_or_none(account_values[3]),
+            "account_values_complete": account_values_complete,
+            "positions": normalized_positions,
+        }
+
+    async def _refresh_position_metadata(
+        self, gateway: AlpacaPyGateway, portfolio: dict[str, Any], now: datetime
+    ) -> dict[str, Any]:
+        """Complete option Greeks/expiry from fresh server-side chain quotes."""
+
+        by_underlying: dict[str, dict[str, dict[str, Any]]] = {}
+        for position in portfolio["positions"]:
+            if position.get("asset_class") != "us_option":
+                # Equity delta is one share per unit and vega is exactly zero;
+                # this is a mechanical exposure, not an option Greek guess.
+                qty = _decimal(position.get("qty"))
+                position["delta"] = position.get("delta") or ("-1" if qty < 0 else "1")
+                position["vega"] = position.get("vega") or "0"
+                try:
+                    position["metadata_complete"] = bool(
+                        position.get("position_values_complete")
+                        and metadata_complete(parse_instrument(str(position.get("symbol", ""))))
+                    )
+                except ValueError:
+                    position["metadata_complete"] = False
+                continue
+            underlying = str(position.get("underlying", "")).upper()
+            if underlying not in by_underlying:
+                try:
+                    by_underlying[underlying] = await asyncio.to_thread(
+                        gateway.get_option_chain, underlying
+                    )
+                except Exception:
+                    by_underlying[underlying] = {}
+            quote = by_underlying[underlying].get(str(position.get("symbol", "")))
+            if quote is not None:
+                qty = _decimal(position.get("qty"))
+                position["delta"] = str(_decimal(quote.get("delta")) * qty)
+                position["vega"] = str(_decimal(quote.get("vega")) * qty)
+                position["iv"] = str(quote.get("iv"))
+                position["quote_timestamp"] = _timestamp_iso(quote.get("quote_timestamp"))
+                position["metadata_source"] = "alpaca_position+alpaca_option_chain"
+                quote_timestamp = quote.get("quote_timestamp")
+                if isinstance(quote_timestamp, datetime) and quote_timestamp.tzinfo is not None:
+                    position["quote_age_seconds"] = str(
+                        (now - quote_timestamp.astimezone(UTC)).total_seconds()
+                    )
+            try:
+                parsed_position = parse_instrument(str(position.get("symbol", "")))
+            except ValueError:
+                parsed_position = None
+            position["metadata_complete"] = bool(
+                quote is not None
+                and position.get("position_values_complete")
+                and parsed_position is not None
+                and metadata_complete(parsed_position)
+                and isinstance(position.get("delta"), str)
+                and isinstance(position.get("vega"), str)
+                and position.get("quote_timestamp") is not None
+                and _decimal(position.get("quote_age_seconds"), Decimal("999999")) >= 0
+                and _decimal(position.get("quote_age_seconds"), Decimal("999999"))
+                <= Decimal(str(get_authorized_ruleset().parameters.data_freshness_seconds))
+            )
+        portfolio["positions_metadata_complete"] = all(
+            bool(item.get("metadata_complete")) for item in portfolio["positions"]
+        )
+        portfolio["positions_observed_at"] = now.isoformat()
+        return portfolio
+
+    async def _persist_portfolio_snapshot(
+        self, session: AsyncSession, portfolio: dict[str, Any]
+    ) -> str:
+        digest = input_digest(portfolio)
+        session.add(
+            PortfolioSnapshotModel(
+                id=str(uuid4()),
+                observed_at=datetime.fromisoformat(portfolio["observed_at"]),
+                account_verified=bool(portfolio["account_verified"]),
+                supported_options_level=portfolio["supported_options_level"],
+                snapshot_digest=digest,
+                payload_json=json.dumps(portfolio, sort_keys=True),
+            )
+        )
+        await session.flush()
+        return digest
+
+    def _authorization_inputs(
+        self,
+        report: Any,
+        analog: HistoricalAnalogSummary,
+        strategy: Any,
+        portfolio: dict[str, Any],
+        now: datetime,
+        quotes: dict[str, dict[str, Any]],
+        financials: Any,
+        *,
+        iv_rank_by_leg: dict[str, Decimal] | None = None,
+    ) -> dict[str, Any]:
+        market_snapshot = {
+            "symbol": report.symbol,
+            "underlying_price": str(report.current_price),
+            "strategy": strategy.model_dump(mode="json"),
+            "observed_at": now.isoformat(),
+            "quotes": {
+                leg.symbol: {
+                    "bid": str(quotes[leg.symbol].get("bid")),
+                    "ask": str(quotes[leg.symbol].get("ask")),
+                    "quote_timestamp": _timestamp_iso(quotes[leg.symbol].get("quote_timestamp")),
+                    "delta": str(quotes[leg.symbol].get("delta")),
+                    "gamma": str(quotes[leg.symbol].get("gamma")),
+                    "theta": str(quotes[leg.symbol].get("theta")),
+                    "vega": str(quotes[leg.symbol].get("vega")),
+                    "iv": str(quotes[leg.symbol].get("iv")),
+                    "price_increment": str(quotes[leg.symbol].get("price_increment", "0.01")),
+                    "iv_rank": str(
+                        (iv_rank_by_leg or {}).get(leg.symbol, quotes[leg.symbol].get("iv_rank"))
+                    ),
+                }
+                for leg in strategy.legs
+                if leg.symbol in quotes
+            },
+        }
+        market_digest = input_digest(market_snapshot)
+        portfolio_digest = input_digest(portfolio)
+        cash = _decimal(portfolio.get("cash"))
+        buying_power = _decimal(portfolio.get("buying_power"))
+        order_cost = strategy.limit_price * Decimal("100")
+        rules = get_authorized_ruleset().parameters
+        cash_buffer_ok = cash - order_cost >= _decimal(rules.starting_capital_usd) * (
+            Decimal("1") - _decimal(rules.cash_buffer_pct) / Decimal("100")
+        )
+        quote_ages: list[Decimal] = []
+        spreads: list[Decimal] = []
+        for leg in strategy.legs:
+            quote = quotes.get(leg.symbol)
+            if quote is None:
+                continue
+            timestamp = quote.get("quote_timestamp")
+            if isinstance(timestamp, datetime) and timestamp.tzinfo is not None:
+                quote_ages.append(Decimal(str((now - timestamp.astimezone(UTC)).total_seconds())))
+            bid = _decimal(quote.get("bid"))
+            ask = _decimal(quote.get("ask"))
+            midpoint = (bid + ask) / Decimal("2")
+            if midpoint > 0:
+                spreads.append((ask - bid) / midpoint * Decimal("100"))
+        required_quote_count = len(strategy.legs)
+        quote_timestamps_valid = len(quote_ages) == required_quote_count and all(
+            age >= 0 for age in quote_ages
+        )
+        market_fresh = quote_timestamps_valid and max(
+            quote_ages, default=Decimal("999999")
+        ) <= Decimal(str(rules.data_freshness_seconds))
+        fundamentals_sourced = (
+            getattr(financials, "provenance", None) == "sec_filing"
+            and isinstance(getattr(financials, "data_as_of", None), datetime)
+            and financials.data_as_of.tzinfo is not None
+        )
+        drawdown_baseline = _decimal(portfolio.get("start_of_day_equity"))
+        drawdown_pct = self._drawdown_pct(portfolio, drawdown_baseline)
+        if drawdown_pct >= _decimal(rules.drawdown_halt_pct):
+            portfolio_risk_state = PortfolioRiskState.HALT
+        elif drawdown_pct >= _decimal(rules.drawdown_defensive_pct):
+            portfolio_risk_state = PortfolioRiskState.DEFENSIVE
+        elif drawdown_pct >= _decimal(rules.drawdown_caution_pct):
+            portfolio_risk_state = PortfolioRiskState.CAUTION
+        else:
+            portfolio_risk_state = PortfolioRiskState.NORMAL
+        market_regime = self._market_regime(report)
+        iv_rank_available = all(
+            (
+                (
+                    iv_rank := (iv_rank_by_leg or {}).get(
+                        leg.symbol,
+                        _decimal(quotes.get(leg.symbol, {}).get("iv_rank"), Decimal("NaN")),
+                    )
+                ).is_finite()
+                and Decimal("0") <= iv_rank <= Decimal("100")
+            )
+            for leg in strategy.legs
+        )
+        risk_base = _decimal(portfolio.get("portfolio_value"))
+        risk_pct = (
+            rules.volatile_risk_per_trade_pct
+            if market_regime is MarketRegime.VOLATILE
+            else rules.max_risk_per_trade_pct
+        )
+        max_trade_risk = risk_base * _decimal(risk_pct) / Decimal("100")
+        existing_exposure = sum(
+            (
+                abs(_decimal(item.get("max_loss_per_contract", item.get("market_value"))))
+                for item in portfolio["positions"]
+            ),
+            Decimal("0"),
+        )
+        planned_risk = analog.max_loss_per_contract or order_cost
+        position_size_ok = planned_risk <= max_trade_risk
+        aggregate_risk_ok = existing_exposure + planned_risk <= (
+            risk_base * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100")
+        )
+        portfolio_controls_complete = bool(
+            portfolio.get("account_values_complete")
+            and portfolio.get("positions_metadata_complete", not portfolio["positions"])
+        )
+        candidate_metadata = parse_instrument(report.symbol)
+        equity = risk_base
+        candidate_exposure = order_cost
+
+        def existing_exposure_by(key: str, value: Any) -> Decimal:
+            return sum(
+                (
+                    abs(_decimal(item.get("market_value")))
+                    for item in portfolio["positions"]
+                    if str(item.get(key, "")).upper() == str(value).upper()
+                ),
+                Decimal("0"),
+            )
+
+        ticker_exposure_pct = (
+            (existing_exposure_by("underlying", candidate_metadata.underlying) + candidate_exposure)
+            / equity
+            * Decimal("100")
+            if equity > 0
+            else Decimal("999999")
+        )
+        sector_exposure_pct = (
+            (existing_exposure_by("sector", candidate_metadata.sector) + candidate_exposure)
+            / equity
+            * Decimal("100")
+            if equity > 0 and candidate_metadata.sector
+            else Decimal("999999")
+        )
+        cluster_exposure_pct = (
+            (
+                existing_exposure_by("correlated_cluster", candidate_metadata.correlated_cluster)
+                + candidate_exposure
+            )
+            / equity
+            * Decimal("100")
+            if equity > 0 and candidate_metadata.correlated_cluster
+            else Decimal("999999")
+        )
+        expiration = strategy.legs[0].expiration
+        expiration_exposure = sum(
+            (
+                abs(_decimal(item.get("market_value")))
+                for item in portfolio["positions"]
+                if item.get("expiration") == expiration
+            ),
+            Decimal("0"),
+        )
+        # Expiration concentration is measured against the authorized
+        # aggregate hard-stop budget: positions expiring together must not
+        # consume more modeled loss capacity than the portfolio cap.
+        expiration_concentration_ok = bool(
+            portfolio_controls_complete
+            and expiration_exposure + planned_risk
+            <= equity * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100")
+        )
+        # Greek exposure is refreshed from the option chain above.  Apply the
+        # same authorized aggregate risk budget to a one-percent underlying
+        # move and one volatility-point move; no binary floats or defaults are
+        # permitted.  This makes the check incremental and deterministic.
+        existing_delta_notional = sum(
+            (
+                _decimal(item.get("delta"))
+                * abs(_decimal(item.get("market_value")))
+                * Decimal("0.01")
+                for item in portfolio["positions"]
+            ),
+            Decimal("0"),
+        )
+        existing_vega_notional = sum(
+            (
+                _decimal(item.get("vega"))
+                * abs(_decimal(item.get("market_value")))
+                * Decimal("0.01")
+                for item in portfolio["positions"]
+            ),
+            Decimal("0"),
+        )
+        candidate_delta = sum(
+            (
+                _decimal(quotes.get(leg.symbol, {}).get("delta"))
+                * (Decimal("1") if leg.side.value == "buy" else Decimal("-1"))
+                * report.current_price
+                * Decimal("100")
+                * Decimal("0.01")
+                for leg in strategy.legs
+            ),
+            Decimal("0"),
+        )
+        candidate_vega = sum(
+            (
+                _decimal(quotes.get(leg.symbol, {}).get("vega"))
+                * (Decimal("1") if leg.side.value == "buy" else Decimal("-1"))
+                * Decimal("100")
+                * Decimal("0.01")
+                for leg in strategy.legs
+            ),
+            Decimal("0"),
+        )
+        greek_budget = equity * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100")
+        greeks_risk_ok = bool(
+            portfolio_controls_complete
+            and all(
+                value.is_finite()
+                for value in (
+                    existing_delta_notional,
+                    existing_vega_notional,
+                    candidate_delta,
+                    candidate_vega,
+                )
+            )
+            and abs(existing_delta_notional + candidate_delta) <= greek_budget
+            and abs(existing_vega_notional + candidate_vega) <= greek_budget
+        )
+        return {
+            "market_fresh": market_fresh,
+            "fundamentals_sourced": fundamentals_sourced,
+            "account_verified": portfolio["account_verified"],
+            "open_positions": len(portfolio["positions"]),
+            "buying_power_ok": buying_power >= order_cost,
+            "cash_buffer_ok": cash_buffer_ok,
+            "concentration_ok": ticker_exposure_pct <= _decimal(rules.ticker_concentration_pct),
+            "position_size_ok": position_size_ok,
+            "aggregate_risk_ok": aggregate_risk_ok,
+            "portfolio_controls_complete": portfolio_controls_complete,
+            "sector_concentration_ok": sector_exposure_pct
+            <= _decimal(rules.sector_concentration_pct),
+            "cluster_concentration_ok": cluster_exposure_pct
+            <= _decimal(rules.correlated_cluster_concentration_pct),
+            "greeks_risk_ok": greeks_risk_ok,
+            "expiration_concentration_ok": expiration_concentration_ok,
+            "ticker_exposure_pct": ticker_exposure_pct,
+            "sector_exposure_pct": sector_exposure_pct,
+            "cluster_exposure_pct": cluster_exposure_pct,
+            "expiration_exposure_pct": (
+                (expiration_exposure + candidate_exposure) / equity * Decimal("100")
+                if equity > 0
+                else Decimal("999999")
+            ),
+            "net_delta_exposure": existing_delta_notional + candidate_delta,
+            "net_vega_exposure": existing_vega_notional + candidate_vega,
+            "quote_age_seconds": max(quote_ages, default=Decimal("999999")),
+            "spread_pct": max(spreads, default=Decimal("999999")),
+            "within_entry_window": now < rules.hackathon_window.new_entry_cutoff_at,
+            "before_force_flatten": now < rules.hackathon_window.force_flatten_by,
+            "opportunity_score": report.composite_opportunity_score,
+            "net_ev_r": analog.net_ev_r,
+            "reward_risk_ratio": analog.reward_risk_ratio
+            if analog.reward_risk_ratio is not None
+            else Decimal("0"),
+            "market_regime": market_regime,
+            "portfolio_risk_state": portfolio_risk_state,
+            "market_open": True,
+            "iv_rank_available": iv_rank_available,
+            "iv_rank": max(
+                [
+                    (iv_rank_by_leg or {}).get(
+                        leg.symbol,
+                        _decimal(quotes.get(leg.symbol, {}).get("iv_rank"), Decimal("-1")),
+                    )
+                    for leg in strategy.legs
+                ],
+                default=Decimal("-1"),
+            ),
+            "market_snapshot_digest": market_digest,
+            "portfolio_snapshot_digest": portfolio_digest,
+            "market_snapshot": market_snapshot,
+            "account_observed_at": now,
+            "supported_options_level": portfolio["supported_options_level"] or 0,
+        }
+
+    @staticmethod
+    def _drawdown_pct(portfolio: dict[str, Any], starting_capital: Any) -> Decimal:
+        starting = _decimal(starting_capital)
+        equity = _decimal(portfolio.get("portfolio_value"))
+        if starting <= 0 or equity <= 0:
+            return Decimal("100")
+        return max(Decimal("0"), (starting - equity) / starting * Decimal("100"))
+
+    @staticmethod
+    def _market_regime(report: Any) -> MarketRegime:
+        # Macro climate is the only persisted regime proxy in the decision
+        # contract.  Derive a conservative deterministic regime rather than
+        # silently asserting NORMAL for every market.
+        score = _decimal(
+            getattr(getattr(report, "specialist_scores", None), "macro_climate_score", 0)
+        )
+        if score <= 25:
+            return MarketRegime.CRISIS
+        if score <= 50:
+            return MarketRegime.VOLATILE
+        return MarketRegime.NORMAL
+
+    @staticmethod
+    def _market_is_open(gateway: AlpacaPyGateway) -> bool:
+        try:
+            clock = gateway.get_clock()
+        except Exception:
+            return False
+        value = _field(clock, "is_open", default=None)
+        return value is True or str(value).lower() == "true"
+
+    async def _persist_authorization(self, session: AsyncSession, decision: Any) -> None:
+        session.add(
+            AuthorizationModel(
+                id=str(decision.id),
+                trace_id=str(decision.trace_id),
+                created_at=decision.created_at,
+                proposal_id=str(decision.proposal_id),
+                proposal_version=decision.proposal_version,
+                proposal_digest=decision.proposal_digest,
+                ruleset_id=decision.ruleset_id,
+                ruleset_version=decision.ruleset_version,
+                profile_id=str(decision.profile_id),
+                profile_version=decision.profile_version,
+                outcome=decision.outcome.value,
+                market_snapshot_digest=decision.market_snapshot_digest,
+                portfolio_snapshot_digest=decision.portfolio_snapshot_digest,
+                decision_at=decision.decision_at,
+                expires_at=decision.expires_at,
+                payload_json=decision.model_dump_json(),
+                rule_trace_json=json.dumps(
+                    [rule.model_dump(mode="json") for rule in decision.rule_trace], sort_keys=True
+                ),
+            )
+        )
+        await session.flush()
+
+    async def _persist_no_trade(
+        self, session: AsyncSession, proposal: TradeProposal, reason: str
+    ) -> None:
+        root = build_evaluation_root(
+            trace_id=proposal.trace_id,
+            outcome="NO_TRADE",
+            evidence={"reason": reason},
+            proposal_digest=proposal.proposal_digest,
+        )
+        await self._persist_root(session, proposal.id, root)
+
+    async def _persist_root(self, session: AsyncSession, aggregate_id: UUID, root: Any) -> None:
+        session.add(
+            AutonomousAuditEventModel(
+                id=str(uuid4()),
+                created_at=datetime.now(UTC),
+                aggregate_type="evaluation_root",
+                aggregate_id=str(aggregate_id),
+                event_type="immutable_evaluation",
+                payload_digest=root.root_digest,
+                payload_json=root.model_dump_json(),
+            )
+        )
+        await session.flush()
+
+    async def _force_flatten(self, positions: list[Any]) -> bool:
+        runner = SubprocessRunner()
+        gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
+        success = True
+        for position in positions:
+            symbol = str(_field(position, "symbol", default=""))
+            if symbol:
+                result = await asyncio.to_thread(
+                    runner.run,
+                    [self.settings.alpaca_cli_path, "api", "DELETE", f"/v2/positions/{symbol}"],
+                    "",
+                    gateway._command_environment(),
+                    self.settings.alpaca_request_timeout_seconds,
+                )
+                success = success and result.returncode == 0
+        return success
+
+    async def _manage_exits(self, positions: list[Any], now: datetime) -> tuple[bool, set[str]]:
+        """Apply mandatory paper exits before evaluating any new entry.
+
+        Alpaca positions expose unrealized P/L as a decimal fraction.  OCC
+        symbols expose expiration in YYMMDD; positions that do not contain
+        either field are left untouched and are handled by force-flatten.
+        Unknown values never trigger a speculative close.
+        """
+        symbols: set[str] = set()
+        max_hold_days = get_authorized_ruleset().parameters.hackathon_max_hold_trading_days
+        for position in positions:
+            symbol = str(_field(position, "symbol", default=""))
+            plpc_raw = _field(position, "unrealized_plpc", default=None)
+            plpc = _decimal(plpc_raw, Decimal("NaN")) if plpc_raw is not None else Decimal("NaN")
+            if plpc.is_finite() and (plpc >= Decimal("0.75") or plpc <= Decimal("-0.50")):
+                symbols.add(symbol)
+                continue
+            opened_at = _field(position, "opened_at", "created_at", default=None)
+            if (
+                isinstance(opened_at, datetime)
+                and opened_at.tzinfo is not None
+                and (now - opened_at.astimezone(UTC)).days >= max_hold_days
+            ):
+                symbols.add(symbol)
+                continue
+            match = re.search(r"(\d{6})[CP]", symbol)
+            if match:
+                try:
+                    expiry = datetime.strptime(match.group(1), "%y%m%d").date()
+                except ValueError:
+                    expiry = None
+                if expiry is not None and (expiry - now.date()).days <= 7:
+                    symbols.add(symbol)
+        if not symbols:
+            return True, set()
+        runner = SubprocessRunner()
+        gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
+        for symbol in sorted(symbols):
+            result = await asyncio.to_thread(
+                runner.run,
+                [self.settings.alpaca_cli_path, "api", "DELETE", f"/v2/positions/{symbol}"],
+                "",
+                gateway._command_environment(),
+                self.settings.alpaca_request_timeout_seconds,
+            )
+            if result.returncode != 0:
+                return False, symbols
+        return True, symbols
+
+    async def _reconcile_unfinished(self, session: AsyncSession) -> None:
+        """Resolve pending submissions by persisted client order ID on restart."""
+        result = await session.execute(
+            select(ExecutionReceiptModel).where(
+                ExecutionReceiptModel.status.in_(["pending", "reconciling"])
+            )
+        )
+        rows = list(result.scalars())
+        if not rows:
+            return
+        executor = AlpacaCliExecutionGateway(self.settings, SubprocessRunner(), None)  # type: ignore[arg-type]
+        repository = SqlAlchemyReceiptRepository(session)
+        for row in rows:
+            receipt = repository._to_contract(row)
+            previous_status = receipt.status.value
+            await executor.reconcile_async(receipt, repository)
+            if receipt.status.value != previous_status or receipt.error_code:
+                session.add(
+                    ReconciliationEventModel(
+                        id=str(uuid4()),
+                        receipt_id=str(row.id),
+                        transition=f"{previous_status}->{receipt.status.value}",
+                        observed_at=datetime.now(UTC),
+                        payload_json=json.dumps(
+                            {
+                                "client_order_id": receipt.client_order_id,
+                                "broker_order_id": receipt.broker_order_id,
+                                "error_code": receipt.error_code,
+                            },
+                            sort_keys=True,
+                        ),
+                    )
+                )
+        await session.flush()
+
+    async def _acquire_cycle_lock(self, session: AsyncSession) -> bool:
+        bind = session.get_bind()
+        if bind is None or bind.dialect.name != "postgresql":
+            return True
+        lock_key = int.from_bytes(
+            hashlib.sha256(b"prism-autonomous-cycle").digest()[:8], "big", signed=True
+        )
+        result = await session.execute(
+            text("SELECT pg_try_advisory_lock(:lock_key)"), {"lock_key": lock_key}
+        )
+        return bool(result.scalar())
+
+    async def _record(
+        self, session: AsyncSession, started_at: datetime, outcome: str, reason: str
+    ) -> None:
+        cycle_id = str(uuid4())
+        root = build_evaluation_root(
+            trace_id=uuid4(),
+            outcome=outcome,
+            evidence={"symbols": AUTONOMOUS_SYMBOLS, "reason": reason},
+        )
+        session.add(
+            AutonomousCycleModel(
+                id=cycle_id,
+                started_at=started_at,
+                completed_at=datetime.now(UTC),
+                outcome=outcome,
+                symbols_json=json.dumps(AUTONOMOUS_SYMBOLS),
+                reason=reason,
+                worker_version=WORKER_VERSION,
+            )
+        )
+        session.add(
+            AutonomousAuditEventModel(
+                id=str(uuid4()),
+                created_at=datetime.now(UTC),
+                aggregate_type="autonomous_cycle",
+                aggregate_id=cycle_id,
+                event_type=f"cycle_{outcome.lower()}",
+                payload_digest=root.root_digest,
+                payload_json=root.model_dump_json(),
+            )
+        )
+
+
+def window_date(now: datetime) -> Any:
+    # The selected contract must outlive the force-flatten date; the selector
+    # enforces the lower bound. This upper bound only keeps provider queries
+    # finite and does not relax the authorized holding window.
+    return now.date() + timedelta(days=365)

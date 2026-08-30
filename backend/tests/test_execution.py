@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import subprocess
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -10,6 +11,7 @@ from uuid import uuid4
 import pytest
 
 from app.contracts.models import (
+    AllowedOrderPayload,
     AuthorizationDecision,
     AuthorizationOutcome,
     MarketRegime,
@@ -26,6 +28,7 @@ from app.execution.cli_gateway import (
     AlpacaCliExecutionGateway,
     CommandResult,
     InMemoryReceiptRepository,
+    verify_cli_capabilities,
 )
 from app.execution.validation import ExecutionRejected, validate_authorization, validate_strategy
 
@@ -63,6 +66,7 @@ def build_proposal(kind: StrategyKind = StrategyKind.LONG_CALL) -> TradeProposal
             option_type=option_type,
             side=OptionSide.BUY,
             strike_price=long_strike,
+            position_intent="buy_to_open",
         )
     ]
     if is_spread:
@@ -74,6 +78,7 @@ def build_proposal(kind: StrategyKind = StrategyKind.LONG_CALL) -> TradeProposal
                 option_type=option_type,
                 side=OptionSide.SELL,
                 strike_price=short_strike,
+                position_intent="sell_to_open",
             )
         )
     return TradeProposal(
@@ -83,6 +88,7 @@ def build_proposal(kind: StrategyKind = StrategyKind.LONG_CALL) -> TradeProposal
         strategy=OptionStrategy(kind=kind, legs=legs, limit_price=Decimal("2.50")),
         quantity=1,
         rationale="Test fixture",
+        research_bundle_digest=hashlib.sha256(b"research-bundle").hexdigest(),
         proposal_digest=hashlib.sha256(b"proposal").hexdigest(),
     )
 
@@ -112,8 +118,30 @@ def build_decision(proposal: TradeProposal, **updates: object) -> AuthorizationD
         "account_observed_at": datetime.now(UTC),
         "supported_options_level": 3,
         "account_verified": True,
+        "rule_trace": [
+            {
+                "trace_id": proposal.trace_id,
+                "proposal_id": proposal.id,
+                "rule_id": "P0-TEST",
+                "priority": "P0",
+                "ruleset_version": "rules-v1",
+                "outcome": "PASS",
+                "reason_codes": [],
+                "explanation": "test",
+                "input_snapshot_digest": "3" * 64,
+            }
+        ],
     }
     values.update(updates)
+    values["allowed_order_payload_digest"] = hashlib.sha256(
+        json.dumps(
+            AllowedOrderPayload.model_validate(values["allowed_order_payload"]).model_dump(
+                mode="json"
+            ),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
     return AuthorizationDecision(**values)
 
 
@@ -178,6 +206,17 @@ def test_frs_011_submits_json_stdin_without_shell_command() -> None:
     assert receipt.broker_order_id == "broker-1"
 
 
+def test_cli_capability_probe_is_non_mutating() -> None:
+    runner = RecordingRunner([CommandResult(0, "ok", "") for _ in range(4)])
+    assert verify_cli_capabilities(Settings(_env_file=None), runner)
+    assert [call[0][1:] for call in runner.calls] == [
+        ["version"],
+        ["order", "submit", "--help"],
+        ["order", "submit", "--schema"],
+        ["order", "submit", "--dry-run", "--help"],
+    ]
+
+
 def test_frs_013_timeout_reconciles_without_resubmission() -> None:
     proposal = build_proposal()
     runner = RecordingRunner(
@@ -215,6 +254,15 @@ def test_frs_014_kill_switch_prevents_invocation() -> None:
     with pytest.raises(ExecutionRejected, match="kill-switched"):
         gateway.submit(proposal, build_decision(proposal))
     assert not runner.calls
+
+
+def test_broker_rejection_is_not_reported_as_submitted() -> None:
+    proposal = build_proposal()
+    runner = RecordingRunner([CommandResult(0, '{"id":"broker-2","status":"rejected"}', "")])
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    receipt = gateway.submit(proposal, build_decision(proposal))
+    assert receipt.status.value == "rejected"
+    assert receipt.error_code == "broker_rejected"
 
 
 def test_frs_009_autonomous_trading_window_blocks_out_of_window_authorization() -> None:

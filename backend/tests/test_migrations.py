@@ -37,14 +37,28 @@ def test_initial_migration_is_an_empty_database_baseline(
     assert initial is not None
     assert initial.down_revision is None
     assert head is not None
-    assert head.revision == "20260829_0002"
-    assert head.down_revision == "20260829_0001"
+    assert head.revision == "20260830_0006"
+    assert head.down_revision == "20260830_0005"
 
     with redirect_stdout(output):
         command.upgrade(config, "head", sql=True)
     sql = output.getvalue()
     assert "CREATE TABLE llm_event_analyses" in sql
     assert "CREATE TABLE research_reports" in sql
+    assert "CREATE TABLE industry_analyses" in sql
+    assert "CREATE TABLE macro_analyses" in sql
+    assert "CREATE TABLE trade_decisions" in sql
+    assert "CREATE TABLE autonomous_controls" in sql
+    assert "CREATE TABLE autonomous_cycles" in sql
+    assert "CREATE TABLE research_bundles" in sql
+    assert "CREATE TABLE trade_proposals" in sql
+    assert "CREATE TABLE risk_assessments" in sql
+    assert "CREATE TABLE portfolio_snapshots" in sql
+    assert "CREATE TABLE authorizations" in sql
+    assert "CREATE TABLE execution_receipts" in sql
+    assert "CREATE TABLE reconciliation_events" in sql
+    assert "CREATE TABLE autonomous_audit_events" in sql
+    assert "CREATE TABLE option_iv_observations" in sql
     assert "CREATE TABLE alembic_version" in sql
 
 

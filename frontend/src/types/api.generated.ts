@@ -55,6 +55,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/autonomous/kill-switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Autonomous Kill Switch */
+        post: operations["autonomous_kill_switch_api_v1_autonomous_kill_switch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Autonomous Status */
+        get: operations["autonomous_status_api_v1_autonomous_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -287,7 +321,7 @@ export interface paths {
         put?: never;
         /**
          * Synthesize Decision
-         * @description Perform master 7-agent consensus synthesis to emit TradeProposal or NO_TRADE.
+         * @description Perform master synthesis and return a canonical proposal or explicit NO_TRADE.
          */
         post: operations["synthesize_decision_api_v1_research_decision_synthesize_post"];
         delete?: never;
@@ -861,6 +895,24 @@ export interface components {
          * @enum {string}
          */
         AuthorizationOutcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+        /** AutonomousStatus */
+        AutonomousStatus: {
+            /** Autonomous Enabled */
+            autonomous_enabled: boolean;
+            /** Execution Enabled */
+            execution_enabled: boolean;
+            /** Kill Switch Active */
+            kill_switch_active: boolean;
+            /** Reason */
+            reason: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By */
+            updated_by: string;
+        };
         /**
          * BalanceSheetRedFlag
          * @enum {string}
@@ -1088,6 +1140,54 @@ export interface components {
          * @enum {string}
          */
         EstimateRevisionTrend: "upward" | "downward" | "mixed" | "neutral";
+        /**
+         * EvaluationRoot
+         * @description Immutable lineage anchor shared by authorization and ShadowFund evaluation.
+         */
+        EvaluationRoot: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Evidence Digest */
+            evidence_digest: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Is Immutable
+             * @default true
+             * @constant
+             */
+            is_immutable: true;
+            /** Market Snapshot Digest */
+            market_snapshot_digest: string;
+            /** Outcome */
+            outcome: string;
+            /** Portfolio Snapshot Digest */
+            portfolio_snapshot_digest: string;
+            /**
+             * Proposal Digest
+             * @default null
+             */
+            proposal_digest: string | null;
+            /** Root Digest */
+            root_digest: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
         /** Evidence */
         Evidence: {
             /** Label */
@@ -1248,6 +1348,8 @@ export interface components {
              * Format: decimal-string
              */
             current_price: string;
+            /** Data As Of */
+            data_as_of?: string | null;
             earnings_event?: components["schemas"]["EarningsSurpriseEvent"] | null;
             /**
              * Enterprise Value Millions
@@ -1268,6 +1370,12 @@ export interface components {
             /** Piotroski F Score */
             piotroski_f_score: number;
             profitability: components["schemas"]["ProfitabilityMetrics"];
+            /**
+             * Provenance
+             * @default illustrative_fixture
+             * @enum {string}
+             */
+            provenance: "illustrative_fixture" | "sec_filing";
             /** Red Flags */
             red_flags?: components["schemas"]["BalanceSheetRedFlag"][];
             /**
@@ -1650,6 +1758,13 @@ export interface components {
          * @enum {string}
          */
         IndustrySentiment: "positive" | "moderately_positive" | "mixed" | "moderately_negative" | "negative";
+        /** KillSwitchRequest */
+        KillSwitchRequest: {
+            /** Active */
+            active: boolean;
+            /** Reason */
+            reason: string;
+        };
         /** LLMEventAnalysis */
         LLMEventAnalysis: {
             /** Article Id */
@@ -2002,6 +2117,44 @@ export interface components {
             /** Symbols */
             symbols: string[];
         };
+        /**
+         * NoTradeDecision
+         * @description Explicit synthesis outcome when evidence cannot support a proposal.
+         */
+        NoTradeDecision: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "no_trade";
+            /** Reason */
+            reason: string;
+            /** Research Bundle Digest */
+            research_bundle_digest: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
         /** OptionLeg */
         OptionLeg: {
             /**
@@ -2012,6 +2165,11 @@ export interface components {
             /** Expiration */
             expiration: string;
             option_type: components["schemas"]["OptionType"];
+            /**
+             * Position Intent
+             * @default null
+             */
+            position_intent: ("buy_to_open" | "buy_to_close" | "sell_to_open" | "sell_to_close") | null;
             /**
              * Ratio Qty
              * @default 1
@@ -2032,6 +2190,54 @@ export interface components {
             tradable: boolean;
             /** Underlying */
             underlying: string;
+        };
+        /**
+         * OptionPayoffEconomics
+         * @description Deterministic option economics bound into an executable proposal.
+         */
+        OptionPayoffEconomics: {
+            /**
+             * Expected Loss Per Contract
+             * Format: decimal-string
+             */
+            expected_loss_per_contract: number | string;
+            /**
+             * Expected Profit Per Contract
+             * Format: decimal-string
+             */
+            expected_profit_per_contract: number | string;
+            /**
+             * Fill Probability
+             * Format: decimal-string
+             */
+            fill_probability: number | string;
+            /**
+             * Max Loss Per Contract
+             * Format: decimal-string
+             */
+            max_loss_per_contract: number | string;
+            /** Method */
+            method: string;
+            /**
+             * Net Ev R
+             * Format: decimal-string
+             */
+            net_ev_r: number | string;
+            /**
+             * Premium Per Contract
+             * Format: decimal-string
+             */
+            premium_per_contract: number | string;
+            /**
+             * Reward Risk Ratio
+             * Format: decimal-string
+             */
+            reward_risk_ratio: number | string;
+            /**
+             * Slippage Per Contract
+             * Format: decimal-string
+             */
+            slippage_per_contract: number | string;
         };
         /**
          * OptionSide
@@ -2341,6 +2547,41 @@ export interface components {
              * Format: decimal-string
              */
             roe_pct: string;
+        };
+        /**
+         * ProposalDecision
+         * @description Canonical proposal result, bound to the immutable research bundle.
+         */
+        ProposalDecision: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "proposal";
+            proposal: components["schemas"]["TradeProposal"];
+            /** Research Bundle Digest */
+            research_bundle_digest: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
         };
         /**
          * Provenance
@@ -3020,6 +3261,11 @@ export interface components {
              */
             current_price: number | string;
             direction: components["schemas"]["TradeDirection"];
+            /**
+             * Evidence Freshness Seconds
+             * @default null
+             */
+            evidence_freshness_seconds: number | null;
             /** Evidence Summary */
             evidence_summary?: string[];
             exit_policy: components["schemas"]["ExitPolicy"];
@@ -3045,6 +3291,12 @@ export interface components {
              * @default
              */
             portfolio_fit: string;
+            /**
+             * Provenance
+             * @default live_research
+             * @enum {string}
+             */
+            provenance: "live_research" | "illustrative_fixture";
             recommended_structure: components["schemas"]["OptionStructure"];
             /**
              * Reward Risk Ratio
@@ -3092,6 +3344,8 @@ export interface components {
              * Format: uuid
              */
             id?: string;
+            /** @default null */
+            option_economics: components["schemas"]["OptionPayoffEconomics"] | null;
             /** Proposal Digest */
             proposal_digest: string;
             /**
@@ -3103,6 +3357,11 @@ export interface components {
             quantity: number;
             /** Rationale */
             rationale: string;
+            /**
+             * Research Bundle Digest
+             * @default null
+             */
+            research_bundle_digest: string | null;
             /**
              * Research Report Id
              * Format: uuid
@@ -3304,6 +3563,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthMeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autonomous_kill_switch_api_v1_autonomous_kill_switch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KillSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autonomous_status_api_v1_autonomous_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousStatus"];
                 };
             };
             /** @description Validation Error */
@@ -3771,7 +4100,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TradeDecisionReport"];
+                    "application/json": components["schemas"]["ProposalDecision"] | components["schemas"]["NoTradeDecision"];
                 };
             };
             /** @description Validation Error */

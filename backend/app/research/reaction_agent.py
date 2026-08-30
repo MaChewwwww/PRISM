@@ -74,9 +74,9 @@ class ReactionAnalysisLLMOutput(BaseModel):
 def _freshness_seconds(bars: list[dict[str, Any]], now: datetime) -> int:
     latest_timestamp = bars[-1].get("timestamp") if bars else None
     if not isinstance(latest_timestamp, datetime):
-        return 0
+        return 10**9
     if latest_timestamp.tzinfo is None or latest_timestamp.utcoffset() is None:
-        return 0
+        return 10**9
     return max(0, int((now - latest_timestamp.astimezone(UTC)).total_seconds()))
 
 
@@ -260,12 +260,14 @@ class MarketReactionAgent:
         article_id: str | None = None,
         event_age_seconds: int = 0,
         event_category: NewsEventCategory = NewsEventCategory.OTHER,
+        *,
+        strict: bool = False,
     ) -> ResearchReport:
         """Evaluate the market reaction and produce a formal ResearchReport contract."""
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB cache first
-        if article_id and db_session is not None:
+        if article_id and db_session is not None and not strict:
             try:
                 query = select(ResearchReportModel).where(
                     ResearchReportModel.symbol == symbol,
@@ -496,9 +498,12 @@ class MarketReactionAgent:
             if db_session is not None:
                 db_session.add(db_model)
                 await db_session.commit()
-        except Exception:
+        except Exception as exc:
+            # A cache write must never turn a non-authoritative research result into an error.
             if db_session is not None:
                 await db_session.rollback()
+            if strict:
+                raise RuntimeError("Market reaction research persistence failed") from exc
             logger.warning("Market reaction cache write failed for symbol=%s", symbol)
 
         return report

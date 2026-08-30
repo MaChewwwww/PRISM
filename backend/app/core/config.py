@@ -35,11 +35,30 @@ class Settings(BaseSettings):
     autonomous_trading_enabled: bool = False
     autonomous_trading_start_at: datetime | None = None
     autonomous_trading_end_at: datetime | None = None
+    autonomous_symbol_allowlist: list[str] = [
+        "NVDA",
+        "TSLA",
+        "AAPL",
+        "MSFT",
+        "AMD",
+        "GOOGL",
+        "AMZN",
+    ]
+    autonomous_scan_interval_seconds: int = Field(default=900, gt=0, le=3600)
+    autonomous_max_open_positions: int = Field(default=6, gt=0, le=6)
     account_state_max_age_seconds: int = Field(default=30, gt=0, le=300)
+    # Optional server-side historical IV provider.  Alpaca's chain supplies
+    # current IV/Greeks but not an IV-rank time series; when this URL is not
+    # configured PRISM uses only its own durable observations and fails closed
+    # until enough timestamped history exists.
+    iv_rank_history_url: str | None = None
+    iv_rank_history_api_key: str | None = None
+    iv_rank_lookback_days: int = Field(default=252, ge=30, le=1825)
+    iv_rank_min_observations: int = Field(default=20, ge=2, le=5000)
     cors_allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:3005"]
 
-    # AI / LLM Configuration (supports anthropic, gemini, ollama, deepseek, openai, featherless)
-    llm_provider: str = "anthropic"
+    # AI / LLM Configuration (providers implemented by LLMGateway)
+    llm_provider: str = "featherless"
     llm_model: str | None = None
     anthropic_api_key: str | None = None
     gemini_api_key: str | None = None
@@ -48,6 +67,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     featherless_api_key: str | None = None
     featherless_base_url: str = "https://api.featherless.ai/v1"
+    sec_user_agent: str = "PRISM autonomous research contact: operator@prism.local"
 
     # Seeded Authentication
     auth_email: str = "operator@prism.local"
@@ -135,6 +155,12 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "Staging and production AUTH_SECRET_KEY must be at least 32 characters"
                 )
+        normalized_symbols = [symbol.strip().upper() for symbol in self.autonomous_symbol_allowlist]
+        if not normalized_symbols or any(not symbol for symbol in normalized_symbols):
+            raise ValueError("AUTONOMOUS_SYMBOL_ALLOWLIST must contain at least one symbol")
+        if len(set(normalized_symbols)) != len(normalized_symbols):
+            raise ValueError("AUTONOMOUS_SYMBOL_ALLOWLIST must not contain duplicates")
+        self.autonomous_symbol_allowlist = normalized_symbols
         return self
 
     def autonomous_trading_window_active(self, now: datetime | None = None) -> bool:

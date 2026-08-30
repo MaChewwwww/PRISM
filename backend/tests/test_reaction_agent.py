@@ -199,6 +199,8 @@ async def test_alpaca_gateway_get_stock_bars_success() -> None:
         assert isinstance(bars[0]["open"], Decimal)
         assert bars[0]["volume"] == 50000
         mock_stock_client.get_stock_bars.assert_called_once()
+        request = mock_stock_client.get_stock_bars.call_args.args[0]
+        assert request.feed.value == "iex"
 
 
 @pytest.mark.asyncio

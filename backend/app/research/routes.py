@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from decimal import Decimal
 from typing import Annotated
@@ -11,13 +12,14 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
+    DecisionSynthesisResult,
     FundamentalAnalysisReport,
     IndustryAnalysisReport,
     LLMEventAnalysis,
     MacroAnalysisReport,
+    NoTradeDecision,
     QuantitativeAnalysisReport,
     ResearchReport,
-    TradeDecisionReport,
 )
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
@@ -161,7 +163,7 @@ def get_alpaca_gateway(settings: Annotated[Settings, Depends(get_settings)]) -> 
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
+            detail="Alpaca research provider is unavailable",
         ) from exc
 
 
@@ -264,7 +266,11 @@ async def analyze_reaction(
         )
         return report
     except Exception as exc:
-        logger.exception("Market reaction analysis failed for symbol=%s", symbol)
+        logger.error(
+            "Market reaction analysis failed for symbol=%s: %s",
+            symbol,
+            type(exc).__name__,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Market reaction analysis is temporarily unavailable",
@@ -282,12 +288,21 @@ async def analyze_quantitative(
     symbol = request.symbol.strip().upper()
 
     try:
-        bars = gateway.get_stock_bars(symbol=symbol, limit=request.bar_limit)
+        bars = await run_in_threadpool(
+            gateway.get_stock_bars,
+            symbol=symbol,
+            limit=request.bar_limit,
+        )
     except Exception as exc:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch market bars from Alpaca: {exc!s}",
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Market data is temporarily unavailable"
         ) from exc
+
+    if not bars:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Fresh market data is unavailable",
+        )
 
     return compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
 
@@ -313,16 +328,32 @@ async def analyze_fundamental(
             latest_close = Decimal(str(bars[-1]["close"]))
     except Exception as exc:
         logger.warning(
-            "Alpaca price-bar provider warning for symbol=%s: %s (using baseline valuation)",
+            "Alpaca price-bar provider failed for symbol=%s: %s",
             symbol,
             type(exc).__name__,
         )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Market data is temporarily unavailable"
+        ) from exc
 
-    return compute_fundamental_analysis(
-        symbol=symbol,
-        latest_close=latest_close,
-        trace_id=trace_id,
-    )
+    if latest_close is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Fresh market data is unavailable",
+        )
+
+    try:
+        return compute_fundamental_analysis(
+            symbol=symbol,
+            latest_close=latest_close,
+            trace_id=trace_id,
+            allow_illustrative=False,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Sourced fundamental data is unavailable",
+        ) from exc
 
 
 @router.post("/industry/analyze", response_model=IndustryAnalysisReport)
@@ -349,10 +380,14 @@ async def analyze_industry(
         )
         return report
     except Exception as exc:
-        logger.error("Industry analysis failed for %s: %s", symbol, exc, exc_info=True)
+        logger.error(
+            "Industry analysis failed for %s: %s",
+            symbol,
+            type(exc).__name__,
+        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Industry analysis failed: {exc!s}",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Industry analysis is temporarily unavailable",
         ) from exc
 
 
@@ -379,22 +414,26 @@ async def analyze_macro(
         )
         return report
     except Exception as exc:
-        logger.error("Macroeconomic analysis failed for %s: %s", symbol, exc, exc_info=True)
+        logger.error(
+            "Macroeconomic analysis failed for %s: %s",
+            symbol,
+            type(exc).__name__,
+        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Macroeconomic analysis failed: {exc!s}",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Macroeconomic analysis is temporarily unavailable",
         ) from exc
 
 
-@router.post("/decision/synthesize", response_model=TradeDecisionReport)
+@router.post("/decision/synthesize", response_model=DecisionSynthesisResult)
 async def synthesize_decision(
     request: DecisionSynthesisRequest,
     current_user: Annotated[str, Depends(get_current_user)],
     gateway: Annotated[AlpacaPyGateway, Depends(get_alpaca_gateway)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[AsyncSession, Depends(get_db_session)],
-) -> TradeDecisionReport:
-    """Perform master 7-agent consensus synthesis to emit TradeProposal or NO_TRADE."""
+) -> DecisionSynthesisResult:
+    """Perform master synthesis and return a canonical proposal or explicit NO_TRADE."""
     trace_id = uuid4()
     symbol = request.symbol.strip().upper()
 
@@ -406,11 +445,36 @@ async def synthesize_decision(
             symbol=symbol,
             trace_id=trace_id,
             db_session=db_session,
+            allow_illustrative=False,
         )
-        return proposal
+        bundle_digest = hashlib.sha256(proposal.model_dump_json().encode("utf-8")).hexdigest()
+        # The current specialist report has no live option contract selection or
+        # persisted proposal binding. Never promote it to executable authority.
+        return NoTradeDecision(
+            trace_id=trace_id,
+            symbol=symbol,
+            research_bundle_digest=bundle_digest,
+            reason=(
+                proposal.synthesis_rationale
+                if proposal.verdict.value == "no_trade"
+                else "Canonical TradeProposal binding and live option selection are unavailable"
+            ),
+        )
+    except ValueError:
+        bundle_digest = hashlib.sha256(f"no-evidence:{symbol}:{trace_id}".encode()).hexdigest()
+        return NoTradeDecision(
+            trace_id=trace_id,
+            symbol=symbol,
+            research_bundle_digest=bundle_digest,
+            reason="Required live research evidence is unavailable",
+        )
     except Exception as exc:
-        logger.error("Decision synthesis failed for %s: %s", symbol, exc, exc_info=True)
+        logger.error(
+            "Decision synthesis failed for %s: %s",
+            symbol,
+            type(exc).__name__,
+        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Trading decision synthesis failed: {exc!s}",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Trading decision synthesis is temporarily unavailable",
         ) from exc

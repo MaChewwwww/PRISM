@@ -93,7 +93,7 @@ def test_production_autonomous_trading_window_is_bounded_by_authorized_hackathon
 
 def test_llm_configuration_defaults() -> None:
     settings = Settings(_env_file=None)
-    assert settings.llm_provider == "anthropic"
+    assert settings.llm_provider == "featherless"
     assert settings.llm_model is None
     assert settings.anthropic_api_key is None
     assert settings.gemini_api_key is None

@@ -107,6 +107,11 @@ class OptionLeg(BaseModel):
     strike_price: DecimalString = Field(gt=0)
     active: bool = True
     tradable: bool = True
+    # Alpaca requires an explicit position intent for every multi-leg option leg.
+    # Keep it optional at the research boundary, but execution rejects missing intents.
+    position_intent: (
+        Literal["buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"] | None
+    ) = None
 
 
 class StrategyKind(StrEnum):
@@ -141,6 +146,22 @@ class ShadowCandidate(BaseModel):
     rationale: str = ""
 
 
+class OptionPayoffEconomics(BaseModel):
+    """Deterministic option economics bound into an executable proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    method: str = Field(min_length=1)
+    expected_profit_per_contract: DecimalString
+    expected_loss_per_contract: DecimalString = Field(ge=0)
+    max_loss_per_contract: DecimalString = Field(gt=0)
+    premium_per_contract: DecimalString = Field(gt=0)
+    slippage_per_contract: DecimalString = Field(ge=0)
+    fill_probability: DecimalString = Field(ge=0, le=1)
+    net_ev_r: DecimalString
+    reward_risk_ratio: DecimalString = Field(ge=0)
+
+
 class TradeProposal(ContractBase):
     proposal_version: int = Field(default=1, ge=1)
     research_report_id: UUID
@@ -150,6 +171,8 @@ class TradeProposal(ContractBase):
     rationale: str
     exit_policy: ExitPolicy = Field(default_factory=ExitPolicy)
     shadow_candidates: list[ShadowCandidate] = Field(default_factory=list)
+    option_economics: OptionPayoffEconomics | None = None
+    research_bundle_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     proposal_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
@@ -331,6 +354,18 @@ class AuditEvent(ContractBase):
     actor_type: str
     payload_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
     payload: dict[str, Any]
+
+
+class EvaluationRoot(ContractBase):
+    """Immutable lineage anchor shared by authorization and ShadowFund evaluation."""
+
+    root_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    outcome: str = Field(min_length=1)
+    evidence_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    proposal_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    market_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    portfolio_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    is_immutable: Literal[True] = True
 
 
 class AIProfileKind(StrEnum):
@@ -753,6 +788,8 @@ class FundamentalAnalysisReport(ContractBase):
     earnings_event: EarningsSurpriseEvent | None = None
     red_flags: list[BalanceSheetRedFlag] = Field(default_factory=list)
     summary: str
+    provenance: Literal["illustrative_fixture", "sec_filing"] = "illustrative_fixture"
+    data_as_of: datetime | None = None
 
 
 class MacroRegime(StrEnum):
@@ -876,3 +913,25 @@ class TradeDecisionReport(ContractBase):
     options_only_constraint_acknowledged: bool = True
     synthesis_rationale: str
     key_risks: list[str] = Field(default_factory=list)
+    provenance: Literal["live_research", "illustrative_fixture"] = "live_research"
+    evidence_freshness_seconds: int | None = Field(default=None, ge=0)
+
+
+class NoTradeDecision(ContractBase):
+    """Explicit synthesis outcome when evidence cannot support a proposal."""
+
+    kind: Literal["no_trade"] = "no_trade"
+    symbol: str = Field(min_length=1)
+    research_bundle_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    reason: str = Field(min_length=1)
+
+
+class ProposalDecision(ContractBase):
+    """Canonical proposal result, bound to the immutable research bundle."""
+
+    kind: Literal["proposal"] = "proposal"
+    research_bundle_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    proposal: TradeProposal
+
+
+DecisionSynthesisResult = Annotated[ProposalDecision | NoTradeDecision, Field(discriminator="kind")]

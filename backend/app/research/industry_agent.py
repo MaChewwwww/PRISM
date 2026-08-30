@@ -287,6 +287,8 @@ class IndustryIntelligenceAgent:
         trace_id: UUID,
         custom_peers: list[str] | None = None,
         db_session: AsyncSession | None = None,
+        *,
+        strict: bool = False,
     ) -> IndustryAnalysisReport:
         sym = symbol.strip().upper()
         sector_name, sector_etf, default_peers = DEFAULT_SECTOR_REGISTRY.get(sym, DEFAULT_FALLBACK)
@@ -294,7 +296,7 @@ class IndustryIntelligenceAgent:
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB cache
-        if db_session is not None:
+        if db_session is not None and not strict:
             try:
                 stmt = (
                     select(IndustryAnalysisModel)
@@ -362,12 +364,14 @@ class IndustryIntelligenceAgent:
                     )
 
             except Exception as exc:
-                logger.warning(f"Error checking cache: {exc}")
+                logger.warning("Error checking industry cache: %s", type(exc).__name__)
 
         # 1. Fetch Market Bars for Stock, Sector ETF, SPY, and Peers
         stock_bars = self.alpaca_gateway.get_stock_bars(sym, limit=30)
         sector_bars = self.alpaca_gateway.get_stock_bars(sector_etf, limit=30)
         spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
+        if strict and (len(stock_bars) < 20 or len(sector_bars) < 20 or len(spy_bars) < 20):
+            raise ValueError("Industry evidence coverage is insufficient")
 
         stock_5d = compute_period_return(stock_bars, 5)
         stock_20d = compute_period_return(stock_bars, 20)
@@ -388,6 +392,8 @@ class IndustryIntelligenceAgent:
             p_sym = peer.strip().upper()
             try:
                 p_bars = self.alpaca_gateway.get_stock_bars(p_sym, limit=30)
+                if strict and len(p_bars) < 20:
+                    raise ValueError("Peer evidence coverage is insufficient")
                 p_5d = compute_period_return(p_bars, 5)
                 p_20d = compute_period_return(p_bars, 20)
                 peer_performances.append(
@@ -400,7 +406,9 @@ class IndustryIntelligenceAgent:
                 peer_5d_list.append(p_5d)
                 peer_20d_list.append(p_20d)
             except Exception as exc:
-                logger.warning(f"Could not fetch peer bars for {p_sym}: {exc}")
+                if strict:
+                    raise ValueError("Peer evidence is unavailable") from exc
+                logger.warning("Could not fetch peer bars for %s: %s", p_sym, type(exc).__name__)
                 peer_performances.append(
                     PeerPerformance(
                         symbol=p_sym,
@@ -430,7 +438,7 @@ class IndustryIntelligenceAgent:
                 "\n".join(news_headlines) if news_headlines else "No recent sector news articles."
             )
         except Exception as exc:
-            logger.warning(f"Could not fetch industry news: {exc}")
+            logger.warning("Could not fetch industry news: %s", type(exc).__name__)
             news_context = "Sector news unavailable."
 
         # 4. LLM DeepSeek Synthesis
@@ -548,7 +556,9 @@ class IndustryIntelligenceAgent:
                 await db_session.commit()
                 logger.info(f"Persisted Industry Analysis for {sym} to database")
             except Exception as exc:
-                logger.warning(f"Failed to cache Industry Analysis to database: {exc}")
+                logger.warning("Failed to cache Industry Analysis: %s", type(exc).__name__)
                 await db_session.rollback()
+                if strict:
+                    raise RuntimeError("Industry research persistence failed") from exc
 
         return report

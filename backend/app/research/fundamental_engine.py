@@ -53,13 +53,15 @@ def compute_solvency_metrics(fin: CompanyFinancials) -> SolvencyMetrics:
     equity = (
         fin.stockholders_equity if fin.stockholders_equity != Decimal("0.0") else Decimal("1.0")
     )
-    int_exp = (
-        fin.interest_expense_ttm if fin.interest_expense_ttm > Decimal("0.0") else Decimal("1.0")
-    )
+    int_exp = fin.interest_expense_ttm
 
     curr_ratio = fin.current_assets / curr_liab
     debt_equity = fin.total_debt / equity
-    int_coverage = fin.operating_income_ttm / int_exp
+    int_coverage = (
+        fin.operating_income_ttm / int_exp
+        if int_exp > Decimal("0")
+        else (Decimal("999.99") if fin.operating_income_ttm > Decimal("0") else Decimal("0"))
+    )
     net_debt = fin.total_debt - fin.cash_and_equivalents
 
     return SolvencyMetrics(
@@ -145,8 +147,14 @@ def compute_piotroski_f_score(fin: CompanyFinancials) -> int:
     )
     if curr_ratio >= fin.prior_current_ratio or curr_ratio >= Decimal("1.5"):
         score += 1
-    # 7. No major share dilution (placeholder +1 for established bluechips)
-    score += 1
+    # 7. No major share dilution.  Unknown share history is not a pass.
+    if (
+        fin.prior_shares_outstanding_millions is not None
+        and fin.prior_shares_outstanding_millions > Decimal("0")
+        and fin.shares_outstanding_millions
+        <= fin.prior_shares_outstanding_millions * Decimal("1.05")
+    ):
+        score += 1
     # 8. Gross margin improved or very strong (> 40%)
     curr_gm = (
         (fin.gross_profit_ttm / fin.revenue_ttm) * Decimal("100.0")
@@ -171,7 +179,9 @@ def compute_altman_z_score(
     """Compute Altman Z-Score for non-financial corporate default risk."""
     total_assets = fin.total_assets if fin.total_assets > Decimal("0.0") else Decimal("1.0")
     working_cap = fin.current_assets - fin.current_liabilities
-    retained_est = fin.stockholders_equity * Decimal("0.7")
+    # Retained earnings must come from the filing.  A missing value contributes
+    # zero rather than an arbitrary percentage of equity.
+    retained_est = fin.retained_earnings or Decimal("0")
     ebit = fin.operating_income_ttm
     market_val_equity = market_cap_m if market_cap_m > Decimal("0.0") else fin.stockholders_equity
     total_liab = fin.total_debt + fin.current_liabilities
@@ -359,16 +369,42 @@ def compute_fundamental_analysis(
     symbol: str,
     latest_close: Decimal | None = None,
     trace_id: UUID | None = None,
+    *,
+    allow_illustrative: bool = True,
+    financials: CompanyFinancials | None = None,
 ) -> FundamentalAnalysisReport:
-    """Perform 100% deterministic fundamental financial statement analysis."""
+    """Perform deterministic fundamental analysis.
+
+    ``allow_illustrative`` is retained for the presentation/demo surface only.
+    Executable workflows must pass ``False`` so missing sourced inputs fail closed.
+    """
     sym = symbol.strip().upper()
     t_id = trace_id or uuid4()
-    fin = get_company_financials(sym)
+    fin = financials or get_company_financials(sym, allow_illustrative=allow_illustrative)
+    if fin.symbol.strip().upper() != sym:
+        raise ValueError("Fundamental record symbol does not match requested symbol")
+    if not allow_illustrative and fin.provenance != "sec_filing":
+        raise ValueError("Autonomous fundamentals require a sourced SEC filing record")
+    if not allow_illustrative:
+        required_positive = (
+            "shares_outstanding_millions",
+            "revenue_ttm",
+            "total_assets",
+            "current_assets",
+            "current_liabilities",
+            "stockholders_equity",
+        )
+        if any(getattr(fin, field) <= Decimal("0") for field in required_positive):
+            raise ValueError("Sourced fundamentals contain non-positive required facts")
+        if fin.data_as_of is None or fin.data_as_of.tzinfo is None:
+            raise ValueError("Sourced fundamentals are missing an as-of timestamp")
 
-    # Use live close price if available, otherwise default to conservative estimate
-    close_price = (
-        latest_close if latest_close and latest_close > Decimal("0.0") else Decimal("100.0")
-    )
+    if latest_close is None or latest_close <= Decimal("0.0"):
+        if not allow_illustrative:
+            raise ValueError(f"No fresh market close available for {sym}")
+        close_price = Decimal("100.0")
+    else:
+        close_price = latest_close
 
     # 1. Compute Metrics
     prof = compute_profitability_metrics(fin)
@@ -429,4 +465,6 @@ def compute_fundamental_analysis(
         earnings_event=earnings_event,
         red_flags=red_flags,
         summary=summary,
+        provenance=fin.provenance,
+        data_as_of=fin.data_as_of,
     )

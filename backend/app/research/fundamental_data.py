@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -35,6 +37,15 @@ class CompanyFinancials(BaseModel):
     prior_total_assets: Decimal
     prior_current_ratio: Decimal
     prior_gross_margin_pct: Decimal
+    # These are optional for legacy presentation fixtures.  A sourced record
+    # should provide them; otherwise the corresponding Piotroski/Altman
+    # signals are treated as unknown instead of being fabricated.
+    retained_earnings: Decimal | None = None
+    prior_shares_outstanding_millions: Decimal | None = None
+    # These fields are mandatory for autonomous use but optional on the bundled
+    # illustrative fixture so existing presentation fixtures remain compatible.
+    provenance: Literal["illustrative_fixture", "sec_filing"] = "illustrative_fixture"
+    data_as_of: datetime | None = None
 
     # Event-specific quarterly earnings and guidance details
     quarter: str | None = None
@@ -48,7 +59,9 @@ class CompanyFinancials(BaseModel):
     estimate_revision_trend: EstimateRevisionTrend = EstimateRevisionTrend.NEUTRAL
 
 
-# Curated SEC-audited financial statement database for active equity universe
+# Illustrative financial statement fixture used by the research demo only.  It is
+# intentionally not eligible for autonomous authorization until a sourced filing
+# adapter supplies an as-of timestamp and provenance.
 COMPANY_FINANCIALS_REGISTRY: dict[str, CompanyFinancials] = {
     "NVDA": CompanyFinancials(
         symbol="NVDA",
@@ -237,13 +250,21 @@ COMPANY_FINANCIALS_REGISTRY: dict[str, CompanyFinancials] = {
 }
 
 
-def get_company_financials(symbol: str) -> CompanyFinancials:
-    """Retrieve financial statement data or generate baseline for unlisted ticker."""
+def get_company_financials(symbol: str, *, allow_illustrative: bool = True) -> CompanyFinancials:
+    """Retrieve fixture financials; executable workflows must opt out of fixtures."""
     sym = symbol.strip().upper()
     if sym in COMPANY_FINANCIALS_REGISTRY:
+        if not allow_illustrative:
+            raise ValueError(
+                f"Only illustrative financial statements are bundled for {sym}; "
+                "a sourced filing adapter is required for autonomous use"
+            )
         return COMPANY_FINANCIALS_REGISTRY[sym]
 
-    # Deterministic fallback for unlisted tickers
+    if not allow_illustrative:
+        raise ValueError(f"No sourced financial statements available for {sym}")
+
+    # Deterministic fallback retained only for the explicitly illustrative UI.
     return CompanyFinancials(
         symbol=sym,
         company_name=f"{sym} Corporation",

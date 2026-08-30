@@ -239,12 +239,14 @@ class MacroeconomicAgent:
         symbol: str,
         trace_id: UUID,
         db_session: AsyncSession | None = None,
+        *,
+        strict: bool = False,
     ) -> MacroAnalysisReport:
         sym = symbol.strip().upper()
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB Cache
-        if db_session is not None:
+        if db_session is not None and not strict:
             try:
                 stmt = (
                     select(MacroAnalysisModel)
@@ -307,7 +309,7 @@ class MacroeconomicAgent:
                         thesis=cached.thesis,
                     )
             except Exception as exc:
-                logger.warning(f"Error checking macro cache: {exc}")
+                logger.warning("Error checking macro cache: %s", type(exc).__name__)
 
         # 1. Fetch Market Bars for Macro Asset Basket
         asset_performances: list[MacroAssetPerformance] = []
@@ -316,6 +318,8 @@ class MacroeconomicAgent:
         for ticker, name in MACRO_BENCHMARK_REGISTRY:
             try:
                 bars = self.alpaca_gateway.get_stock_bars(ticker, limit=30)
+                if strict and len(bars) < 20:
+                    raise ValueError("Macro evidence coverage is insufficient")
                 r_5d = compute_period_return(bars, 5)
                 r_20d = compute_period_return(bars, 20)
                 asset_performances.append(
@@ -328,7 +332,9 @@ class MacroeconomicAgent:
                 )
                 asset_returns_map[ticker] = (r_5d, r_20d)
             except Exception as exc:
-                logger.warning(f"Could not fetch macro bars for {ticker}: {exc}")
+                if strict:
+                    raise ValueError("Macro evidence is unavailable") from exc
+                logger.warning("Could not fetch macro bars for %s: %s", ticker, type(exc).__name__)
                 asset_performances.append(
                     MacroAssetPerformance(
                         asset_symbol=ticker,
@@ -341,6 +347,8 @@ class MacroeconomicAgent:
 
         # 2. Compute Volatility Stress, Direction, and Climate Score
         spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
+        if strict and len(spy_bars) < 20:
+            raise ValueError("Macro benchmark evidence coverage is insufficient")
         stress_level, stress_direction, vol_pct, vol_delta = compute_market_stress_level(spy_bars)
 
         _, spy_20d = asset_returns_map.get("SPY", (Decimal("0.0"), Decimal("0.0")))
@@ -361,7 +369,7 @@ class MacroeconomicAgent:
                 "\n".join(news_headlines) if news_headlines else "No recent macro headlines."
             )
         except Exception as exc:
-            logger.warning(f"Could not fetch macro news: {exc}")
+            logger.warning("Could not fetch macro news: %s", type(exc).__name__)
             news_context = "Macro news unavailable."
 
         economic_event_proximity = detect_economic_event_proximity(news_headlines)
@@ -463,7 +471,9 @@ class MacroeconomicAgent:
                 await db_session.commit()
                 logger.info(f"Persisted Macro Analysis for {sym} to database")
             except Exception as exc:
-                logger.warning(f"Failed to cache Macro Analysis to database: {exc}")
+                logger.warning("Failed to cache Macro Analysis: %s", type(exc).__name__)
                 await db_session.rollback()
+                if strict:
+                    raise RuntimeError("Macro research persistence failed") from exc
 
         return report

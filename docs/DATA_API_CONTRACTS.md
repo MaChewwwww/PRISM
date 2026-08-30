@@ -1,6 +1,6 @@
 # Data and API contracts
 
-Revision: `2026-08-29 / ecosystem-consolidation-v1`
+Revision: `2026-08-30 / autonomous-paper-parity-v4`
 
 Runtime models live in `backend/app/contracts` and `backend/app/presentation`. `backend/scripts/export_contracts.py` starts from `FastAPI.app.openapi()`, then merges exported domain schemas. Committed outputs are `backend/build/contracts.openapi.json` and `frontend/src/types/api.generated.ts`.
 
@@ -22,6 +22,8 @@ The BA registry is `backend/app/rules/authorized_baseline.v1.json`. Typed contra
 
 The governance read model also exposes the registry-backed hackathon window as UTC timestamps: trading start, new-entry cutoff, official scoring point, force-flatten deadline, and outer boundary. `scoring_basis` is the closed value `total_account_equity`; the effective maximum hold is four trading days bounded by the scoring point.
 
+Autonomous research persists immutable `option_iv_observations` with provider/source, UTC observation time, and decimal IV. The worker computes IV rank from that history (or a provider-supplied current rank), and records option-payoff EV fields including premium, NBBO slippage, fill probability, maximum loss, and reward/risk in the research bundle. Portfolio snapshots retain OCC-derived underlying, sector, correlated cluster, expiration, Delta, Vega, and quote-freshness metadata used by concentration rules; unknown or stale metadata fails closed.
+
 ## Decision semantics
 
 | Scope | Values |
@@ -41,9 +43,15 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/auth/me` | Current operator session | Yes |
 | POST | `/api/v1/auth/logout` | Clears session cookie | No |
 | GET | `/api/v1/system/status` | Redacted operational state | Yes |
+| GET | `/api/v1/autonomous/status` | Durable autonomous state and kill-switch audit metadata | Yes |
+| POST | `/api/v1/autonomous/kill-switch` | Authenticated, audited kill-switch update | Yes |
 | POST | `/api/v1/research/news/analyze` | Non-authoritative structured news research | Yes |
 | POST | `/api/v1/research/reaction/analyze` | Non-authoritative market-reaction and mispricing research | Yes |
 | POST | `/api/v1/research/quant/analyze` | Deterministic quantitative technical analysis | Yes |
+| POST | `/api/v1/research/fundamental/analyze` | Sourced fundamental analysis; illustrative fixtures are rejected | Yes |
+| POST | `/api/v1/research/industry/analyze` | Structured industry/peer research | Yes |
+| POST | `/api/v1/research/macro/analyze` | Structured macroeconomic research | Yes |
+| POST | `/api/v1/research/decision/synthesize` | Seven-agent synthesis; autonomous use requires a canonical proposal pipeline | Yes |
 | GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
 | GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
 | GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
