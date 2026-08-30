@@ -195,7 +195,7 @@ export function AgentPerspectiveChain({
                 type="button"
                 onClick={() => setActiveKey(agent.key)}
                 aria-pressed={isActive}
-                className="flex h-full w-full items-center gap-2.5 rounded-xl border border-t-white/16 px-3.5 py-3 text-left backdrop-blur-xl transition-all duration-200 outline-none hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+                className="flex h-full w-full items-center gap-2.5 rounded-xl border border-t-white/16 px-3.5 py-3 text-left backdrop-blur-xl transition-all duration-200 outline-none hover:-translate-y-px hover:!border-[#547D83]/40 hover:!shadow-[0_0_24px_rgba(84,125,131,0.35)] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
                 style={{
                   borderColor: isActive ? "rgba(84,125,131,0.5)" : "rgba(255,255,255,0.08)",
                   background: isActive

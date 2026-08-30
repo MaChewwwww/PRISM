@@ -1,11 +1,19 @@
-import { ArrowLeft, Check, GitCompareArrows, MessageSquareText, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  GitCompareArrows,
+  MessageSquareText,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AgentPerspectiveChain } from "@/features/story/agent-perspective-chain";
+import { StoryBranchChart } from "@/features/story/story-branch-chart";
 import { StoryCatalystChart } from "@/features/story/story-catalyst-chart";
 import { StateBadge } from "@/components/workspace/workspace-ui";
-import { formatDate, formatDateTime, formatTokens } from "@/features/story/formatters";
+import { formatDateTime, formatTokens } from "@/features/story/formatters";
 import { getStory } from "@/features/story/presentation-api";
 
 const RULE_RESULT_TONE: Record<string, string> = {
@@ -15,9 +23,26 @@ const RULE_RESULT_TONE: Record<string, string> = {
   NOT_EVALUATED: "text-[#547D83]",
 };
 
-function shortStoryId(id: string): string {
-  const tail = id.replace(/[^a-z0-9]/gi, "").slice(-2);
-  return `story #${tail || id.slice(0, 4)}`;
+/** Human-readable story identifier, e.g. "ACME-EARNINGS-GAP". */
+function formatStoryId(id: string): string {
+  return id.toUpperCase();
+}
+
+/** Kicker timestamp in Eastern Time, e.g. "Aug 27, 2026 · 10:05 AM ET". */
+function formatKickerTimestamp(value: string): string {
+  const date = new Date(value);
+  const day = new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  }).format(date);
+  const time = new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/New_York",
+  }).format(date);
+  return `${day} · ${time} ET`;
 }
 
 export default async function StoryDetailPage({
@@ -35,40 +60,47 @@ export default async function StoryDetailPage({
   const ruleTone = RULE_RESULT_TONE[story.ruleResult] ?? "text-[#F8FAFC]";
 
   return (
-    <div className="space-y-10">
-      {/* Top row: back link + status pill */}
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          href="/stories"
-          className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/5 px-3.5 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          Decision Stories
-        </Link>
-        <StateBadge state={story.ruleResult === "MODIFY" ? "MODIFY" : story.outcome} />
-      </div>
+    <div className="space-y-8">
+      {/* Back link */}
+      <Link
+        href="/stories"
+        className="inline-flex items-center gap-1.5 text-[12px] text-[#64748B] outline-none transition-colors hover:text-[#CBD5E1] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        All decision stories
+      </Link>
 
-      {/* Title + kicker */}
-      <header>
-        <h1 className="text-[clamp(1.75rem,3.4vw,2.5rem)] font-semibold leading-tight tracking-tight text-[#F8FAFC]">
-          {story.title}
-        </h1>
+      {/* Title row + kicker + summary + key takeaway */}
+      <header className="mt-3">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[clamp(1.5rem,3vw,2rem)] font-semibold leading-tight tracking-tight text-[#F8FAFC]">
+            {story.title}
+            <span className="rounded-full border border-[#547D83]/40 bg-[#547D83]/20 px-2.5 py-0.5 text-[11px] font-semibold text-[#B2D8DC]">
+              {story.category}
+            </span>
+          </h1>
+          <StateBadge state={story.ruleResult === "MODIFY" ? "MODIFY" : story.outcome} />
+        </div>
+
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
           <span className="font-semibold text-[#CBD5E1]">{story.symbol}</span>
-          <span aria-hidden="true" className="text-white/20">
-            |
-          </span>
-          <time dateTime={story.occurredAt}>{formatDate(story.occurredAt)}</time>
-          <span aria-hidden="true" className="text-white/20">
-            |
-          </span>
-          <span>{shortStoryId(story.id)}</span>
+          <span aria-hidden="true">&middot;</span>
+          <time dateTime={story.occurredAt}>{formatKickerTimestamp(story.occurredAt)}</time>
+          <span aria-hidden="true">&middot;</span>
+          <span>Story ID: {formatStoryId(story.id)}</span>
+        </div>
+
+        <p className="mt-4 max-w-3xl text-[14px] leading-relaxed text-[#CBD5E1]">{story.summary}</p>
+
+        <div className="mt-4 border-l-2 border-[#547D83] pl-3 text-[13px] leading-relaxed text-[#94A3B8]">
+          <span className="font-semibold text-[#B2D8DC]">Key takeaway</span> &mdash; {story.lesson}
         </div>
       </header>
 
-      {/* Metric strip (DESIGN.md Section 5.2 glass; Section 3.6 semantic tones) */}
-      <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-white/8 border-t-white/16 bg-white/8 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-[#0B0F14] p-5">
+      {/* Metric cards — individual glass cards matching the Synthesis panel
+          (DESIGN.md Section 5.2 glass; Section 3.6 semantic tones) */}
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Rule Result
           </dt>
@@ -76,7 +108,7 @@ export default async function StoryDetailPage({
             {story.ruleResult}
           </dd>
         </div>
-        <div className="bg-[#0B0F14] p-5">
+        <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Chosen Outcome
           </dt>
@@ -84,7 +116,7 @@ export default async function StoryDetailPage({
             {story.chosenPathImpact}
           </dd>
         </div>
-        <div className="bg-[#0B0F14] p-5">
+        <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Best Shadow Path
           </dt>
@@ -92,7 +124,7 @@ export default async function StoryDetailPage({
             {story.bestAlternativeImpact}
           </dd>
         </div>
-        <div className="bg-[#0B0F14] p-5">
+        <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Model Tokens
           </dt>
@@ -287,59 +319,76 @@ export default async function StoryDetailPage({
             </span>
           </div>
 
-          <Section
-            id="chapter-lessons"
-            title="06 · ShadowFund Counterfactual Matrix & Lessons"
-            description="Simulated parallel paths evaluated under identical market conditions to measure Counterfactual Alpha and Decision Regret."
-          >
-            <div className="branch-table table-wrap prism-glass-card">
-              <table>
-                <caption>Active Portfolio path vs. ShadowFund branch comparison</caption>
-                <thead>
-                  <tr>
-                    <th>Branch</th>
-                    <th>Controlled Variation</th>
-                    <th>P&amp;L</th>
-                    <th>Drawdown</th>
-                    <th>Coverage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {story.alternatives.map((branch) => (
-                    <tr
-                      key={branch.id}
-                      className={branch.id === "chosen" ? "bg-[#547D83]/10 font-semibold" : ""}
-                    >
-                      <th scope="row">
-                        {branch.label === "Illustrative governed path"
-                          ? "Active Portfolio"
-                          : branch.label}
-                        <span className="text-xs font-mono block text-slate-400 font-normal">
-                          {branch.status}
-                        </span>
-                      </th>
-                      <td>{branch.variation}</td>
-                      <td className="font-mono tabular-nums font-semibold text-[#00D084]">
-                        {branch.pnl}
-                      </td>
-                      <td className="font-mono tabular-nums text-[#FF6B6B]">{branch.drawdown}</td>
-                      <td className="font-mono tabular-nums">{branch.coverage}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <section aria-labelledby="chapter-lessons" className="space-y-5">
+            <div className="flex items-start justify-between gap-6 border-b border-white/8 pb-4">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-[#818CF8]">
+                07
+              </span>
+              <div className="text-right">
+                <h2
+                  id="chapter-lessons"
+                  className="text-lg font-semibold tracking-tight text-[#F8FAFC]"
+                >
+                  ShadowFund Counterfactual Matrix &amp; Lessons
+                </h2>
+                <p className="mt-1 text-[12px] text-[#64748B]">
+                  What every branch would have done.
+                </p>
+              </div>
             </div>
-            <ol className="lesson-list mt-4 space-y-2">
-              {story.lessons.map((lesson, index) => (
-                <li key={lesson} className="prism-glass-card p-3 flex items-start gap-3">
-                  <span className="font-mono text-[#818CF8] font-bold">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <p className="text-sm text-slate-200">{lesson}</p>
-                </li>
-              ))}
-            </ol>
-          </Section>
+
+            <StoryBranchChart data={story.marketPath} />
+
+            {/* Branch comparison table */}
+            <div className="overflow-hidden rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 backdrop-blur-xl">
+              <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)] gap-4 border-b border-white/8 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#64748B]">
+                <span>Branch</span>
+                <span>Controlled Variation</span>
+                <span className="text-right">P&amp;L</span>
+                <span className="text-right">Drawdown</span>
+              </div>
+              {story.alternatives.map((branch) => {
+                const name =
+                  branch.label === "Illustrative governed path" ? "Active Portfolio" : branch.label;
+                const isActive = branch.id === "chosen";
+                return (
+                  <div
+                    key={branch.id}
+                    className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)] items-center gap-4 px-5 py-3.5 not-last:border-b not-last:border-white/8"
+                    style={isActive ? { background: "rgba(84,125,131,0.1)" } : undefined}
+                  >
+                    <span className="text-[13px] font-semibold text-[#F8FAFC]">{name}</span>
+                    <span className="text-[13px] text-[#94A3B8]">{branch.variation}</span>
+                    <span className="text-right font-mono text-[13px] font-semibold tabular-nums text-[#00D084]">
+                      {branch.pnl}
+                    </span>
+                    <span className="text-right font-mono text-[13px] tabular-nums text-[#CBD5E1]">
+                      {branch.drawdown}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Lessons panel */}
+            <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl">
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[#818CF8]">
+                <Sparkles className="h-3 w-3" aria-hidden="true" />
+                Lessons
+              </div>
+              <ul className="mt-3 space-y-2.5">
+                {story.lessons.map((lesson) => (
+                  <li key={lesson} className="flex items-start gap-2.5">
+                    <span
+                      aria-hidden="true"
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#818CF8]"
+                    />
+                    <p className="m-0 text-[13px] leading-relaxed text-[#CBD5E1]">{lesson}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
         </div>
       </article>
     </div>
