@@ -21,7 +21,7 @@ export default async function StoriesPage({
         description="A scannable feed of the narrative takeaway and the counterfactual impact behind every call the agent stack made."
       />
       <div className="result-count" role="status">
-        {stories.length} illustrative {stories.length === 1 ? "story" : "stories"}
+        {stories.length} {stories.length === 1 ? "story" : "stories"}
       </div>
       <StoryList stories={stories} />
     </>

@@ -270,7 +270,8 @@ PRISM's operator interface presents each trading decision as an auditable, narra
 ```
 
 ### 7.2 Authority & Provenance Labelling
-- **Illustrative fixture**: Explicit label on every current demonstration surface; does not imply a provider, account, order, fill, holding, or P&L record.
+- **Portfolio & Asset Representation**: Portfolio equity, asset holdings, cash reserves, and risk metrics are presented as operational portfolio assets across staging and production surfaces using standard institutional terminology ("Active Portfolio", "Cash reserve", "Mark-to-market valuation", position allocation, unrealized P&L). Avoid labeling cash as "Illustrative cash" or "illustrative spread" in user-facing UI copy.
+- **Illustrative fixture**: Explicit provenance tag on backend demonstration metadata; does not imply a provider, account, order, fill, holding, or P&L record.
 - **Alpaca paper**: Reserved for authenticated data genuinely produced by an Alpaca paper account.
 - **ShadowFund**: Reserved for future engine-produced counterfactuals; use **Simulated** for other simulations and **Benchmark** for declared reference series.
 - **Historical analogs**: Dotted reference line and explicit source/coverage indicator.
