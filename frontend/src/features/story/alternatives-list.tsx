@@ -166,7 +166,10 @@ export function AlternativesList({
                         style={{ background: "rgba(84,125,131,0.12)" }}
                       >
                         <dt className="flex items-center gap-2 text-[13px]">
-                          <Check className="h-3.5 w-3.5 shrink-0 text-[#547D83]" aria-hidden="true" />
+                          <Check
+                            className="h-3.5 w-3.5 shrink-0 text-[#547D83]"
+                            aria-hidden="true"
+                          />
                           <span className="font-semibold text-[#F8FAFC]">What we chose</span>
                         </dt>
                         <dd
@@ -179,7 +182,10 @@ export function AlternativesList({
                     {best && (
                       <div className="flex items-center justify-between gap-4 px-4 py-2.5">
                         <dt className="flex items-center gap-2 text-[13px]">
-                          <Star className="h-3.5 w-3.5 shrink-0 text-[#F59E0B]" aria-hidden="true" />
+                          <Star
+                            className="h-3.5 w-3.5 shrink-0 text-[#F59E0B]"
+                            aria-hidden="true"
+                          />
                           <span className="text-[#CBD5E1]">
                             Best alternative: {branchWhatIf(best.id, best.label).question}
                           </span>

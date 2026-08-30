@@ -44,7 +44,9 @@ export function branchWhatIf(id: string, label: string): { question: string; pla
       return { question: "What if it used the agent's alternative?", plain: "Agent alternative" };
     default: {
       // Fall back to the raw label, stripping the "Shadow: " prefix if present.
-      const plain = label.replace(/^Shadow:\s*/i, "").replace("Illustrative governed path", "Active Portfolio");
+      const plain = label
+        .replace(/^Shadow:\s*/i, "")
+        .replace("Illustrative governed path", "Active Portfolio");
       return { question: plain, plain };
     }
   }
@@ -62,10 +64,7 @@ export function parseMoney(value: string): number {
  * path. Returns null when there is nothing meaningful to say. Display-only; it
  * summarizes the existing branch numbers, it does not compute new ones.
  */
-export function branchTakeaway(
-  bestPlainLabel: string,
-  bestDelta: string,
-): string | null {
+export function branchTakeaway(bestPlainLabel: string, bestDelta: string): string | null {
   const delta = parseMoney(bestDelta);
   if (!Number.isFinite(delta) || delta === 0 || bestDelta === "\u2014") {
     return "What PRISM chose was the best available path in this comparison.";
@@ -82,7 +81,10 @@ export function branchTakeaway(
  * only from data we actually have (symbol + whether the chosen path traded).
  * We do not invent quantities or structures that are not in the contract.
  */
-export function decisionLabel(symbol: string, chosenPnl: string): {
+export function decisionLabel(
+  symbol: string,
+  chosenPnl: string,
+): {
   headline: string;
   question: string;
 } {

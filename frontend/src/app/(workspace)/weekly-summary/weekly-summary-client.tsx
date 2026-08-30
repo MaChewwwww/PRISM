@@ -113,7 +113,6 @@ export function WeeklySummaryClient({ summary }: { summary: WeeklySummary }) {
           );
         })}
       </div>
-
     </div>
   );
 }

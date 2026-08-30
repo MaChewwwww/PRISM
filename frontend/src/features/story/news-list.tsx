@@ -83,7 +83,9 @@ export function NewsList({
 
       {news.length === 0 ? (
         <div className={`${SECTION_CARD} p-6`}>
-          <p className="text-[13px] text-[#94A3B8]">No illustrative news falls inside this range.</p>
+          <p className="text-[13px] text-[#94A3B8]">
+            No illustrative news falls inside this range.
+          </p>
         </div>
       ) : filtered.length === 0 ? (
         <div className={`${SECTION_CARD} p-6`}>
@@ -137,5 +139,3 @@ export function NewsList({
     </>
   );
 }
-
-

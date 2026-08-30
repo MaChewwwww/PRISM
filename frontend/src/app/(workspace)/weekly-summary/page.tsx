@@ -115,7 +115,6 @@ export default async function WeeklySummaryPage() {
         />
         <WeeklySummaryClient summary={summary} />
       </section>
-
     </>
   );
 }
