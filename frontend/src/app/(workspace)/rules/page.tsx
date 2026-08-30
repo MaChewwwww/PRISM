@@ -11,7 +11,10 @@ const TD_NUM = "px-5 py-3.5 font-mono text-[14px] tabular-nums text-[#CBD5E1]";
 
 /** Order in which final executable size is constrained (BUSINESS_RULES.md / FRG-12). */
 const SIZING_CAPS = [
-  { label: "Profile target allocation", detail: "Tier 2 preference — the starting point, not a floor." },
+  {
+    label: "Profile target allocation",
+    detail: "Tier 2 preference — the starting point, not a floor.",
+  },
   { label: "Per-trade stop-risk cap", detail: "1.00% normal / 0.75% volatile of current equity." },
   { label: "Ticker / sector / cluster concentration", detail: "5.00% / 10.00% / 7.50% maximums." },
   { label: "Aggregate portfolio-risk cap", detail: "3.00% modeled hard-stop risk maximum." },
@@ -66,10 +69,7 @@ export default async function RulesPage() {
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <ul className="space-y-2">
             {governance.hardRules.map((rule) => (
-              <li
-                key={rule.ruleId}
-                className="rounded-xl border border-white/8 bg-white/2 p-3.5"
-              >
+              <li key={rule.ruleId} className="rounded-xl border border-white/8 bg-white/2 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-[14px] font-semibold text-[#F8FAFC]">{rule.name}</span>
                   <span className="inline-flex shrink-0 items-center gap-1.5">
@@ -154,17 +154,13 @@ export default async function RulesPage() {
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <p className="text-[13px] leading-relaxed text-[#CBD5E1]">
-            Final allocation is the{" "}
-            <span className="font-semibold text-[#F8FAFC]">minimum</span> of the profile target and
-            every hard cap below, then rounded down to a whole-contract size. A tighter cap always
-            wins.
+            Final allocation is the <span className="font-semibold text-[#F8FAFC]">minimum</span> of
+            the profile target and every hard cap below, then rounded down to a whole-contract size.
+            A tighter cap always wins.
           </p>
           <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {SIZING_CAPS.map((cap) => (
-              <div
-                key={cap.label}
-                className="rounded-xl border border-white/8 bg-white/2 p-3.5"
-              >
+              <div key={cap.label} className="rounded-xl border border-white/8 bg-white/2 p-3.5">
                 <dt className="text-[13px] font-semibold text-[#F8FAFC]">{cap.label}</dt>
                 <dd className="mt-0.5 text-[12px] leading-relaxed text-[#94A3B8]">{cap.detail}</dd>
               </div>
@@ -183,14 +179,7 @@ export default async function RulesPage() {
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {(
-            [
-              "PASS",
-              "MODIFY",
-              "FAIL",
-              "APPROVE",
-              "REJECT",
-              "MODIFIED_PENDING_ACCEPTANCE",
-            ] as const
+            ["PASS", "MODIFY", "FAIL", "APPROVE", "REJECT", "MODIFIED_PENDING_ACCEPTANCE"] as const
           ).map((state) => (
             <div key={state} className={`${SECTION_CARD} p-4`}>
               <StateBadge state={state} />

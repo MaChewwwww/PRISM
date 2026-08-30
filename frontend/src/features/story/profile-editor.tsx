@@ -305,7 +305,8 @@ export function ProfileEditor({
                       </>
                     ) : (
                       <>
-                        <Info className="h-3.5 w-3.5" aria-hidden="true" /> Matches the active value.
+                        <Info className="h-3.5 w-3.5" aria-hidden="true" /> Matches the active
+                        value.
                       </>
                     )}
                   </p>
@@ -320,7 +321,8 @@ export function ProfileEditor({
               className="mt-4 flex items-start gap-3 rounded-xl border p-4"
               style={{
                 borderColor: savedAt === "staged" ? "rgba(0,208,132,0.3)" : "rgba(255,107,107,0.3)",
-                background: savedAt === "staged" ? "rgba(0,208,132,0.08)" : "rgba(255,107,107,0.08)",
+                background:
+                  savedAt === "staged" ? "rgba(0,208,132,0.08)" : "rgba(255,107,107,0.08)",
               }}
               role="status"
             >
