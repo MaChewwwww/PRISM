@@ -3,10 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { MarketTrackerShell } from "@/features/market/market-tracker-shell";
-import {
-  isVerifiedTrade,
-  marketActivityKinds,
-} from "@/features/market/market-tracker-types";
+import { isVerifiedTrade, marketActivityKinds } from "@/features/market/market-tracker-types";
 
 const range = {
   preset: "1m",

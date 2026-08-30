@@ -1,7 +1,12 @@
 import { CalendarCheck, Clock3, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/workspace/workspace-ui";
+import {
+  DemoDataNotice,
+  PageHeader,
+  Section,
+  StateBadge,
+} from "@/components/workspace/workspace-ui";
 import { getGovernance, getWeeklySummary } from "@/features/story/presentation-api";
 
 function formatEastern(value: string): string {

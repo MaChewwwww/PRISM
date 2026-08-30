@@ -3,7 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StoryLineChart } from "@/features/story/story-charts";
-import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/workspace/workspace-ui";
+import {
+  DemoDataNotice,
+  PageHeader,
+  Section,
+  StateBadge,
+} from "@/components/workspace/workspace-ui";
 import { getAlternativeSession } from "@/features/story/presentation-api";
 
 function DeltaBadge({ delta }: { delta: string }) {
