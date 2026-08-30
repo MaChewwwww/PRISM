@@ -21,7 +21,7 @@ describe("AppShell", () => {
       ["Overview", "/"],
       ["Decision stories", "/stories"],
       ["Portfolio", "/portfolio"],
-      ["Alternatives", "/alternatives"],
+      ["Shadow Portfolio", "/alternatives"],
       ["News & catalysts", "/news"],
       ["Market Tracker", "/market-tracker"],
       ["Agents & tools", "/agents"],
