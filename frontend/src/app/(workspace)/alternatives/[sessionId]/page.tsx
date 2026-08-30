@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { StoryLineChart } from "@/features/story/story-charts";
+import { StoryBranchChart } from "@/features/story/story-branch-chart";
 import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
 import { getAlternativeSession } from "@/features/story/presentation-api";
@@ -49,8 +49,6 @@ export default async function AlternativeDetailPage({
 
   const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
   const activePathLabel = "Active Portfolio";
-  const bestBranchLabel =
-    session.bestBranch === "Illustrative governed path" ? activePathLabel : session.bestBranch;
 
   return (
     <div className="space-y-8">
@@ -108,33 +106,7 @@ export default async function AlternativeDetailPage({
           subtitle="Each line is a non-executable branch on the same fixture timeline; the teal chosen path is the reference."
           accent="#818CF8"
         />
-        <div className={`${SECTION_CARD} p-4 sm:p-6`}>
-          <StoryLineChart
-            title="Cumulative Decision Trajectories"
-            description="Interactive trajectory view. Toggle shadow branches on or off to isolate any comparison."
-            summary={
-              session.bestBranch === "Illustrative governed path"
-                ? `Chosen path finished ${session.bestDelta} ahead of all shadow alternatives`
-                : `${bestBranchLabel} finished ${session.bestDelta} relative to the Active Portfolio path`
-            }
-            data={session.path}
-            valuePrefix="$"
-            series={[
-              { key: "chosenPath", label: activePathLabel, color: "#547D83" },
-              {
-                key: "alternative",
-                label:
-                  session.alternativeLabel ??
-                  (session.bestBranch === "Illustrative governed path"
-                    ? "Shadow: Unhedged Alternative"
-                    : session.bestBranch),
-                color: "#818CF8",
-                dashed: true,
-              },
-              { key: "benchmark", label: "Shadow: Cash Baseline", color: "#94A3B8", dashed: true },
-            ]}
-          />
-        </div>
+        <StoryBranchChart data={session.path} />
       </section>
 
       {/* Branch matrix */}
