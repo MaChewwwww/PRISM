@@ -23,7 +23,7 @@ Production publishes only ports 80/443 at the edge. PostgreSQL and Redis have no
 
 For lock-aware runtime commands and the current single-VM paths, see the [staging server maintenance cheatsheet](deployment/staging-server-maintenance-cheatsheet.md) and [single Azure VM runbook](deployment/single-azure-vm.md).
 
-Autonomous paper execution remains disabled unless separately reviewed and authorized. Production schedules must remain inside the BA-authorized hackathon window; staging supplies its own protected paper credentials and may use a bounded rehearsal interval. The current deployment does not run an autonomous scheduler.
+Autonomous paper execution remains disabled unless separately reviewed and authorized. Production schedules must remain inside the BA-authorized hackathon window. Staging rejects autonomous trading configuration; it uses the separately enabled, non-executing historical backtest command and retains its artifacts outside the Active Portfolio path. The current deployment does not run an autonomous scheduler.
 
 ## Rollback and operations
 

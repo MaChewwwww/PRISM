@@ -102,9 +102,7 @@ export default async function AlternativeDetailPage({
           <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {session.chosenPathPnl}
           </p>
-          <p className="mt-1 text-[11px] text-[#64748B]">
-            Versioned fixture · no broker submission
-          </p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Active Portfolio baseline</p>
         </div>
         {shadowBranches.map((branch) => {
           const whatIf = branchWhatIf(branch.id, branch.label);

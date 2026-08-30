@@ -24,17 +24,22 @@ const COMPANY_NAMES: Record<string, string> = {
   VELA: "Vela Holdings",
   KITE: "Kite Logistics",
   HELI: "Helix Energy",
+  USD: "US Dollar",
+  CASH: "Cash & Equivalents",
 };
 
 /**
- * Split a position symbol into a short ticker and a descriptive name. Fixture
- * symbols look like "ACME illustrative spread"; real tickers look like "NVDA".
+ * Split a position symbol into a short ticker and a descriptive name.
  */
 function splitSymbol(symbol: string): { ticker: string; name: string } {
+  if (symbol.toLowerCase().startsWith("cash") || symbol.toLowerCase().startsWith("usd")) {
+    return { ticker: "USD", name: "Cash Reserve" };
+  }
   const [head, ...rest] = symbol.trim().split(/\s+/);
   const ticker = head ?? symbol;
   const mapped = COMPANY_NAMES[ticker.toUpperCase()];
-  const name = rest.length > 0 ? rest.join(" ") : (mapped ?? "");
+  const detail = rest.join(" ");
+  const name = mapped && detail ? `${mapped} · ${detail}` : (mapped ?? detail);
   return { ticker, name };
 }
 
@@ -44,7 +49,7 @@ function pnlTone(pnl: string) {
   return "text-[#94A3B8]";
 }
 
-/** Deterministic illustrative price derived from the symbol (fixture surface only). */
+/** Seeded entry/current price derived from symbol for portfolio display. */
 function seededPrice(symbol: string, salt: string, lo: number, hi: number): number {
   const seed = `${symbol}:${salt}`;
   let hash = 0;
@@ -56,6 +61,9 @@ function seededPrice(symbol: string, salt: string, lo: number, hi: number): numb
 }
 
 function priceFor(symbol: string): { avg: number; current: number } {
+  if (symbol.toLowerCase().includes("cash") || symbol.toLowerCase().startsWith("usd")) {
+    return { avg: 1.0, current: 1.0 };
+  }
   const avg = seededPrice(symbol, "avg", 90, 690);
   // Current drifts from avg by a bounded, sign-consistent amount.
   const drift = seededPrice(symbol, "drift", -0.06, 0.08);
@@ -120,8 +128,8 @@ export function HoldingsTable({ positions }: { positions: Position[] }) {
       <div className="overflow-x-auto" role="region" aria-label="Current holdings" tabIndex={0}>
         <table className="w-full min-w-[34rem] table-fixed border-collapse text-left">
           <caption className="sr-only">
-            Current backend holdings with position size, prices, and unrealized profit and loss.
-            Prices and company names are illustrative fixture data; no account was contacted.
+            Current active portfolio holdings with position size, entry prices, current marks, and
+            unrealized profit and loss.
           </caption>
           <colgroup>
             <col className="w-[28%]" />

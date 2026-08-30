@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import UTC, datetime
@@ -366,10 +367,13 @@ class IndustryIntelligenceAgent:
             except Exception as exc:
                 logger.warning("Error checking industry cache: %s", type(exc).__name__)
 
-        # 1. Fetch Market Bars for Stock, Sector ETF, SPY, and Peers
-        stock_bars = self.alpaca_gateway.get_stock_bars(sym, limit=30)
-        sector_bars = self.alpaca_gateway.get_stock_bars(sector_etf, limit=30)
-        spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
+        # 1. Fetch independent market evidence concurrently. The strict path
+        # still rejects missing coverage before the LLM is invoked.
+        stock_bars, sector_bars, spy_bars = await asyncio.gather(
+            asyncio.to_thread(self.alpaca_gateway.get_stock_bars, sym, limit=30),
+            asyncio.to_thread(self.alpaca_gateway.get_stock_bars, sector_etf, limit=30),
+            asyncio.to_thread(self.alpaca_gateway.get_stock_bars, "SPY", limit=30),
+        )
         if strict and (len(stock_bars) < 20 or len(sector_bars) < 20 or len(spy_bars) < 20):
             raise ValueError("Industry evidence coverage is insufficient")
 
@@ -384,40 +388,47 @@ class IndustryIntelligenceAgent:
         rel_alpha_20d = round(stock_20d - sector_20d, 2)
         stock_vs_spy_alpha_20d = round(stock_20d - spy_20d, 2)
 
-        # Compute Peer Returns
-        peer_performances: list[PeerPerformance] = []
-        peer_5d_list: list[Decimal] = []
-        peer_20d_list: list[Decimal] = []
-        for peer in peer_symbols:
+        # Compute peer returns concurrently, while retaining deterministic
+        # strict-mode rejection for every required peer observation.
+        async def _fetch_peer_performance(peer: str) -> tuple[PeerPerformance, Decimal, Decimal]:
             p_sym = peer.strip().upper()
             try:
-                p_bars = self.alpaca_gateway.get_stock_bars(p_sym, limit=30)
+                p_bars = await asyncio.to_thread(
+                    self.alpaca_gateway.get_stock_bars, p_sym, limit=30
+                )
                 if strict and len(p_bars) < 20:
                     raise ValueError("Peer evidence coverage is insufficient")
                 p_5d = compute_period_return(p_bars, 5)
                 p_20d = compute_period_return(p_bars, 20)
-                peer_performances.append(
+                return (
                     PeerPerformance(
                         symbol=p_sym,
                         price_change_5d_pct=p_5d,
                         price_change_20d_pct=p_20d,
-                    )
+                    ),
+                    p_5d,
+                    p_20d,
                 )
-                peer_5d_list.append(p_5d)
-                peer_20d_list.append(p_20d)
             except Exception as exc:
                 if strict:
                     raise ValueError("Peer evidence is unavailable") from exc
                 logger.warning("Could not fetch peer bars for %s: %s", p_sym, type(exc).__name__)
-                peer_performances.append(
+                return (
                     PeerPerformance(
                         symbol=p_sym,
                         price_change_5d_pct=Decimal("0.0"),
                         price_change_20d_pct=Decimal("0.0"),
-                    )
+                    ),
+                    Decimal("0.0"),
+                    Decimal("0.0"),
                 )
-                peer_5d_list.append(Decimal("0.0"))
-                peer_20d_list.append(Decimal("0.0"))
+
+        peer_results = await asyncio.gather(
+            *[_fetch_peer_performance(peer) for peer in peer_symbols]
+        )
+        peer_performances = [result[0] for result in peer_results]
+        peer_5d_list = [result[1] for result in peer_results]
+        peer_20d_list = [result[2] for result in peer_results]
 
         # 2. Deterministic Health Score, Dispersion, & Performance Classifications
         sector_health_score = compute_sector_health_score(sector_5d, sector_20d, peer_20d_list)

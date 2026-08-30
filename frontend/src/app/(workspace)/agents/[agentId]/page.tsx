@@ -8,6 +8,20 @@ import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-hea
 import { formatDateTime, formatTokens } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { getAgent } from "@/features/story/presentation-api";
+import { TryAgentButton, type AgentAction } from "@/features/agents/agent-playground-modal";
+
+function mapAgentIdToAction(id: string): AgentAction {
+  const lower = id.toLowerCase();
+  if (lower.includes("decision") || lower.includes("trading") || lower.includes("cio"))
+    return "decision";
+  if (lower.includes("fundamental")) return "fundamental";
+  if (lower.includes("quant")) return "quant";
+  if (lower.includes("industry")) return "industry";
+  if (lower.includes("macro")) return "macro";
+  if (lower.includes("reaction")) return "reaction";
+  if (lower.includes("news")) return "news";
+  return "decision";
+}
 
 const METRIC_CARD =
   "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]";
@@ -56,7 +70,13 @@ export default async function AgentDetailPage({
       </Link>
 
       <PageHeader eyebrow="Agent detail" title={agent.name} description={agent.role}>
-        <RangePresets range={range} />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <RangePresets range={range} />
+          <TryAgentButton
+            agentId={mapAgentIdToAction(agentId)}
+            label={`Try ${agent.name.split(" ")[0]}`}
+          />
+        </div>
       </PageHeader>
 
       {/* Metric cards */}

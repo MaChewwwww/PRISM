@@ -20,7 +20,7 @@ Pull requests and pushes targeting `staging` or `main` run repository governance
 
 The remote Compose command runs the one-shot Alembic migration service before backend readiness. Deployment smoke checks use unauthenticated `/api/v1/health/ready`; authenticated `/api/v1/system/status` is an operator check and requires a valid session.
 
-Staging and production require distinct VPS paths, Compose project names, secrets, authentication values, Alpaca paper credentials when configured, and databases. Neither environment may enable live trading. Execution and autonomous trading remain disabled unless separately reviewed and authorized; production autonomous schedule bounds are validated at startup.
+Staging and production require distinct VPS paths, Compose project names, secrets, authentication values, Alpaca paper credentials when configured, and databases. Neither environment may enable live trading. Execution remains disabled unless separately reviewed and authorized. Autonomous trading is production-only and its schedule bounds are validated at startup; staging rejects `AUTONOMOUS_TRADING_ENABLED=true`. Staging historical backtests are manual, explicitly enabled, non-executing jobs and must not be added as a CI order test.
 
 ## Rollback
 
