@@ -63,11 +63,17 @@ from app.research.iv_rank import (
     compute_iv_rank,
     infer_iv_observations,
 )
+from app.research.post_analysis import (
+    POST_ANALYSIS_AGENT_VERSION,
+    PostAnalysisAgent,
+    get_trading_week_bounds,
+    is_friday_post_close,
+)
 from app.research.risk_agent import RiskManagementAgent
 from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
 from app.rules.evaluator import authorize_proposal, input_digest
 from app.rules.registry import get_authorized_ruleset
-from app.shadowfund.models import ShadowSessionModel
+from app.shadowfund.models import ShadowPostAnalysisBatchModel, ShadowSessionModel
 from app.shadowfund.service import ShadowFundService
 
 logger = logging.getLogger(__name__)
@@ -157,6 +163,13 @@ class AutonomousWorker:
                     flatten_attempted = True
                 await self._wait(stop_event, self.settings.autonomous_scan_interval_seconds)
             else:
+                try:
+                    async for session in get_db_session():
+                        if await self._acquire_cycle_lock(session):
+                            await self._run_weekly_post_analysis_if_due(session, now)
+                            await session.commit()
+                except Exception:
+                    logger.exception("Weekly post-analysis check failed closed")
                 await self._wait(
                     stop_event, min(self.settings.autonomous_scan_interval_seconds, 60)
                 )
@@ -210,6 +223,7 @@ class AutonomousWorker:
                     await self._mark_open_shadow_sessions(session, gateway, now)
                 if not flatten_due and not await asyncio.to_thread(self._market_is_open, gateway):
                     await self._record(session, now, "NO_TRADE", "Broker market is closed")
+                    await self._run_weekly_post_analysis_if_due(session, now)
                     await session.commit()
                     return "NO_TRADE"
                 account, positions = await asyncio.gather(
@@ -1640,6 +1654,15 @@ class AutonomousWorker:
                     )
                     if reason == "Hackathon force-flatten executed":
                         window = get_authorized_ruleset().parameters.hackathon_window
+                        agent = PostAnalysisAgent(LLMGateway(self.settings))
+                        active_profile = await ProfileGovernanceService().get_active(session)
+                        summary, recommendations = await agent.analyze_week(
+                            session,
+                            window_start=window.trading_start_at,
+                            window_end=window.official_scoring_at,
+                            source_mode="production",
+                            active_profile=active_profile,
+                        )
                         batch = await shadow_service.persist_post_analysis_batch(
                             session,
                             source_mode="production",
@@ -1647,13 +1670,11 @@ class AutonomousWorker:
                             window_end=window.official_scoring_at,
                             model_metadata={
                                 "trigger": "official_scoring",
+                                "agent": POST_ANALYSIS_AGENT_VERSION,
                                 "worker": WORKER_VERSION,
                             },
-                            summary={
-                                "outcome": "NO_RECOMMENDATION",
-                                "reason": "Manual review requires completed eligible evidence.",
-                            },
-                            recommendations=[],
+                            summary=summary,
+                            recommendations=recommendations,
                         )
                         await ProfileGovernanceService().apply_automatic_if_enabled(
                             session,
@@ -1662,6 +1683,58 @@ class AutonomousWorker:
                         )
             except Exception:
                 logger.exception("ShadowFund no-trade session failed without affecting cycle")
+
+    async def _run_weekly_post_analysis_if_due(
+        self, session: AsyncSession, now: datetime
+    ) -> str | None:
+        """Execute weekly post-analysis after Friday market close if not already completed."""
+        if not self.settings.shadowfund_enabled or not is_friday_post_close(now):
+            return None
+        window_start, window_end = get_trading_week_bounds(now)
+        existing = await session.scalar(
+            select(ShadowPostAnalysisBatchModel.id).where(
+                ShadowPostAnalysisBatchModel.source_mode == "production",
+                ShadowPostAnalysisBatchModel.window_start == window_start,
+                ShadowPostAnalysisBatchModel.window_end == window_end,
+            )
+        )
+        if existing is not None:
+            return None
+
+        agent = PostAnalysisAgent(LLMGateway(self.settings))
+        active_profile = await ProfileGovernanceService().get_active(session)
+        summary, recommendations = await agent.analyze_week(
+            session,
+            window_start=window_start,
+            window_end=window_end,
+            source_mode="production",
+            active_profile=active_profile,
+        )
+        shadow_service = ShadowFundService()
+        batch = await shadow_service.persist_post_analysis_batch(
+            session,
+            source_mode="production",
+            window_start=window_start,
+            window_end=window_end,
+            model_metadata={
+                "trigger": "weekly_friday_post_analysis",
+                "agent": POST_ANALYSIS_AGENT_VERSION,
+                "worker": WORKER_VERSION,
+            },
+            summary=summary,
+            recommendations=recommendations,
+        )
+        await ProfileGovernanceService().apply_automatic_if_enabled(
+            session,
+            batch_id=batch.id,
+            operator_id=self.settings.auth_email,
+        )
+        logger.info(
+            "Weekly Friday post-analysis completed: batch_id=%s, state=%s",
+            batch.id,
+            batch.state,
+        )
+        return batch.id
 
 
 def window_date(now: datetime) -> Any:

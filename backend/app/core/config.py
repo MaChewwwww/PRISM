@@ -48,7 +48,7 @@ class Settings(BaseSettings):
         "GOOGL",
         "AMZN",
     ]
-    autonomous_scan_interval_seconds: int = Field(default=900, gt=0, le=3600)
+    autonomous_scan_interval_seconds: int = Field(default=300, gt=0, le=3600)
     autonomous_max_open_positions: int = Field(default=6, gt=0, le=6)
     account_state_max_age_seconds: int = Field(default=30, gt=0, le=300)
     # Optional server-side historical IV provider.  Alpaca's chain supplies
