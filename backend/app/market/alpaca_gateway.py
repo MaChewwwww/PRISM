@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -351,7 +351,10 @@ class AlpacaPyGateway:
         limit: int | None = None,
         feed: DataFeed | None = None,
     ) -> list[dict[str, Any]]:
-        """Retrieve historical stock bars (OHLCV) from Alpaca Market API for a symbol."""
+        if start is None:
+            days = max(365, (limit or 250) * 2)
+            start = datetime.now(UTC) - timedelta(days=days)
+
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
             timeframe=timeframe,
@@ -363,6 +366,7 @@ class AlpacaPyGateway:
             # correctly returns 403 for a Basic/paper account.
             feed=feed or DataFeed.IEX,
         )
+
 
         retries = 3
         delay = 1.0
