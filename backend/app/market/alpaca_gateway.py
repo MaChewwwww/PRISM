@@ -349,6 +349,7 @@ class AlpacaPyGateway:
         start: datetime | None = None,
         end: datetime | None = None,
         limit: int | None = None,
+        feed: DataFeed | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve historical stock bars (OHLCV) from Alpaca Market API for a symbol."""
         request_params = StockBarsRequest(
@@ -360,7 +361,7 @@ class AlpacaPyGateway:
             # Paper-only accounts are entitled to IEX equities data.  Leaving
             # the feed unset makes alpaca-py request SIP by default, which
             # correctly returns 403 for a Basic/paper account.
-            feed=DataFeed.IEX,
+            feed=feed or DataFeed.IEX,
         )
 
         retries = 3
