@@ -14,7 +14,7 @@ Readiness validates required configuration and database connectivity. When auton
 docker compose -f compose.yml -f compose.production.yml up -d --build
 ```
 
-The production override publishes only Nginx on `{PRISM_HTTP_PORT:-80}`. Application and data services use private networks, and PostgreSQL/Redis have no host ports. Staging adds `compose.staging.yml` and publishes Nginx on `{STAGING_HTTP_PORT:-3005}` under a distinct Compose project.
+The production override publishes only Nginx on `{PRISM_HTTP_PORT:-80}`. Application and data services use private networks, and PostgreSQL/Redis have no host ports. The backend also joins an unexposed egress network for its required outbound HTTPS calls to Alpaca and other configured research providers; this does not publish a backend port. Staging adds `compose.staging.yml` and publishes Nginx on `{STAGING_HTTP_PORT:-3005}` under a distinct Compose project.
 
 Validate the resolved production topology with `pnpm docker:config`. Execution remains disabled by default and fails closed without valid paper configuration, an active ruleset, and a current authorization.
 
