@@ -266,7 +266,7 @@ PRISM's operator interface presents each trading decision as an auditable, narra
 9. Risk Management -> AI-assisted adversarial critique
 10. Deterministic Gate -> rule trace and aggregate authorization
 11. Outcome and ShadowFund -> only label genuine sources as paper or simulated
-12. Post-Analysis -> bounded recommendation pending manual review
+12. Post-Analysis -> persisted batch, then bounded manual or operator-configured automatic review when a validated recommendation exists
 ```
 
 ### 7.2 Authority & Provenance Labelling
