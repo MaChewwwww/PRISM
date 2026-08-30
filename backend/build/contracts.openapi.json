@@ -682,6 +682,17 @@
         "title": "AltmanZone",
         "type": "string"
       },
+      "AssetMacroImpact": {
+        "enum": [
+          "strong_tailwind",
+          "moderate_tailwind",
+          "neutral",
+          "moderate_headwind",
+          "severe_headwind"
+        ],
+        "title": "AssetMacroImpact",
+        "type": "string"
+      },
       "AuditEvent": {
         "additionalProperties": false,
         "properties": {
@@ -928,6 +939,18 @@
         "title": "AuthorizationOutcome",
         "type": "string"
       },
+      "BalanceSheetRedFlag": {
+        "enum": [
+          "accrual_earnings_divergence",
+          "working_capital_deficit",
+          "high_leverage_burden",
+          "interest_coverage_strain",
+          "altman_distress_risk",
+          "none_detected"
+        ],
+        "title": "BalanceSheetRedFlag",
+        "type": "string"
+      },
       "BollingerBands": {
         "additionalProperties": false,
         "properties": {
@@ -1006,6 +1029,27 @@
         ],
         "title": "Catalyst",
         "type": "object"
+      },
+      "CatalystDecayStatus": {
+        "enum": [
+          "fresh_catalyst",
+          "active_digestion",
+          "aging_catalyst",
+          "priced_in"
+        ],
+        "title": "CatalystDecayStatus",
+        "type": "string"
+      },
+      "CatalystMateriality": {
+        "enum": [
+          "critical",
+          "high",
+          "medium",
+          "low",
+          "noise"
+        ],
+        "title": "CatalystMateriality",
+        "type": "string"
       },
       "ChartPoint": {
         "additionalProperties": false,
@@ -1271,6 +1315,283 @@
         ],
         "title": "DecisionSynthesisRequest",
         "type": "object"
+      },
+      "EarningsSurpriseData": {
+        "additionalProperties": false,
+        "properties": {
+          "eps_surprise_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Eps Surprise Pct"
+          },
+          "quarter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Quarter"
+          },
+          "revenue_surprise_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revenue Surprise Pct"
+          }
+        },
+        "title": "EarningsSurpriseData",
+        "type": "object"
+      },
+      "EarningsSurpriseEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "eps_actual": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Eps Actual"
+          },
+          "eps_consensus": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Eps Consensus"
+          },
+          "eps_surprise_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Eps Surprise Pct"
+          },
+          "estimate_revision_trend": {
+            "$ref": "#/components/schemas/EstimateRevisionTrend",
+            "default": "neutral"
+          },
+          "gross_margin_surprise_bps": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Gross Margin Surprise Bps"
+          },
+          "guidance_change": {
+            "$ref": "#/components/schemas/GuidanceChange",
+            "default": "not_applicable"
+          },
+          "operating_margin_surprise_bps": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Operating Margin Surprise Bps"
+          },
+          "quarter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Quarter"
+          },
+          "revenue_actual_millions": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revenue Actual Millions"
+          },
+          "revenue_consensus_millions": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revenue Consensus Millions"
+          },
+          "revenue_surprise_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revenue Surprise Pct"
+          }
+        },
+        "title": "EarningsSurpriseEvent",
+        "type": "object"
+      },
+      "EconomicEventProximity": {
+        "enum": [
+          "fomc_decision_near",
+          "cpi_inflation_near",
+          "jobs_payrolls_near",
+          "high_impact_event_ahead",
+          "standard_calendar"
+        ],
+        "title": "EconomicEventProximity",
+        "type": "string"
+      },
+      "EstimateRevisionTrend": {
+        "enum": [
+          "upward",
+          "downward",
+          "mixed",
+          "neutral"
+        ],
+        "title": "EstimateRevisionTrend",
+        "type": "string"
       },
       "Evidence": {
         "additionalProperties": false,
@@ -1591,6 +1912,16 @@
             "title": "Current Price",
             "type": "string"
           },
+          "earnings_event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsSurpriseEvent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "enterprise_value_millions": {
             "format": "decimal-string",
             "title": "Enterprise Value Millions",
@@ -1617,6 +1948,13 @@
           },
           "profitability": {
             "$ref": "#/components/schemas/ProfitabilityMetrics"
+          },
+          "red_flags": {
+            "items": {
+              "$ref": "#/components/schemas/BalanceSheetRedFlag"
+            },
+            "title": "Red Flags",
+            "type": "array"
           },
           "schema_version": {
             "const": "1.0",
@@ -1804,6 +2142,17 @@
         ],
         "title": "GovernanceVersion",
         "type": "object"
+      },
+      "GuidanceChange": {
+        "enum": [
+          "raised",
+          "lowered",
+          "reaffirmed",
+          "withdrawn",
+          "not_applicable"
+        ],
+        "title": "GuidanceChange",
+        "type": "string"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2193,6 +2542,16 @@
           "overall_sentiment": {
             "$ref": "#/components/schemas/IndustrySentiment"
           },
+          "peer_dispersion_20d_pct": {
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Peer Dispersion 20D Pct",
+            "type": "string"
+          },
+          "peer_reaction_dynamics": {
+            "$ref": "#/components/schemas/PeerReactionDynamics",
+            "default": "isolated_reaction"
+          },
           "peer_relative_performance": {
             "$ref": "#/components/schemas/RelativePerformance"
           },
@@ -2232,6 +2591,10 @@
             "title": "Sector Name",
             "type": "string"
           },
+          "sector_regime_confirmation": {
+            "$ref": "#/components/schemas/SectorRegimeConfirmation",
+            "default": "broad_beta_convergence"
+          },
           "sector_relative_performance": {
             "$ref": "#/components/schemas/RelativePerformance"
           },
@@ -2245,6 +2608,18 @@
             "title": "Sector Return 5D Pct",
             "type": "string"
           },
+          "spy_return_20d_pct": {
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Spy Return 20D Pct",
+            "type": "string"
+          },
+          "spy_return_5d_pct": {
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Spy Return 5D Pct",
+            "type": "string"
+          },
           "stock_return_20d_pct": {
             "format": "decimal-string",
             "title": "Stock Return 20D Pct",
@@ -2253,6 +2628,12 @@
           "stock_return_5d_pct": {
             "format": "decimal-string",
             "title": "Stock Return 5D Pct",
+            "type": "string"
+          },
+          "stock_vs_spy_alpha_20d_pct": {
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Stock Vs Spy Alpha 20D Pct",
             "type": "string"
           },
           "symbol": {
@@ -2345,12 +2726,50 @@
             "title": "Article Id",
             "type": "string"
           },
+          "catalyst_materiality": {
+            "$ref": "#/components/schemas/CatalystMateriality",
+            "default": "medium"
+          },
+          "contradiction_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Contradiction Notes"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
+          "earnings_surprise": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsSurpriseData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "event_age_seconds": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Event Age Seconds",
+            "type": "integer"
+          },
+          "event_category": {
+            "$ref": "#/components/schemas/NewsEventCategory",
+            "default": "other"
+          },
           "event_type": {
+            "default": "other",
             "title": "Event Type",
             "type": "string"
           },
@@ -2374,6 +2793,15 @@
             ],
             "default": null,
             "title": "Expected Reaction Pct"
+          },
+          "guidance_change": {
+            "$ref": "#/components/schemas/GuidanceChange",
+            "default": "not_applicable"
+          },
+          "has_contradictory_signals": {
+            "default": false,
+            "title": "Has Contradictory Signals",
+            "type": "boolean"
           },
           "headline": {
             "title": "Headline",
@@ -2426,6 +2854,27 @@
             "format": "decimal-string",
             "title": "Significance Score"
           },
+          "source": {
+            "default": "unknown",
+            "title": "Source",
+            "type": "string"
+          },
+          "source_confidence": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "50.0",
+            "format": "decimal-string",
+            "title": "Source Confidence"
+          },
           "symbol": {
             "title": "Symbol",
             "type": "string"
@@ -2441,7 +2890,6 @@
           "article_id",
           "symbol",
           "headline",
-          "event_type",
           "sentiment",
           "significance_score",
           "rationale",
@@ -2548,6 +2996,10 @@
       "MacroAnalysisReport": {
         "additionalProperties": false,
         "properties": {
+          "asset_macro_impact": {
+            "$ref": "#/components/schemas/AssetMacroImpact",
+            "default": "neutral"
+          },
           "assets": {
             "items": {
               "$ref": "#/components/schemas/MacroAssetPerformance"
@@ -2559,6 +3011,10 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "economic_event_proximity": {
+            "$ref": "#/components/schemas/EconomicEventProximity",
+            "default": "standard_calendar"
           },
           "id": {
             "format": "uuid",
@@ -2587,11 +3043,21 @@
             "title": "Macro Tailwinds",
             "type": "array"
           },
+          "market_stress_direction": {
+            "$ref": "#/components/schemas/MarketStressDirection",
+            "default": "stable"
+          },
           "market_stress_level": {
             "$ref": "#/components/schemas/MarketStressLevel"
           },
           "rate_environment": {
             "$ref": "#/components/schemas/RateEnvironment"
+          },
+          "realized_volatility_pct": {
+            "default": "15.0",
+            "format": "decimal-string",
+            "title": "Realized Volatility Pct",
+            "type": "string"
           },
           "schema_version": {
             "const": "1.0",
@@ -2615,6 +3081,12 @@
           "trace_id": {
             "format": "uuid",
             "title": "Trace Id",
+            "type": "string"
+          },
+          "volatility_change_5d_pct": {
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Volatility Change 5D Pct",
             "type": "string"
           }
         },
@@ -2768,6 +3240,15 @@
         "title": "MarketRegime",
         "type": "string"
       },
+      "MarketStressDirection": {
+        "enum": [
+          "escalating",
+          "stable",
+          "easing"
+        ],
+        "title": "MarketStressDirection",
+        "type": "string"
+      },
       "MarketStressLevel": {
         "enum": [
           "low",
@@ -2903,6 +3384,22 @@
         ],
         "title": "NewsCollection",
         "type": "object"
+      },
+      "NewsEventCategory": {
+        "enum": [
+          "earnings",
+          "guidance",
+          "m_and_a",
+          "regulatory_legal",
+          "product_innovation",
+          "analyst_action",
+          "management_change",
+          "macro_geopolitical",
+          "routine_pr",
+          "other"
+        ],
+        "title": "NewsEventCategory",
+        "type": "string"
       },
       "NewsRecord": {
         "additionalProperties": false,
@@ -3205,6 +3702,16 @@
         ],
         "title": "PeerPerformance",
         "type": "object"
+      },
+      "PeerReactionDynamics": {
+        "enum": [
+          "divergent_winner",
+          "sympathetic_sector_surge",
+          "isolated_reaction",
+          "peer_dragged_down"
+        ],
+        "title": "PeerReactionDynamics",
+        "type": "string"
       },
       "Portfolio": {
         "additionalProperties": false,
@@ -3518,6 +4025,104 @@
         "title": "PresentationMeta",
         "type": "object"
       },
+      "PriceDisplacement": {
+        "additionalProperties": false,
+        "properties": {
+          "displacement_1d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Displacement 1D Pct"
+          },
+          "displacement_20d_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Displacement 20D Pct"
+          },
+          "displacement_3d_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Displacement 3D Pct"
+          },
+          "displacement_5d_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Displacement 5D Pct"
+          },
+          "gap_size_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Gap Size Pct"
+          }
+        },
+        "title": "PriceDisplacement",
+        "type": "object"
+      },
       "ProfileParameter": {
         "additionalProperties": false,
         "properties": {
@@ -3762,6 +4367,9 @@
           "moving_averages": {
             "$ref": "#/components/schemas/MovingAverages"
           },
+          "price_displacement": {
+            "$ref": "#/components/schemas/PriceDisplacement"
+          },
           "rsi_14": {
             "format": "decimal-string",
             "title": "Rsi 14",
@@ -3792,6 +4400,10 @@
           },
           "trend": {
             "$ref": "#/components/schemas/TrendDirection"
+          },
+          "trend_confirmation": {
+            "$ref": "#/components/schemas/TrendConfirmation",
+            "default": "range_bound"
           },
           "volatility_annualized_pct": {
             "format": "decimal-string",
@@ -3944,6 +4556,45 @@
             "default": null,
             "title": "Actual Reaction Pct"
           },
+          "analog_count": {
+            "default": 0,
+            "title": "Analog Count",
+            "type": "integer"
+          },
+          "analog_similarity_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "50.0",
+            "format": "decimal-string",
+            "title": "Analog Similarity Score"
+          },
+          "catalyst_decay_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "format": "decimal-string",
+            "title": "Catalyst Decay Factor"
+          },
+          "catalyst_decay_status": {
+            "$ref": "#/components/schemas/CatalystDecayStatus",
+            "default": "fresh_catalyst"
+          },
           "classification": {
             "anyOf": [
               {
@@ -3974,6 +4625,41 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "direction_adjusted_gap_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Direction Adjusted Gap Pct"
+          },
+          "event_age_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.0",
+            "format": "decimal-string",
+            "title": "Event Age Hours"
           },
           "evidence": {
             "items": {
@@ -4008,10 +4694,115 @@
             "title": "Freshness Seconds",
             "type": "integer"
           },
+          "historical_dispersion_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Historical Dispersion Pct"
+          },
+          "historical_median_reaction_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Historical Median Reaction Pct"
+          },
+          "historical_volatility_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Historical Volatility Pct"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "implied_volatility_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Implied Volatility Pct"
+          },
+          "iv_hv_ratio": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Iv Hv Ratio"
           },
           "limitations": {
             "items": {
@@ -4042,6 +4833,27 @@
             ],
             "default": null,
             "title": "Opportunity Score"
+          },
+          "options_implied_move_pct": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options Implied Move Pct"
           },
           "reaction_gap_pct": {
             "anyOf": [
@@ -4356,6 +5168,17 @@
         "title": "RulePriority",
         "type": "string"
       },
+      "SectorRegimeConfirmation": {
+        "enum": [
+          "leading_sector_outperformer",
+          "idiosyncratic_decoupling",
+          "broad_beta_convergence",
+          "sector_under_pressure",
+          "lagging_in_bull_sector"
+        ],
+        "title": "SectorRegimeConfirmation",
+        "type": "string"
+      },
       "ShadowCandidate": {
         "additionalProperties": false,
         "properties": {
@@ -4535,34 +5358,82 @@
         "additionalProperties": false,
         "properties": {
           "fundamental_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Fundamental Quality Score",
-            "type": "string"
+            "title": "Fundamental Quality Score"
           },
           "macro_climate_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Macro Climate Score",
-            "type": "string"
+            "title": "Macro Climate Score"
           },
           "news_sentiment_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "News Sentiment Score",
-            "type": "string"
+            "title": "News Sentiment Score"
           },
           "quant_momentum_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Quant Momentum Score",
-            "type": "string"
+            "title": "Quant Momentum Score"
           },
           "reaction_opportunity_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Reaction Opportunity Score",
-            "type": "string"
+            "title": "Reaction Opportunity Score"
           },
           "sector_health_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Sector Health Score",
-            "type": "string"
+            "title": "Sector Health Score"
           }
         },
         "required": [
@@ -4997,18 +5868,45 @@
         "additionalProperties": false,
         "properties": {
           "composite_opportunity_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Composite Opportunity Score",
-            "type": "string"
+            "title": "Composite Opportunity Score"
           },
           "confidence_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Confidence Score",
-            "type": "string"
+            "title": "Confidence Score"
           },
           "contradiction_analysis": {
             "title": "Contradiction Analysis",
             "type": "string"
+          },
+          "contradictions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Contradictions",
+            "type": "array"
           },
           "created_at": {
             "format": "date-time",
@@ -5016,12 +5914,28 @@
             "type": "string"
           },
           "current_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Current Price",
-            "type": "string"
+            "title": "Current Price"
           },
           "direction": {
             "$ref": "#/components/schemas/TradeDirection"
+          },
+          "evidence_summary": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Summary",
+            "type": "array"
           },
           "exit_policy": {
             "$ref": "#/components/schemas/ExitPolicy"
@@ -5039,17 +5953,43 @@
             "type": "array"
           },
           "net_ev_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Net Ev R",
+            "title": "Net Ev R"
+          },
+          "options_only_constraint_acknowledged": {
+            "default": true,
+            "title": "Options Only Constraint Acknowledged",
+            "type": "boolean"
+          },
+          "portfolio_fit": {
+            "default": "",
+            "title": "Portfolio Fit",
             "type": "string"
           },
           "recommended_structure": {
             "$ref": "#/components/schemas/OptionStructure"
           },
           "reward_risk_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
             "format": "decimal-string",
-            "title": "Reward Risk Ratio",
-            "type": "string"
+            "title": "Reward Risk Ratio"
           },
           "schema_version": {
             "const": "1.0",
@@ -5072,13 +6012,22 @@
           "target_price": {
             "anyOf": [
               {
-                "format": "decimal-string",
-                "type": "string"
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
               },
               {
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Target Price"
           },
           "trace_id": {
@@ -5103,8 +6052,8 @@
           "current_price",
           "exit_policy",
           "specialist_scores",
-          "synthesis_rationale",
-          "contradiction_analysis"
+          "contradiction_analysis",
+          "synthesis_rationale"
         ],
         "title": "TradeDecisionReport",
         "type": "object"
@@ -5199,8 +6148,9 @@
       },
       "TradeVerdict": {
         "enum": [
-          "propose_trade",
-          "no_trade"
+          "proceed_to_options_proposal",
+          "no_trade",
+          "propose_trade"
         ],
         "title": "TradeVerdict",
         "type": "string"
@@ -5312,6 +6262,19 @@
         ],
         "title": "TranscriptStep",
         "type": "object"
+      },
+      "TrendConfirmation": {
+        "enum": [
+          "strong_uptrend_confirmed",
+          "pullback_in_uptrend",
+          "golden_cross",
+          "range_bound",
+          "oversold_bounce",
+          "death_cross",
+          "breakdown_confirmed"
+        ],
+        "title": "TrendConfirmation",
+        "type": "string"
       },
       "TrendDirection": {
         "enum": [

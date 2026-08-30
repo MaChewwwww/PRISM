@@ -6,6 +6,8 @@ from uuid import UUID, uuid4
 
 from app.contracts.models import (
     AltmanZone,
+    BalanceSheetRedFlag,
+    EarningsSurpriseEvent,
     FundamentalAnalysisReport,
     FundamentalHealth,
     ProfitabilityMetrics,
@@ -279,6 +281,80 @@ def compute_composite_fundamental_score(
     return total_score, health, stance
 
 
+def detect_balance_sheet_red_flags(
+    fin: CompanyFinancials,
+    solv: SolvencyMetrics,
+    z_score: Decimal,
+) -> list[BalanceSheetRedFlag]:
+    """Deterministically audit balance sheet and cash flows for credit/liquidity red flags."""
+    flags: list[BalanceSheetRedFlag] = []
+
+    # 1. Earnings quality: Operating cash flow < 70% of Net Income (severe accruals divergence)
+    if fin.net_income_ttm > Decimal("0.0") and fin.operating_cash_flow_ttm < (
+        fin.net_income_ttm * Decimal("0.70")
+    ):
+        flags.append(BalanceSheetRedFlag.ACCRUAL_EARNINGS_DIVERGENCE)
+
+    # 2. Liquidity: Current ratio < 1.0 (working capital deficit)
+    if solv.current_ratio < Decimal("1.0"):
+        flags.append(BalanceSheetRedFlag.WORKING_CAPITAL_DEFICIT)
+
+    # 3. Solvency: Debt-to-Equity > 2.0 (high leverage burden)
+    if solv.debt_to_equity > Decimal("2.0"):
+        flags.append(BalanceSheetRedFlag.HIGH_LEVERAGE_BURDEN)
+
+    # 4. Debt service: Interest coverage < 2.0x (coverage strain)
+    if solv.interest_coverage_ratio < Decimal("2.0"):
+        flags.append(BalanceSheetRedFlag.INTEREST_COVERAGE_STRAIN)
+
+    # 5. Bankruptcy/distress risk: Altman Z < 1.80
+    if z_score < Decimal("1.80"):
+        flags.append(BalanceSheetRedFlag.ALTMAN_DISTRESS_RISK)
+
+    if not flags:
+        flags.append(BalanceSheetRedFlag.NONE_DETECTED)
+
+    return flags
+
+
+def compute_earnings_surprise_event(fin: CompanyFinancials) -> EarningsSurpriseEvent | None:
+    """Compute quantified EPS/revenue surprise percentages and event details."""
+    if fin.eps_actual is None and fin.revenue_actual is None:
+        return None
+
+    eps_surprise: Decimal | None = None
+    if (
+        fin.eps_actual is not None
+        and fin.eps_consensus is not None
+        and fin.eps_consensus != Decimal("0.0")
+    ):
+        eps_diff = fin.eps_actual - fin.eps_consensus
+        eps_surprise = round((eps_diff / abs(fin.eps_consensus)) * Decimal("100.0"), 2)
+
+    rev_surprise: Decimal | None = None
+    if (
+        fin.revenue_actual is not None
+        and fin.revenue_consensus is not None
+        and fin.revenue_consensus > Decimal("0.0")
+    ):
+        rev_diff = fin.revenue_actual - fin.revenue_consensus
+        rev_surprise = round((rev_diff / fin.revenue_consensus) * Decimal("100.0"), 2)
+
+    return EarningsSurpriseEvent(
+        quarter=fin.quarter,
+        eps_actual=fin.eps_actual,
+        eps_consensus=fin.eps_consensus,
+        eps_surprise_pct=eps_surprise,
+        revenue_actual_millions=fin.revenue_actual,
+        revenue_consensus_millions=fin.revenue_consensus,
+        revenue_surprise_pct=rev_surprise,
+        guidance_change=fin.guidance_change,
+        gross_margin_surprise_bps=fin.gross_margin_surprise_bps,
+        operating_margin_surprise_bps=fin.operating_margin_surprise_bps,
+        estimate_revision_trend=fin.estimate_revision_trend,
+    )
+
+
 def compute_fundamental_analysis(
     symbol: str,
     latest_close: Decimal | None = None,
@@ -310,12 +386,28 @@ def compute_fundamental_analysis(
         pe_ratio=val.pe_ratio_ttm,
     )
 
+    # 3. Detect Balance Sheet Red Flags & Earnings Event
+    red_flags = detect_balance_sheet_red_flags(fin, solv, z_score)
+    earnings_event = compute_earnings_surprise_event(fin)
+
+    event_desc = ""
+    if earnings_event and earnings_event.quarter:
+        event_desc = (
+            f" {earnings_event.quarter} EPS surprise: {earnings_event.eps_surprise_pct or 0}% "
+            f"(Guidance: {earnings_event.guidance_change.value})."
+        )
+
+    flag_desc = ""
+    if red_flags and red_flags != [BalanceSheetRedFlag.NONE_DETECTED]:
+        flag_desc = f" Red flags: {', '.join(f.value for f in red_flags)}."
+
     summary = (
         f"{fin.company_name} ({sym}) displays {health.value.upper()} fundamental health "
         f"with a Quality Score of {composite_score}/100 and Piotroski F-Score of {f_score}/9. "
         f"Altman Z-Score is {z_score} ({z_zone.value.upper()} ZONE). "
         f"Profitability reflects a {prof.net_margin_pct}% net margin and {prof.roe_pct}% ROE. "
         f"Valuation stance is {stance.value.upper()} at {val.pe_ratio_ttm or 'N/A'}x P/E."
+        f"{event_desc}{flag_desc}"
     )
 
     return FundamentalAnalysisReport(
@@ -334,5 +426,7 @@ def compute_fundamental_analysis(
         composite_quality_score=composite_score,
         fundamental_health=health,
         valuation_stance=stance,
+        earnings_event=earnings_event,
+        red_flags=red_flags,
         summary=summary,
     )

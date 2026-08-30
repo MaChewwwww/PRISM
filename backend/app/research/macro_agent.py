@@ -13,9 +13,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
+    AssetMacroImpact,
+    EconomicEventProximity,
     MacroAnalysisReport,
     MacroAssetPerformance,
     MacroRegime,
+    MarketStressDirection,
     MarketStressLevel,
     RateEnvironment,
 )
@@ -25,14 +28,16 @@ from app.research.models import MacroAnalysisModel
 
 logger = logging.getLogger(__name__)
 
-# Key macro asset benchmarks across Equities, Rates, FX, and Commodities
+# Key macro asset benchmarks across Equities, Rates, FX, Commodities, and Volatility
 MACRO_BENCHMARK_REGISTRY: list[tuple[str, str]] = [
     ("SPY", "S&P 500 Broad Market Index"),
     ("QQQ", "Nasdaq 100 Tech & Growth Index"),
-    ("IWM", "Russell 2000 Small-Cap / Credit"),
-    ("TLT", "20+ Year US Treasury Bond (Yield Proxy)"),
+    ("IWM", "Russell 2000 Small-Cap / Credit Index"),
+    ("TLT", "20+ Year US Treasury Bond ETF (Long-Duration Rates)"),
+    ("IEF", "7-10 Year US Treasury Bond ETF (Intermediate Benchmark Rates)"),
     ("GLD", "Gold / Safe Haven & Inflation Hedge"),
     ("UUP", "US Dollar Index / Global Liquidity"),
+    ("VXX", "Short-Term VIX Futures Volatility ETN"),
 ]
 
 SYSTEM_PROMPT = (
@@ -59,6 +64,11 @@ class MacroAnalysisLLMOutput(BaseModel):
         ...,
         description="Prevailing monetary policy and interest rate environment "
         "('rate_cut_cycle', 'pause_elevated', 'rising_rates', 'neutral')",
+    )
+    asset_macro_impact: AssetMacroImpact = Field(
+        ...,
+        description="Impact of macro regime on target stock ('strong_tailwind', "
+        "'moderate_tailwind', 'neutral', 'moderate_headwind', 'severe_headwind')",
     )
     macro_tailwinds: list[str] = Field(
         default_factory=list,
@@ -96,10 +106,10 @@ def compute_period_return(bars: list[dict[str, Any]], days: int) -> Decimal:
 
 def compute_market_stress_level(
     spy_bars: list[dict[str, Any]],
-) -> tuple[MarketStressLevel, Decimal]:
-    """Compute annualized realized volatility of SPY to quantify market stress."""
+) -> tuple[MarketStressLevel, MarketStressDirection, Decimal, Decimal]:
+    """Compute annualized realized volatility of SPY, stress level, direction, and 5d delta."""
     if len(spy_bars) < 5:
-        return MarketStressLevel.LOW, Decimal("15.0")
+        return MarketStressLevel.LOW, MarketStressDirection.STABLE, Decimal("15.0"), Decimal("0.0")
 
     closes = [float(b["close"]) for b in spy_bars if "close" in b]
     returns = [
@@ -108,13 +118,25 @@ def compute_market_stress_level(
         if closes[i - 1] > 0
     ]
     if not returns:
-        return MarketStressLevel.LOW, Decimal("15.0")
+        return MarketStressLevel.LOW, MarketStressDirection.STABLE, Decimal("15.0"), Decimal("0.0")
 
-    mean_ret = sum(returns) / len(returns)
-    variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
-    std_dev = math.sqrt(variance)
-    annualized_vol = std_dev * math.sqrt(252) * 100.0
+    cur_returns = returns[-20:] if len(returns) >= 20 else returns
+    mean_ret = sum(cur_returns) / len(cur_returns)
+    variance = sum((r - mean_ret) ** 2 for r in cur_returns) / max(1, len(cur_returns) - 1)
+    annualized_vol = math.sqrt(variance) * math.sqrt(252) * 100.0
     vol_dec = round(Decimal(str(annualized_vol)), 1)
+
+    if len(returns) >= 10:
+        prior_returns = returns[:-5][-20:] if len(returns) >= 25 else returns[:-5]
+        prior_mean = sum(prior_returns) / len(prior_returns)
+        prior_variance = sum((r - prior_mean) ** 2 for r in prior_returns) / max(
+            1, len(prior_returns) - 1
+        )
+        prior_vol = math.sqrt(prior_variance) * math.sqrt(252) * 100.0
+        prior_vol_dec = round(Decimal(str(prior_vol)), 1)
+        vol_delta = round(vol_dec - prior_vol_dec, 1)
+    else:
+        vol_delta = Decimal("0.0")
 
     if vol_dec >= Decimal("30.0"):
         stress = MarketStressLevel.EXTREME
@@ -125,7 +147,42 @@ def compute_market_stress_level(
     else:
         stress = MarketStressLevel.LOW
 
-    return stress, vol_dec
+    if vol_delta >= Decimal("2.0"):
+        direction = MarketStressDirection.ESCALATING
+    elif vol_delta <= Decimal("-2.0"):
+        direction = MarketStressDirection.EASING
+    else:
+        direction = MarketStressDirection.STABLE
+
+    return stress, direction, vol_dec, vol_delta
+
+
+def detect_economic_event_proximity(news_headlines: list[str]) -> EconomicEventProximity:
+    """Detect imminent high-impact macroeconomic event catalysts from news wire headlines."""
+    text_corpus = " ".join(news_headlines).lower()
+
+    if any(
+        k in text_corpus
+        for k in ["fomc", "fed rate", "powell", "interest rate decision", "rate cut", "rate hike"]
+    ):
+        return EconomicEventProximity.FOMC_DECISION_NEAR
+
+    if any(
+        k in text_corpus
+        for k in ["cpi", "inflation report", "consumer price index", "pce price index"]
+    ):
+        return EconomicEventProximity.CPI_INFLATION_NEAR
+
+    if any(
+        k in text_corpus
+        for k in ["nonfarm payroll", "payrolls", "jobs report", "unemployment rate"]
+    ):
+        return EconomicEventProximity.JOBS_PAYROLLS_NEAR
+
+    if any(k in text_corpus for k in ["treasury auction", "gdp release", "debt ceiling", "opec"]):
+        return EconomicEventProximity.HIGH_IMPACT_EVENT_AHEAD
+
+    return EconomicEventProximity.STANDARD_CALENDAR
 
 
 def compute_macro_climate_score(
@@ -206,6 +263,29 @@ class MacroeconomicAgent:
                         MacroAssetPerformance.model_validate(a)
                         for a in json.loads(cached.assets_json)
                     ]
+                    stress_dir_raw = getattr(cached, "market_stress_direction", None)
+                    stress_dir = (
+                        MarketStressDirection(stress_dir_raw)
+                        if stress_dir_raw
+                        else MarketStressDirection.STABLE
+                    )
+                    realized_vol = getattr(cached, "realized_volatility_pct", None) or Decimal(
+                        "15.0"
+                    )
+                    vol_delta = getattr(cached, "volatility_change_5d_pct", None) or Decimal("0.0")
+                    event_prox_raw = getattr(cached, "economic_event_proximity", None)
+                    event_prox = (
+                        EconomicEventProximity(event_prox_raw)
+                        if event_prox_raw
+                        else EconomicEventProximity.STANDARD_CALENDAR
+                    )
+                    asset_impact_raw = getattr(cached, "asset_macro_impact", None)
+                    asset_impact = (
+                        AssetMacroImpact(asset_impact_raw)
+                        if asset_impact_raw
+                        else AssetMacroImpact.NEUTRAL
+                    )
+
                     return MacroAnalysisReport(
                         id=UUID(cached.id),
                         trace_id=UUID(cached.trace_id),
@@ -214,7 +294,12 @@ class MacroeconomicAgent:
                         macro_regime=MacroRegime(cached.macro_regime),
                         rate_environment=RateEnvironment(cached.rate_environment),
                         market_stress_level=MarketStressLevel(cached.market_stress_level),
+                        market_stress_direction=stress_dir,
+                        realized_volatility_pct=realized_vol,
+                        volatility_change_5d_pct=vol_delta,
                         macro_climate_score=cached.macro_climate_score,
+                        economic_event_proximity=event_prox,
+                        asset_macro_impact=asset_impact,
                         assets=assets_data,
                         macro_tailwinds=json.loads(cached.macro_tailwinds_json),
                         macro_headwinds=json.loads(cached.macro_headwinds_json),
@@ -254,9 +339,9 @@ class MacroeconomicAgent:
                 )
                 asset_returns_map[ticker] = (Decimal("0.0"), Decimal("0.0"))
 
-        # 2. Compute Volatility Stress and Climate Score
+        # 2. Compute Volatility Stress, Direction, and Climate Score
         spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
-        stress_level, vol_pct = compute_market_stress_level(spy_bars)
+        stress_level, stress_direction, vol_pct, vol_delta = compute_market_stress_level(spy_bars)
 
         _, spy_20d = asset_returns_map.get("SPY", (Decimal("0.0"), Decimal("0.0")))
         _, qqq_20d = asset_returns_map.get("QQQ", (Decimal("0.0"), Decimal("0.0")))
@@ -264,7 +349,8 @@ class MacroeconomicAgent:
 
         climate_score = compute_macro_climate_score(spy_20d, qqq_20d, tlt_20d, stress_level)
 
-        # 3. Fetch Macro / Fed News Context
+        # 3. Fetch Macro / Fed News Context & Detect Event Proximity
+        news_headlines: list[str] = []
         try:
             news_items = self.alpaca_gateway.get_news(symbol="SPY", limit=5)
             news_headlines = [
@@ -278,6 +364,8 @@ class MacroeconomicAgent:
             logger.warning(f"Could not fetch macro news: {exc}")
             news_context = "Macro news unavailable."
 
+        economic_event_proximity = detect_economic_event_proximity(news_headlines)
+
         # 4. DeepSeek LLM Synthesis
         assets_str = "\n".join(
             f"- {a.asset_symbol} ({a.asset_name}): 5d={a.price_change_5d_pct}%, "
@@ -290,18 +378,22 @@ class MacroeconomicAgent:
             f"Evaluate the broader macroeconomic environment and impact on: {sym}.\n\n"
             f"CROSS-ASSET BENCHMARK METRICS:\n{assets_str}\n\n"
             f"MACRO METRICS:\n"
-            f"- Realized Volatility: {vol_pct}%\n"
-            f"- Market Stress Level: {stress_level.value.upper()}\n"
-            f"- Deterministic Macro Climate Score: {climate_score}/100\n\n"
+            f"- Realized Volatility: {vol_pct}% (5d delta: {vol_delta}%)\n"
+            f"- Market Stress Level: {stress_level.value.upper()} "
+            f"({stress_direction.value.upper()})\n"
+            f"- Deterministic Macro Climate Score: {climate_score}/100\n"
+            f"- Economic Event Proximity: {economic_event_proximity.value.upper()}\n\n"
             f"RECENT MACRO HEADLINES:\n{news_context}\n\n"
             "TASK:\n"
             "1. Select Macro Regime ('risk_on', 'risk_off', 'expansionary', 'contractionary', "
             "'stagflationary', 'transitional').\n"
             "2. Select Rate Environment ('rate_cut_cycle', 'pause_elevated', 'rising_rates').\n"
-            "3. Provide 2-3 strictly macro-level tailwinds.\n"
-            "4. Provide 2-3 strictly macro-level headwinds.\n"
-            f"5. Analyze how {sym} specifically responds to this macro/rate environment.\n"
-            "6. Provide a synthesis thesis."
+            "3. Select Asset Macro Impact ('strong_tailwind', 'moderate_tailwind', 'neutral', "
+            "'moderate_headwind', 'severe_headwind').\n"
+            "4. Provide 2-3 strictly macro-level tailwinds.\n"
+            "5. Provide 2-3 strictly macro-level headwinds.\n"
+            f"6. Analyze how {sym} specifically responds to this macro/rate environment.\n"
+            "7. Provide a synthesis thesis."
         )
 
         llm_response = await self.llm_gateway.complete_structured(
@@ -328,7 +420,12 @@ class MacroeconomicAgent:
             macro_regime=output.macro_regime,
             rate_environment=output.rate_environment,
             market_stress_level=stress_level,
+            market_stress_direction=stress_direction,
+            realized_volatility_pct=vol_pct,
+            volatility_change_5d_pct=vol_delta,
             macro_climate_score=climate_score,
+            economic_event_proximity=economic_event_proximity,
+            asset_macro_impact=output.asset_macro_impact,
             assets=asset_performances,
             macro_tailwinds=output.macro_tailwinds,
             macro_headwinds=output.macro_headwinds,
@@ -348,7 +445,12 @@ class MacroeconomicAgent:
                     macro_regime=output.macro_regime.value,
                     rate_environment=output.rate_environment.value,
                     market_stress_level=stress_level.value,
+                    market_stress_direction=stress_direction.value,
+                    realized_volatility_pct=vol_pct,
+                    volatility_change_5d_pct=vol_delta,
                     macro_climate_score=climate_score,
+                    economic_event_proximity=economic_event_proximity.value,
+                    asset_macro_impact=output.asset_macro_impact.value,
                     assets_json=json.dumps([a.model_dump(mode="json") for a in asset_performances]),
                     macro_tailwinds_json=json.dumps(output.macro_tailwinds),
                     macro_headwinds_json=json.dumps(output.macro_headwinds),

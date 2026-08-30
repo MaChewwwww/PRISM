@@ -7,7 +7,10 @@ from uuid import uuid4
 import pytest
 
 from app.contracts.models import (
+    AssetMacroImpact,
+    EconomicEventProximity,
     MacroRegime,
+    MarketStressDirection,
     MarketStressLevel,
     RateEnvironment,
 )
@@ -20,6 +23,7 @@ from app.research.macro_agent import (
     compute_macro_climate_score,
     compute_market_stress_level,
     compute_period_return,
+    detect_economic_event_proximity,
 )
 
 
@@ -39,15 +43,49 @@ def test_compute_period_return() -> None:
 def test_compute_market_stress_level() -> None:
     # Calm / low volatility mock bars
     calm_bars = [{"close": 100 + (i * 0.1)} for i in range(25)]
-    stress, vol = compute_market_stress_level(calm_bars)
+    stress, direction, vol, delta = compute_market_stress_level(calm_bars)
     assert stress == MarketStressLevel.LOW
+    assert direction in {MarketStressDirection.STABLE, MarketStressDirection.EASING}
     assert vol < Decimal("15.0")
+    assert delta <= Decimal("2.0")
 
     # High volatility mock bars (wild swings)
     volatile_bars = [{"close": 100 if i % 2 == 0 else 115} for i in range(25)]
-    stress_hi, vol_hi = compute_market_stress_level(volatile_bars)
+    stress_hi, dir_hi, vol_hi, delta_hi = compute_market_stress_level(volatile_bars)
     assert stress_hi in {MarketStressLevel.HIGH, MarketStressLevel.EXTREME}
+    assert dir_hi in {
+        MarketStressDirection.ESCALATING,
+        MarketStressDirection.STABLE,
+        MarketStressDirection.EASING,
+    }
     assert vol_hi > Decimal("20.0")
+    assert delta_hi is not None
+
+
+def test_detect_economic_event_proximity() -> None:
+    # 1. FOMC headline
+    assert (
+        detect_economic_event_proximity(["Powell hints at FOMC rate decision this Wednesday"])
+        == EconomicEventProximity.FOMC_DECISION_NEAR
+    )
+
+    # 2. CPI headline
+    assert (
+        detect_economic_event_proximity(["Wall Street awaits key CPI inflation report"])
+        == EconomicEventProximity.CPI_INFLATION_NEAR
+    )
+
+    # 3. Jobs / Payrolls headline
+    assert (
+        detect_economic_event_proximity(["Nonfarm payrolls report expected to show job growth"])
+        == EconomicEventProximity.JOBS_PAYROLLS_NEAR
+    )
+
+    # 4. Standard calendar
+    assert (
+        detect_economic_event_proximity(["Tech stocks lead broad market gains today"])
+        == EconomicEventProximity.STANDARD_CALENDAR
+    )
 
 
 def test_compute_macro_climate_score() -> None:
@@ -84,6 +122,7 @@ async def test_macro_agent_analyze_mocked() -> None:
     mock_llm_output = MacroAnalysisLLMOutput(
         macro_regime=MacroRegime.RISK_ON,
         rate_environment=RateEnvironment.RATE_CUT_CYCLE,
+        asset_macro_impact=AssetMacroImpact.STRONG_TAILWIND,
         macro_tailwinds=["Federal Reserve rate cuts", "Expanding market liquidity"],
         macro_headwinds=["Elevated oil prices"],
         stock_macro_sensitivity="NVDA benefits strongly from lower discount rates on cash flows.",
@@ -110,7 +149,7 @@ async def test_macro_agent_analyze_mocked() -> None:
         {"close": 500.0 + i, "timestamp": "2026-08-28T00:00:00Z"} for i in range(25)
     ]
     alpaca_gateway.get_news.return_value = [
-        {"headline": "Fed signals rate cuts ahead", "source": "Reuters"}
+        {"headline": "Fed signals rate cuts ahead at next FOMC meeting", "source": "Reuters"}
     ]
 
     agent = MacroeconomicAgent(llm_gateway=llm_gateway, alpaca_gateway=alpaca_gateway)
@@ -121,6 +160,9 @@ async def test_macro_agent_analyze_mocked() -> None:
     assert report.symbol == "NVDA"
     assert report.macro_regime == MacroRegime.RISK_ON
     assert report.rate_environment == RateEnvironment.RATE_CUT_CYCLE
+    assert report.asset_macro_impact == AssetMacroImpact.STRONG_TAILWIND
+    assert report.economic_event_proximity == EconomicEventProximity.FOMC_DECISION_NEAR
+    assert report.market_stress_direction is not None
     assert len(report.assets) >= 6
     assert len(report.macro_tailwinds) == 2
     assert "NVDA benefits" in report.stock_macro_sensitivity

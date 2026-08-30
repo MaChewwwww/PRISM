@@ -16,7 +16,9 @@ from app.contracts.models import (
     IndustryAnalysisReport,
     IndustrySentiment,
     PeerPerformance,
+    PeerReactionDynamics,
     RelativePerformance,
+    SectorRegimeConfirmation,
 )
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
@@ -209,6 +211,69 @@ def classify_peer_relative_performance(
     return RelativePerformance.MIXED
 
 
+def compute_peer_dispersion(peer_returns_20d: list[Decimal]) -> Decimal:
+    """Compute sample standard deviation of peer returns to measure cross-sectional dispersion."""
+    if len(peer_returns_20d) < 2:
+        return Decimal("0.0")
+
+    n = Decimal(str(len(peer_returns_20d)))
+    mean_val = sum(peer_returns_20d) / n
+    variance = sum((r - mean_val) ** 2 for r in peer_returns_20d) / (n - Decimal("1.0"))
+    std_dev = Decimal(str(round(float(variance) ** 0.5, 2)))
+    return std_dev
+
+
+def compute_sector_regime_confirmation(
+    stock_20d: Decimal,
+    sector_20d: Decimal,
+    spy_20d: Decimal,
+) -> SectorRegimeConfirmation:
+    """Deterministically classify market vs. sector vs. stock multi-tier relative structure."""
+    # 1. Leading Sector Outperformer: Stock beating sector, and sector beating broad SPY
+    if stock_20d >= sector_20d and sector_20d >= spy_20d and stock_20d > Decimal("0.0"):
+        return SectorRegimeConfirmation.LEADING_SECTOR_OUTPERFORMER
+
+    # 2. Idiosyncratic Decoupling: Stock beating SPY while sector is lagging SPY
+    if stock_20d > spy_20d and sector_20d < spy_20d:
+        return SectorRegimeConfirmation.IDIOSYNCRATIC_DECOUPLING
+
+    # 3. Lagging in Bull Sector: Sector is strong relative to SPY, but stock is trailing its sector
+    if sector_20d > (spy_20d + Decimal("2.0")) and stock_20d < (sector_20d - Decimal("2.0")):
+        return SectorRegimeConfirmation.LAGGING_IN_BULL_SECTOR
+
+    # 4. Sector Under Pressure: Sector is noticeably underperforming SPY, pulling down stock
+    if sector_20d < (spy_20d - Decimal("2.0")) and stock_20d < (spy_20d - Decimal("1.0")):
+        return SectorRegimeConfirmation.SECTOR_UNDER_PRESSURE
+
+    # 5. Default Broad Beta Convergence
+    return SectorRegimeConfirmation.BROAD_BETA_CONVERGENCE
+
+
+def compute_peer_reaction_dynamics(
+    stock_5d: Decimal,
+    peer_returns_5d: list[Decimal],
+) -> PeerReactionDynamics:
+    """Classify 5-day event reaction dynamics between target stock and its peer group."""
+    if not peer_returns_5d:
+        return PeerReactionDynamics.ISOLATED_REACTION
+
+    avg_peer_5d = sum(peer_returns_5d) / Decimal(str(len(peer_returns_5d)))
+
+    # Stock positive, peer group average negative -> Divergent winner
+    if stock_5d >= Decimal("1.5") and avg_peer_5d <= Decimal("-0.5"):
+        return PeerReactionDynamics.DIVERGENT_WINNER
+
+    # Stock positive and peers strongly positive -> Sympathetic sector surge
+    if stock_5d >= Decimal("1.5") and avg_peer_5d >= Decimal("1.5"):
+        return PeerReactionDynamics.SYMPATHETIC_SECTOR_SURGE
+
+    # Stock negative and peers negative -> Peer dragged down
+    if stock_5d <= Decimal("-1.5") and avg_peer_5d <= Decimal("-1.5"):
+        return PeerReactionDynamics.PEER_DRAGGED_DOWN
+
+    return PeerReactionDynamics.ISOLATED_REACTION
+
+
 class IndustryIntelligenceAgent:
     """Agent #3: Evaluates the stock against its specialized sector ETF and direct competitors."""
 
@@ -248,6 +313,20 @@ class IndustryIntelligenceAgent:
                     peers_data = [
                         PeerPerformance.model_validate(p) for p in json.loads(cached.peers_json)
                     ]
+                    sec_regime_raw = getattr(cached, "sector_regime_confirmation", None)
+                    sec_regime_val = sec_regime_raw if sec_regime_raw else "broad_beta_convergence"
+                    peer_react_raw = getattr(cached, "peer_reaction_dynamics", None)
+                    peer_react_val = peer_react_raw if peer_react_raw else "isolated_reaction"
+
+                    spy_5d_val = getattr(cached, "spy_return_5d_pct", None) or Decimal("0.0")
+                    spy_20d_val = getattr(cached, "spy_return_20d_pct", None) or Decimal("0.0")
+                    stock_vs_spy_val = getattr(
+                        cached, "stock_vs_spy_alpha_20d_pct", None
+                    ) or Decimal("0.0")
+                    peer_disp_val = getattr(cached, "peer_dispersion_20d_pct", None) or Decimal(
+                        "0.0"
+                    )
+
                     return IndustryAnalysisReport(
                         id=UUID(cached.id),
                         trace_id=UUID(cached.trace_id),
@@ -260,14 +339,20 @@ class IndustryIntelligenceAgent:
                         stock_return_20d_pct=cached.stock_return_20d_pct,
                         sector_return_5d_pct=cached.sector_return_5d_pct,
                         sector_return_20d_pct=cached.sector_return_20d_pct,
+                        spy_return_5d_pct=spy_5d_val,
+                        spy_return_20d_pct=spy_20d_val,
                         relative_alpha_5d_pct=cached.relative_alpha_5d_pct,
                         relative_alpha_20d_pct=cached.relative_alpha_20d_pct,
+                        stock_vs_spy_alpha_20d_pct=stock_vs_spy_val,
+                        peer_dispersion_20d_pct=peer_disp_val,
                         sector_relative_performance=RelativePerformance(
                             cached.sector_relative_performance
                         ),
                         peer_relative_performance=RelativePerformance(
                             cached.peer_relative_performance
                         ),
+                        sector_regime_confirmation=SectorRegimeConfirmation(sec_regime_val),
+                        peer_reaction_dynamics=PeerReactionDynamics(peer_react_val),
                         peers=peers_data,
                         competitive_moat=CompetitiveMoat(cached.competitive_moat),
                         overall_sentiment=IndustrySentiment(cached.overall_sentiment),
@@ -275,23 +360,29 @@ class IndustryIntelligenceAgent:
                         headwinds=json.loads(cached.headwinds_json),
                         thesis=cached.thesis,
                     )
+
             except Exception as exc:
                 logger.warning(f"Error checking cache: {exc}")
 
-        # 1. Fetch Market Bars for Stock, Sector ETF, and Peers
+        # 1. Fetch Market Bars for Stock, Sector ETF, SPY, and Peers
         stock_bars = self.alpaca_gateway.get_stock_bars(sym, limit=30)
         sector_bars = self.alpaca_gateway.get_stock_bars(sector_etf, limit=30)
+        spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
 
         stock_5d = compute_period_return(stock_bars, 5)
         stock_20d = compute_period_return(stock_bars, 20)
         sector_5d = compute_period_return(sector_bars, 5)
         sector_20d = compute_period_return(sector_bars, 20)
+        spy_5d = compute_period_return(spy_bars, 5)
+        spy_20d = compute_period_return(spy_bars, 20)
 
         rel_alpha_5d = round(stock_5d - sector_5d, 2)
         rel_alpha_20d = round(stock_20d - sector_20d, 2)
+        stock_vs_spy_alpha_20d = round(stock_20d - spy_20d, 2)
 
         # Compute Peer Returns
         peer_performances: list[PeerPerformance] = []
+        peer_5d_list: list[Decimal] = []
         peer_20d_list: list[Decimal] = []
         for peer in peer_symbols:
             p_sym = peer.strip().upper()
@@ -306,6 +397,7 @@ class IndustryIntelligenceAgent:
                         price_change_20d_pct=p_20d,
                     )
                 )
+                peer_5d_list.append(p_5d)
                 peer_20d_list.append(p_20d)
             except Exception as exc:
                 logger.warning(f"Could not fetch peer bars for {p_sym}: {exc}")
@@ -316,12 +408,16 @@ class IndustryIntelligenceAgent:
                         price_change_20d_pct=Decimal("0.0"),
                     )
                 )
+                peer_5d_list.append(Decimal("0.0"))
                 peer_20d_list.append(Decimal("0.0"))
 
-        # 2. Deterministic Health Score & Performance Classifications
+        # 2. Deterministic Health Score, Dispersion, & Performance Classifications
         sector_health_score = compute_sector_health_score(sector_5d, sector_20d, peer_20d_list)
         sector_rel_perf = classify_relative_performance(rel_alpha_20d)
         peer_rel_perf = classify_peer_relative_performance(stock_20d, peer_20d_list)
+        peer_dispersion_20d = compute_peer_dispersion(peer_20d_list)
+        sector_regime = compute_sector_regime_confirmation(stock_20d, sector_20d, spy_20d)
+        peer_reaction = compute_peer_reaction_dynamics(stock_5d, peer_5d_list)
 
         # 3. Fetch Recent Industry News Context
         try:
@@ -351,8 +447,13 @@ class IndustryIntelligenceAgent:
             f"- Benchmark ETF: {sector_etf}\n"
             f"- Grounded Sector Health Score: {sector_health_score}/100\n"
             f"- Stock Return (5d / 20d): {stock_5d}% / {stock_20d}%\n"
-            f"- Benchmark Return (5d / 20d): {sector_5d}% / {sector_20d}%\n"
-            f"- Relative Alpha vs Benchmark (20d): {rel_alpha_20d}% ({sector_rel_perf.value})\n"
+            f"- Sector ETF Return (5d / 20d): {sector_5d}% / {sector_20d}%\n"
+            f"- Broad Market SPY Return (5d / 20d): {spy_5d}% / {spy_20d}%\n"
+            f"- Relative Alpha vs Sector (20d): {rel_alpha_20d}% ({sector_rel_perf.value})\n"
+            f"- Stock vs SPY Alpha (20d): {stock_vs_spy_alpha_20d}%\n"
+            f"- Sector Regime Confirmation: {sector_regime.value}\n"
+            f"- Peer Dispersion (20d std dev): {peer_dispersion_20d}%\n"
+            f"- Event Peer Dynamics (5d): {peer_reaction.value}\n"
             f"- Peer Comparison (20d): {peer_rel_perf.value} across peers: {peers_str}\n\n"
             f"RECENT INDUSTRY HEADLINES:\n{news_context}\n\n"
             "TASK:\n"
@@ -390,10 +491,16 @@ class IndustryIntelligenceAgent:
             stock_return_20d_pct=stock_20d,
             sector_return_5d_pct=sector_5d,
             sector_return_20d_pct=sector_20d,
+            spy_return_5d_pct=spy_5d,
+            spy_return_20d_pct=spy_20d,
             relative_alpha_5d_pct=rel_alpha_5d,
             relative_alpha_20d_pct=rel_alpha_20d,
+            stock_vs_spy_alpha_20d_pct=stock_vs_spy_alpha_20d,
+            peer_dispersion_20d_pct=peer_dispersion_20d,
             sector_relative_performance=sector_rel_perf,
             peer_relative_performance=peer_rel_perf,
+            sector_regime_confirmation=sector_regime,
+            peer_reaction_dynamics=peer_reaction,
             peers=peer_performances,
             competitive_moat=analysis_output.competitive_moat,
             overall_sentiment=analysis_output.overall_sentiment,
@@ -417,10 +524,16 @@ class IndustryIntelligenceAgent:
                     stock_return_20d_pct=stock_20d,
                     sector_return_5d_pct=sector_5d,
                     sector_return_20d_pct=sector_20d,
+                    spy_return_5d_pct=spy_5d,
+                    spy_return_20d_pct=spy_20d,
                     relative_alpha_5d_pct=rel_alpha_5d,
                     relative_alpha_20d_pct=rel_alpha_20d,
+                    stock_vs_spy_alpha_20d_pct=stock_vs_spy_alpha_20d,
+                    peer_dispersion_20d_pct=peer_dispersion_20d,
                     sector_relative_performance=sector_rel_perf.value,
                     peer_relative_performance=peer_rel_perf.value,
+                    sector_regime_confirmation=sector_regime.value,
+                    peer_reaction_dynamics=peer_reaction.value,
                     peers_json=json.dumps([p.model_dump(mode="json") for p in peer_performances]),
                     sector_health_score=sector_health_score,
                     competitive_moat=analysis_output.competitive_moat.value,
