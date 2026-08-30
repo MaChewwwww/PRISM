@@ -10,35 +10,22 @@ import {
   Newspaper,
   Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const navigation = [
-  {
-    label: "Understand",
-    items: [
-      { label: "Overview", icon: LayoutDashboard, href: "/" },
-      { label: "Decision stories", icon: Network, href: "/stories" },
-    ],
-  },
-  {
-    label: "Compare",
-    items: [
-      { label: "Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
-      { label: "Alternatives", icon: GitBranch, href: "/alternatives" },
-    ],
-  },
-  {
-    label: "Inspect",
-    items: [
-      { label: "News & catalysts", icon: Newspaper, href: "/news" },
-      { label: "Market Tracker", icon: LineChart, href: "/market-tracker" },
-      { label: "Agents & tools", icon: Sparkles, href: "/agents" },
-      { label: "Rules", icon: BookOpenCheck, href: "/rules" },
-    ],
-  },
+  { label: "Overview", icon: LayoutDashboard, href: "/" },
+  { label: "Decision stories", icon: Network, href: "/stories" },
+  { label: "Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
+  { label: "Shadow Portfolio", icon: GitBranch, href: "/alternatives" },
+  { label: "News & catalysts", icon: Newspaper, href: "/news" },
+  { label: "Market Tracker", icon: LineChart, href: "/market-tracker" },
+  { label: "Agents & tools", icon: Sparkles, href: "/agents" },
+  { label: "Rules", icon: BookOpenCheck, href: "/rules" },
 ];
 
 export type PrimaryNavProps = {
@@ -55,9 +42,19 @@ export type PrimaryNavProps = {
  */
 export function PrimaryNav({ open, onNavigate }: PrimaryNavProps) {
   const pathname = usePathname();
+  const [expanded, setExpanded] = useState(false);
 
   function isCurrent(href: string) {
     return href === "/" ? pathname === href : pathname.startsWith(href);
+  }
+
+  function collapse() {
+    setExpanded(false);
+    // Drop focus so a link that kept focus after a click cannot re-expand the rail.
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      const active = document.activeElement;
+      if (active.closest(".rail")) active.blur();
+    }
   }
 
   return (
@@ -65,30 +62,38 @@ export function PrimaryNav({ open, onNavigate }: PrimaryNavProps) {
       id="primary-navigation"
       className="rail"
       data-open={open || undefined}
+      data-expanded={expanded || undefined}
       aria-label="Primary navigation"
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={collapse}
+      onFocusCapture={() => setExpanded(true)}
+      onBlurCapture={(event) => {
+        // Collapse only when focus leaves the rail entirely.
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setExpanded(false);
+        }
+      }}
     >
-      <Link className="wordmark" href="/" aria-label="PRISM decision journal home">
-        <span aria-hidden="true">PR</span>
+      <Link className="wordmark" href="/" aria-label="PRISM home">
+        <span aria-hidden="true">
+          <Image src="/logo.png" alt="" width={32} height={32} priority />
+        </span>
         <strong>PRISM</strong>
-        <small>Decision journal</small>
       </Link>
       <nav>
-        {navigation.map((group) => (
-          <div className="nav-group" key={group.label}>
-            <p>{group.label}</p>
-            {group.items.map(({ label, icon: Icon, href }) => (
-              <Link
-                key={href}
-                href={href}
-                aria-current={isCurrent(href) ? "page" : undefined}
-                onClick={onNavigate}
-              >
-                <Icon aria-hidden="true" />
-                <span className="text-[12px]">{label}</span>
-              </Link>
-            ))}
-          </div>
-        ))}
+        <div className="nav-group">
+          {navigation.map(({ label, icon: Icon, href }) => (
+            <Link
+              key={href}
+              href={href}
+              aria-current={isCurrent(href) ? "page" : undefined}
+              onClick={onNavigate}
+            >
+              <Icon aria-hidden="true" />
+              <span className="nav-label text-[13px]">{label}</span>
+            </Link>
+          ))}
+        </div>
       </nav>
       <div className="rail-footer">
         <SignOutButton />
