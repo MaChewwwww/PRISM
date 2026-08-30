@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/product/workspace-ui";
+import { EmptyState } from "@/components/workspace/workspace-ui";
 
 export default function WorkspaceError({
   reset,

@@ -1,4 +1,4 @@
-import { OverviewDashboard } from "@/components/product/overview-dashboard";
+import { OverviewDashboard } from "@/features/overview/overview-dashboard";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { loadDashboard } from "@/features/story/presentation-api";
 

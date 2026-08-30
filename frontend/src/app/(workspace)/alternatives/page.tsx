@@ -1,8 +1,8 @@
 import { ArrowUpRight, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
-import { DemoDataNotice, PageHeader, StateBadge } from "@/components/product/workspace-ui";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
+import { DemoDataNotice, PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDate } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listAlternativeSessions } from "@/features/story/presentation-api";

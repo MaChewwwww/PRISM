@@ -1,11 +1,11 @@
-import { DateRangeControl } from "@/components/product/date-range-control";
-import { HoldingsTable } from "@/components/product/holdings-table";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
+import { HoldingsTable } from "@/features/portfolio/holdings-table";
 import {
   DemoDataNotice,
   MetricStrip,
   PageHeader,
   Section,
-} from "@/components/product/workspace-ui";
+} from "@/components/workspace/workspace-ui";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { loadPortfolio } from "@/features/story/presentation-api";
 

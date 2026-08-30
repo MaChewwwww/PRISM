@@ -2,8 +2,9 @@ import { ArrowLeft, Check, GitCompareArrows, MessageSquareText, ShieldCheck } fr
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { StoryCatalystChart } from "@/components/product/story-catalyst-chart";
-import { StateBadge } from "@/components/product/workspace-ui";
+import { AgentPerspectiveChain } from "@/features/story/agent-perspective-chain";
+import { StoryCatalystChart } from "@/features/story/story-catalyst-chart";
+import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDate, formatDateTime, formatTokens } from "@/features/story/formatters";
 import { getStory } from "@/features/story/presentation-api";
 
@@ -134,33 +135,36 @@ export default async function StoryDetailPage({
 
         {/* PART I: WHAT HAPPENED (continued) */}
         <div className="space-y-6">
-          <Section
-            id="chapter-tree"
-            title="02 · Autonomous Agent Perspective Chain"
-            description="Seven specialist perspectives feed Trading Decision, then Risk Management and the deterministic Rules Engine."
-          >
-            <ol className="decision-tree">
-              {story.decisionTree.map((node, index) => (
-                <li
-                  key={node.id}
-                  className="prism-glass-card p-4 my-2 transition-all hover:border-[#547D83]/40"
+          <section aria-labelledby="chapter-tree" className="space-y-5">
+            <div className="flex items-start justify-between gap-6 border-b border-white/8 pb-4">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-[#547D83]">
+                02 <span className="text-[#64748B]">&rarr;</span> 03
+              </span>
+              <div className="text-right">
+                <h2
+                  id="chapter-tree"
+                  className="text-lg font-semibold tracking-tight text-[#F8FAFC]"
                 >
-                  <span className="tree-line" aria-hidden="true" />
-                  <div className="tree-node-index font-mono">
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#547D83]">
-                      {node.actor}
-                    </p>
-                    <h3 className="text-base font-medium text-white">{node.label}</h3>
-                    <span className="text-sm text-slate-300">{node.detail}</span>
-                  </div>
-                  <StateBadge state={node.status} />
-                </li>
-              ))}
-            </ol>
-          </Section>
+                  Autonomous Agent Perspective Chain &rarr; Synthesis
+                </h2>
+                <p className="mt-1 text-[12px] text-[#64748B]">
+                  Seven specialists, one vetted candidate action.
+                </p>
+              </div>
+            </div>
+
+            <AgentPerspectiveChain
+              storyId={story.id}
+              synthesis={{
+                action: story.illustrativeOutcome.action,
+                structure: story.illustrativeOutcome.action,
+                notional: story.chosenPathImpact,
+                consensus: "3 / 7 aligned",
+                authority: "Authority: proposal only",
+                note: story.illustrativeOutcome.rationale,
+              }}
+            />
+          </section>
 
           <Section
             id="chapter-transcript"

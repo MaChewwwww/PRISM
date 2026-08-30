@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
 import { rangeForPreset } from "@/features/story/date-range";
 
 const replaceMock = vi.fn();

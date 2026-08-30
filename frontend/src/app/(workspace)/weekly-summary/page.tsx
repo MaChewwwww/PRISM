@@ -6,7 +6,7 @@ import {
   MetricStrip,
   PageHeader,
   Section,
-} from "@/components/product/workspace-ui";
+} from "@/components/workspace/workspace-ui";
 import { getWeeklySummary } from "@/features/story/presentation-api";
 
 import { WeeklySummaryClient } from "./weekly-summary-client";

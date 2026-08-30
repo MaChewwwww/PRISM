@@ -1,6 +1,6 @@
-import { DateRangeControl } from "@/components/product/date-range-control";
-import { PageHeader } from "@/components/product/workspace-ui";
-import { MarketTrackerShell } from "@/components/product/market-tracker-shell";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
+import { PageHeader } from "@/components/workspace/workspace-ui";
+import { MarketTrackerShell } from "@/features/market/market-tracker-shell";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 
 export default async function MarketTrackerPage({

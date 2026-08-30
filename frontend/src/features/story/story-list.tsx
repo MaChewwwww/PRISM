@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowUpRight, CircleDot, Diamond, type LucideIcon } from
 import Link from "next/link";
 import { useState } from "react";
 
-import { StateBadge } from "@/components/product/workspace-ui";
+import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDate } from "@/features/story/formatters";
 import type { StorySummary } from "@/features/story/presentation-api";
 

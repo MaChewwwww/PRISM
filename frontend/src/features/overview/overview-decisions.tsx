@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import type { OverviewDecision } from "@/features/story/overview-adapter";
+import type { OverviewDecision } from "@/features/overview/overview-adapter";
 
 /**
  * Agent perspective chips mirror the Decision Stories feed (story-list.tsx) so

@@ -6,7 +6,7 @@ import type {
   OverviewExposure,
   OverviewOutcome,
   OverviewPoint,
-} from "@/features/story/overview-adapter";
+} from "@/features/overview/overview-adapter";
 
 type Props = {
   points: OverviewPoint[];

@@ -2,14 +2,14 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
 import {
   DemoDataNotice,
   MetricStrip,
   PageHeader,
   Section,
   StateBadge,
-} from "@/components/product/workspace-ui";
+} from "@/components/workspace/workspace-ui";
 import { formatDateTime, formatTokens } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { getAgent } from "@/features/story/presentation-api";
