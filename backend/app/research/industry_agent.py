@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import UTC, datetime
@@ -364,10 +365,19 @@ class IndustryIntelligenceAgent:
             except Exception as exc:
                 logger.warning(f"Error checking cache: {exc}")
 
-        # 1. Fetch Market Bars for Stock, Sector ETF, SPY, and Peers
-        stock_bars = self.alpaca_gateway.get_stock_bars(sym, limit=30)
-        sector_bars = self.alpaca_gateway.get_stock_bars(sector_etf, limit=30)
-        spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
+        # 1. Fetch Market Bars for Stock, Sector ETF, SPY, and Peers Concurrently in Parallel
+        async def _fetch_bars(ticker: str):
+            try:
+                return await asyncio.to_thread(self.alpaca_gateway.get_stock_bars, ticker, limit=30)
+            except Exception as exc:
+                logger.warning(f"Could not fetch bars for {ticker}: {exc}")
+                return []
+
+        stock_bars, sector_bars, spy_bars = await asyncio.gather(
+            _fetch_bars(sym),
+            _fetch_bars(sector_etf),
+            _fetch_bars("SPY"),
+        )
 
         stock_5d = compute_period_return(stock_bars, 5)
         stock_20d = compute_period_return(stock_bars, 20)
@@ -380,36 +390,41 @@ class IndustryIntelligenceAgent:
         rel_alpha_20d = round(stock_20d - sector_20d, 2)
         stock_vs_spy_alpha_20d = round(stock_20d - spy_20d, 2)
 
-        # Compute Peer Returns
-        peer_performances: list[PeerPerformance] = []
-        peer_5d_list: list[Decimal] = []
-        peer_20d_list: list[Decimal] = []
-        for peer in peer_symbols:
+        # Compute Peer Returns concurrently
+        async def _fetch_peer_perf(peer: str):
             p_sym = peer.strip().upper()
             try:
-                p_bars = self.alpaca_gateway.get_stock_bars(p_sym, limit=30)
+                p_bars = await asyncio.to_thread(
+                    self.alpaca_gateway.get_stock_bars, p_sym, limit=30
+                )
                 p_5d = compute_period_return(p_bars, 5)
                 p_20d = compute_period_return(p_bars, 20)
-                peer_performances.append(
+                return (
                     PeerPerformance(
                         symbol=p_sym,
                         price_change_5d_pct=p_5d,
                         price_change_20d_pct=p_20d,
-                    )
+                    ),
+                    p_5d,
+                    p_20d,
                 )
-                peer_5d_list.append(p_5d)
-                peer_20d_list.append(p_20d)
             except Exception as exc:
                 logger.warning(f"Could not fetch peer bars for {p_sym}: {exc}")
-                peer_performances.append(
+                return (
                     PeerPerformance(
                         symbol=p_sym,
                         price_change_5d_pct=Decimal("0.0"),
                         price_change_20d_pct=Decimal("0.0"),
-                    )
+                    ),
+                    Decimal("0.0"),
+                    Decimal("0.0"),
                 )
-                peer_5d_list.append(Decimal("0.0"))
-                peer_20d_list.append(Decimal("0.0"))
+
+        peer_results = await asyncio.gather(*[_fetch_peer_perf(peer) for peer in peer_symbols])
+
+        peer_performances: list[PeerPerformance] = [res[0] for res in peer_results]
+        peer_5d_list: list[Decimal] = [res[1] for res in peer_results]
+        peer_20d_list: list[Decimal] = [res[2] for res in peer_results]
 
         # 2. Deterministic Health Score, Dispersion, & Performance Classifications
         sector_health_score = compute_sector_health_score(sector_5d, sector_20d, peer_20d_list)

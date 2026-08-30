@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
@@ -309,38 +310,46 @@ class MacroeconomicAgent:
             except Exception as exc:
                 logger.warning(f"Error checking macro cache: {exc}")
 
-        # 1. Fetch Market Bars for Macro Asset Basket
-        asset_performances: list[MacroAssetPerformance] = []
-        asset_returns_map: dict[str, tuple[Decimal, Decimal]] = {}
-
-        for ticker, name in MACRO_BENCHMARK_REGISTRY:
+        # 1. Fetch Market Bars for Macro Asset Basket Concurrently in Parallel
+        async def _fetch_single_macro_bars(ticker: str, name: str):
             try:
-                bars = self.alpaca_gateway.get_stock_bars(ticker, limit=30)
+                bars = await asyncio.to_thread(self.alpaca_gateway.get_stock_bars, ticker, limit=30)
                 r_5d = compute_period_return(bars, 5)
                 r_20d = compute_period_return(bars, 20)
-                asset_performances.append(
-                    MacroAssetPerformance(
-                        asset_symbol=ticker,
-                        asset_name=name,
-                        price_change_5d_pct=r_5d,
-                        price_change_20d_pct=r_20d,
-                    )
+                perf = MacroAssetPerformance(
+                    asset_symbol=ticker,
+                    asset_name=name,
+                    price_change_5d_pct=r_5d,
+                    price_change_20d_pct=r_20d,
                 )
-                asset_returns_map[ticker] = (r_5d, r_20d)
+                return ticker, bars, perf, (r_5d, r_20d)
             except Exception as exc:
                 logger.warning(f"Could not fetch macro bars for {ticker}: {exc}")
-                asset_performances.append(
-                    MacroAssetPerformance(
-                        asset_symbol=ticker,
-                        asset_name=name,
-                        price_change_5d_pct=Decimal("0.0"),
-                        price_change_20d_pct=Decimal("0.0"),
-                    )
+                perf = MacroAssetPerformance(
+                    asset_symbol=ticker,
+                    asset_name=name,
+                    price_change_5d_pct=Decimal("0.0"),
+                    price_change_20d_pct=Decimal("0.0"),
                 )
-                asset_returns_map[ticker] = (Decimal("0.0"), Decimal("0.0"))
+                return ticker, [], perf, (Decimal("0.0"), Decimal("0.0"))
+
+        results = await asyncio.gather(
+            *[_fetch_single_macro_bars(t, n) for t, n in MACRO_BENCHMARK_REGISTRY]
+        )
+
+        asset_performances: list[MacroAssetPerformance] = []
+        asset_returns_map: dict[str, tuple[Decimal, Decimal]] = {}
+        bars_by_ticker: dict[str, list[dict[str, Any]]] = {}
+
+        for ticker, bars, perf, returns in results:
+            asset_performances.append(perf)
+            asset_returns_map[ticker] = returns
+            bars_by_ticker[ticker] = bars
 
         # 2. Compute Volatility Stress, Direction, and Climate Score
-        spy_bars = self.alpaca_gateway.get_stock_bars("SPY", limit=30)
+        spy_bars = bars_by_ticker.get("SPY", [])
+        if not spy_bars:
+            spy_bars = await asyncio.to_thread(self.alpaca_gateway.get_stock_bars, "SPY", limit=30)
         stress_level, stress_direction, vol_pct, vol_delta = compute_market_stress_level(spy_bars)
 
         _, spy_20d = asset_returns_map.get("SPY", (Decimal("0.0"), Decimal("0.0")))

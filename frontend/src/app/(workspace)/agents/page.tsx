@@ -13,6 +13,7 @@ import {
 import { formatTokens } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { loadAgentObservability } from "@/features/story/presentation-api";
+import { TryAgentButton } from "@/features/agents/agent-playground-modal";
 
 export default async function AgentsPage({
   searchParams,
@@ -41,7 +42,10 @@ export default async function AgentsPage({
         eyebrow="Agents and tools"
         title="Know what contributed to every decision"
         description="Inspect responsibilities, run cadence, models, prompt versions, token usage, read-only tools, and planned MCP surfaces."
-      />
+      >
+        <TryAgentButton label="Try Agent" />
+      </PageHeader>
+
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <MetricStrip

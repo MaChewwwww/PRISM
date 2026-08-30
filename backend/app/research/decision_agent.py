@@ -19,7 +19,6 @@ from app.contracts.models import (
     NewsEventCategory,
     OptionStructure,
     QuantitativeAnalysisReport,
-    ResearchReport,
     SpecialistScores,
     TradeDecisionReport,
     TradeDirection,
@@ -279,9 +278,14 @@ class TradingDecisionAgent:
         macro_agent = MacroeconomicAgent(self.llm_gateway, self.alpaca_gateway)
         news_agent = NewsIntelligenceAgent(self.llm_gateway)
 
-        news_articles = self.alpaca_gateway.get_news(symbol=sym, limit=5)
+        news_articles = self.alpaca_gateway.get_news(symbol=sym, limit=3)
 
-        # Coroutines for async specialist agents
+        # Top catalyst metadata for concurrent reaction analysis
+        top_art = news_articles[0] if news_articles else {}
+        catalyst = top_art.get("headline") or f"Market movement in {sym}"
+        art_id = top_art.get("id")
+
+        # Coroutines for all async specialist agents running in parallel
         news_tasks = [
             news_agent.analyze_article(
                 article=art,
@@ -289,11 +293,11 @@ class TradingDecisionAgent:
                 trace_id=trace_id,
                 db_session=db_session,
             )
-            for art in news_articles
+            for art in news_articles[:2]
         ]
         news_coro = asyncio.gather(*news_tasks) if news_tasks else asyncio.sleep(0, result=[])
 
-        news_report, industry_report, macro_report = await asyncio.gather(
+        news_report, industry_report, macro_report, reaction_report = await asyncio.gather(
             news_coro,
             industry_agent.analyze_industry(
                 symbol=sym,
@@ -305,6 +309,17 @@ class TradingDecisionAgent:
                 trace_id=trace_id,
                 db_session=db_session,
             ),
+            reaction_agent.analyze_reaction(
+                symbol=sym,
+                bars=bars,
+                catalyst_summary=catalyst,
+                expected_reaction_pct=Decimal("0.0"),
+                trace_id=trace_id,
+                db_session=db_session,
+                article_id=art_id,
+                event_age_seconds=0,
+                event_category=NewsEventCategory.OTHER,
+            ),
         )
 
         # Synchronous deterministic agents
@@ -313,29 +328,6 @@ class TradingDecisionAgent:
         )
         fundamental_report: FundamentalAnalysisReport = compute_fundamental_analysis(
             symbol=sym, latest_close=current_price, trace_id=trace_id
-        )
-
-        # Reaction agent
-        catalyst = news_report[0].headline if news_report else f"Market movement in {sym}"
-        exp_move = (
-            news_report[0].expected_reaction_pct
-            if news_report and news_report[0].expected_reaction_pct
-            else Decimal("0.0")
-        )
-        evt_cat = news_report[0].event_category if news_report else NewsEventCategory.OTHER
-        evt_age = news_report[0].event_age_seconds if news_report else 0
-        art_id = news_report[0].article_id if news_report else None
-
-        reaction_report: ResearchReport = await reaction_agent.analyze_reaction(
-            symbol=sym,
-            bars=bars,
-            catalyst_summary=catalyst,
-            expected_reaction_pct=exp_move,
-            trace_id=trace_id,
-            db_session=db_session,
-            article_id=art_id,
-            event_age_seconds=evt_age,
-            event_category=evt_cat,
         )
 
         # 3. Deterministic Composite Scoring & Alignment

@@ -13,6 +13,20 @@ import {
 import { formatDateTime, formatTokens } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { getAgent } from "@/features/story/presentation-api";
+import { TryAgentButton, type AgentAction } from "@/features/agents/agent-playground-modal";
+
+function mapAgentIdToAction(id: string): AgentAction {
+  const lower = id.toLowerCase();
+  if (lower.includes("decision") || lower.includes("trading") || lower.includes("cio"))
+    return "decision";
+  if (lower.includes("fundamental")) return "fundamental";
+  if (lower.includes("quant")) return "quant";
+  if (lower.includes("industry")) return "industry";
+  if (lower.includes("macro")) return "macro";
+  if (lower.includes("reaction")) return "reaction";
+  if (lower.includes("news")) return "news";
+  return "decision";
+}
 
 export default async function AgentDetailPage({
   params,
@@ -41,8 +55,15 @@ export default async function AgentDetailPage({
         <ArrowLeft aria-hidden="true" /> All agents and tools
       </Link>
       <PageHeader eyebrow="Agent detail" title={agent.name} description={agent.role}>
-        <StateBadge state="decision support only" />
+        <div className="flex items-center gap-3">
+          <StateBadge state="decision support only" />
+          <TryAgentButton
+            agentId={mapAgentIdToAction(agentId)}
+            label={`Try ${agent.name.split(" ")[0]}`}
+          />
+        </div>
       </PageHeader>
+
       <DemoDataNotice />
       <DateRangeControl range={range} />
       <MetricStrip

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from alpaca.data.enums import DataFeed
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.historical.stock import StockHistoricalDataClient
@@ -51,12 +52,13 @@ class AlpacaPyGateway:
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> list[dict[str, Any]]:
-        """Retrieve news articles from Alpaca News API for a ticker symbol, with retries."""
+        """Retrieve recent market news articles for a symbol."""
         request_params = NewsRequest(
             symbols=symbol,
             limit=limit,
             start=start,
             end=end,
+            include_content=False,
         )
 
         retries = 3
@@ -64,26 +66,36 @@ class AlpacaPyGateway:
         for attempt in range(retries):
             try:
                 news_response = self.news.get_news(request_params)
-                # Flatten the data dict mapping symbols to lists of News articles
                 articles: list[Any] = []
                 data_map = getattr(news_response, "data", news_response)
                 if isinstance(data_map, dict):
-                    for symbol_news in data_map.values():
-                        if isinstance(symbol_news, list):
-                            articles.extend(symbol_news)
+                    if "news" in data_map and isinstance(data_map["news"], list):
+                        articles.extend(data_map["news"])
+                    else:
+                        for symbol_news in data_map.values():
+                            if isinstance(symbol_news, list):
+                                articles.extend(symbol_news)
+                elif hasattr(news_response, "news") and isinstance(news_response.news, list):
+                    articles.extend(news_response.news)
+                elif hasattr(news_response, "__iter__"):
+                    articles.extend(news_response)
+
                 return [
                     {
                         "id": str(article.id),
-                        "headline": article.headline,
-                        "source": article.source,
-                        "url": article.url,
-                        "summary": article.summary or "",
-                        "content": article.content or "",
-                        "symbols": article.symbols,
+                        "headline": str(article.headline),
+                        "source": getattr(article, "source", None),
+                        "url": getattr(article, "url", None),
+                        "summary": str(getattr(article, "summary", "") or ""),
+                        "content": str(getattr(article, "content", "") or ""),
+                        "symbols": getattr(article, "symbols", [symbol]),
                         "created_at": article.created_at,
+                        "updated_at": getattr(article, "updated_at", None),
+                        "author": getattr(article, "author", None),
                     }
                     for article in articles
                 ]
+
             except Exception as exc:
                 logger.warning(
                     "Alpaca news fetch failed for %s (attempt %d/%d)",
@@ -104,14 +116,20 @@ class AlpacaPyGateway:
         start: datetime | None = None,
         end: datetime | None = None,
         limit: int | None = None,
+        feed: DataFeed | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve historical stock bars (OHLCV) from Alpaca Market API for a symbol."""
+        if start is None:
+            days = max(365, (limit or 250) * 2)
+            start = datetime.now(UTC) - timedelta(days=days)
+
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
             timeframe=timeframe,
             start=start,
             end=end,
             limit=limit,
+            feed=feed or DataFeed.IEX,
         )
 
         retries = 3
