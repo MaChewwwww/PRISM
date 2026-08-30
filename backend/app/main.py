@@ -19,7 +19,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db(settings.database_url)
     stop_event = asyncio.Event()
     worker_task: asyncio.Task[None] | None = None
-    if settings.autonomous_trading_enabled:
+    # Settings rejects this flag in staging. Keep the environment condition as
+    # a second, local guard so a staging process can never instantiate the
+    # order-capable worker if configuration validation changes in the future.
+    if settings.autonomous_trading_enabled and settings.environment != "staging":
         worker_task = asyncio.create_task(AutonomousWorker(settings).run_forever(stop_event))
     yield
     if worker_task is not None:
