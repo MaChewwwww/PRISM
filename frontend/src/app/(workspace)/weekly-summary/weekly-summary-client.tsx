@@ -1,6 +1,7 @@
-import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 
-import { DisabledAction, StateBadge } from "@/components/workspace/workspace-ui";
+import { StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD } from "@/components/workspace/section-heading";
 import type { WeeklySummary } from "@/features/story/presentation-api";
 
@@ -18,30 +19,15 @@ export function WeeklySummaryClient({ summary }: { summary: WeeklySummary }) {
 
   return (
     <div className={`${SECTION_CARD} p-5 sm:p-6`}>
-      {/* Mode header */}
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/8 pb-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">
-            Manual Prescriptive mode
-          </p>
-          <h3 className="mt-1 text-[15px] font-semibold text-[#F8FAFC]">
-            Recommendations awaiting operator review
-          </h3>
-          <p className="mt-1 text-[13px] text-[#94A3B8]">
-            Automatic switching is deferred. Nothing on this screen changes the active profile.
-          </p>
-        </div>
-        <StateBadge state="manual review" />
-      </div>
-
-      {/* Deterministic boundary note */}
-      <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#547D83]/30 bg-[#547D83]/10 p-4">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#B2D8DC]" aria-hidden="true" />
-        <p className="text-[13px] leading-relaxed text-[#CBD5E1]">
-          <strong className="font-semibold text-[#F8FAFC]">Deterministic boundary:</strong> only
-          approved AI Profile fields may be proposed, and each value must remain inside the
-          BA-authorized range.
+      {/* Mode row (compact — the section heading already names this block) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 pb-4">
+        <p className="text-[13px] text-[#94A3B8]">
+          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">
+            Manual Prescriptive mode.
+          </span>{" "}
+          Automatic switching is deferred; nothing here changes the active profile.
         </p>
+        <StateBadge state="manual review" />
       </div>
 
       {/* Recommendation cards */}
@@ -114,25 +100,20 @@ export function WeeklySummaryClient({ summary }: { summary: WeeklySummary }) {
               <p className="mt-3 text-[13px] leading-relaxed text-[#94A3B8]">
                 {suggestion.rationale}
               </p>
+
+              {/* Carry the recommendation into the Rules profile editor for review + activation */}
+              <Link
+                href={`/rules?apply=${encodeURIComponent(suggestion.parameterId)}&value=${encodeURIComponent(suggestion.suggestedValue)}#configure-profile`}
+                className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#547D83]/40 bg-[#547D83]/20 px-3.5 py-2 text-[12px] font-semibold text-[#B2D8DC] outline-none transition-colors hover:bg-[#547D83]/30 focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                Apply in profile editor
+              </Link>
             </article>
           );
         })}
       </div>
 
-      {/* Manual activation boundary */}
-      <section className="mt-5 border-t border-white/8 pt-5" aria-labelledby="manual-review-title">
-        <h3 id="manual-review-title" className="text-[15px] font-semibold text-[#F8FAFC]">
-          Manual activation boundary
-        </h3>
-        <p className="mt-1 mb-3 text-[13px] leading-relaxed text-[#94A3B8]">
-          The skeleton exposes review evidence only. It does not persist, approve, schedule, or
-          activate a profile.
-        </p>
-        <DisabledAction
-          label="Validate and activate profile"
-          reason="Profile persistence, deterministic validation, and approval APIs are outside this aligned-skeleton pass."
-        />
-      </section>
     </div>
   );
 }
