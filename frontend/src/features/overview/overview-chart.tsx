@@ -10,7 +10,7 @@ import {
   formatSignedPercent,
   percentChange,
   type OverviewPoint,
-} from "@/features/story/overview-adapter";
+} from "@/features/overview/overview-adapter";
 
 import type { OverviewChartProps } from "./overview-types";
 

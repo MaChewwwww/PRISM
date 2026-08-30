@@ -2,11 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { MarketTrackerShell } from "@/components/product/market-tracker-shell";
+import { MarketTrackerShell } from "@/features/market/market-tracker-shell";
 import {
   isVerifiedTrade,
   marketActivityKinds,
-} from "@/features/market-tracker/market-tracker-types";
+} from "@/features/market/market-tracker-types";
 
 const range = {
   preset: "1m",

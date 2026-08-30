@@ -1,15 +1,15 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
-import { StoryBarChart } from "@/components/product/story-charts";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
+import { StoryBarChart } from "@/features/story/story-charts";
 import {
   DemoDataNotice,
   MetricStrip,
   PageHeader,
   Section,
   StateBadge,
-} from "@/components/product/workspace-ui";
+} from "@/components/workspace/workspace-ui";
 import { formatTokens } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { loadAgentObservability } from "@/features/story/presentation-api";

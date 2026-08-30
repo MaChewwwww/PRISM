@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { rangeForPreset, rangeQuery, type DateRange } from "@/features/story/date-range";
-import { adaptOverview, type OverviewRange } from "@/features/story/overview-adapter";
+import { adaptOverview, type OverviewRange } from "@/features/overview/overview-adapter";
 import type { components } from "@/types/api.generated";
 
 import { OverviewChart } from "./overview-chart";

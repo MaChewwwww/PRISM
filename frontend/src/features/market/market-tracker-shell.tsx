@@ -19,9 +19,9 @@ import {
   marketTimeframes,
   type MarketActivityKind,
   type MarketTimeframe,
-} from "@/features/market-tracker/market-tracker-types";
+} from "@/features/market/market-tracker-types";
 
-import { ProvenanceLabel, Section } from "./workspace-ui";
+import { ProvenanceLabel, Section } from "@/components/workspace/workspace-ui";
 import "./market-tracker.css";
 
 const allActivityKinds = marketActivityKinds.map(({ id }) => id) as MarketActivityKind[];

@@ -4,7 +4,7 @@ import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { PrimaryNav } from "@/components/product/primary-nav";
+import { PrimaryNav } from "@/components/layout/primary-nav";
 
 /**
  * There is intentionally no `<header className="topbar">` in this shell.

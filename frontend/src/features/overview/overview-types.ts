@@ -4,7 +4,7 @@ import type {
   OverviewOutcome,
   OverviewPoint,
   OverviewRange,
-} from "@/features/story/overview-adapter";
+} from "@/features/overview/overview-adapter";
 
 export type SelectedPoint = {
   point: OverviewPoint;

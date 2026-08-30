@@ -1,13 +1,13 @@
 import { ArrowRight, Filter, Newspaper } from "lucide-react";
 import Link from "next/link";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
+import { DateRangeControl } from "@/components/workspace/date-range-control";
 import {
   DemoDataNotice,
   PageHeader,
   ProvenanceLabel,
   StateBadge,
-} from "@/components/product/workspace-ui";
+} from "@/components/workspace/workspace-ui";
 import { formatDateTime } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listNews } from "@/features/story/presentation-api";

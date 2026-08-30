@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/product/workspace-ui";
+import { PageHeader } from "@/components/workspace/workspace-ui";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listStories } from "@/features/story/presentation-api";
 import { StoryList } from "@/features/story/story-list";

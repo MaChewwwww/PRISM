@@ -13,7 +13,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { SignOutButton } from "@/components/product/sign-out-button";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const navigation = [
   {

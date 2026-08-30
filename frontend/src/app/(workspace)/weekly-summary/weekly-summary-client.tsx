@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 
-import { DisabledAction, StateBadge } from "@/components/product/workspace-ui";
+import { DisabledAction, StateBadge } from "@/components/workspace/workspace-ui";
 import type { WeeklySummary } from "@/features/story/presentation-api";
 
 export function WeeklySummaryClient({ summary }: { summary: WeeklySummary }) {

@@ -2,9 +2,9 @@ import { ArrowLeft, Check, GitCompareArrows, MessageSquareText, ShieldCheck } fr
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AgentPerspectiveChain } from "@/components/product/agent-perspective-chain";
-import { StoryCatalystChart } from "@/components/product/story-catalyst-chart";
-import { StateBadge } from "@/components/product/workspace-ui";
+import { AgentPerspectiveChain } from "@/features/story/agent-perspective-chain";
+import { StoryCatalystChart } from "@/features/story/story-catalyst-chart";
+import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDate, formatDateTime, formatTokens } from "@/features/story/formatters";
 import { getStory } from "@/features/story/presentation-api";
 
