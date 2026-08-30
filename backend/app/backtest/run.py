@@ -7,13 +7,21 @@ import asyncio
 import hashlib
 import json
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
+from app.autonomous.audit import build_evaluation_root
+from app.backtest.historical_gateway import HistoricalResearchGateway
 from app.backtest.models import BacktestAuditEventModel, BacktestRunModel
 from app.core.config import get_settings
 from app.core.database import close_database, get_db_session, init_db
+from app.core.llm_gateway import LLMGateway
+from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.decision_agent import TradingDecisionAgent
+from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
+from app.shadowfund.service import ShadowFundService
 
 START = "2026-08-24"
 END = "2026-08-28"
@@ -63,29 +71,70 @@ async def run() -> int:
     (output / "notes.md").write_text(
         f"# PRISM staging historical simulation\n\n{DISCLOSURE}\n", encoding="utf-8"
     )
-    summary = {
+    summary: dict[str, Any] = {
         **manifest,
-        "outcome": "DATA_UNAVAILABLE",
-        "reason": "Historical data acquisition is required before a virtual trade can be recorded.",
+        "outcome": "RUNNING",
         "disclosure": DISCLOSURE,
     }
-    (output / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     init_db(settings.database_url)
     async for session in get_db_session():
+        try:
+            reports, warnings = await _replay_agents(settings, output)
+        except Exception as exc:
+            reports, warnings = [], [f"AI replay unavailable: {type(exc).__name__}"]
+        summary.update(
+            {
+                "outcome": "COMPLETED" if reports else "DATA_UNAVAILABLE",
+                "agent_reports": len(reports),
+                "warnings": warnings,
+                "reason": (
+                    "Agent replay completed. Virtual options remain NO_TRADE when historical "
+                    "contracts or quotes are unavailable."
+                    if reports
+                    else "No point-in-time AI research report could be completed."
+                ),
+            }
+        )
+        (output / "summary.json").write_text(
+            json.dumps(summary, indent=2, default=str), encoding="utf-8"
+        )
+        if reports:
+            for report in reports:
+                root = build_evaluation_root(
+                    trace_id=report["trace_id"],
+                    outcome="NO_TRADE",
+                    evidence={
+                        "backtest_report_digest": report["digest"],
+                        "reason": report["reason"],
+                    },
+                )
+                await ShadowFundService().create_terminal_session(
+                    session,
+                    root=root,
+                    terminal_outcome="NO_TRADE",
+                    proposal=None,
+                    authorization=None,
+                    source_mode="staging",
+                    source_feed="historical_configured",
+                    backtest_run_id=run_id,
+                    refusal_reason=report["reason"],
+                    horizon_at=report["checkpoint"],
+                )
+            from sqlalchemy import update
+
+            await session.execute(update(BacktestRunModel).values(is_active_presentation=False))
         session.add(
             BacktestRunModel(
                 id=run_id,
                 started_at=created_at,
                 completed_at=datetime.now(UTC),
-                status="DATA_UNAVAILABLE",
+                status=summary["outcome"],
                 start_date=START,
                 end_date=END,
                 symbols_json=json.dumps(SYMBOLS),
                 artifact_dir=str(output),
-                summary_json=json.dumps(summary),
-                # A placeholder/data-refusal result must never replace a
-                # previously completed staging presentation dataset.
-                is_active_presentation=False,
+                summary_json=json.dumps(summary, default=str),
+                is_active_presentation=bool(reports),
             )
         )
         session.add(
@@ -93,9 +142,13 @@ async def run() -> int:
                 id=str(uuid4()),
                 run_id=run_id,
                 created_at=datetime.now(UTC),
-                event_type="SIMULATION_DATA_UNAVAILABLE",
+                event_type=(
+                    "SIMULATION_COMPLETED_RESEARCH_REPLAY"
+                    if reports
+                    else "SIMULATION_DATA_UNAVAILABLE"
+                ),
                 payload_digest=_digest(summary),
-                payload_json=json.dumps(summary),
+                payload_json=json.dumps(summary, default=str),
             )
         )
         await session.commit()
@@ -104,6 +157,64 @@ async def run() -> int:
         json.dumps({"run_id": run_id, "artifact_dir": str(output), "outcome": summary["outcome"]})
     )
     return 0
+
+
+async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    """Run Agents 1-7 over point-in-time historical evidence; never execute."""
+
+    reports: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    gateway = AlpacaPyGateway(settings)
+    checkpoint = datetime.fromisoformat(f"{START}T20:00:00+00:00")
+    end = datetime.fromisoformat(f"{END}T20:00:00+00:00")
+    while checkpoint <= end:
+        if checkpoint.weekday() >= 5:
+            checkpoint += timedelta(days=1)
+            continue
+        historical = HistoricalResearchGateway(gateway, checkpoint=checkpoint)
+        for symbol in SYMBOLS:
+            trace_id = uuid4()
+            try:
+                financials = await asyncio.to_thread(
+                    fetch_sec_company_financials,
+                    symbol,
+                    user_agent=settings.sec_user_agent,
+                    as_of=checkpoint,
+                )
+                decision = await TradingDecisionAgent(
+                    LLMGateway(settings),
+                    historical,  # type: ignore[arg-type]
+                ).synthesize_decision(
+                    symbol,
+                    trace_id,
+                    allow_illustrative=True,
+                    financials=financials,
+                    as_of=checkpoint,
+                    provenance="historical_simulation",
+                )
+                digest = _digest(decision.model_dump(mode="json"))
+                reports.append(
+                    {
+                        "trace_id": trace_id,
+                        "checkpoint": checkpoint,
+                        "symbol": symbol,
+                        "digest": digest,
+                        "decision": decision.model_dump(mode="json"),
+                        "reason": (
+                            "DATA_UNAVAILABLE: historical option contract/quote replay pending"
+                        ),
+                    }
+                )
+            except (SecFundamentalsUnavailable, ValueError) as exc:
+                warnings.append(f"{checkpoint.date()} {symbol}: {type(exc).__name__}")
+            except Exception as exc:
+                warnings.append(f"{checkpoint.date()} {symbol}: {type(exc).__name__}")
+        checkpoint += timedelta(days=1)
+    (output / "agent-replay.json").write_text(
+        json.dumps({"reports": reports, "inputs": historical.inputs}, indent=2, default=str),
+        encoding="utf-8",
+    )
+    return reports, warnings
 
 
 def main() -> None:

@@ -883,6 +883,26 @@ class OptionStructure(StrEnum):
     NO_TRADE = "no_trade"
 
 
+class ShadowAlternativeIntent(BaseModel):
+    """AI research intent for a non-executable ShadowFund branch.
+
+    Contract symbols and prices are deliberately absent. Deterministic code
+    selects them from the same eligible option universe as the primary
+    proposal, and this model can never become an order payload.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    direction: Literal[TradeDirection.BULLISH, TradeDirection.BEARISH]
+    preferred_structure: Literal[
+        OptionStructure.LONG_CALL,
+        OptionStructure.LONG_PUT,
+        OptionStructure.BULL_CALL_SPREAD,
+        OptionStructure.BEAR_PUT_SPREAD,
+    ]
+    rationale: str = Field(min_length=1, max_length=500)
+
+
 class SpecialistScores(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reaction_opportunity_score: DecimalString
@@ -913,7 +933,10 @@ class TradeDecisionReport(ContractBase):
     options_only_constraint_acknowledged: bool = True
     synthesis_rationale: str
     key_risks: list[str] = Field(default_factory=list)
-    provenance: Literal["live_research", "illustrative_fixture"] = "live_research"
+    shadow_alternative_intent: ShadowAlternativeIntent | None = None
+    provenance: Literal["live_research", "historical_simulation", "illustrative_fixture"] = (
+        "live_research"
+    )
     evidence_freshness_seconds: int | None = Field(default=None, ge=0)
 
 

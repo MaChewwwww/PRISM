@@ -15,18 +15,18 @@ const LAYERS = [
     tag: "Layer 01",
     title: "Decision Counterfactuals",
     detail:
-      "Active Portfolio path, Cash baseline, Reduced sizing (50%), and Unhedged alternatives.",
+      "Recorded chosen path, cash, fractional half-size, contrarian, and Agent 7 alternative intent.",
   },
   {
     tag: "Layer 02",
     title: "Agent Strategy Variations",
-    detail: "Divergent strikes, expirations, and contrarian perspectives generated simultaneously.",
+    detail: "Agent 7 supplies intent only; deterministic code selects eligible virtual contracts.",
   },
   {
     tag: "Layer 03",
     title: "AI Profile Adaptation",
     detail:
-      "Counterfactual regret and alpha generate explainable recommendations for the next profile.",
+      "Post-analysis is a manual-review draft and can never activate a profile automatically.",
   },
 ];
 
@@ -68,14 +68,15 @@ export default async function AlternativesPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const sessions = await listAlternativeSessions(range);
+  const alternatives = await listAlternativeSessions(range);
+  const sessions = alternatives.sessions;
 
   return (
     <>
       <PageHeader
         eyebrow="ShadowFund Multiverse"
         title="Shadow Portfolios"
-        description="Every major decision launches parallel non-executing Shadow Portfolios to stress-test alternate choices under identical market conditions."
+        description="Historical simulation and recorded counterfactual evidence. ShadowFund is non-executing and never changes the Active Portfolio."
       >
         <RangePresets range={range} />
       </PageHeader>
@@ -86,7 +87,7 @@ export default async function AlternativesPage({
           id="layers"
           icon={Layers}
           title="How ShadowFund Analyzes"
-          subtitle="Three layers of counterfactual analysis run on every decision."
+          subtitle="Counterfactual paths use the same timestamped market observations and governed valuation policy."
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {LAYERS.map((layer) => (
@@ -107,13 +108,14 @@ export default async function AlternativesPage({
           id="sessions"
           icon={GitCompareArrows}
           title="ShadowFund Sessions"
-          subtitle="Simulated multiverse comparisons for each recorded decision."
+          subtitle="Virtual-only comparison sessions; incomplete data remains visible as a refusal."
         />
 
         {sessions.length === 0 ? (
           <div className={`${SECTION_CARD} p-6`}>
             <p className="text-[13px] text-[#94A3B8]">
-              No completed ShadowFund alternative sessions fall inside this date range.
+              {alternatives.emptyMessage ??
+                "No completed ShadowFund sessions fall inside this date range."}
             </p>
           </div>
         ) : (
@@ -134,7 +136,9 @@ export default async function AlternativesPage({
                     <span aria-hidden="true" className="text-white/20">
                       |
                     </span>
-                    <StateBadge state="simulated" />
+                    <StateBadge
+                      state={session.sourceMode === "staging" ? "simulated" : session.state}
+                    />
                   </div>
 
                   {/* Title + summary */}

@@ -26,7 +26,7 @@ function DeltaBadge({ delta }: { delta: string }) {
     <span
       className="inline-flex items-center gap-1 font-mono text-[13px] font-semibold tabular-nums"
       style={{ color }}
-      aria-label={`${sign === "positive" ? "outperformed" : sign === "negative" ? "underperformed" : "matched"} active by ${delta}`}
+      aria-label={`${sign === "positive" ? "outperformed" : sign === "negative" ? "underperformed" : "matched"} the chosen path by ${delta}`}
     >
       {sign === "positive" ? (
         <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
@@ -47,8 +47,8 @@ export default async function AlternativeDetailPage({
   const session = await getAlternativeSession(sessionId);
   if (!session) notFound();
 
-  const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
-  const activePathLabel = "Active Portfolio";
+  const shadowBranches = session.branches.filter((branch) => !branch.chosenPath);
+  const activePathLabel = "Chosen Path";
 
   return (
     <div className="space-y-8">
@@ -77,7 +77,7 @@ export default async function AlternativeDetailPage({
           <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {session.chosenPathPnl}
           </p>
-          <p className="mt-1 text-[11px] text-[#64748B]">Active Portfolio baseline</p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Recorded or virtual-only baseline</p>
         </div>
         {shadowBranches.map((branch) => (
           <div key={branch.id} className={`${SECTION_CARD} p-5`}>
@@ -88,7 +88,7 @@ export default async function AlternativeDetailPage({
               {branch.pnl}
             </p>
             <div className="mt-1 flex items-center gap-2 text-[11px] text-[#64748B]">
-              <span>vs Active:</span>
+              <span>vs chosen:</span>
               <DeltaBadge delta={branch.deltaVsChosen} />
             </div>
           </div>
@@ -101,7 +101,7 @@ export default async function AlternativeDetailPage({
           id="branch-path"
           icon={GitCompareArrows}
           title="Trajectory Comparison vs. Chosen Path"
-          subtitle="Each line is a non-executable branch on the same fixture timeline; the teal chosen path is the reference."
+          subtitle="Each line is a persisted non-executable branch on the same market-observation timeline."
           accent="#818CF8"
         />
         <StoryBranchChart data={session.path} />
@@ -113,13 +113,13 @@ export default async function AlternativeDetailPage({
           id="branch-matrix"
           icon={Table2}
           title="Shadow Branch Results vs. Chosen Path"
-          subtitle="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
+          subtitle="Every branch uses the same observations. Delta shows how each virtual path differs from the chosen path."
           accent="#818CF8"
         />
         <div className={`${SECTION_CARD} overflow-x-auto`}>
           <table className="w-full min-w-[52rem] border-collapse text-left">
             <caption className="sr-only">
-              ShadowFund branch comparison vs. Active Portfolio path
+              ShadowFund branch comparison versus the chosen path
             </caption>
             <thead>
               <tr className="border-b border-white/8">
@@ -127,7 +127,7 @@ export default async function AlternativeDetailPage({
                   "Branch",
                   "Variation Tested",
                   "Final P&L",
-                  "vs Active (Δ)",
+                  "vs Chosen (Δ)",
                   "Max Drawdown",
                   "Coverage",
                   "State",
@@ -144,7 +144,7 @@ export default async function AlternativeDetailPage({
             </thead>
             <tbody>
               {session.branches.map((branch) => {
-                const isActive = branch.id === "chosen";
+                const isActive = branch.chosenPath;
                 return (
                   <tr
                     key={branch.id}

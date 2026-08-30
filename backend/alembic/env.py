@@ -11,6 +11,9 @@ from app.research import models as research_models  # noqa: F401
 from app.autonomous import models as autonomous_models  # noqa: F401
 from app.execution import models as execution_models  # noqa: F401
 from app.backtest import models as backtest_models  # noqa: F401
+from app.shadowfund import models as shadowfund_models  # noqa: F401
+from app.profiles import models as profile_models  # noqa: F401
+from app.observability import models as observability_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

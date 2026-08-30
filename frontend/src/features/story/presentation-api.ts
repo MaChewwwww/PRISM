@@ -90,7 +90,7 @@ export async function loadPortfolio(range: DateRange) {
 
 export async function listAlternativeSessions(range: DateRange) {
   return (await apiGet<AlternativesEnvelope>("/presentation/alternatives", apiRangeQuery(range)))
-    .data.sessions;
+    .data;
 }
 
 export async function getAlternativeSession(id: string) {

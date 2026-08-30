@@ -37,8 +37,8 @@ def test_initial_migration_is_an_empty_database_baseline(
     assert initial is not None
     assert initial.down_revision is None
     assert head is not None
-    assert head.revision == "20260830_0007"
-    assert head.down_revision == "20260830_0006"
+    assert head.revision == "20260831_0010"
+    assert head.down_revision == "20260831_0009"
 
     with redirect_stdout(output):
         command.upgrade(config, "head", sql=True)
@@ -59,6 +59,10 @@ def test_initial_migration_is_an_empty_database_baseline(
     assert "CREATE TABLE reconciliation_events" in sql
     assert "CREATE TABLE autonomous_audit_events" in sql
     assert "CREATE TABLE option_iv_observations" in sql
+    assert "CREATE TABLE ai_profiles" in sql
+    assert "CREATE TABLE profile_calibration_preferences" in sql
+    assert "CREATE TABLE profile_governance_audit_events" in sql
+    assert "CREATE TABLE llm_usage_events" in sql
     assert "CREATE TABLE alembic_version" in sql
 
 

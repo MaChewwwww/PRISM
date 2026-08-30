@@ -81,13 +81,13 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | `contracts` | Typed proposal, risk, governance, authorization, execution, profile, and audit records | Implemented skeleton |
 | `rules` | Versioned BA registry and deterministic policy boundary | Registry, P0-P5 evaluator, Balanced threshold 84, and typed traces implemented |
 | `research` | Provider-normalized evidence and structured research | Seven specialist workflows, SEC-sourced fundamentals, historical analog option-payoff EV, IV-rank history, and strict freshness/provenance gates |
-| `presentation` | Backend-owned illustrative read models | Implemented with versioned fixture adapter |
+| `presentation` | Backend-owned read models | Fixture adapter in development/test; persisted ShadowFund alternatives in production/staging |
 | `proposal` | Trading Decision proposal synthesis | Canonical digest-bound proposals persisted by the autonomous worker; the public research endpoint remains `NO_TRADE` without complete binding |
 | `risk` | AI-assisted adversarial critique | Structured RiskAssessment persisted before deterministic authorization |
 | `market` | Alpaca market/news adapter | Account/portfolio, stock bars, active contracts, fresh chain quotes/Greeks, and news |
 | `portfolio` | Durable snapshots and exposure calculations | OCC/chain-enriched account snapshots persisted per cycle with six-position, cash, ticker/sector/cluster, Greek, and expiry concentration gates |
 | `execution` | Final paper checks, translation, idempotency, reconciliation | Durable PostgreSQL receipts, client-order idempotency, restart reconciliation, and paper-only CLI submission |
-| `shadowfund` | Immutable counterfactual branches and evaluation | Non-executable evaluation roots and shadow candidates implemented; valuation/fill ingestion deferred |
+| `shadowfund` | Immutable counterfactual branches and evaluation | Non-executable session/branch/observation/valuation roots, virtual marking, and persisted presentation projection |
 | `audit` | Append-oriented decision and execution events | Alembic audit-root tables and cycle emissions implemented; full event projector deferred |
 
 ## Research slices
@@ -139,4 +139,4 @@ Alembic owns schema creation, including specialist reports, research bundles, pr
 
 Missing rules, invalid profile compatibility, stale data, invalid AI output, unsupported permissions, unavailable required dependencies, ambiguous paper environment, or digest mismatch fail closed. Provider failures are classified and redacted. Monitoring and audit remain available when execution is disabled.
 
-Automatic AI Profile switching is deferred. Post-Analysis recommendations are limited to authorized fields, require deterministic validation, and remain pending manual operator review. Shadow candidates are persisted as non-executable branches.
+Post-Analysis recommendations are limited to authorized fields and flow through the `profiles` application boundary. It persists preference, active/superseded profile, and audit roots; the rule engine receives only the selected bounded parameters plus profile ID/version. Manual activation is authenticated. Automatic calibration follows the persisted authenticated operator preference. Neither profile service nor ShadowFund imports an execution adapter. `BacktestPresentationRepository` projects only the active completed staging backtest run into the existing alternatives routes, while production projects recorded ShadowFund sessions. Both expose provenance and explicit empty/degraded states rather than falling back to fixtures.

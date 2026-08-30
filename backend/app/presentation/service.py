@@ -383,6 +383,7 @@ def _branch(raw: dict[str, Any]) -> AlternativeBranch:
         drawdown=raw["drawdown"],
         coverage=raw["coverage"],
         status=raw["status"],
+        chosen_path=branch_id == "chosen",
     )
 
 

@@ -71,6 +71,8 @@ Every entry therefore has at least one full Thursday session of runway. The EV a
 
 Autonomous paper execution is a production-only operational opt-in, not a replacement for this ruleset. `AUTONOMOUS_TRADING_ENABLED` defaults to `false`; in production, enabling it requires `EXECUTION_ENABLED=true`, an active ruleset, complete Alpaca paper credentials, and a UTC `AUTONOMOUS_TRADING_START_AT`/`AUTONOMOUS_TRADING_END_AT` pair. Production intervals must remain within the authorized hackathon trading start and force-flatten deadline. Staging rejects autonomous trading configuration and validates the system only through an explicitly enabled, non-executing historical backtest. Neither path may bypass paper mode, the kill switch, or mandatory rules.
 
+ShadowFund does not alter BA numerical thresholds. It applies the existing quote freshness, bid/ask spread, option economics, take-profit, stop-loss, DTE, and four-trading-day scoring controls to virtual-only branches. A missing historical/live observation is `DATA_UNAVAILABLE` / `INCOMPLETE`, never a simulated fill.
+
 The production worker uses a 15-minute cadence, seven-symbol allowlist, six-position cap, session advisory lock, mandatory exit checks, and durable kill switch. It does not manufacture evidence or orders; unavailable IV history, analog coverage, illustrative fundamentals, stale data, incomplete quotes/Greeks, unavailable portfolio/regime controls, or an unverified deployment produce `NO_TRADE`. IV rank is sourced from a configured history provider, durable chain observations, or option-bar IV inversion; it is never replaced with realized-volatility rank. Existing OCC option positions are enriched from the live chain before sector/cluster/Greek/expiry checks. Historical analog returns are converted to option intrinsic payoffs and charged observed NBBO slippage and a deterministic spread-derived fill probability before the EV gate.
 
 ## Standard AI Profiles
@@ -99,6 +101,10 @@ Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 thr
 ## Sizing and risk states
 
 Final allocation is the smallest applicable limit among profile target, per-trade stop-risk, ticker cap, sector/cluster cap, aggregate portfolio-risk cap, regime cap, liquidity cap, and buying-power cap. With the fixed 50% stop, the 1.00% normal risk cap implies a 2.00% allocation ceiling, and the 0.75% volatile cap implies a 1.50% ceiling. Quantity rounds down to an executable whole-contract size.
+
+## AI Profile activation governance
+
+Post-Analysis can only propose the four profile fields in the active baseline register. A successor profile is valid only when its batch contains one or more unique authorized fields and every suggested value is within the registered bounds; any unspecified field retains the active value. Manual activation is an authenticated, audited backend action. Automatic calibration follows the authenticated operator's persisted database preference. Profiles cannot change the ruleset, hard limits, the paper-only boundary, or a previously issued authorization.
 
 | State | Trigger | New-risk behavior |
 | --- | --- | --- |

@@ -271,6 +271,49 @@
         "title": "ActivationMode",
         "type": "string"
       },
+      "ActiveProfileResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "activation_mode": {
+            "enum": [
+              "manual",
+              "automatic"
+            ],
+            "title": "Activation Mode",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/ProfileParameters"
+          },
+          "profile_key": {
+            "enum": [
+              "conservative",
+              "balanced",
+              "aggressive"
+            ],
+            "title": "Profile Key",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "profile_key",
+          "version",
+          "parameters",
+          "activation_mode"
+        ],
+        "title": "ActiveProfileResponse",
+        "type": "object"
+      },
       "Activity": {
         "additionalProperties": false,
         "properties": {
@@ -511,6 +554,33 @@
       "AlternativeBranch": {
         "additionalProperties": false,
         "properties": {
+          "allocationMultiplier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocationmultiplier"
+          },
+          "capitalAtRisk": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capitalatrisk"
+          },
+          "chosenPath": {
+            "default": false,
+            "title": "Chosenpath",
+            "type": "boolean"
+          },
           "coverage": {
             "title": "Coverage",
             "type": "string"
@@ -523,6 +593,39 @@
             "title": "Drawdown",
             "type": "string"
           },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "entryExitPolicy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entryexitpolicy"
+          },
+          "grossPnl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grosspnl"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -531,17 +634,73 @@
             "title": "Label",
             "type": "string"
           },
+          "mae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mae"
+          },
+          "mfe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfe"
+          },
+          "netPnl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Netpnl"
+          },
           "pnl": {
             "title": "Pnl",
             "type": "string"
           },
+          "refusalReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusalreason"
+          },
           "status": {
             "enum": [
+              "open",
               "complete",
               "incomplete"
             ],
             "title": "Status",
             "type": "string"
+          },
+          "valuationConfidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuationconfidence"
           },
           "variation": {
             "title": "Variation",
@@ -564,6 +723,36 @@
       "AlternativeCollection": {
         "additionalProperties": false,
         "properties": {
+          "aggregatePath": {
+            "items": {
+              "$ref": "#/components/schemas/ChartPoint"
+            },
+            "title": "Aggregatepath",
+            "type": "array"
+          },
+          "completedSessions": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Completedsessions",
+            "type": "integer"
+          },
+          "emptyMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emptymessage"
+          },
+          "incompleteSessions": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Incompletesessions",
+            "type": "integer"
+          },
           "sessions": {
             "items": {
               "$ref": "#/components/schemas/AlternativeSession"
@@ -615,6 +804,17 @@
             "title": "Coverage",
             "type": "string"
           },
+          "evaluationRootDigest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluationrootdigest"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -638,6 +838,60 @@
             "title": "Path",
             "type": "array"
           },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "refusalReasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refusalreasons",
+            "type": "array"
+          },
+          "rulesetVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rulesetversion"
+          },
+          "sourceMode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "production",
+                  "staging"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemode"
+          },
+          "state": {
+            "default": "incomplete",
+            "enum": [
+              "open",
+              "complete",
+              "incomplete"
+            ],
+            "title": "State",
+            "type": "string"
+          },
           "storyId": {
             "title": "Storyid",
             "type": "string"
@@ -650,9 +904,31 @@
             "title": "Symbol",
             "type": "string"
           },
+          "terminalOutcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminaloutcome"
+          },
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "valuationPolicyVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuationpolicyversion"
           }
         },
         "required": [
@@ -1030,6 +1306,58 @@
         "title": "BollingerBands",
         "type": "object"
       },
+      "CalibrationPreferenceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "manual",
+              "automatic"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "CalibrationPreferenceRequest",
+        "type": "object"
+      },
+      "CalibrationPreferenceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "automatic_opt_in": {
+            "title": "Automatic Opt In",
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "manual",
+              "automatic"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "operator_id": {
+            "title": "Operator Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operator_id",
+          "mode",
+          "automatic_opt_in",
+          "updated_at"
+        ],
+        "title": "CalibrationPreferenceResponse",
+        "type": "object"
+      },
       "Catalyst": {
         "additionalProperties": false,
         "properties": {
@@ -1216,7 +1544,9 @@
       },
       "DataMode": {
         "enum": [
-          "illustrative_fixture"
+          "illustrative_fixture",
+          "recorded",
+          "simulated"
         ],
         "title": "DataMode",
         "type": "string"
@@ -3061,6 +3391,52 @@
         "title": "LLMEventAnalysis",
         "type": "object"
       },
+      "LLMUsageSummaryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "completion_tokens": {
+            "title": "Completion Tokens",
+            "type": "integer"
+          },
+          "estimated_cost_usd": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost Usd"
+          },
+          "prompt_tokens": {
+            "title": "Prompt Tokens",
+            "type": "integer"
+          },
+          "request_count": {
+            "title": "Request Count",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "title": "Total Tokens",
+            "type": "integer"
+          },
+          "usage_available_count": {
+            "title": "Usage Available Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_count",
+          "usage_available_count",
+          "prompt_tokens",
+          "completion_tokens",
+          "total_tokens"
+        ],
+        "title": "LLMUsageSummaryResponse",
+        "type": "object"
+      },
       "LoginRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4367,15 +4743,32 @@
             "default": "illustrative_fixture"
           },
           "fixtureVersion": {
-            "const": "prism-demo-v1",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": "prism-demo-v1",
-            "title": "Fixtureversion",
-            "type": "string"
+            "title": "Fixtureversion"
           },
           "generatedAt": {
             "format": "date-time",
             "title": "Generatedat",
             "type": "string"
+          },
+          "provenanceNotice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenancenotice"
           },
           "range": {
             "anyOf": [
@@ -4493,6 +4886,57 @@
         "title": "PriceDisplacement",
         "type": "object"
       },
+      "ProfileActivationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "format": "uuid",
+            "title": "Batch Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch_id"
+        ],
+        "title": "ProfileActivationRequest",
+        "type": "object"
+      },
+      "ProfileActivationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "activated_from_batch_id": {
+            "format": "uuid",
+            "title": "Activated From Batch Id",
+            "type": "string"
+          },
+          "active_profile": {
+            "$ref": "#/components/schemas/ActiveProfileResponse"
+          }
+        },
+        "required": [
+          "active_profile",
+          "activated_from_batch_id"
+        ],
+        "title": "ProfileActivationResponse",
+        "type": "object"
+      },
+      "ProfileGovernanceStatusResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "active_profile": {
+            "$ref": "#/components/schemas/ActiveProfileResponse"
+          },
+          "preference": {
+            "$ref": "#/components/schemas/CalibrationPreferenceResponse"
+          }
+        },
+        "required": [
+          "active_profile",
+          "preference"
+        ],
+        "title": "ProfileGovernanceStatusResponse",
+        "type": "object"
+      },
       "ProfileParameter": {
         "additionalProperties": false,
         "properties": {
@@ -4535,6 +4979,39 @@
           "description"
         ],
         "title": "ProfileParameter",
+        "type": "object"
+      },
+      "ProfileParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "opportunity_score_threshold": {
+            "format": "decimal-string",
+            "title": "Opportunity Score Threshold",
+            "type": "string"
+          },
+          "stop_loss_pct": {
+            "format": "decimal-string",
+            "title": "Stop Loss Pct",
+            "type": "string"
+          },
+          "take_profit_pct": {
+            "format": "decimal-string",
+            "title": "Take Profit Pct",
+            "type": "string"
+          },
+          "target_position_size_pct": {
+            "format": "decimal-string",
+            "title": "Target Position Size Pct",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_position_size_pct",
+          "opportunity_score_threshold",
+          "take_profit_pct",
+          "stop_loss_pct"
+        ],
+        "title": "ProfileParameters",
         "type": "object"
       },
       "ProfileSuggestion": {
@@ -5597,6 +6074,43 @@
         "title": "SectorRegimeConfirmation",
         "type": "string"
       },
+      "ShadowAlternativeIntent": {
+        "additionalProperties": false,
+        "description": "AI research intent for a non-executable ShadowFund branch.\n\nContract symbols and prices are deliberately absent. Deterministic code\nselects them from the same eligible option universe as the primary\nproposal, and this model can never become an order payload.",
+        "properties": {
+          "direction": {
+            "enum": [
+              "bullish",
+              "bearish"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "preferred_structure": {
+            "enum": [
+              "long_call",
+              "long_put",
+              "bull_call_spread",
+              "bear_put_spread"
+            ],
+            "title": "Preferred Structure",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "direction",
+          "preferred_structure",
+          "rationale"
+        ],
+        "title": "ShadowAlternativeIntent",
+        "type": "object"
+      },
       "ShadowCandidate": {
         "additionalProperties": false,
         "properties": {
@@ -6410,6 +6924,7 @@
             "default": "live_research",
             "enum": [
               "live_research",
+              "historical_simulation",
               "illustrative_fixture"
             ],
             "title": "Provenance",
@@ -6436,6 +6951,17 @@
             "default": "1.0",
             "title": "Schema Version",
             "type": "string"
+          },
+          "shadow_alternative_intent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShadowAlternativeIntent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "specialist_scores": {
             "$ref": "#/components/schemas/SpecialistScores"
@@ -7211,6 +7737,91 @@
           }
         },
         "summary": "Ready"
+      }
+    },
+    "/api/v1/llm-usage/summary": {
+      "get": {
+        "operationId": "llm_usage_summary_api_v1_llm_usage_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMUsageSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Llm Usage Summary",
+        "tags": [
+          "observability"
+        ]
       }
     },
     "/api/v1/presentation/agents": {
@@ -8136,6 +8747,221 @@
         "summary": "Weekly Summary",
         "tags": [
           "presentation"
+        ]
+      }
+    },
+    "/api/v1/profiles/activate-post-analysis": {
+      "post": {
+        "operationId": "activate_post_analysis_profile_api_v1_profiles_activate_post_analysis_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileActivationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileActivationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Post Analysis Profile",
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/api/v1/profiles/calibration-preference": {
+      "put": {
+        "operationId": "update_calibration_preference_api_v1_profiles_calibration_preference_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationPreferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationPreferenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Calibration Preference",
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/api/v1/profiles/governance": {
+      "get": {
+        "operationId": "profile_governance_status_api_v1_profiles_governance_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileGovernanceStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Profile Governance Status",
+        "tags": [
+          "profiles"
         ]
       }
     },

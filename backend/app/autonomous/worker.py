@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import re
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
@@ -28,9 +29,11 @@ from app.autonomous.models import (
 )
 from app.contracts.models import (
     AuthorizationOutcome,
+    ExitPolicy,
     MarketRegime,
     OptionPayoffEconomics,
     PortfolioRiskState,
+    ShadowCandidate,
     TradeProposal,
     TradeVerdict,
 )
@@ -46,6 +49,7 @@ from app.execution.models import ExecutionReceiptModel
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.market.option_selection import OptionSelectionError, select_option_strategy
 from app.portfolio.metadata import metadata_complete, parse_instrument
+from app.profiles.service import ActiveProfile, ProfileGovernanceService
 from app.research.decision_agent import TradingDecisionAgent
 from app.research.historical_analogs import (
     HistoricalAnalogSummary,
@@ -63,6 +67,8 @@ from app.research.risk_agent import RiskManagementAgent
 from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
 from app.rules.evaluator import authorize_proposal, input_digest
 from app.rules.registry import get_authorized_ruleset
+from app.shadowfund.models import ShadowSessionModel
+from app.shadowfund.service import ShadowFundService
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +206,8 @@ class AutonomousWorker:
                 return "NO_TRADE"
             try:
                 gateway = AlpacaPyGateway(self.settings)
+                if self.settings.shadowfund_enabled:
+                    await self._mark_open_shadow_sessions(session, gateway, now)
                 if not flatten_due and not await asyncio.to_thread(self._market_is_open, gateway):
                     await self._record(session, now, "NO_TRADE", "Broker market is closed")
                     await session.commit()
@@ -234,10 +242,13 @@ class AutonomousWorker:
                     portfolio = await self._refresh_position_metadata(gateway, portfolio, now)
                     await self._persist_portfolio_snapshot(session, portfolio)
 
+                # Profile resolution is database-backed and fails closed with the
+                # cycle if its bounded, auditable state cannot be proven.
+                active_profile = await ProfileGovernanceService().get_active(session)
                 candidates: list[tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]]] = []
                 for symbol in symbols:
                     candidate = await self._research_candidate(
-                        session, gateway, symbol, portfolio, now
+                        session, gateway, symbol, portfolio, now, active_profile
                     )
                     if candidate is not None:
                         candidates.append(candidate)
@@ -281,6 +292,10 @@ class AutonomousWorker:
                         self.settings,
                         inputs={**context, "analog_count": analog.count},
                         now=now,
+                        profile_key=active_profile.profile_key,
+                        profile_parameters=active_profile.parameters,
+                        profile_id=active_profile.id,
+                        profile_version=active_profile.version,
                         kill_switch_active=kill_switch_active,
                     )
                     await self._persist_authorization(session, decision)
@@ -293,6 +308,41 @@ class AutonomousWorker:
                         portfolio_snapshot=portfolio,
                     )
                     await self._persist_root(session, proposal.id, root)
+                    shadow_session_id: str | None = None
+                    if self.settings.shadowfund_enabled:
+                        try:
+                            async with session.begin_nested():
+                                shadow_session = await ShadowFundService().create_terminal_session(
+                                    session,
+                                    root=root,
+                                    terminal_outcome=decision.outcome.value,
+                                    proposal=proposal,
+                                    authorization=decision,
+                                    source_mode="production",
+                                    source_feed="configured",
+                                    candidate_strategies={
+                                        candidate.label: candidate.strategy
+                                        for candidate in proposal.shadow_candidates
+                                        if candidate.strategy is not None
+                                    },
+                                    horizon_at=get_authorized_ruleset().parameters.hackathon_window.official_scoring_at,
+                                )
+                                shadow_session_id = shadow_session.id
+                                raw_quotes = context.get("shadow_quotes", {})
+                                if raw_quotes:
+                                    await ShadowFundService().mark_session_from_quotes(
+                                        session,
+                                        shadow_session_id=shadow_session.id,
+                                        observed_at=now,
+                                        quotes=raw_quotes,
+                                        source="alpaca_option_chain",
+                                        feed="configured",
+                                        max_quote_age_seconds=get_authorized_ruleset().parameters.data_freshness_seconds,
+                                    )
+                        except Exception:
+                            logger.exception(
+                                "ShadowFund session failed without affecting execution"
+                            )
                     if decision.outcome is not AuthorizationOutcome.APPROVE:
                         continue
                     receipt = await executor.submit_async(
@@ -301,6 +351,25 @@ class AutonomousWorker:
                         SqlAlchemyReceiptRepository(session),
                         kill_switch_active=kill_switch_active,
                     )
+                    if (
+                        shadow_session_id is not None
+                        and receipt.status.value == "filled"
+                        and receipt.filled_average_price is not None
+                    ):
+                        try:
+                            async with session.begin_nested():
+                                await ShadowFundService().attach_confirmed_paper_fill(
+                                    session,
+                                    shadow_session_id=shadow_session_id,
+                                    strategy=proposal.strategy,
+                                    filled_average_price=receipt.filled_average_price,
+                                    filled_at=receipt.reconciled_at or receipt.submitted_at or now,
+                                )
+                        except Exception:
+                            logger.exception(
+                                "ShadowFund paper-fill attachment failed without "
+                                "affecting execution"
+                            )
                     submitted = receipt.status.value in {"submitted", "filled"}
                     if submitted:
                         open_positions += 1
@@ -332,6 +401,7 @@ class AutonomousWorker:
         symbol: str,
         portfolio: dict[str, Any],
         now: datetime,
+        active_profile: ActiveProfile,
     ) -> tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]] | None:
         trace_id = uuid4()
         try:
@@ -363,6 +433,15 @@ class AutonomousWorker:
                 "bearish",
             }:
                 return None
+            # AI proposes an exit policy, but profile-owned take-profit and
+            # fixed stop values are bound deterministically before a proposal
+            # can be persisted or authorized.
+            exit_policy = ExitPolicy(
+                take_profit_pct=active_profile.parameters.take_profit_pct,
+                stop_loss_pct=active_profile.parameters.stop_loss_pct,
+                dte_threshold=report.exit_policy.dte_threshold,
+                max_hold_days=report.exit_policy.max_hold_days,
+            )
             direction: Literal["bullish", "bearish"] = (
                 "bullish" if report.direction.value == "bullish" else "bearish"
             )
@@ -372,7 +451,7 @@ class AutonomousWorker:
                 if report.recommended_structure.value in {"long_call", "long_put"}
                 else "debit_spread"
             )
-            min_expiry = now.date() + timedelta(days=report.exit_policy.dte_threshold)
+            min_expiry = now.date() + timedelta(days=exit_policy.dte_threshold)
             contracts = await asyncio.to_thread(
                 gateway.get_option_contracts,
                 symbol,
@@ -400,7 +479,7 @@ class AutonomousWorker:
                 direction=direction,
                 structure=structure,
                 now=now,
-                exit_dte_threshold=report.exit_policy.dte_threshold,
+                exit_dte_threshold=exit_policy.dte_threshold,
                 force_flatten_at=get_authorized_ruleset().parameters.hackathon_window.force_flatten_by,
             )
             iv_rank_by_leg, _iv_observations = await self._resolve_iv_rank(
@@ -428,6 +507,13 @@ class AutonomousWorker:
                 net_ev_r=analog.net_ev_r,
                 reward_risk_ratio=analog.reward_risk_ratio or Decimal("0"),
             )
+            shadow_candidates = self._shadow_candidates(
+                report=report,
+                primary_strategy=strategy,
+                contracts=contracts,
+                quotes=quotes,
+                now=now,
+            )
             payload = {
                 "trace_id": str(trace_id),
                 "research_report_id": str(report.id),
@@ -435,8 +521,10 @@ class AutonomousWorker:
                 "strategy": strategy.model_dump(mode="json"),
                 "quantity": 1,
                 "rationale": report.synthesis_rationale,
-                "exit_policy": report.exit_policy.model_dump(mode="json"),
-                "shadow_candidates": [],
+                "exit_policy": exit_policy.model_dump(mode="json"),
+                "shadow_candidates": [
+                    candidate.model_dump(mode="json") for candidate in shadow_candidates
+                ],
                 "option_economics": proposal_economics.model_dump(mode="json"),
                 "iv_rank_by_leg": {key: str(value) for key, value in iv_rank_by_leg.items()},
             }
@@ -461,8 +549,8 @@ class AutonomousWorker:
                 strategy=strategy,
                 quantity=1,
                 rationale=report.synthesis_rationale,
-                exit_policy=report.exit_policy,
-                shadow_candidates=[],
+                exit_policy=exit_policy,
+                shadow_candidates=shadow_candidates,
                 option_economics=proposal_economics,
                 research_bundle_digest=bundle_digest,
                 proposal_digest=proposal_digest,
@@ -476,7 +564,17 @@ class AutonomousWorker:
                 quotes,
                 financials,
                 iv_rank_by_leg=iv_rank_by_leg,
+                profile=active_profile,
             )
+            shadow_symbols = {
+                leg.symbol
+                for candidate in shadow_candidates
+                if candidate.strategy is not None
+                for leg in candidate.strategy.legs
+            } | {leg.symbol for leg in strategy.legs}
+            context["shadow_quotes"] = {
+                symbol: quotes[symbol] for symbol in shadow_symbols if symbol in quotes
+            }
             bundle_id = str(uuid4())
             session.add(
                 ResearchBundleModel(
@@ -514,6 +612,141 @@ class AutonomousWorker:
         except Exception as exc:
             logger.warning("Research candidate rejected for %s: %s", symbol, type(exc).__name__)
             return None
+
+    async def _mark_open_shadow_sessions(
+        self, session: AsyncSession, gateway: AlpacaPyGateway, now: datetime
+    ) -> None:
+        """Refresh virtual-only branches without reading account or execution state."""
+
+        open_sessions = list(
+            (
+                await session.scalars(
+                    select(ShadowSessionModel).where(
+                        ShadowSessionModel.state == "open",
+                        ShadowSessionModel.source_mode == "production",
+                    )
+                )
+            ).all()
+        )
+        chains: dict[str, dict[str, dict[str, Any]]] = {}
+        for shadow_session in open_sessions:
+            if not shadow_session.symbol:
+                continue
+            if shadow_session.proposal_id:
+                receipt = await session.scalar(
+                    select(ExecutionReceiptModel)
+                    .where(
+                        ExecutionReceiptModel.proposal_id == shadow_session.proposal_id,
+                        ExecutionReceiptModel.status == "filled",
+                    )
+                    .order_by(ExecutionReceiptModel.reconciled_at.desc())
+                )
+                proposal_row = await session.get(TradeProposalModel, shadow_session.proposal_id)
+                if (
+                    receipt is not None
+                    and receipt.filled_average_price is not None
+                    and proposal_row is not None
+                ):
+                    try:
+                        async with session.begin_nested():
+                            await ShadowFundService().attach_confirmed_paper_fill(
+                                session,
+                                shadow_session_id=shadow_session.id,
+                                strategy=TradeProposal.model_validate_json(
+                                    proposal_row.payload_json
+                                ).strategy,
+                                filled_average_price=receipt.filled_average_price,
+                                filled_at=receipt.reconciled_at or receipt.submitted_at or now,
+                            )
+                    except Exception:
+                        logger.exception(
+                            "ShadowFund reconciliation failed without affecting autonomous cycle"
+                        )
+            if shadow_session.symbol not in chains:
+                try:
+                    chains[shadow_session.symbol] = await asyncio.to_thread(
+                        gateway.get_option_chain, shadow_session.symbol
+                    )
+                except Exception:
+                    logger.warning(
+                        "ShadowFund valuation data unavailable for %s", shadow_session.symbol
+                    )
+                    continue
+            try:
+                async with session.begin_nested():
+                    await ShadowFundService().mark_session_from_quotes(
+                        session,
+                        shadow_session_id=shadow_session.id,
+                        observed_at=now,
+                        quotes=chains[shadow_session.symbol],
+                        source="alpaca_option_chain",
+                        feed="configured",
+                        max_quote_age_seconds=get_authorized_ruleset().parameters.data_freshness_seconds,
+                    )
+            except Exception:
+                logger.exception("ShadowFund valuation failed without affecting autonomous cycle")
+
+    @staticmethod
+    def _shadow_candidates(
+        *,
+        report: Any,
+        primary_strategy: Any,
+        contracts: list[dict[str, Any]],
+        quotes: dict[str, dict[str, Any]],
+        now: datetime,
+    ) -> list[ShadowCandidate]:
+        """Select virtual alternatives with the same deterministic eligibility gate."""
+
+        candidates: list[ShadowCandidate] = []
+        primary_direction = str(report.direction.value)
+        opposite: Literal["bullish", "bearish"] = (
+            "bearish" if primary_direction == "bullish" else "bullish"
+        )
+        primary_shape: Literal["long", "debit_spread"] = (
+            "debit_spread" if len(primary_strategy.legs) == 2 else "long"
+        )
+
+        def select(
+            direction: Literal["bullish", "bearish"],
+            shape: Literal["long", "debit_spread"],
+        ) -> Any:
+            return select_option_strategy(
+                contracts,
+                quotes,
+                underlying_price=report.current_price,
+                direction=direction,
+                structure=shape,
+                now=now,
+                exit_dte_threshold=report.exit_policy.dte_threshold,
+                force_flatten_at=get_authorized_ruleset().parameters.hackathon_window.force_flatten_by,
+            )
+
+        with suppress(OptionSelectionError, ValueError):
+            candidates.append(
+                ShadowCandidate(
+                    label="contrarian",
+                    strategy=select(opposite, primary_shape),
+                    allocation_multiplier=Decimal("1"),
+                    rationale="Deterministic opposite-direction counterfactual.",
+                )
+            )
+        intent = report.shadow_alternative_intent
+        if intent is not None:
+            shape: Literal["long", "debit_spread"] = (
+                "long"
+                if intent.preferred_structure.value in {"long_call", "long_put"}
+                else "debit_spread"
+            )
+            with suppress(OptionSelectionError, ValueError):
+                candidates.append(
+                    ShadowCandidate(
+                        label="ai_alternative",
+                        strategy=select(intent.direction.value, shape),
+                        allocation_multiplier=Decimal("1"),
+                        rationale=intent.rationale,
+                    )
+                )
+        return candidates
 
     async def _resolve_iv_rank(
         self,
@@ -883,6 +1116,7 @@ class AutonomousWorker:
         financials: Any,
         *,
         iv_rank_by_leg: dict[str, Decimal] | None = None,
+        profile: ActiveProfile,
     ) -> dict[str, Any]:
         market_snapshot = {
             "symbol": report.symbol,
@@ -981,7 +1215,10 @@ class AutonomousWorker:
             Decimal("0"),
         )
         planned_risk = analog.max_loss_per_contract or order_cost
-        position_size_ok = planned_risk <= max_trade_risk
+        profile_target_cap = (
+            risk_base * profile.parameters.target_position_size_pct / Decimal("100")
+        )
+        position_size_ok = planned_risk <= max_trade_risk and order_cost <= profile_target_cap
         aggregate_risk_ok = existing_exposure + planned_risk <= (
             risk_base * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100")
         )
@@ -1111,6 +1348,7 @@ class AutonomousWorker:
             "cash_buffer_ok": cash_buffer_ok,
             "concentration_ok": ticker_exposure_pct <= _decimal(rules.ticker_concentration_pct),
             "position_size_ok": position_size_ok,
+            "profile_target_allocation_pct": profile.parameters.target_position_size_pct,
             "aggregate_risk_ok": aggregate_risk_ok,
             "portfolio_controls_complete": portfolio_controls_complete,
             "sector_concentration_ok": sector_exposure_pct
@@ -1385,6 +1623,45 @@ class AutonomousWorker:
                 payload_json=root.model_dump_json(),
             )
         )
+        if self.settings.shadowfund_enabled:
+            try:
+                async with session.begin_nested():
+                    shadow_service = ShadowFundService()
+                    await shadow_service.create_terminal_session(
+                        session,
+                        root=root,
+                        terminal_outcome=outcome,
+                        proposal=None,
+                        authorization=None,
+                        source_mode="production",
+                        source_feed="not_applicable",
+                        refusal_reason=reason,
+                        horizon_at=get_authorized_ruleset().parameters.hackathon_window.official_scoring_at,
+                    )
+                    if reason == "Hackathon force-flatten executed":
+                        window = get_authorized_ruleset().parameters.hackathon_window
+                        batch = await shadow_service.persist_post_analysis_batch(
+                            session,
+                            source_mode="production",
+                            window_start=window.trading_start_at,
+                            window_end=window.official_scoring_at,
+                            model_metadata={
+                                "trigger": "official_scoring",
+                                "worker": WORKER_VERSION,
+                            },
+                            summary={
+                                "outcome": "NO_RECOMMENDATION",
+                                "reason": "Manual review requires completed eligible evidence.",
+                            },
+                            recommendations=[],
+                        )
+                        await ProfileGovernanceService().apply_automatic_if_enabled(
+                            session,
+                            batch_id=batch.id,
+                            operator_id=self.settings.auth_email,
+                        )
+            except Exception:
+                logger.exception("ShadowFund no-trade session failed without affecting cycle")
 
 
 def window_date(now: datetime) -> Any:

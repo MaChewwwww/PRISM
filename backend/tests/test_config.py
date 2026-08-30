@@ -110,3 +110,24 @@ def test_llm_configuration_defaults() -> None:
 def test_staging_rejects_example_authentication_secrets() -> None:
     with pytest.raises(ValidationError, match="non-example AUTH_PASSWORD"):
         Settings(_env_file=None, environment="staging")
+
+
+def test_staging_shadowfund_requires_explicit_backtest_boundary() -> None:
+    with pytest.raises(ValidationError, match="Staging ShadowFund requires"):
+        Settings(
+            _env_file=None,
+            environment="staging",
+            auth_password="staging-password-123",
+            auth_secret_key="s" * 32,
+            shadowfund_enabled=True,
+        )
+
+    settings = Settings(
+        _env_file=None,
+        environment="staging",
+        auth_password="staging-password-123",
+        auth_secret_key="s" * 32,
+        shadowfund_enabled=True,
+        backtest_simulation_enabled=True,
+    )
+    assert settings.shadowfund_enabled is True
