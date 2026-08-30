@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,8 +70,6 @@ class ReactionAnalysisLLMOutput(BaseModel):
         description="Classification: 'UNDERREACTION', 'OVERREACTION', or 'FAIR_REACTION'."
     )
 
-    from pydantic import field_validator
-
     @field_validator("limitations", "evidence_summaries", mode="before")
     @classmethod
     def _coerce_list(cls, v: Any) -> list[str]:
@@ -80,7 +78,6 @@ class ReactionAnalysisLLMOutput(BaseModel):
         if isinstance(v, (list, tuple)):
             return [str(x).strip() for x in v]
         return []
-
 
 
 def _freshness_seconds(bars: list[dict[str, Any]], now: datetime) -> int:
@@ -364,17 +361,26 @@ class MarketReactionAgent:
         )
 
         prompt = (
-            f"Analyze market reaction for {symbol}. Catalyst='{catalyst_summary[:200]}' Cat={event_category.value} "
-            f"Age={metrics['event_age_hours']}h ({metrics['catalyst_decay_status'].value.upper()}, decay={metrics['catalyst_decay_factor']}).\n"
-            f"PRICING: Expected={metrics['expected_reaction_pct']}% Actual={metrics['actual_reaction_pct']}% "
-            f"AdjGap={metrics['direction_adjusted_gap_pct']}% VolSurge={metrics['volume_ratio']}x.\n"
-            f"ANALOGS: Median={metrics['historical_median_reaction_pct']}% StdDev={metrics['historical_dispersion_pct']}% "
+            f"Analyze market reaction for {symbol}. Catalyst='{catalyst_summary[:200]}' "
+            f"Cat={event_category.value} Age={metrics['event_age_hours']}h "
+            f"({metrics['catalyst_decay_status'].value.upper()}, "
+            f"decay={metrics['catalyst_decay_factor']}).\n"
+            f"PRICING: Expected={metrics['expected_reaction_pct']}% "
+            f"Actual={metrics['actual_reaction_pct']}% "
+            f"AdjGap={metrics['direction_adjusted_gap_pct']}% "
+            f"VolSurge={metrics['volume_ratio']}x.\n"
+            f"ANALOGS: Median={metrics['historical_median_reaction_pct']}% "
+            f"StdDev={metrics['historical_dispersion_pct']}% "
             f"Matches={metrics['analog_count']} Sim={metrics['analog_similarity_score']}/100.\n"
-            f"VOL/OPTIONS: HV={metrics['historical_volatility_pct']}% IV={metrics['implied_volatility_pct']}% "
-            f"IV/HV={metrics['iv_hv_ratio']}x ImpliedMove=±{metrics['options_implied_move_pct']}%. "
-            f"PrelimClass={metrics['classification']} OppScore={metrics['opportunity_score']}/100.\n\n"
+            f"VOL/OPTIONS: HV={metrics['historical_volatility_pct']}% "
+            f"IV={metrics['implied_volatility_pct']}% "
+            f"IV/HV={metrics['iv_hv_ratio']}x "
+            f"ImpliedMove=±{metrics['options_implied_move_pct']}%. "
+            f"PrelimClass={metrics['classification']} "
+            f"OppScore={metrics['opportunity_score']}/100.\n\n"
             "Output JSON: thesis (concise 1-2 sentences), confidence (0.0-1.0), "
-            "evidence_summaries (2 concise items), limitations (1 item), classification (UNDERREACTION|OVERREACTION|FAIR_REACTION)."
+            "evidence_summaries (2 concise items), limitations (1 item), "
+            "classification (UNDERREACTION|OVERREACTION|FAIR_REACTION)."
         )
 
         completion = await self.llm_gateway.complete_structured(

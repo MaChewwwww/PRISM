@@ -20,6 +20,8 @@ import {
   AGENTS,
   PRESET_TICKERS,
   type AgentAction,
+  type DecisionReportData,
+  type ObjectReportData,
   type PlaygroundResult,
 } from "./playground-types";
 import { DecisionResult } from "./playground-result-decision";
@@ -54,7 +56,9 @@ export function AgentPlaygroundModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlaygroundResult | null>(null);
   const [currentStage, setCurrentStage] = useState<string>("Initializing pipeline...");
-  const [liveSpecialists, setLiveSpecialists] = useState<Record<string, Record<string, unknown>>>({});
+  const [liveSpecialists, setLiveSpecialists] = useState<Record<string, Record<string, unknown>>>(
+    {},
+  );
   const [verdictPreview, setVerdictPreview] = useState<DecisionReportData | null>(null);
 
   useEffect(() => {
@@ -107,7 +111,11 @@ export function AgentPlaygroundModal({
 
         // Check if stream is available
         const contentType = streamRes.headers?.get?.("content-type") ?? "";
-        if (streamRes.ok && contentType.includes("text/event-stream") && streamRes.body?.getReader) {
+        if (
+          streamRes.ok &&
+          contentType.includes("text/event-stream") &&
+          streamRes.body?.getReader
+        ) {
           const reader = streamRes.body.getReader();
           const decoder = new TextDecoder();
           let buffer = "";
@@ -136,11 +144,23 @@ export function AgentPlaygroundModal({
               if (eventType === "stage") {
                 const stageData = dataObj as { stage?: string; status?: string; price?: string };
                 if (stageData.stage === "market_data") {
-                  setCurrentStage(stageData.status === "done" ? `Market bars loaded ($${stageData.price ?? "N/A"})` : "Querying Alpaca bars & news...");
+                  setCurrentStage(
+                    stageData.status === "done"
+                      ? `Market bars loaded ($${stageData.price ?? "N/A"})`
+                      : "Querying Alpaca bars & news...",
+                  );
                 } else if (stageData.stage === "specialists") {
-                  setCurrentStage(stageData.status === "done" ? "6 specialist reports synthesized" : "Running parallel specialist models...");
+                  setCurrentStage(
+                    stageData.status === "done"
+                      ? "6 specialist reports synthesized"
+                      : "Running parallel specialist models...",
+                  );
                 } else if (stageData.stage === "cio_synthesis") {
-                  setCurrentStage(stageData.status === "done" ? "Decision finalized" : "Chief Investment Officer formulating options proposal...");
+                  setCurrentStage(
+                    stageData.status === "done"
+                      ? "Decision finalized"
+                      : "Chief Investment Officer formulating options proposal...",
+                  );
                 }
               } else if (eventType === "specialist") {
                 const specData = dataObj as { agent?: string; [key: string]: unknown };
@@ -367,9 +387,7 @@ export function AgentPlaygroundModal({
                         ? "Live Streaming 6 Specialist Agents & CIO Master Synthesis"
                         : `Executing ${currentAgent.name}...`}
                     </h3>
-                    <p className="text-xs text-cyan-300/80 font-mono mt-0.5">
-                      {currentStage}
-                    </p>
+                    <p className="text-xs text-cyan-300/80 font-mono mt-0.5">{currentStage}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-center px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs font-mono text-cyan-300">
@@ -382,11 +400,13 @@ export function AgentPlaygroundModal({
               {currentAgent.isAllAgents ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
                   {/* 1. Quant */}
-                  <div className={`rounded-lg border p-3 space-y-1 transition ${
-                    liveSpecialists.quant
-                      ? "border-emerald-500/40 bg-emerald-950/20"
-                      : "border-white/5 bg-[#0B0F14]/70"
-                  }`}>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.quant
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold">
                         <LineChart className="h-3.5 w-3.5" />
@@ -408,11 +428,13 @@ export function AgentPlaygroundModal({
                   </div>
 
                   {/* 2. Fundamental */}
-                  <div className={`rounded-lg border p-3 space-y-1 transition ${
-                    liveSpecialists.fundamental
-                      ? "border-emerald-500/40 bg-emerald-950/20"
-                      : "border-white/5 bg-[#0B0F14]/70"
-                  }`}>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.fundamental
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold">
                         <Building2 className="h-3.5 w-3.5" />
@@ -434,11 +456,13 @@ export function AgentPlaygroundModal({
                   </div>
 
                   {/* 3. Industry */}
-                  <div className={`rounded-lg border p-3 space-y-1 transition ${
-                    liveSpecialists.industry
-                      ? "border-emerald-500/40 bg-emerald-950/20"
-                      : "border-white/5 bg-[#0B0F14]/70"
-                  }`}>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.industry
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
                         <Building2 className="h-3.5 w-3.5" />
@@ -460,11 +484,13 @@ export function AgentPlaygroundModal({
                   </div>
 
                   {/* 4. Macro */}
-                  <div className={`rounded-lg border p-3 space-y-1 transition ${
-                    liveSpecialists.macro
-                      ? "border-emerald-500/40 bg-emerald-950/20"
-                      : "border-white/5 bg-[#0B0F14]/70"
-                  }`}>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.macro
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-pink-400 text-xs font-semibold">
                         <Globe2 className="h-3.5 w-3.5" />
@@ -486,11 +512,13 @@ export function AgentPlaygroundModal({
                   </div>
 
                   {/* 5. News */}
-                  <div className={`rounded-lg border p-3 space-y-1 transition ${
-                    liveSpecialists.news
-                      ? "border-emerald-500/40 bg-emerald-950/20"
-                      : "border-white/5 bg-[#0B0F14]/70"
-                  }`}>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.news
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-purple-400 text-xs font-semibold">
                         <Activity className="h-3.5 w-3.5" />
@@ -512,11 +540,13 @@ export function AgentPlaygroundModal({
                   </div>
 
                   {/* 6. Market Reaction */}
-                  <div className={`rounded-lg border p-3 space-y-1 transition ${
-                    liveSpecialists.reaction
-                      ? "border-emerald-500/40 bg-emerald-950/20"
-                      : "border-white/5 bg-[#0B0F14]/70"
-                  }`}>
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.reaction
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold">
                         <Activity className="h-3.5 w-3.5" />
@@ -575,12 +605,21 @@ export function AgentPlaygroundModal({
 
               {selectedAgent === "decision" ? (
                 <div className="space-y-4">
-                  <DecisionResult data={(result && !Array.isArray(result) ? result : verdictPreview) as ObjectReportData} />
+                  <DecisionResult
+                    data={
+                      (result && !Array.isArray(result)
+                        ? result
+                        : verdictPreview) as ObjectReportData
+                    }
+                  />
                   {/* Subtle stream indicator while full detailed narrative synthesizes */}
                   {!result && isLoading && (
                     <div className="flex items-center gap-2.5 rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-4 py-3 text-xs text-cyan-300 animate-pulse">
                       <Loader2 className="h-4 w-4 animate-spin text-cyan-400 shrink-0" />
-                      <span>Synthesizing cross-agent narrative evidence, contradictions & portfolio fit...</span>
+                      <span>
+                        Synthesizing cross-agent narrative evidence, contradictions & portfolio
+                        fit...
+                      </span>
                     </div>
                   )}
                 </div>

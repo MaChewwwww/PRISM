@@ -8,14 +8,13 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
-    DecisionSynthesisResult,
     FundamentalAnalysisReport,
     IndustryAnalysisReport,
     LLMEventAnalysis,
@@ -25,7 +24,6 @@ from app.contracts.models import (
     ResearchReport,
     TradeDecisionReport,
 )
-
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
 from app.core.database import get_db_session
@@ -262,6 +260,7 @@ async def analyze_reaction(
     db_healthy = False
     try:
         from sqlalchemy import text
+
         await db_session.execute(text("SELECT 1"))
         db_healthy = True
     except Exception:
@@ -372,7 +371,6 @@ async def analyze_fundamental(
         )
 
 
-
 @router.post("/industry/analyze", response_model=IndustryAnalysisReport)
 async def analyze_industry(
     request: IndustryAnalysisRequest,
@@ -450,7 +448,6 @@ async def synthesize_decision(
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> TradeDecisionReport | NoTradeDecision:
-
     """Perform master synthesis and return a canonical proposal or explicit NO_TRADE."""
     trace_id = uuid4()
     symbol = request.symbol.strip().upper()
@@ -465,6 +462,7 @@ async def synthesize_decision(
         db_healthy = False
         try:
             from sqlalchemy import text
+
             await db_session.execute(text("SELECT 1"))
             db_healthy = True
         except Exception:
@@ -477,7 +475,6 @@ async def synthesize_decision(
             allow_illustrative=not db_healthy,
         )
         return proposal
-
 
     except ValueError:
         bundle_digest = hashlib.sha256(f"no-evidence:{symbol}:{trace_id}".encode()).hexdigest()
@@ -532,31 +529,44 @@ async def synthesize_decision_stream(
                 yield _sse_event("error", {"message": f"No market data for {symbol}"})
                 return
             current_price = Decimal(str(bars[-1]["close"]))
-            yield _sse_event("stage", {"stage": "market_data", "status": "done", "price": str(current_price)})
+            yield _sse_event(
+                "stage", {"stage": "market_data", "status": "done", "price": str(current_price)}
+            )
 
             # 2. Deterministic agents (instant)
-            from app.research.quant_engine import compute_quantitative_analysis
             from app.research.fundamental_engine import compute_fundamental_analysis
+            from app.research.quant_engine import compute_quantitative_analysis
 
-            quant_report = compute_quantitative_analysis(bars=bars, symbol=symbol, trace_id=trace_id)
-            yield _sse_event("specialist", {
-                "agent": "quant",
-                "momentum_score": str(quant_report.momentum_score),
-                "trend": quant_report.trend.value,
-                "rsi_14": str(quant_report.rsi_14),
-                "rsi_condition": quant_report.rsi_condition.value,
-            })
+            quant_report = compute_quantitative_analysis(
+                bars=bars, symbol=symbol, trace_id=trace_id
+            )
+            yield _sse_event(
+                "specialist",
+                {
+                    "agent": "quant",
+                    "momentum_score": str(quant_report.momentum_score),
+                    "trend": quant_report.trend.value,
+                    "rsi_14": str(quant_report.rsi_14),
+                    "rsi_condition": quant_report.rsi_condition.value,
+                },
+            )
 
             fund_report = compute_fundamental_analysis(
-                symbol=symbol, latest_close=current_price, trace_id=trace_id, allow_illustrative=True,
+                symbol=symbol,
+                latest_close=current_price,
+                trace_id=trace_id,
+                allow_illustrative=True,
             )
-            yield _sse_event("specialist", {
-                "agent": "fundamental",
-                "quality_score": str(fund_report.composite_quality_score),
-                "health": fund_report.fundamental_health.value,
-                "f_score": fund_report.piotroski_f_score,
-                "valuation": fund_report.valuation_stance.value,
-            })
+            yield _sse_event(
+                "specialist",
+                {
+                    "agent": "fundamental",
+                    "quality_score": str(fund_report.composite_quality_score),
+                    "health": fund_report.fundamental_health.value,
+                    "f_score": fund_report.piotroski_f_score,
+                    "valuation": fund_report.valuation_stance.value,
+                },
+            )
 
             # 3. LLM specialists in parallel (News, Industry, Macro, Reaction)
             yield _sse_event("stage", {"stage": "specialists", "status": "running"})
@@ -571,14 +581,22 @@ async def synthesize_decision_stream(
                 if news_articles
                 else f"Market movement in {symbol}"
             )
-            art_id = str(news_articles[0].get("id")) if news_articles and news_articles[0].get("id") else None
+            art_id = (
+                str(news_articles[0].get("id"))
+                if news_articles and news_articles[0].get("id")
+                else None
+            )
 
             news_tasks = [
-                news_agent.analyze_article(article=art, symbol=symbol, trace_id=trace_id, strict=False)
+                news_agent.analyze_article(
+                    article=art, symbol=symbol, trace_id=trace_id, strict=False
+                )
                 for art in (news_articles or [])[:2]
             ]
             news_coro = asyncio.gather(*news_tasks) if news_tasks else asyncio.sleep(0, result=[])
-            industry_coro = industry_agent.analyze_industry(symbol=symbol, trace_id=trace_id, strict=False)
+            industry_coro = industry_agent.analyze_industry(
+                symbol=symbol, trace_id=trace_id, strict=False
+            )
             macro_coro = macro_agent.analyze_macro(symbol=symbol, trace_id=trace_id, strict=False)
             reaction_coro = reaction_agent.analyze_reaction(
                 symbol=symbol,
@@ -592,7 +610,11 @@ async def synthesize_decision_stream(
             )
 
             results = await asyncio.gather(
-                news_coro, industry_coro, macro_coro, reaction_coro, return_exceptions=True,
+                news_coro,
+                industry_coro,
+                macro_coro,
+                reaction_coro,
+                return_exceptions=True,
             )
             news_report = results[0] if not isinstance(results[0], Exception) else []
             industry_report = results[1] if not isinstance(results[1], Exception) else None
@@ -600,33 +622,47 @@ async def synthesize_decision_stream(
             reaction_report = results[3] if not isinstance(results[3], Exception) else None
 
             if news_report:
-                yield _sse_event("specialist", {
-                    "agent": "news",
-                    "count": len(news_report),
-                    "headline": news_report[0].headline if news_report else None,
-                    "sentiment": news_report[0].sentiment if news_report else None,
-                })
+                yield _sse_event(
+                    "specialist",
+                    {
+                        "agent": "news",
+                        "count": len(news_report),
+                        "headline": news_report[0].headline if news_report else None,
+                        "sentiment": news_report[0].sentiment if news_report else None,
+                    },
+                )
             if industry_report and not isinstance(industry_report, Exception):
-                yield _sse_event("specialist", {
-                    "agent": "industry",
-                    "sector": industry_report.sector_name,
-                    "health_score": str(industry_report.sector_health_score),
-                    "moat": industry_report.competitive_moat.value,
-                })
+                yield _sse_event(
+                    "specialist",
+                    {
+                        "agent": "industry",
+                        "sector": industry_report.sector_name,
+                        "health_score": str(industry_report.sector_health_score),
+                        "moat": industry_report.competitive_moat.value,
+                    },
+                )
             if macro_report and not isinstance(macro_report, Exception):
-                yield _sse_event("specialist", {
-                    "agent": "macro",
-                    "regime": macro_report.macro_regime.value,
-                    "stress": macro_report.market_stress_level.value,
-                    "climate_score": str(macro_report.macro_climate_score),
-                })
+                yield _sse_event(
+                    "specialist",
+                    {
+                        "agent": "macro",
+                        "regime": macro_report.macro_regime.value,
+                        "stress": macro_report.market_stress_level.value,
+                        "climate_score": str(macro_report.macro_climate_score),
+                    },
+                )
             if reaction_report and not isinstance(reaction_report, Exception):
-                yield _sse_event("specialist", {
-                    "agent": "reaction",
-                    "classification": reaction_report.classification.value if reaction_report.classification else None,
-                    "gap_pct": str(reaction_report.reaction_gap_pct),
-                    "opportunity_score": str(reaction_report.opportunity_score),
-                })
+                yield _sse_event(
+                    "specialist",
+                    {
+                        "agent": "reaction",
+                        "classification": reaction_report.classification.value
+                        if reaction_report.classification
+                        else None,
+                        "gap_pct": str(reaction_report.reaction_gap_pct),
+                        "opportunity_score": str(reaction_report.opportunity_score),
+                    },
+                )
 
             yield _sse_event("stage", {"stage": "specialists", "status": "done"})
 
@@ -637,25 +673,15 @@ async def synthesize_decision_stream(
             )
 
             news_score = (
-                calculate_news_sentiment_score(news_report)
-                if news_report
-                else Decimal("50.0")
+                calculate_news_sentiment_score(news_report) if news_report else Decimal("50.0")
             )
             reaction_opp = (
                 reaction_report.opportunity_score
                 if reaction_report and reaction_report.opportunity_score is not None
                 else Decimal("50.0")
             )
-            sec_health = (
-                industry_report.sector_health_score
-                if industry_report
-                else Decimal("50.0")
-            )
-            macro_clim = (
-                macro_report.macro_climate_score
-                if macro_report
-                else Decimal("50.0")
-            )
+            sec_health = industry_report.sector_health_score if industry_report else Decimal("50.0")
+            macro_clim = macro_report.macro_climate_score if macro_report else Decimal("50.0")
 
             comp_score = compute_composite_opportunity_score(
                 reaction_score=reaction_opp,
@@ -675,9 +701,7 @@ async def synthesize_decision_stream(
                 if (is_affirmative and direction_val == "bullish")
                 else ("bear_put_spread" if is_affirmative else "no_trade")
             )
-            verdict_val = (
-                "proceed_to_options_proposal" if is_affirmative else "no_trade"
-            )
+            verdict_val = "proceed_to_options_proposal" if is_affirmative else "no_trade"
 
             yield _sse_event(
                 "verdict_preview",
@@ -704,7 +728,9 @@ async def synthesize_decision_stream(
 
             agent = TradingDecisionAgent(llm_gateway=llm_gateway, alpaca_gateway=alpaca)
             proposal = await agent.synthesize_decision(
-                symbol=symbol, trace_id=trace_id, allow_illustrative=True,
+                symbol=symbol,
+                trace_id=trace_id,
+                allow_illustrative=True,
             )
 
             yield _sse_event("result", proposal.model_dump(mode="json"))

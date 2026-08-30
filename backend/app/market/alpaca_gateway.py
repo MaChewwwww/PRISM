@@ -367,7 +367,6 @@ class AlpacaPyGateway:
             feed=feed or DataFeed.IEX,
         )
 
-
         retries = 3
         delay = 1.0
         for attempt in range(retries):

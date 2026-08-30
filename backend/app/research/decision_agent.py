@@ -5,10 +5,10 @@ import json
 import logging
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -132,8 +132,6 @@ class TradeProposalLLMOutput(BaseModel):
         ),
     )
 
-    from pydantic import field_validator
-
     @field_validator("evidence_summary", "contradictions", "key_risks", mode="before")
     @classmethod
     def _coerce_list(cls, v: Any) -> list[str]:
@@ -142,7 +140,6 @@ class TradeProposalLLMOutput(BaseModel):
         if isinstance(v, (list, tuple)):
             return [str(x).strip() for x in v]
         return []
-
 
 
 def compute_composite_opportunity_score(
@@ -374,7 +371,11 @@ class TradingDecisionAgent:
                 if news_articles
                 else f"Market movement in {sym}"
             )
-            art_id = str(news_articles[0].get("id")) if news_articles and news_articles[0].get("id") else None
+            art_id = (
+                str(news_articles[0].get("id"))
+                if news_articles and news_articles[0].get("id")
+                else None
+            )
 
             news_tasks = [
                 news_agent.analyze_article(
@@ -460,7 +461,9 @@ class TradingDecisionAgent:
         news_meta = ""
         if top_event:
             cat = getattr(top_event.event_category, "value", str(top_event.event_category))
-            mat = getattr(top_event.catalyst_materiality, "value", str(top_event.catalyst_materiality))
+            mat = getattr(
+                top_event.catalyst_materiality, "value", str(top_event.catalyst_materiality)
+            )
             news_meta = f" Cat={cat} Mat={mat}"
             if any(getattr(e, "has_contradictory_signals", False) for e in news_report):
                 news_meta += " CONTRADICTORY"
@@ -475,24 +478,31 @@ class TradingDecisionAgent:
             f"NEWS: n={len(news_report)} score={news_score}/100 headline='{catalyst}'{news_meta}\n"
             f"QUANT: trend={quant_report.trend.value} mom={quant_report.momentum_score}/100 "
             f"rsi={quant_report.rsi_14}({quant_report.rsi_condition.value}) "
-            f"gap={quant_report.price_displacement.gap_size_pct}% vol={quant_report.volatility_annualized_pct}%\n"
-            f"INDUSTRY: sector={industry_report.sector_name} health={industry_report.sector_health_score}/100 "
-            f"moat={industry_report.competitive_moat.value} alpha_spy={industry_report.stock_vs_spy_alpha_20d_pct}%\n"
+            f"gap={quant_report.price_displacement.gap_size_pct}% "
+            f"vol={quant_report.volatility_annualized_pct}%\n"
+            f"INDUSTRY: sector={industry_report.sector_name} "
+            f"health={industry_report.sector_health_score}/100 "
+            f"moat={industry_report.competitive_moat.value} "
+            f"alpha_spy={industry_report.stock_vs_spy_alpha_20d_pct}%\n"
             f"FUNDAMENTAL: quality={fundamental_report.composite_quality_score}/100 "
             f"health={fundamental_report.fundamental_health.value} "
             f"f_score={fundamental_report.piotroski_f_score}/9 "
             f"z={fundamental_report.altman_z_score}({fundamental_report.altman_zone.value}) "
             f"valuation={fundamental_report.valuation_stance.value}(PE:{pe_val}x)\n"
-            f"MACRO: regime={macro_report.macro_regime.value} rates={macro_report.rate_environment.value} "
+            f"MACRO: regime={macro_report.macro_regime.value} "
+            f"rates={macro_report.rate_environment.value} "
             f"stress={macro_report.market_stress_level.value} "
-            f"impact={macro_report.asset_macro_impact.value} climate={macro_report.macro_climate_score}/100\n"
+            f"impact={macro_report.asset_macro_impact.value} "
+            f"climate={macro_report.macro_climate_score}/100\n"
             f"REACTION: class={react_cls} gap={reaction_report.reaction_gap_pct}% "
             f"adj_gap={reaction_report.direction_adjusted_gap_pct}% "
             f"iv_hv={reaction_report.iv_hv_ratio}x opp={reaction_opp_score}/100\n\n"
-            "Output JSON: verdict(proceed_to_options_proposal|no_trade), direction(bullish|bearish|neutral), "
+            "Output JSON: verdict(proceed_to_options_proposal|no_trade), "
+            "direction(bullish|bearish|neutral), "
             "structure(long_call|long_put|bull_call_spread|bear_put_spread|no_trade), "
-            "net_ev_r(>=0.15), reward_risk_ratio(>=1.5), confidence_score(0-100), target_price, "
-            "evidence_summary(3-5 items), contradictions, contradiction_analysis, portfolio_fit, "
+            "net_ev_r(>=0.15), reward_risk_ratio(>=1.5), confidence_score(0-100), "
+            "target_price, evidence_summary(3-5 items), contradictions, "
+            "contradiction_analysis, portfolio_fit, "
             "options_only_constraint_acknowledged(true), synthesis_rationale, key_risks."
         )
 
@@ -520,9 +530,7 @@ class TradingDecisionAgent:
                 if _attempt == 0:
                     await asyncio.sleep(2)
         if llm_response is None:
-            raise ValueError(
-                f"CIO LLM synthesis failed after retries for {sym}: {last_llm_exc}"
-            )
+            raise ValueError(f"CIO LLM synthesis failed after retries for {sym}: {last_llm_exc}")
 
         if not llm_response.parsed:
             raise ValueError(
