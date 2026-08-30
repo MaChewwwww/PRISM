@@ -1,6 +1,6 @@
 # PRISM business rules
 
-Revision: `2026-08-29 / ecosystem-consolidation-v1`
+Revision: `2026-08-30 / autonomous-paper-parity-v4`
 
 This document is the human-readable mirror of `backend/app/rules/authorized_baseline.v1.json`. The JSON registry is the only machine-readable numerical source. Changes require a new ruleset/profile version and synchronized contracts, tests, and documentation.
 
@@ -12,7 +12,7 @@ This document is the human-readable mirror of `backend/app/rules/authorized_base
 4. Deterministic rules evaluate each rule as `PASS`, `MODIFY`, or `FAIL`.
 5. Aggregation returns `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
 6. Only `APPROVE` may proceed toward execution. An accepted modification creates a revised proposal and must be authorized again.
-7. Any genuine execution target is Alpaca paper only. Current skeleton execution is disabled and unimplemented.
+7. Any genuine execution target is Alpaca paper only. Execution is disabled by default; the production-shaped autonomous worker fails closed and records `NO_TRADE` until all live evidence, account, portfolio, option-chain, risk, and authorization gates pass.
 
 ## Active baseline parameter register
 
@@ -71,7 +71,7 @@ Every entry therefore has at least one full Thursday session of runway. The EV a
 
 Autonomous paper execution is an operational opt-in, not a replacement for this ruleset. `AUTONOMOUS_TRADING_ENABLED` defaults to `false`; enabling it requires `EXECUTION_ENABLED=true`, an active ruleset, complete Alpaca paper credentials, and a UTC `AUTONOMOUS_TRADING_START_AT`/`AUTONOMOUS_TRADING_END_AT` pair. Production intervals must remain within the authorized hackathon trading start and force-flatten deadline. Staging may use its separate paper account for a bounded rehearsal interval; neither environment may bypass paper mode, the kill switch, or mandatory rules.
 
-The current repository has no autonomous orchestration loop. These settings provide a fail-closed schedule gate for the future loop; they do not, by themselves, submit or schedule orders.
+The shared staging/production worker uses the same 15-minute cadence, seven-symbol allowlist, six-position cap, session advisory lock, mandatory exit checks, and durable kill switch. It does not manufacture evidence or orders; unavailable IV history, analog coverage, illustrative fundamentals, stale data, incomplete quotes/Greeks, unavailable portfolio/regime controls, or an unverified deployment produce `NO_TRADE`. IV rank is sourced from a configured history provider, durable chain observations, or option-bar IV inversion; it is never replaced with realized-volatility rank. Existing OCC option positions are enriched from the live chain before sector/cluster/Greek/expiry checks. Historical analog returns are converted to option intrinsic payoffs and charged observed NBBO slippage and a deterministic spread-derived fill probability before the EV gate.
 
 ## Standard AI Profiles
 
@@ -89,10 +89,10 @@ Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 thr
 | --- | --- | --- |
 | P0 | Platform and authorization integrity | Reject live mode, disabled execution, kill switch, missing/invalid ruleset, incompatible profile, expired authorization, or digest mismatch. |
 | P1 | Portfolio survival | Apply drawdown state, aggregate/ticker/sector/cluster concentration, cash reserve, max positions, and planned stop-risk controls. |
-| P2 | Instrument and regime | Permit only supported option structures and verified permissions. VOLATILE restricts to 1:1 debit spreads. CRISIS blocks new risk. |
+| P2 | Risk, instrument, and regime | Require a fresh acceptable AI risk assessment, permit only supported option structures and verified permissions, restrict VOLATILE to 1:1 debit spreads, and block CRISIS new risk. |
 | P3 | Freshness and execution quality | Reject evidence older than 30 seconds and spreads wider than 10% of premium; validate active contracts and required snapshots. |
 | P4 | Opportunity and economics | Require score, net EV, and realistic reward/risk gates independently. |
-| P5 | Exit completeness | Require bounded take-profit, fixed stop-loss, DTE, holding, and thesis-invalidation behavior. |
+| P5 | Exit and payload completeness | Require bounded take-profit, fixed stop-loss, DTE/holding controls, active ruleset identity, and an exact executable payload. |
 
 `MODIFY` is valid only where a safe, deterministic revision can be described, such as reducing size to a concentration cap. A proposal that cannot be safely revised is `FAIL`. Aggregate modification state is `MODIFIED_PENDING_ACCEPTANCE`, never approval.
 

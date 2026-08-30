@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -19,6 +20,24 @@ class SystemStatus(BaseModel):
     credentials_present: bool
     account_verified: bool
     supported_options_level: int | None
+
+
+class AutonomousStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    autonomous_enabled: bool
+    execution_enabled: bool
+    kill_switch_active: bool
+    updated_at: datetime
+    updated_by: str
+    reason: str
+
+
+class KillSwitchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    active: bool
+    reason: str
 
 
 class LoginRequest(BaseModel):

@@ -2,7 +2,7 @@
 
 ShadowFund is PRISM's non-executable counterfactual evaluation boundary. It compares alternate choices against the same subsequent market path without submitting, amending, or cancelling broker orders.
 
-The current skeleton exposes an `illustrative_fixture` presentation of ShadowFund branches. It does not implement valuation, persistence, provider ingestion, or a paper-account adapter, and it must not be described as a completed engine.
+The current presentation remains an `illustrative_fixture`, but the backend emits an immutable `EvaluationRoot` lineage anchor for every autonomous cycle and candidate authorization. Full valuation, provider ingestion, and fill reconciliation remain deferred; the paper-account snapshot adapter is live and the root remains non-executable.
 
 ## Future lifecycle
 

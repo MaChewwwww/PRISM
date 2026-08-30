@@ -173,6 +173,8 @@ class NewsIntelligenceAgent:
         symbol: str,
         trace_id: UUID,
         db_session: AsyncSession | None = None,
+        *,
+        strict: bool = False,
     ) -> LLMEventAnalysis:
         """Analyze a single news article, checking cache first to prevent duplicate LLM cost."""
         article_id = str(article["id"])
@@ -190,7 +192,7 @@ class NewsIntelligenceAgent:
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB cache first
-        if db_session is not None:
+        if db_session is not None and not strict:
             try:
                 query = select(LLMEventAnalysisModel).where(
                     LLMEventAnalysisModel.article_id == article_id,
@@ -380,8 +382,9 @@ class NewsIntelligenceAgent:
                 )
                 db_session.add(db_model)
                 await db_session.commit()
-            except Exception:
+            except Exception as exc:
                 # Database cache write failed; ignore and return result
-                pass
+                if strict:
+                    raise RuntimeError("News research persistence failed") from exc
 
         return analysis_contract

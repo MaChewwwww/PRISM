@@ -1,8 +1,8 @@
 # PRISM architecture
 
-Revision: `2026-08-29 / ecosystem-consolidation-v1`
+Revision: `2026-08-30 / autonomous-paper-parity-v4`
 
-PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The current repository is a contract-aligned skeleton: it implements authenticated news, deterministic quantitative, and market-reaction research slices, typed domain boundaries, authenticated illustrative presentation APIs, a generated frontend transport contract, and deployment foundations. Full orchestration, persisted portfolio services, ShadowFund evaluation, and paper order execution remain future work.
+PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The repository includes authenticated specialist research routes, persisted research tables, strict provenance/freshness gates, SEC companyfacts sourcing, option-chain/contract adapters, deterministic P0-P5 authorization, authenticated durable autonomous controls, durable receipts/reconciliation, and a generated frontend transport contract. The same autonomous worker runs in staging and production; separate paper credentials select the account.
 
 ## Authority and dependency direction
 
@@ -68,7 +68,7 @@ Operator browser
        -> PostgreSQL through an Alembic-managed schema
        -> optional Redis cache
        -> Alpaca data adapter through alpaca-py, future broader integration
-       -> gated Alpaca paper execution adapter, future activation
+       -> gated Alpaca paper execution adapter
        -> provider-neutral LLM adapter
 ```
 
@@ -79,16 +79,16 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | Boundary | Responsibility | Current state |
 | --- | --- | --- |
 | `contracts` | Typed proposal, risk, governance, authorization, execution, profile, and audit records | Implemented skeleton |
-| `rules` | Versioned BA registry and deterministic policy boundary | Registry and typed boundary implemented; full evaluator deferred |
-| `research` | Provider-normalized evidence and structured research | News, deterministic quantitative, and market-reaction endpoints implemented; full specialist orchestration deferred |
+| `rules` | Versioned BA registry and deterministic policy boundary | Registry, P0-P5 evaluator, Balanced threshold 84, and typed traces implemented |
+| `research` | Provider-normalized evidence and structured research | Seven specialist workflows, SEC-sourced fundamentals, historical analog option-payoff EV, IV-rank history, and strict freshness/provenance gates |
 | `presentation` | Backend-owned illustrative read models | Implemented with versioned fixture adapter |
-| `proposal` | Trading Decision proposal synthesis | Contract only / deferred |
-| `risk` | AI-assisted adversarial critique | Contract/presentation only / deferred |
-| `market` | Alpaca market/news adapter | Read-only news and historical stock-bar slices |
-| `portfolio` | Durable snapshots and exposure calculations | Deferred |
-| `execution` | Final paper checks, translation, idempotency, reconciliation | Validation and autonomous-window gate; submission deferred and disabled |
-| `shadowfund` | Immutable counterfactual branches and evaluation | Presentation fixture only / deferred engine |
-| `audit` | Append-oriented decision and execution events | Contract only / deferred persistence |
+| `proposal` | Trading Decision proposal synthesis | Canonical digest-bound proposals persisted by the autonomous worker; the public research endpoint remains `NO_TRADE` without complete binding |
+| `risk` | AI-assisted adversarial critique | Structured RiskAssessment persisted before deterministic authorization |
+| `market` | Alpaca market/news adapter | Account/portfolio, stock bars, active contracts, fresh chain quotes/Greeks, and news |
+| `portfolio` | Durable snapshots and exposure calculations | OCC/chain-enriched account snapshots persisted per cycle with six-position, cash, ticker/sector/cluster, Greek, and expiry concentration gates |
+| `execution` | Final paper checks, translation, idempotency, reconciliation | Durable PostgreSQL receipts, client-order idempotency, restart reconciliation, and paper-only CLI submission |
+| `shadowfund` | Immutable counterfactual branches and evaluation | Non-executable evaluation roots and shadow candidates implemented; valuation/fill ingestion deferred |
+| `audit` | Append-oriented decision and execution events | Alembic audit-root tables and cycle emissions implemented; full event projector deferred |
 
 ## Research slices
 
@@ -114,7 +114,9 @@ The BA-owned registry also carries the fixed-date hackathon window. It starts Mo
 
 Autonomous paper execution is an explicit server-side opt-in, controlled by `AUTONOMOUS_TRADING_ENABLED` and a UTC half-open interval from `AUTONOMOUS_TRADING_START_AT` through (but excluding) `AUTONOMOUS_TRADING_END_AT`. The flag defaults to false, requires `EXECUTION_ENABLED=true`, an active ruleset, and a complete Alpaca paper credential pair. Production intervals must be contained within the registry's hackathon trading start and force-flatten deadline. Staging uses a separate paper credential pair and may select a bounded rehearsal interval; this does not change the production BA window or any deterministic authorization requirement.
 
-This is configuration and validation groundwork only. The autonomous orchestration loop is not implemented, so setting the variables does not itself schedule or submit orders.
+The shared autonomous worker runs in staging and production when explicitly enabled, uses a PostgreSQL session advisory lock, reconciles unfinished receipts before every cycle (including kill-switched cycles), records cycle outcomes and reconciliation transitions, and checks the durable kill switch. It processes exactly the seven-symbol allowlist, requires fresh sourced evidence, complete option quotes/Greeks, at least 30 comparable five-year events, live account/portfolio and market-clock data, AI risk acceptance, and a deterministic `APPROVE`. Missing or degraded inputs produce `NO_TRADE`; mandatory exits and force-flatten are attempted before new entries.
+
+The worker is not considered release-ready merely because the API is healthy. The deployed revision, Alembic head, worker heartbeat, CLI probes, paper account/options level, market-data freshness, and empty reconciliation queue must be verified together. Until that deployment gate is green, the static kill switch remains active.
 
 ## Authorization binding
 
@@ -131,10 +133,10 @@ Only `APPROVE` may reach the execution service. Before any future submission, ex
 
 ## Database and readiness
 
-Alembic owns schema creation. Application startup never calls `create_all()` and never swallows database initialization failures. Compose runs a one-shot migration service before the backend. Readiness checks required configuration and database connectivity; liveness reports process availability only.
+Alembic owns schema creation, including specialist reports, research bundles, proposals, risk assessments, portfolio snapshots, immutable option-IV observations, authorizations, execution receipts, reconciliation events, autonomous controls, and cycle audit anchors. Application startup never calls `create_all()` and never swallows database initialization failures. Compose runs a one-shot migration service before the backend. When autonomous mode is enabled, readiness additionally requires the pinned CLI, paper credentials, active ruleset, verified paper account, and Level 3 options capability.
 
 ## Failure posture
 
 Missing rules, invalid profile compatibility, stale data, invalid AI output, unsupported permissions, unavailable required dependencies, ambiguous paper environment, or digest mismatch fail closed. Provider failures are classified and redacted. Monitoring and audit remain available when execution is disabled.
 
-Automatic AI Profile switching is deferred. Post-Analysis recommendations are limited to authorized fields, require deterministic validation, and remain pending manual operator review.
+Automatic AI Profile switching is deferred. Post-Analysis recommendations are limited to authorized fields, require deterministic validation, and remain pending manual operator review. Shadow candidates are persisted as non-executable branches.

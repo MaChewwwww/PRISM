@@ -27,6 +27,7 @@ from app.contracts.models import (
 )
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.fundamental_data import CompanyFinancials
 from app.research.fundamental_engine import compute_fundamental_analysis
 from app.research.industry_agent import IndustryIntelligenceAgent
 from app.research.macro_agent import MacroeconomicAgent
@@ -192,18 +193,26 @@ class TradingDecisionAgent:
         symbol: str,
         trace_id: UUID,
         db_session: AsyncSession | None = None,
+        *,
+        allow_illustrative: bool = True,
+        financials: CompanyFinancials | None = None,
     ) -> TradeDecisionReport:
         sym = symbol.strip().upper()
-        active_model = self.llm_gateway._settings.llm_model or "default"
+        settings = self.llm_gateway._settings
+        active_model = f"{settings.llm_provider}:{settings.llm_model or 'default'}"
+        now_utc = datetime.now(UTC)
+        freshness_cutoff = now_utc.timestamp() - 30
 
         # Check DB Cache
-        if db_session is not None:
+        if db_session is not None and allow_illustrative:
             try:
                 stmt = (
                     select(TradeDecisionModel)
                     .where(
                         TradeDecisionModel.symbol == sym,
                         TradeDecisionModel.model_name == active_model,
+                        TradeDecisionModel.created_at
+                        >= datetime.fromtimestamp(freshness_cutoff, tz=UTC),
                     )
                     .order_by(TradeDecisionModel.created_at.desc())
                     .limit(1)
@@ -228,7 +237,7 @@ class TradingDecisionAgent:
 
                     return TradeDecisionReport(
                         id=UUID(cached.id),
-                        trace_id=UUID(cached.trace_id),
+                        trace_id=trace_id,
                         created_at=cached.created_at,
                         schema_version=cached.schema_version,
                         symbol=cached.symbol,
@@ -258,19 +267,24 @@ class TradingDecisionAgent:
                         options_only_constraint_acknowledged=options_only_val,
                         synthesis_rationale=cached.synthesis_rationale,
                         key_risks=json.loads(cached.key_risks_json),
+                        provenance="illustrative_fixture"
+                        if allow_illustrative
+                        else "live_research",
                     )
 
             except Exception as exc:
-                logger.warning(
-                    "TradeDecision DB cache read failed for %s: %s",
-                    sym,
-                    type(exc).__name__,
-                )
+                logger.warning("Error checking decision cache: %s", type(exc).__name__)
 
-        # 1. Fetch Market Data for Underlying (Bars)
-        bars = self.alpaca_gateway.get_stock_bars(symbol=sym, limit=250)
-        if not bars:
-            raise ValueError(f"Insufficient market price bars available for symbol {sym}")
+        # 1. Concurrently Fetch Market Bars and News in Worker Threads (Non-blocking I/O)
+        bars, news_articles = await asyncio.gather(
+            asyncio.to_thread(self.alpaca_gateway.get_stock_bars, sym, limit=250),
+            asyncio.to_thread(self.alpaca_gateway.get_news, sym, limit=5),
+        )
+
+        if not bars or "close" not in bars[-1]:
+            raise ValueError(f"No fresh market bars available for {sym}")
+        if not allow_illustrative and not news_articles:
+            raise ValueError(f"No current sourced news evidence available for {sym}")
         current_price = Decimal(str(bars[-1]["close"]))
 
         # 2. Concurrently Execute Specialist Agents
@@ -279,40 +293,60 @@ class TradingDecisionAgent:
         macro_agent = MacroeconomicAgent(self.llm_gateway, self.alpaca_gateway)
         news_agent = NewsIntelligenceAgent(self.llm_gateway)
 
-        news_articles = self.alpaca_gateway.get_news(symbol=sym, limit=5)
-
-        # Coroutines for async specialist agents
-        news_tasks = [
-            news_agent.analyze_article(
-                article=art,
-                symbol=sym,
-                trace_id=trace_id,
-                db_session=db_session,
+        # AsyncSession is not safe for concurrent commits. The illustrative
+        # presentation path keeps its parallel behavior, while the executable
+        # path serializes persistence-bound specialists so every report is
+        # durably committed without transaction races.
+        if db_session is not None and not allow_illustrative:
+            news_report = []
+            for article in news_articles or []:
+                news_report.append(
+                    await news_agent.analyze_article(
+                        article=article,
+                        symbol=sym,
+                        trace_id=trace_id,
+                        db_session=db_session,
+                        strict=True,
+                    )
+                )
+            industry_report = await industry_agent.analyze_industry(
+                symbol=sym, trace_id=trace_id, db_session=db_session, strict=True
             )
-            for art in news_articles
-        ]
-        news_coro = asyncio.gather(*news_tasks) if news_tasks else asyncio.sleep(0, result=[])
-
-        news_report, industry_report, macro_report = await asyncio.gather(
-            news_coro,
-            industry_agent.analyze_industry(
-                symbol=sym,
-                trace_id=trace_id,
-                db_session=db_session,
-            ),
-            macro_agent.analyze_macro(
-                symbol=sym,
-                trace_id=trace_id,
-                db_session=db_session,
-            ),
-        )
+            macro_report = await macro_agent.analyze_macro(
+                symbol=sym, trace_id=trace_id, db_session=db_session, strict=True
+            )
+        else:
+            news_tasks = [
+                news_agent.analyze_article(
+                    article=art,
+                    symbol=sym,
+                    trace_id=trace_id,
+                    db_session=db_session,
+                    strict=not allow_illustrative,
+                )
+                for art in (news_articles or [])
+            ]
+            news_coro = asyncio.gather(*news_tasks) if news_tasks else asyncio.sleep(0, result=[])
+            industry_coro = industry_agent.analyze_industry(
+                symbol=sym, trace_id=trace_id, db_session=db_session, strict=not allow_illustrative
+            )
+            macro_coro = macro_agent.analyze_macro(
+                symbol=sym, trace_id=trace_id, db_session=db_session, strict=not allow_illustrative
+            )
+            news_report, industry_report, macro_report = await asyncio.gather(
+                news_coro, industry_coro, macro_coro
+            )
 
         # Synchronous deterministic agents
         quant_report: QuantitativeAnalysisReport = compute_quantitative_analysis(
             bars=bars, symbol=sym, trace_id=trace_id
         )
         fundamental_report: FundamentalAnalysisReport = compute_fundamental_analysis(
-            symbol=sym, latest_close=current_price, trace_id=trace_id
+            symbol=sym,
+            latest_close=current_price,
+            trace_id=trace_id,
+            allow_illustrative=allow_illustrative,
+            financials=financials,
         )
 
         # Reaction agent
@@ -336,15 +370,21 @@ class TradingDecisionAgent:
             article_id=art_id,
             event_age_seconds=evt_age,
             event_category=evt_cat,
+            strict=not allow_illustrative,
         )
+        if not allow_illustrative and reaction_report.freshness_seconds > 30:
+            raise ValueError(f"Market reaction evidence is stale for {sym}")
 
         # 3. Deterministic Composite Scoring & Alignment
         news_score = calculate_news_sentiment_score(news_report)
-        reaction_opp_score = (
-            reaction_report.confidence * Decimal("100.0")
-            if reaction_report.confidence is not None
-            else Decimal("75.0")
-        )
+        # The reaction agent owns the deterministic opportunity score.  Do not
+        # substitute confidence (or a made-up 75) because the two measures
+        # have different meanings and would diverge from the BA weighting.
+        reaction_opp_score = reaction_report.opportunity_score
+        if reaction_opp_score is None:
+            if not allow_illustrative:
+                raise ValueError(f"Market reaction opportunity score is unavailable for {sym}")
+            reaction_opp_score = Decimal("0.0")
 
         composite_score = compute_composite_opportunity_score(
             reaction_score=reaction_opp_score,
@@ -519,10 +559,11 @@ class TradingDecisionAgent:
             take_profit_pct=Decimal("75.0"),
             stop_loss_pct=Decimal("50.0"),
             dte_threshold=7,
-            max_hold_days=14,
+            # Autonomous/hackathon execution uses the BA four-trading-day
+            # override; the longer reusable baseline remains presentation-only.
+            max_hold_days=(4 if not allow_illustrative else 14),
         )
 
-        now_utc = datetime.now(UTC)
         decision_id = uuid4()
 
         decision = TradeDecisionReport(
@@ -548,6 +589,8 @@ class TradingDecisionAgent:
             options_only_constraint_acknowledged=output.options_only_constraint_acknowledged,
             synthesis_rationale=output.synthesis_rationale,
             key_risks=output.key_risks,
+            provenance=("illustrative_fixture" if allow_illustrative else "live_research"),
+            evidence_freshness_seconds=30,
         )
 
         # Cache in PostgreSQL
@@ -584,7 +627,9 @@ class TradingDecisionAgent:
                 await db_session.commit()
                 logger.info("Persisted TradeDecisionReport for %s to database", sym)
             except Exception as exc:
-                logger.warning("Failed to cache TradeDecisionReport to database: %s", exc)
+                logger.warning("Failed to cache TradeDecisionReport: %s", type(exc).__name__)
                 await db_session.rollback()
+                if not allow_illustrative:
+                    raise RuntimeError("Durable decision persistence is unavailable") from exc
 
         return decision

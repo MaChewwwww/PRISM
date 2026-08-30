@@ -17,6 +17,13 @@ def test_frs_015_public_endpoints_and_redacted_status() -> None:
         # Unauthenticated request to /system/status fails closed with 401
         unauth_response = client.get("/api/v1/system/status")
         assert unauth_response.status_code == 401
+        assert client.get("/api/v1/autonomous/status").status_code == 401
+        assert (
+            client.post(
+                "/api/v1/autonomous/kill-switch", json={"active": True, "reason": "test"}
+            ).status_code
+            == 401
+        )
 
         # Login to obtain session cookie
         login_res = client.post(

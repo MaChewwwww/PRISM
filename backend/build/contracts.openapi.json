@@ -939,6 +939,46 @@
         "title": "AuthorizationOutcome",
         "type": "string"
       },
+      "AutonomousStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "autonomous_enabled": {
+            "title": "Autonomous Enabled",
+            "type": "boolean"
+          },
+          "execution_enabled": {
+            "title": "Execution Enabled",
+            "type": "boolean"
+          },
+          "kill_switch_active": {
+            "title": "Kill Switch Active",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "autonomous_enabled",
+          "execution_enabled",
+          "kill_switch_active",
+          "updated_at",
+          "updated_by",
+          "reason"
+        ],
+        "title": "AutonomousStatus",
+        "type": "object"
+      },
       "BalanceSheetRedFlag": {
         "enum": [
           "accrual_earnings_divergence",
@@ -1593,6 +1633,87 @@
         "title": "EstimateRevisionTrend",
         "type": "string"
       },
+      "EvaluationRoot": {
+        "additionalProperties": false,
+        "description": "Immutable lineage anchor shared by authorization and ShadowFund evaluation.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Evidence Digest",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_immutable": {
+            "const": true,
+            "default": true,
+            "title": "Is Immutable",
+            "type": "boolean"
+          },
+          "market_snapshot_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Market Snapshot Digest",
+            "type": "string"
+          },
+          "outcome": {
+            "minLength": 1,
+            "title": "Outcome",
+            "type": "string"
+          },
+          "portfolio_snapshot_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Portfolio Snapshot Digest",
+            "type": "string"
+          },
+          "proposal_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Proposal Digest"
+          },
+          "root_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Root Digest",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "root_digest",
+          "outcome",
+          "evidence_digest",
+          "market_snapshot_digest",
+          "portfolio_snapshot_digest"
+        ],
+        "title": "EvaluationRoot",
+        "type": "object"
+      },
       "Evidence": {
         "additionalProperties": false,
         "properties": {
@@ -1912,6 +2033,18 @@
             "title": "Current Price",
             "type": "string"
           },
+          "data_as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data As Of"
+          },
           "earnings_event": {
             "anyOf": [
               {
@@ -1948,6 +2081,15 @@
           },
           "profitability": {
             "$ref": "#/components/schemas/ProfitabilityMetrics"
+          },
+          "provenance": {
+            "default": "illustrative_fixture",
+            "enum": [
+              "illustrative_fixture",
+              "sec_filing"
+            ],
+            "title": "Provenance",
+            "type": "string"
           },
           "red_flags": {
             "items": {
@@ -2719,6 +2861,25 @@
         "title": "IndustrySentiment",
         "type": "string"
       },
+      "KillSwitchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "active",
+          "reason"
+        ],
+        "title": "KillSwitchRequest",
+        "type": "object"
+      },
       "LLMEventAnalysis": {
         "additionalProperties": false,
         "properties": {
@@ -3481,6 +3642,62 @@
         "title": "NewsRecord",
         "type": "object"
       },
+      "NoTradeDecision": {
+        "additionalProperties": false,
+        "description": "Explicit synthesis outcome when evidence cannot support a proposal.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "no_trade",
+            "default": "no_trade",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "research_bundle_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Research Bundle Digest",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "symbol": {
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "symbol",
+          "research_bundle_digest",
+          "reason"
+        ],
+        "title": "NoTradeDecision",
+        "type": "object"
+      },
       "OptionLeg": {
         "additionalProperties": false,
         "properties": {
@@ -3495,6 +3712,24 @@
           },
           "option_type": {
             "$ref": "#/components/schemas/OptionType"
+          },
+          "position_intent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_to_open",
+                  "buy_to_close",
+                  "sell_to_open",
+                  "sell_to_close"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Position Intent"
           },
           "ratio_qty": {
             "default": 1,
@@ -3542,6 +3777,141 @@
           "strike_price"
         ],
         "title": "OptionLeg",
+        "type": "object"
+      },
+      "OptionPayoffEconomics": {
+        "additionalProperties": false,
+        "description": "Deterministic option economics bound into an executable proposal.",
+        "properties": {
+          "expected_loss_per_contract": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Expected Loss Per Contract"
+          },
+          "expected_profit_per_contract": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Expected Profit Per Contract"
+          },
+          "fill_probability": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Fill Probability"
+          },
+          "max_loss_per_contract": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Max Loss Per Contract"
+          },
+          "method": {
+            "minLength": 1,
+            "title": "Method",
+            "type": "string"
+          },
+          "net_ev_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Net Ev R"
+          },
+          "premium_per_contract": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Premium Per Contract"
+          },
+          "reward_risk_ratio": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Reward Risk Ratio"
+          },
+          "slippage_per_contract": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Slippage Per Contract"
+          }
+        },
+        "required": [
+          "method",
+          "expected_profit_per_contract",
+          "expected_loss_per_contract",
+          "max_loss_per_contract",
+          "premium_per_contract",
+          "slippage_per_contract",
+          "fill_probability",
+          "net_ev_r",
+          "reward_risk_ratio"
+        ],
+        "title": "OptionPayoffEconomics",
         "type": "object"
       },
       "OptionSide": {
@@ -4316,6 +4686,54 @@
           "roa_pct"
         ],
         "title": "ProfitabilityMetrics",
+        "type": "object"
+      },
+      "ProposalDecision": {
+        "additionalProperties": false,
+        "description": "Canonical proposal result, bound to the immutable research bundle.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "proposal",
+            "default": "proposal",
+            "title": "Kind",
+            "type": "string"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/TradeProposal"
+          },
+          "research_bundle_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Research Bundle Digest",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "research_bundle_digest",
+          "proposal"
+        ],
+        "title": "ProposalDecision",
         "type": "object"
       },
       "Provenance": {
@@ -5930,6 +6348,19 @@
           "direction": {
             "$ref": "#/components/schemas/TradeDirection"
           },
+          "evidence_freshness_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Evidence Freshness Seconds"
+          },
           "evidence_summary": {
             "items": {
               "type": "string"
@@ -5973,6 +6404,15 @@
           "portfolio_fit": {
             "default": "",
             "title": "Portfolio Fit",
+            "type": "string"
+          },
+          "provenance": {
+            "default": "live_research",
+            "enum": [
+              "live_research",
+              "illustrative_fixture"
+            ],
+            "title": "Provenance",
             "type": "string"
           },
           "recommended_structure": {
@@ -6083,6 +6523,17 @@
             "title": "Id",
             "type": "string"
           },
+          "option_economics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OptionPayoffEconomics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "proposal_digest": {
             "pattern": "^[a-f0-9]{64}$",
             "title": "Proposal Digest",
@@ -6102,6 +6553,19 @@
           "rationale": {
             "title": "Rationale",
             "type": "string"
+          },
+          "research_bundle_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Bundle Digest"
           },
           "research_report_id": {
             "format": "uuid",
@@ -6577,6 +7041,140 @@
         "tags": [
           "auth"
         ]
+      }
+    },
+    "/api/v1/autonomous/kill-switch": {
+      "post": {
+        "operationId": "autonomous_kill_switch_api_v1_autonomous_kill_switch_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KillSwitchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutonomousStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Autonomous Kill Switch"
+      }
+    },
+    "/api/v1/autonomous/status": {
+      "get": {
+        "operationId": "autonomous_status_api_v1_autonomous_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutonomousStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Autonomous Status"
       }
     },
     "/api/v1/health/live": {
@@ -7543,7 +8141,7 @@
     },
     "/api/v1/research/decision/synthesize": {
       "post": {
-        "description": "Perform master 7-agent consensus synthesis to emit TradeProposal or NO_TRADE.",
+        "description": "Perform master synthesis and return a canonical proposal or explicit NO_TRADE.",
         "operationId": "synthesize_decision_api_v1_research_decision_synthesize_post",
         "parameters": [
           {
@@ -7594,7 +8192,22 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TradeDecisionReport"
+                  "discriminator": {
+                    "mapping": {
+                      "no_trade": "#/components/schemas/NoTradeDecision",
+                      "proposal": "#/components/schemas/ProposalDecision"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProposalDecision"
+                    },
+                    {
+                      "$ref": "#/components/schemas/NoTradeDecision"
+                    }
+                  ],
+                  "title": "Response Synthesize Decision Api V1 Research Decision Synthesize Post"
                 }
               }
             },

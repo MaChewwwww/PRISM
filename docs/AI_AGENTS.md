@@ -1,6 +1,6 @@
 # PRISM AI agents
 
-Revision: `2026-08-29 / ecosystem-consolidation-v1`
+Revision: `2026-08-30 / autonomous-paper-parity-v3`
 
 AI produces evidence, proposals, critiques, and recommendations. Deterministic code owns authorization. The canonical topology contains seven specialist agents, followed by distinct risk, authorization, execution, evaluation, and learning stages.
 
@@ -24,8 +24,8 @@ Specialist work may be concurrent where inputs are independent, but synthesis co
 | --- | --- | --- |
 | Risk Management | AI-assisted | Challenge portfolio concentration, drawdown, liquidity, volatility, tail risk, and contradictory evidence; recommend changes but do not authorize. |
 | Rules Engine | Deterministic | Evaluate typed rules as `PASS`, `MODIFY`, or `FAIL`; produce aggregate `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`. |
-| Execution | Deterministic integration | Recheck immutable bindings and changing state, then translate only a current `APPROVE` into an Alpaca paper order. Disabled and unimplemented in the current skeleton. |
-| ShadowFund | Deterministic evaluation | Track non-executable counterfactual branches against the same subsequent market path. Engine deferred; illustrative views implemented. |
+| Execution | Deterministic integration | Recheck immutable bindings and changing state, then translate only a current `APPROVE` into an Alpaca paper order. MLeg position intents and paper-only CLI translation are implemented; submission remains gated. |
+| ShadowFund | Deterministic evaluation | Track non-executable counterfactual branches against the same subsequent market path. Evaluation roots and shadow candidates are persisted; valuation/fill ingestion remains deferred. |
 | Post-Analysis | Asynchronous AI-assisted | Compare completed chosen/ShadowFund evidence and recommend changes only to authorized AI Profile fields. Recommendations require validation and manual review. |
 
 ## Structured records
@@ -48,4 +48,8 @@ In a VOLATILE regime with IV Rank above 50%, deterministic policy restricts prop
 
 Model providers remain behind a neutral adapter. Invalid structured output, missing required evidence, timeouts after classified retries, or unsafe provider responses stop the relevant workflow and expose a redacted error. The implemented `/api/v1/research/news/analyze`, `/api/v1/research/reaction/analyze`, and deterministic `/api/v1/research/quant/analyze` slices are non-authoritative and do not change this boundary. Quantitative analysis uses only normalized historical bars and emits a typed technical report; it never proposes or authorizes an order.
 
-The active model/provider selection remains deployment configuration. Automatic AI Profile switching is deferred.
+The active model/provider selection remains deployment configuration. Executable workflows use timestamped SEC companyfacts records and reject the illustrative registry. Automatic AI Profile switching is deferred.
+
+The authenticated decision endpoint returns `NO_TRADE` unless it can bind a complete live research bundle and option selection. The autonomous worker is the only path that constructs and persists a canonical digest-bound `TradeProposal`; a specialist report or HTTP response alone never grants execution authority.
+
+Autonomous execution additionally requires a sourced IV-rank observation. The Alpaca chain adapter preserves a provider-supplied rank when available; otherwise the worker computes a deterministic percentile from a configured historical provider, immutable chain observations, or Decimal Black-Scholes IV inversions over Alpaca option bars paired with underlying bars. Missing/insufficient history is an explicit `NO_TRADE`, never a guessed value.
