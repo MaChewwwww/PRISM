@@ -1,107 +1,87 @@
-import { ArrowRight, Filter, Newspaper } from "lucide-react";
+import { ArrowRight, Newspaper } from "lucide-react";
 import Link from "next/link";
 
-import { DateRangeControl } from "@/components/workspace/date-range-control";
-import {
-  DemoDataNotice,
-  PageHeader,
-  ProvenanceLabel,
-  StateBadge,
-} from "@/components/workspace/workspace-ui";
+import { PageHeader, ProvenanceLabel, StateBadge } from "@/components/workspace/workspace-ui";
+import { RangePresets } from "@/components/workspace/range-presets";
+import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
 import { formatDateTime } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listNews } from "@/features/story/presentation-api";
 
-function value(values: SearchValues, key: string) {
-  const found = values[key];
-  return Array.isArray(found) ? found[0] : found;
-}
-
 export default async function NewsPage({ searchParams }: { searchParams: Promise<SearchValues> }) {
   const values = await searchParams;
   const range = readDateRange(values);
-  const symbol = value(values, "symbol") ?? "all";
-  const significance = value(values, "significance") ?? "all";
-  const collection = await listNews(range, { symbol, significance });
+  const collection = await listNews(range);
   const news = collection.items;
+
   return (
     <>
       <PageHeader
         eyebrow="News and catalysts"
         title="See the evidence before the interpretation"
         description="A backend-owned illustrative feed connects source timestamps and symbols to the decision stories they influenced."
-      />
-      <DemoDataNotice />
-      <DateRangeControl range={range} />
-      <div className="source-contract">
-        <Newspaper aria-hidden="true" />
-        <div>
-          <strong>Illustrative source boundary</strong>
-          <p>
-            Fields mirror the intended read-only adapter, but this response came only from the
-            versioned PRISM fixture.
-          </p>
-        </div>
-        <ProvenanceLabel provenance="illustrative_fixture" />
-      </div>
-      <form className="filter-bar" method="get">
-        <Filter aria-hidden="true" />
-        <input type="hidden" name="range" value={range.preset} />
-        <input type="hidden" name="from" value={range.from} />
-        <input type="hidden" name="to" value={range.to} />
-        <label>
-          <span>Symbol</span>
-          <select name="symbol" defaultValue={symbol}>
-            <option value="all">All symbols</option>
-            {collection.symbols.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Significance</span>
-          <select name="significance" defaultValue={significance}>
-            <option value="all">All significance</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </label>
-        <button type="submit">Apply filters</button>
-      </form>
-      {news.length > 0 ? (
-        <ol className="news-feed">
-          {news.map((item) => (
-            <li key={item.id}>
-              <div className="news-time">
-                <time dateTime={item.publishedAt}>{formatDateTime(item.publishedAt)}</time>
-                <span>{item.source}</span>
-              </div>
-              <article>
-                <div className="story-kicker">
-                  {item.symbols.map((itemSymbol) => (
-                    <span key={itemSymbol}>{itemSymbol}</span>
+      >
+        <RangePresets range={range} />
+      </PageHeader>
+
+      <section aria-labelledby="news-feed" className="mt-6">
+        <SectionHeading
+          id="news-feed"
+          icon={Newspaper}
+          title="Catalyst Feed"
+          subtitle="Source-timestamped signals linked to the decisions they influenced."
+        />
+
+        {news.length === 0 ? (
+          <div className={`${SECTION_CARD} p-6`}>
+            <p className="text-[13px] text-[#94A3B8]">
+              No illustrative news falls inside this range.
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-4">
+            {news.map((item) => (
+              <li key={item.id} className={`${SECTION_CARD} p-5 sm:p-6`}>
+                {/* Kicker: time · source · symbols · significance */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
+                  <time dateTime={item.publishedAt}>{formatDateTime(item.publishedAt)}</time>
+                  <span aria-hidden="true" className="text-white/20">
+                    |
+                  </span>
+                  <span className="text-[#CBD5E1]">{item.source}</span>
+                  {item.symbols.map((symbol) => (
+                    <span key={symbol} className="font-semibold text-[#38BDF8]">
+                      {symbol}
+                    </span>
                   ))}
                   <StateBadge state={item.significance} />
                   <span>{item.category}</span>
                 </div>
-                <h2>{item.headline}</h2>
-                <p>{item.summary}</p>
-                <div className="news-footer">
+
+                <h3 className="mt-3 text-[17px] font-semibold leading-snug tracking-tight text-[#F8FAFC]">
+                  {item.headline}
+                </h3>
+                <p className="mt-1.5 max-w-3xl text-[14px] leading-relaxed text-[#CBD5E1]">
+                  {item.summary}
+                </p>
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-4">
                   <ProvenanceLabel provenance={item.provenance} />
                   {item.storyId && (
-                    <Link href={`/stories/${item.storyId}`}>
-                      Read linked decision story <ArrowRight aria-hidden="true" />
+                    <Link
+                      href={`/stories/${item.storyId}`}
+                      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#B2D8DC] outline-none transition-colors hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+                    >
+                      Read linked decision story
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                     </Link>
                   )}
                 </div>
-              </article>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="inline-empty">No illustrative news falls inside these filters.</p>
-      )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </>
   );
 }
