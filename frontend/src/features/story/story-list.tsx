@@ -1,12 +1,37 @@
 "use client";
 
-import { AlertTriangle, ArrowUpRight, CircleDot, Diamond, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  CircleDot,
+  Diamond,
+  type LucideIcon,
+  Search,
+  X,
+} from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
 
 import { StateBadge } from "@/components/workspace/workspace-ui";
-import { formatDate } from "@/features/story/formatters";
+import { formatDateTime, storyDecisionLabel } from "@/features/story/formatters";
 import type { StorySummary } from "@/features/story/presentation-api";
+
+/** Lowercased haystack of the searchable fields for a decision story. */
+function storyHaystack(story: StorySummary): string {
+  return [
+    story.symbol,
+    story.title,
+    story.summary,
+    story.category,
+    story.lesson,
+    storyDecisionLabel(story.symbol, story.outcome),
+    formatDateTime(story.occurredAt),
+    story.occurredAt,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
 
 /**
  * Agent perspective chips follow DESIGN.md Section 6.3 (Agent Perspective Chips
@@ -93,25 +118,7 @@ function StoryCard({ story }: { story: StorySummary }) {
   const tags = agentTagsFor(story);
 
   return (
-    <li className="relative pl-7 sm:pl-9">
-      {/* Timeline rail: connecting line + node (DESIGN.md Section 7.1 chronology) */}
-      <span
-        aria-hidden="true"
-        className="absolute left-[0.28rem] top-1.5 -bottom-6 w-px bg-white/8 sm:left-[0.4rem]"
-      />
-      <span
-        aria-hidden="true"
-        className={`absolute left-0 top-1.5 grid h-3 w-3 place-items-center rounded-full border transition-colors duration-200 ${
-          active ? "border-[#547D83] bg-[#547D83]/20" : "border-white/16 bg-[#080B10]"
-        }`}
-      >
-        <span
-          className={`h-1 w-1 rounded-full transition-colors duration-200 ${
-            active ? "bg-[#547D83]" : "bg-[#64748B]"
-          }`}
-        />
-      </span>
-
+    <li>
       {/*
         Major decision-story module: DESIGN.md Section 5.2 interactive glass
         recipe (rounded-xl, layered fill, specular top border, teal hover border,
@@ -132,7 +139,7 @@ function StoryCard({ story }: { story: StorySummary }) {
         <div className="min-w-0">
           {/* Caption / Meta: 12px, 500, tracking 0.02em (DESIGN.md Section 4.2) */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
-            <time dateTime={story.occurredAt}>{formatDate(story.occurredAt)}</time>
+            <time dateTime={story.occurredAt}>{formatDateTime(story.occurredAt)}</time>
             <span aria-hidden="true" className="text-white/20">
               |
             </span>
@@ -143,15 +150,18 @@ function StoryCard({ story }: { story: StorySummary }) {
             <span>{story.category}</span>
           </div>
 
-          {/* Card H3: 20px / 600 (DESIGN.md Section 4.2) */}
+          {/* Card H3: plain decision label (DESIGN.md Section 4.2) */}
           <h3 className="mt-3 text-[18px] font-semibold leading-tight tracking-tight text-[#F8FAFC]">
             <Link
               href={`/stories/${story.id}`}
               className="rounded-sm outline-none transition-colors hover:text-[#B2D8DC] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
             >
-              {story.title}
+              {storyDecisionLabel(story.symbol, story.outcome)}
             </Link>
           </h3>
+
+          {/* Analytical title kept as a secondary line */}
+          <p className="mt-1 text-[13px] leading-snug text-[#94A3B8]">{story.title}</p>
 
           {/* Body Regular: 14px (DESIGN.md Section 4.2) */}
           <p className="mt-2 max-w-208 text-[12px] leading-relaxed text-[#CBD5E1]">
@@ -209,21 +219,78 @@ function StoryCard({ story }: { story: StorySummary }) {
   );
 }
 
-export function StoryList({ stories }: { stories: StorySummary[] }) {
-  if (stories.length === 0) {
-    return (
-      <div className="inline-empty">
-        <strong>No decision stories in this range.</strong>
-        <span>Choose a wider period or clear the outcome and symbol filters.</span>
-      </div>
-    );
-  }
+export function StoryList({
+  stories,
+  heading,
+  rangeControl,
+}: {
+  stories: StorySummary[];
+  heading?: ReactNode;
+  rangeControl?: ReactNode;
+}) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return stories;
+    const terms = trimmed.split(/\s+/);
+    return stories.filter((story) => {
+      const haystack = storyHaystack(story);
+      return terms.every((term) => haystack.includes(term));
+    });
+  }, [query, stories]);
 
   return (
-    <ol className="mt-2 grid list-none gap-5 p-0">
-      {stories.map((story) => (
-        <StoryCard key={story.id} story={story} />
-      ))}
-    </ol>
+    <>
+      {/* Toolbar row: heading (left), search + range picker (right) */}
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {heading && <div className="min-w-0 shrink-0">{heading}</div>}
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+          <div className="relative w-full sm:max-w-xs">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search decision, company, date, time"
+              aria-label="Search decision stories"
+              className="w-full rounded-md border border-white/8 bg-white/2 py-2 pl-9 pr-9 text-[13px] text-[#F8FAFC] outline-none transition-colors placeholder:text-[#64748B] focus-visible:border-[#547D83]/50 focus-visible:ring-2 focus-visible:ring-[#547D83]/40"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[#64748B] outline-none transition-colors hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83]"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          {rangeControl && <div className="shrink-0">{rangeControl}</div>}
+        </div>
+      </div>
+
+      {stories.length === 0 ? (
+        <div className="inline-empty">
+          <strong>No decision stories in this range.</strong>
+          <span>Choose a wider period or clear the outcome and symbol filters.</span>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="inline-empty">
+          <strong>No decision stories match &ldquo;{query}&rdquo;.</strong>
+          <span>Try a different company, date, or time.</span>
+        </div>
+      ) : (
+        <ol className="grid list-none gap-5 p-0">
+          {filtered.map((story) => (
+            <StoryCard key={story.id} story={story} />
+          ))}
+        </ol>
+      )}
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   GitCompareArrows,
+  Lightbulb,
   ShieldCheck,
   Table2,
   TrendingDown,
@@ -12,6 +13,13 @@ import { notFound } from "next/navigation";
 import { StoryBranchChart } from "@/features/story/story-branch-chart";
 import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
+import {
+  branchTakeaway,
+  branchWhatIf,
+  decisionLabel,
+  formatDateTime,
+  parseMoney,
+} from "@/features/story/formatters";
 import { getAlternativeSession } from "@/features/story/presentation-api";
 
 function deltaTone(delta: string): { color: string; sign: "positive" | "negative" | "neutral" } {
@@ -49,6 +57,15 @@ export default async function AlternativeDetailPage({
 
   const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
   const activePathLabel = "Active Portfolio";
+  const bestBranch = shadowBranches.reduce<(typeof shadowBranches)[number] | undefined>(
+    (leader, branch) =>
+      !leader || parseMoney(branch.pnl) > parseMoney(leader.pnl) ? branch : leader,
+    undefined,
+  );
+  const takeaway = branchTakeaway(
+    branchWhatIf(bestBranch?.id ?? "", bestBranch?.label ?? session.bestBranch).plain,
+    session.bestDelta,
+  );
 
   return (
     <div className="space-y-8">
@@ -61,41 +78,66 @@ export default async function AlternativeDetailPage({
       </Link>
 
       <PageHeader
-        eyebrow={`${session.symbol} · ShadowFund Multiverse Session`}
-        title={session.title}
-        description={session.summary}
+        eyebrow={`${session.symbol} · ${formatDateTime(session.occurredAt)} · ShadowFund Multiverse Session`}
+        title={decisionLabel(session.symbol, session.chosenPathPnl).headline}
+        description={decisionLabel(session.symbol, session.chosenPathPnl).question}
       >
         <StateBadge state="simulated" />
       </PageHeader>
 
-      {/* Outcome comparison cards */}
+      {/* Analysis context (the original analytical framing, kept secondary) */}
+      <p className="text-[13px] italic leading-relaxed text-[#64748B]">
+        Analysis: {session.title} — {session.summary}
+      </p>
+
+      {/* Outcome comparison cards — one "what if" per card */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className={`${SECTION_CARD} border-l-2 border-l-[#547D83] p-5`}>
-          <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            {activePathLabel}
+          <span className="text-[13px] font-semibold text-[#F8FAFC]">
+            {branchWhatIf("chosen", activePathLabel).question}
           </span>
+          <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+            {activePathLabel}
+          </p>
           <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {session.chosenPathPnl}
           </p>
-          <p className="mt-1 text-[11px] text-[#64748B]">
-            Versioned fixture · no broker submission
-          </p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Versioned fixture · no broker submission</p>
         </div>
-        {shadowBranches.map((branch) => (
-          <div key={branch.id} className={`${SECTION_CARD} p-5`}>
-            <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-              {branch.label}
-            </span>
-            <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#818CF8]">
-              {branch.pnl}
-            </p>
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-[#64748B]">
-              <span>vs Active:</span>
-              <DeltaBadge delta={branch.deltaVsChosen} />
+        {shadowBranches.map((branch) => {
+          const whatIf = branchWhatIf(branch.id, branch.label);
+          return (
+            <div key={branch.id} className={`${SECTION_CARD} p-5`}>
+              <span className="text-[13px] font-semibold text-[#F8FAFC]">{whatIf.question}</span>
+              <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+                {whatIf.plain}
+              </p>
+              <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#818CF8]">
+                {branch.pnl}
+              </p>
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-[#64748B]">
+                <span>vs Active:</span>
+                <DeltaBadge delta={branch.deltaVsChosen} />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Takeaway / lesson */}
+      {takeaway && (
+        <div className="flex items-start gap-3 rounded-xl border border-[#818CF8]/30 bg-[#818CF8]/10 p-4">
+          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-[#C7D2FE]" aria-hidden="true" />
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#818CF8]">
+              What we learned
+            </p>
+            <p className="mt-1 text-[14px] font-semibold leading-relaxed text-[#F8FAFC]">
+              {takeaway}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Trajectory chart */}
       <section aria-labelledby="branch-path">
@@ -153,13 +195,13 @@ export default async function AlternativeDetailPage({
                     className="not-last:border-b not-last:border-white/8"
                     style={isActive ? { background: "rgba(84,125,131,0.1)" } : undefined}
                   >
-                    <th
-                      scope="row"
-                      className="px-5 py-3.5 text-[14px] font-semibold text-[#F8FAFC]"
-                    >
-                      {branch.label === "Illustrative governed path"
-                        ? activePathLabel
-                        : branch.label}
+                    <th scope="row" className="px-5 py-3.5">
+                      <span className="block text-[14px] font-semibold text-[#F8FAFC]">
+                        {branchWhatIf(branch.id, branch.label).question}
+                      </span>
+                      <span className="mt-0.5 block !text-[12px] font-normal text-[#64748B]">
+                        {branchWhatIf(branch.id, branch.label).plain}
+                      </span>
                     </th>
                     <td className="px-5 py-3.5 text-[13px] text-[#94A3B8]">{branch.variation}</td>
                     <td className="px-5 py-3.5 font-mono text-[14px] font-semibold tabular-nums text-[#00D084]">
