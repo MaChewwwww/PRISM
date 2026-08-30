@@ -141,6 +141,7 @@ async def test_decision_agent_synthesize_mocked() -> None:
         response_model: type,
         system_prompt: str | None = None,
         trace_id: str | None = None,
+        **kwargs: object,
     ) -> LLMCompletionResult:
         if response_model is NewsAnalysisLLMOutput:
             parsed_data = mock_news_output

@@ -398,6 +398,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/decision/synthesize/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Decision Stream
+         * @description Stream decision synthesis progress via Server-Sent Events.
+         */
+        post: operations["synthesize_decision_stream_api_v1_research_decision_synthesize_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/fundamental/analyze": {
         parameters: {
             query?: never;
@@ -2321,8 +2341,9 @@ export interface components {
              */
             id?: string;
             /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
+             * Kind
+             * @default no_trade
+             * @constant
              */
             kind: "no_trade";
             /** Reason */
@@ -2798,8 +2819,9 @@ export interface components {
              */
             id?: string;
             /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
+             * Kind
+             * @default proposal
+             * @constant
              */
             kind: "proposal";
             proposal: components["schemas"]["TradeProposal"];
@@ -4501,7 +4523,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProposalDecision"] | components["schemas"]["NoTradeDecision"];
+                    "application/json": components["schemas"]["TradeDecisionReport"] | components["schemas"]["NoTradeDecision"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_decision_stream_api_v1_research_decision_synthesize_stream_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionSynthesisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

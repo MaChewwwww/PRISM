@@ -9018,16 +9018,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "discriminator": {
-                    "mapping": {
-                      "no_trade": "#/components/schemas/NoTradeDecision",
-                      "proposal": "#/components/schemas/ProposalDecision"
-                    },
-                    "propertyName": "kind"
-                  },
-                  "oneOf": [
+                  "anyOf": [
                     {
-                      "$ref": "#/components/schemas/ProposalDecision"
+                      "$ref": "#/components/schemas/TradeDecisionReport"
                     },
                     {
                       "$ref": "#/components/schemas/NoTradeDecision"
@@ -9051,6 +9044,80 @@
           }
         },
         "summary": "Synthesize Decision",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/v1/research/decision/synthesize/stream": {
+      "post": {
+        "description": "Stream decision synthesis progress via Server-Sent Events.",
+        "operationId": "synthesize_decision_stream_api_v1_research_decision_synthesize_stream_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionSynthesisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Synthesize Decision Stream",
         "tags": [
           "research"
         ]

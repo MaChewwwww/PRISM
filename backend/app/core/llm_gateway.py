@@ -175,7 +175,9 @@ class LLMGateway:
         resp_json = response.json()
         try:
             choice_msg = resp_json["choices"][0]["message"]
-            raw_content = choice_msg.get("content") or choice_msg.get("reasoning_content") or ""
+            raw_content = choice_msg.get("content") or ""
+            if not raw_content and choice_msg.get("reasoning_content"):
+                raw_content = choice_msg.get("reasoning_content") or ""
         except (KeyError, IndexError) as exc:
             raise LLMValidationError("Malformed LLM response structure") from exc
 
@@ -204,12 +206,12 @@ class LLMGateway:
             raw_digest=raw_digest,
         )
 
-        # Parse and validate with Pydantic
+        # Robust JSON substring extraction
         clean_text = raw_content.strip()
-        if clean_text.startswith("```"):
-            clean_text = clean_text.strip("`")
-            if clean_text.startswith("json"):
-                clean_text = clean_text[4:].strip()
+        start_idx = clean_text.find("{")
+        end_idx = clean_text.rfind("}")
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            clean_text = clean_text[start_idx : end_idx + 1]
 
         try:
             parsed_instance = response_model.model_validate_json(clean_text)

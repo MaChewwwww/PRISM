@@ -20,6 +20,8 @@ import {
   AGENTS,
   PRESET_TICKERS,
   type AgentAction,
+  type DecisionReportData,
+  type ObjectReportData,
   type PlaygroundResult,
 } from "./playground-types";
 import { DecisionResult } from "./playground-result-decision";
@@ -53,6 +55,11 @@ export function AgentPlaygroundModal({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlaygroundResult | null>(null);
+  const [currentStage, setCurrentStage] = useState<string>("Initializing pipeline...");
+  const [liveSpecialists, setLiveSpecialists] = useState<Record<string, Record<string, unknown>>>(
+    {},
+  );
+  const [verdictPreview, setVerdictPreview] = useState<DecisionReportData | null>(null);
 
   useEffect(() => {
     if (!isLoading) return;
@@ -74,6 +81,9 @@ export function AgentPlaygroundModal({
     setElapsedSeconds(0);
     setError(null);
     setResult(null);
+    setLiveSpecialists({});
+    setVerdictPreview(null);
+    setCurrentStage("Connecting to research orchestrator...");
 
     const normSym = symbol.trim().toUpperCase();
 
@@ -92,17 +102,107 @@ export function AgentPlaygroundModal({
     }
 
     try {
-      const res = await fetch("/api/research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: selectedAgent, payload }),
-      });
+      if (selectedAgent === "decision") {
+        const streamRes = await fetch("/api/research/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error ?? "Failed to execute agent analysis.");
+        // Check if stream is available
+        const contentType = streamRes.headers?.get?.("content-type") ?? "";
+        if (
+          streamRes.ok &&
+          contentType.includes("text/event-stream") &&
+          streamRes.body?.getReader
+        ) {
+          const reader = streamRes.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() ?? "";
+
+            for (const block of lines) {
+              const eventMatch = block.match(/^event:\s*(.+)$/m);
+              const dataMatch = block.match(/^data:\s*(.+)$/m);
+              if (!eventMatch || !dataMatch) continue;
+
+              const eventType = eventMatch[1].trim();
+              let dataObj: unknown;
+              try {
+                dataObj = JSON.parse(dataMatch[1].trim());
+              } catch {
+                continue;
+              }
+
+              if (eventType === "stage") {
+                const stageData = dataObj as { stage?: string; status?: string; price?: string };
+                if (stageData.stage === "market_data") {
+                  setCurrentStage(
+                    stageData.status === "done"
+                      ? `Market bars loaded ($${stageData.price ?? "N/A"})`
+                      : "Querying Alpaca bars & news...",
+                  );
+                } else if (stageData.stage === "specialists") {
+                  setCurrentStage(
+                    stageData.status === "done"
+                      ? "6 specialist reports synthesized"
+                      : "Running parallel specialist models...",
+                  );
+                } else if (stageData.stage === "cio_synthesis") {
+                  setCurrentStage(
+                    stageData.status === "done"
+                      ? "Decision finalized"
+                      : "Chief Investment Officer formulating options proposal...",
+                  );
+                }
+              } else if (eventType === "specialist") {
+                const specData = dataObj as { agent?: string; [key: string]: unknown };
+                if (specData.agent) {
+                  setLiveSpecialists((prev) => ({
+                    ...prev,
+                    [specData.agent as string]: specData,
+                  }));
+                }
+              } else if (eventType === "verdict_preview") {
+                setVerdictPreview(dataObj as DecisionReportData);
+              } else if (eventType === "result") {
+                setResult(dataObj as PlaygroundResult);
+                setIsLoading(false);
+              } else if (eventType === "error") {
+                const errData = dataObj as { message?: string };
+                throw new Error(errData.message ?? "Streaming analysis failed");
+              }
+            }
+          }
+          return;
+        }
+
+        // Fallback for non-streaming or test mocks
+        const json = await streamRes.json();
+        if (!streamRes.ok || !json.success) {
+          throw new Error(json.error ?? "Failed to execute agent analysis.");
+        }
+        setResult(json.data as PlaygroundResult);
+      } else {
+        const res = await fetch("/api/research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: selectedAgent, payload }),
+        });
+
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error ?? "Failed to execute agent analysis.");
+        }
+        setResult(json.data as PlaygroundResult);
       }
-      setResult(json.data as PlaygroundResult);
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -165,6 +265,7 @@ export function AgentPlaygroundModal({
                       setSelectedAgent(agent.id);
                       setResult(null);
                       setError(null);
+                      setLiveSpecialists({});
                     }}
                     className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
                       isSelected
@@ -272,8 +373,8 @@ export function AgentPlaygroundModal({
             )}
           </form>
 
-          {/* Loading Pipeline State */}
-          {isLoading && (
+          {/* Loading Pipeline State (Shown during the initial 0-6s before early verdict is reached) */}
+          {isLoading && !verdictPreview && (
             <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/10 pb-4">
                 <div className="flex items-center gap-3">
@@ -283,12 +384,10 @@ export function AgentPlaygroundModal({
                   <div>
                     <h3 className="text-sm font-semibold text-white">
                       {currentAgent.isAllAgents
-                        ? "Orchestrating 6 Specialist Agents & Master Strategy Synthesis"
+                        ? "Live Streaming 6 Specialist Agents & CIO Master Synthesis"
                         : `Executing ${currentAgent.name}...`}
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Querying Alpaca Market Data & running deep LLM consensus models for {symbol}
-                    </p>
+                    <p className="text-xs text-cyan-300/80 font-mono mt-0.5">{currentStage}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-center px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs font-mono text-cyan-300">
@@ -297,43 +396,174 @@ export function AgentPlaygroundModal({
                 </div>
               </div>
 
-              {/* Multi-Agent Stage Pipeline */}
+              {/* Progressive Live Multi-Agent Cards */}
               {currentAgent.isAllAgents ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
-                  <div className="rounded-lg border border-white/5 bg-[#0B0F14]/70 p-3 space-y-1">
-                    <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold">
-                      <LineChart className="h-3.5 w-3.5" />
-                      <span>1. Quant & Fund</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                  {/* 1. Quant */}
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.quant
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold">
+                        <LineChart className="h-3.5 w-3.5" />
+                        <span>1. Quantitative</span>
+                      </div>
+                      {liveSpecialists.quant ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          Mom {String(liveSpecialists.quant.momentum_score ?? "")}/100
+                        </span>
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                      )}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      RSI, MACD, Bollinger Bands, Piotroski F & Altman Z
+                      {liveSpecialists.quant
+                        ? `Trend: ${String(liveSpecialists.quant.trend ?? "").toUpperCase()} | RSI: ${String(liveSpecialists.quant.rsi_14 ?? "")} (${String(liveSpecialists.quant.rsi_condition ?? "")})`
+                        : "Computing RSI, MACD & momentum..."}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-white/5 bg-[#0B0F14]/70 p-3 space-y-1">
-                    <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
-                      <Building2 className="h-3.5 w-3.5" />
-                      <span>2. Industry & Peers</span>
+
+                  {/* 2. Fundamental */}
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.fundamental
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold">
+                        <Building2 className="h-3.5 w-3.5" />
+                        <span>2. Fundamental</span>
+                      </div>
+                      {liveSpecialists.fundamental ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          F-Score {String(liveSpecialists.fundamental.f_score ?? "")}/9
+                        </span>
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                      )}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Sector ETF momentum, 20d alpha & peer dispersion
+                      {liveSpecialists.fundamental
+                        ? `Quality: ${String(liveSpecialists.fundamental.quality_score ?? "")}/100 | Stance: ${String(liveSpecialists.fundamental.valuation ?? "").toUpperCase()}`
+                        : "Evaluating Altman Z & Piotroski F..."}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-white/5 bg-[#0B0F14]/70 p-3 space-y-1">
-                    <div className="flex items-center gap-2 text-pink-400 text-xs font-semibold">
-                      <Globe2 className="h-3.5 w-3.5" />
-                      <span>3. Macro & News</span>
+
+                  {/* 3. Industry */}
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.industry
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
+                        <Building2 className="h-3.5 w-3.5" />
+                        <span>3. Industry</span>
+                      </div>
+                      {liveSpecialists.industry ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          Health {String(liveSpecialists.industry.health_score ?? "")}/100
+                        </span>
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                      )}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      8-benchmark regime registry & news catalysts
+                      {liveSpecialists.industry
+                        ? `Sector: ${String(liveSpecialists.industry.sector ?? "")} | Moat: ${String(liveSpecialists.industry.moat ?? "")}`
+                        : "Analyzing sector ETF alpha & peer dispersion..."}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-white/5 bg-[#0B0F14]/70 p-3 space-y-1">
-                    <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold">
-                      <Activity className="h-3.5 w-3.5" />
-                      <span>4. CIO Synthesis</span>
+
+                  {/* 4. Macro */}
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.macro
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-pink-400 text-xs font-semibold">
+                        <Globe2 className="h-3.5 w-3.5" />
+                        <span>4. Macro</span>
+                      </div>
+                      {liveSpecialists.macro ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          Climate {String(liveSpecialists.macro.climate_score ?? "")}/100
+                        </span>
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                      )}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Options trade proposal or governed NO_TRADE
+                      {liveSpecialists.macro
+                        ? `Regime: ${String(liveSpecialists.macro.regime ?? "").toUpperCase()} | Stress: ${String(liveSpecialists.macro.stress ?? "")}`
+                        : "Checking rates, TLT, VXX & regime benchmarks..."}
+                    </p>
+                  </div>
+
+                  {/* 5. News */}
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.news
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-purple-400 text-xs font-semibold">
+                        <Activity className="h-3.5 w-3.5" />
+                        <span>5. News</span>
+                      </div>
+                      {liveSpecialists.news ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          {String(liveSpecialists.news.count ?? "")} Catalysts
+                        </span>
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 line-clamp-1">
+                      {liveSpecialists.news
+                        ? `${String(liveSpecialists.news.sentiment ?? "").toUpperCase()}: ${String(liveSpecialists.news.headline ?? "")}`
+                        : "Extracting catalysts & sentiment..."}
+                    </p>
+                  </div>
+
+                  {/* 6. Market Reaction */}
+                  <div
+                    className={`rounded-lg border p-3 space-y-1 transition ${
+                      liveSpecialists.reaction
+                        ? "border-emerald-500/40 bg-emerald-950/20"
+                        : "border-white/5 bg-[#0B0F14]/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold">
+                        <Activity className="h-3.5 w-3.5" />
+                        <span>6. Reaction</span>
+                      </div>
+                      {liveSpecialists.reaction ? (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          Opp {String(liveSpecialists.reaction.opportunity_score ?? "")}/100
+                        </span>
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {liveSpecialists.reaction
+                        ? `Class: ${String(liveSpecialists.reaction.classification ?? "")} | Gap: ${String(liveSpecialists.reaction.gap_pct ?? "")}%`
+                        : "Measuring mispricing gap & options IV/HV..."}
                     </p>
                   </div>
                 </div>
@@ -358,8 +588,8 @@ export function AgentPlaygroundModal({
             </div>
           )}
 
-          {/* Results */}
-          {result && !isLoading && (
+          {/* Instant Verdict View (Renders at ~6s when verdictPreview arrives OR when final result finishes) */}
+          {(verdictPreview || (result && !isLoading)) && (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <div className="flex items-center gap-2">
@@ -369,14 +599,32 @@ export function AgentPlaygroundModal({
                   </span>
                 </div>
                 <span className="text-[11px] font-mono text-slate-400">
-                  Schema v{(!Array.isArray(result) && result.schema_version) || "1.0"}
+                  Schema v{(!Array.isArray(result) && result?.schema_version) || "1.0"}
                 </span>
               </div>
 
-              {selectedAgent === "decision" && !Array.isArray(result) ? (
-                <DecisionResult data={result} />
+              {selectedAgent === "decision" ? (
+                <div className="space-y-4">
+                  <DecisionResult
+                    data={
+                      (result && !Array.isArray(result)
+                        ? result
+                        : verdictPreview) as ObjectReportData
+                    }
+                  />
+                  {/* Subtle stream indicator while full detailed narrative synthesizes */}
+                  {!result && isLoading && (
+                    <div className="flex items-center gap-2.5 rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-4 py-3 text-xs text-cyan-300 animate-pulse">
+                      <Loader2 className="h-4 w-4 animate-spin text-cyan-400 shrink-0" />
+                      <span>
+                        Synthesizing cross-agent narrative evidence, contradictions & portfolio
+                        fit...
+                      </span>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <SpecialistResult agent={selectedAgent} data={result} />
+                result && <SpecialistResult agent={selectedAgent} data={result} />
               )}
             </div>
           )}
