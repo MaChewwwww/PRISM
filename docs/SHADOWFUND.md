@@ -28,7 +28,7 @@ The existing authenticated `/presentation/alternatives` routes project these rec
 
 ## Post-Analysis
 
-One consolidated post-analysis batch is permitted after production official scoring/force-flatten or a completed staging backtest. It may recommend only the BA-authorized AI Profile fields. The immutable batch cannot amend a ruleset or influence its originating decision. A separate profile-governance service may create a successor profile from a complete validated batch through authenticated manual activation, or through explicit operator plus server automatic-calibration opt-in. Insufficient completed evidence records a no-recommendation outcome.
+One consolidated post-analysis batch is persisted after production official scoring/force-flatten or a completed staging backtest. The current backend writes a `NO_RECOMMENDATION` batch unless an evidence-qualified recommendation producer supplies validated recommendations. A future batch may recommend only BA-authorized AI Profile fields and cannot amend a ruleset or influence its originating decision. The profile-governance service may create a successor profile from a complete validated draft batch through authenticated manual activation or the authenticated operator's persisted database `automatic` preference. Insufficient completed evidence records a no-recommendation outcome.
 
 ## Alpaca and data limits
 

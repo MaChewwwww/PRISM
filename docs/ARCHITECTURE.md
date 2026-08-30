@@ -41,7 +41,7 @@ Their outputs then pass through:
 9. Deterministic Rules Engine
 10. Paper Execution, only after a valid `APPROVE`
 11. ShadowFund counterfactual evaluation
-12. Asynchronous Post-Analysis recommendations
+12. Asynchronous Post-Analysis batch and bounded profile-review path
 
 The specialists may run independent evidence work where dependencies allow, but the Market Reaction/Mispricing and Trading Decision stages synthesize validated inputs. No AI stage owns execution authority.
 
@@ -54,7 +54,7 @@ signal and market snapshot
   -> APPROVE | REJECT | MODIFIED_PENDING_ACCEPTANCE
   -> paper execution only for APPROVE
   -> ShadowFund evaluation
-  -> asynchronous Post-Analysis recommendation
+  -> asynchronous Post-Analysis batch and bounded profile-review path
 ```
 
 Per-rule results are `PASS`, `MODIFY`, or `FAIL`. A modification never authorizes execution. Operator acceptance creates a revised proposal, new digest, and new authorization evaluation.
@@ -139,4 +139,4 @@ Alembic owns schema creation, including specialist reports, research bundles, pr
 
 Missing rules, invalid profile compatibility, stale data, invalid AI output, unsupported permissions, unavailable required dependencies, ambiguous paper environment, or digest mismatch fail closed. Provider failures are classified and redacted. Monitoring and audit remain available when execution is disabled.
 
-Post-Analysis recommendations are limited to authorized fields and flow through the `profiles` application boundary. It persists preference, active/superseded profile, and audit roots; the rule engine receives only the selected bounded parameters plus profile ID/version. Manual activation is authenticated. Automatic calibration follows the persisted authenticated operator preference. Neither profile service nor ShadowFund imports an execution adapter. `BacktestPresentationRepository` projects only the active completed staging backtest run into the existing alternatives routes, while production projects recorded ShadowFund sessions. Both expose provenance and explicit empty/degraded states rather than falling back to fixtures.
+Post-Analysis batches are limited to authorized fields and flow through the `profiles` application boundary. Production force-flatten and completed staging backtests persist one `NO_RECOMMENDATION` batch until an evidence-qualified recommendation producer is implemented. The profile service already persists preference, active/superseded profile, and audit roots; it accepts only a complete validated draft batch, and the rule engine receives only the selected bounded parameters plus profile ID/version. Manual activation is authenticated. Automatic calibration follows the persisted authenticated operator preference. Neither profile service nor ShadowFund imports an execution adapter. `BacktestPresentationRepository` projects only the active completed staging backtest run into the existing alternatives routes, while production projects recorded ShadowFund sessions. Both expose provenance and explicit empty/degraded states rather than falling back to fixtures.

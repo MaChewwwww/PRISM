@@ -38,7 +38,7 @@ Every profile identifies its version, lifecycle state, effective period, compati
 
 Post-Analysis may recommend only the four fields above. The authenticated operator selects `manual` or `automatic` calibration through the backend profile-governance API. New operator preferences default to `automatic`; an existing persisted preference is never silently changed. Manual activation requires an explicit authenticated `POST /api/v1/profiles/activate-post-analysis` request for a complete draft batch. Automatic activation is controlled solely by that persisted operator preference and remains bounded by deterministic validation. Neither mode can change an immutable ruleset or any hard control.
 
-ShadowFund post-analysis runs only once after production official scoring/force-flatten or a successful staging historical backtest. Its persisted output is a draft recommendation batch. Incomplete evidence produces a recorded no-recommendation outcome and cannot activate a profile. Profile, preference, and audit records contain no execution authority; the deterministic rule engine binds the selected profile ID/version into each authorization.
+ShadowFund post-analysis runs only once after production official scoring/force-flatten or a successful staging historical backtest. The current backend persists a `NO_RECOMMENDATION` batch until an evidence-qualified recommendation producer is implemented; a future producer may create a draft recommendation batch containing only the authorized fields above. Incomplete evidence cannot activate a profile. Profile, preference, and audit records contain no execution authority; the deterministic rule engine binds the selected profile ID/version into each authorization.
 
 ## Regime override
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import hashlib
 import json
@@ -19,6 +18,7 @@ from app.core.config import get_settings
 from app.core.database import close_database, get_db_session, init_db
 from app.core.llm_gateway import LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.profiles.service import ProfileGovernanceService
 from app.research.decision_agent import TradingDecisionAgent
 from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
 from app.shadowfund.service import ShadowFundService
@@ -33,7 +33,7 @@ DISCLOSURE = (
 
 
 def _digest(value: object) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(value, default=str, sort_keys=True).encode()).hexdigest()
 
 
 def _preflight(cli_path: str) -> str:
@@ -53,6 +53,11 @@ async def run() -> int:
         )
     if not settings.alpaca_paper or settings.alpaca_live_trade:
         raise RuntimeError("Historical simulation requires paper-only configuration")
+    if not settings.shadowfund_enabled:
+        raise RuntimeError(
+            "Historical simulation requires SHADOWFUND_ENABLED=true for its isolated "
+            "counterfactual evaluation"
+        )
     cli_version = _preflight(settings.alpaca_cli_path)
     run_id = str(uuid4())
     created_at = datetime.now(UTC)
@@ -120,6 +125,35 @@ async def run() -> int:
                     refusal_reason=report["reason"],
                     horizon_at=report["checkpoint"],
                 )
+            post_analysis = await ShadowFundService().persist_post_analysis_batch(
+                session,
+                source_mode="staging",
+                window_start=datetime.fromisoformat(f"{START}T00:00:00+00:00"),
+                window_end=datetime.fromisoformat(f"{END}T20:00:00+00:00"),
+                model_metadata={
+                    "trigger": "completed_historical_backtest",
+                    "mode": "historical_live_model",
+                    "worker": "staging-backtest-v1",
+                },
+                summary={
+                    "outcome": "NO_RECOMMENDATION",
+                    "reason": (
+                        "Automated profile recommendations require completed eligible "
+                        "ShadowFund valuation evidence."
+                    ),
+                    "backtest_run_id": run_id,
+                },
+                recommendations=[],
+            )
+            # The persisted operator preference is the sole automatic-calibration control.
+            # A no-recommendation batch cannot activate a profile.
+            await ProfileGovernanceService().apply_automatic_if_enabled(
+                session,
+                batch_id=post_analysis.id,
+                operator_id=settings.auth_email,
+            )
+            summary["post_analysis_batch_id"] = post_analysis.id
+            summary["post_analysis_state"] = post_analysis.state
             from sqlalchemy import update
 
             await session.execute(update(BacktestRunModel).values(is_active_presentation=False))
@@ -152,6 +186,9 @@ async def run() -> int:
             )
         )
         await session.commit()
+        (output / "summary.json").write_text(
+            json.dumps(summary, indent=2, default=str), encoding="utf-8"
+        )
     await close_database()
     print(
         json.dumps({"run_id": run_id, "artifact_dir": str(output), "outcome": summary["outcome"]})
@@ -164,6 +201,7 @@ async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, An
 
     reports: list[dict[str, Any]] = []
     warnings: list[str] = []
+    input_manifests: list[dict[str, Any]] = []
     gateway = AlpacaPyGateway(settings)
     checkpoint = datetime.fromisoformat(f"{START}T20:00:00+00:00")
     end = datetime.fromisoformat(f"{END}T20:00:00+00:00")
@@ -203,25 +241,33 @@ async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, An
                         "reason": (
                             "DATA_UNAVAILABLE: historical option contract/quote replay pending"
                         ),
+                        "input_digest": _digest(historical.inputs),
                     }
                 )
             except (SecFundamentalsUnavailable, ValueError) as exc:
                 warnings.append(f"{checkpoint.date()} {symbol}: {type(exc).__name__}")
             except Exception as exc:
                 warnings.append(f"{checkpoint.date()} {symbol}: {type(exc).__name__}")
+        input_manifests.append(
+            {
+                "checkpoint": checkpoint.isoformat(),
+                "input_digest": _digest(historical.inputs),
+                "inputs": historical.inputs,
+            }
+        )
         checkpoint += timedelta(days=1)
     (output / "agent-replay.json").write_text(
-        json.dumps({"reports": reports, "inputs": historical.inputs}, indent=2, default=str),
+        json.dumps(
+            {"reports": reports, "input_manifests": input_manifests},
+            indent=2,
+            default=str,
+        ),
         encoding="utf-8",
     )
     return reports, warnings
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--start", default=START)
-    parser.add_argument("--end", default=END)
-    parser.parse_args()
     raise SystemExit(asyncio.run(run()))
 
 
