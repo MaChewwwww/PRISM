@@ -174,4 +174,5 @@ Use this skill to guide the construction, styling, and composition of frontend i
 - [ ] Are agent perspectives color-coded with their respective spectral accents?
 - [ ] Are interactive buttons configured with `#547D83` gradient or 20% opacity ghost styles?
 - [ ] Do all interactive elements have visible focus rings (`ring-2 ring-[#547D83]`)?
+- [ ] Are portfolio assets, equity, and cash presented with professional active terminology (e.g. "Active Portfolio", "Cash reserve") without "Illustrative cash" labels?
 - [ ] Does the layout adapt gracefully at 360px, 768px, and 1280px?

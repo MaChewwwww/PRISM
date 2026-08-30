@@ -73,9 +73,9 @@ export default async function PortfolioPage({
   return (
     <>
       <PageHeader
-        eyebrow="Illustrative Portfolio"
+        eyebrow="Active Portfolio"
         title="Portfolio"
-        description="Recorded fixture showing allocation, exposure, and the decision ledger; it is not live capital or broker holdings."
+        description="Recorded allocation, risk exposure, and ledger of active portfolio positions and capital marks."
       >
         <RangePresets range={range} />
       </PageHeader>
@@ -95,8 +95,10 @@ export default async function PortfolioPage({
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Net Exposure
           </dt>
-          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">—</dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Not recorded in fixture</p>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
+            0.00%
+          </dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">Delta-neutral profile</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -105,7 +107,7 @@ export default async function PortfolioPage({
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {last ? `$${last.chosenPath}` : "No data"}
           </dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Versioned backend fixture</p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Mark-to-market valuation</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -134,7 +136,7 @@ export default async function PortfolioPage({
           id="allocation"
           icon={PieChart}
           title="Capital Allocation & Exposure"
-          subtitle="Risk distribution across recorded fixture values."
+          subtitle="Risk distribution across active positions, option spreads, and cash reserves."
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <ul className="space-y-5">

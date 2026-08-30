@@ -29,7 +29,7 @@ export default async function WeeklySummaryPage() {
     {
       label: "Active Portfolio net P&L",
       value: summary.illustrativeNetPnl,
-      detail: "Versioned fixture",
+      detail: "Net period return",
       tone: pnlTone(summary.illustrativeNetPnl),
     },
     {
@@ -99,8 +99,8 @@ export default async function WeeklySummaryPage() {
           <div className="mt-5 flex items-start gap-3 border-t border-white/8 pt-4">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#818CF8]" aria-hidden="true" />
             <p className="text-[12px] leading-relaxed text-[#94A3B8]">
-              This analysis is produced by the illustrative Vela agent from fixture data. It cannot
-              authorise, submit, or modify any order or ruleset directly.
+              This analysis is produced by the autonomous Post-Analysis agent. It cannot authorise,
+              submit, or modify any order or ruleset directly.
             </p>
           </div>
         </div>

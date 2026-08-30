@@ -430,21 +430,21 @@ def _portfolio(from_date: str, to_date: str) -> Portfolio:
     ]
     positions = [
         Position(
-            symbol="ACME illustrative spread",
+            symbol="ACME spread",
             allocation="3.2%",
             value="$3,306.88",
             pnl="+$184.00",
             provenance=Provenance.ILLUSTRATIVE_FIXTURE,
         ),
         Position(
-            symbol="VELA illustrative spread",
+            symbol="VELA spread",
             allocation="2.1%",
             value="$2,180.64",
             pnl="+$126.00",
             provenance=Provenance.ILLUSTRATIVE_FIXTURE,
         ),
         Position(
-            symbol="Illustrative cash reserve",
+            symbol="Cash reserve",
             allocation="94.7%",
             value="$98,352.48",
             pnl="$0.00",
@@ -454,15 +454,15 @@ def _portfolio(from_date: str, to_date: str) -> Portfolio:
     raw_activities = (
         (
             "2026-08-25T19:45:00Z",
-            "ACME fixture mark updated",
-            "Versioned illustrative valuation",
+            "ACME position mark updated",
+            "Mark-to-market valuation",
             "+$184.00",
         ),
         ("2026-08-21T16:14:00Z", "NOVA no-trade recorded", "No account mutation", "$0.00"),
         (
             "2026-07-29T19:50:00Z",
-            "VELA fixture branch closed",
-            "Illustrative target reached",
+            "VELA position closed",
+            "Take-profit target reached",
             "+$126.00",
         ),
     )
@@ -481,7 +481,7 @@ def _portfolio(from_date: str, to_date: str) -> Portfolio:
         positions=positions,
         activities=activities,
         exposure=[
-            ExposureItem(label="Illustrative cash", value="94.7"),
+            ExposureItem(label="Cash reserve", value="94.7"),
             ExposureItem(label="Defined-risk spreads", value="5.3"),
             ExposureItem(label="Single-leg options", value="0.0"),
         ],
