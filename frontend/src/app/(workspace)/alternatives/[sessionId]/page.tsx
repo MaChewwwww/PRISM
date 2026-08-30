@@ -1,30 +1,38 @@
-import { ArrowLeft, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  ChevronLeft,
+  GitCompareArrows,
+  ShieldCheck,
+  Table2,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { StoryLineChart } from "@/features/story/story-charts";
-import {
-  DemoDataNotice,
-  PageHeader,
-  Section,
-  StateBadge,
-} from "@/components/workspace/workspace-ui";
+import { StoryBranchChart } from "@/features/story/story-branch-chart";
+import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
+import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
 import { getAlternativeSession } from "@/features/story/presentation-api";
 
+function deltaTone(delta: string): { color: string; sign: "positive" | "negative" | "neutral" } {
+  if (delta === "—" || delta === "$0.00") return { color: "#94A3B8", sign: "neutral" };
+  if (delta.startsWith("+")) return { color: "#00D084", sign: "positive" };
+  return { color: "#FF6B6B", sign: "negative" };
+}
+
 function DeltaBadge({ delta }: { delta: string }) {
-  const isPositive = delta.startsWith("+");
-  const isNeutral = delta === "—" || delta === "$0.00";
+  const { color, sign } = deltaTone(delta);
   return (
     <span
-      className="delta-badge"
-      data-sign={isNeutral ? "neutral" : isPositive ? "positive" : "negative"}
-      aria-label={`${isPositive ? "outperformed" : "underperformed"} active by ${delta}`}
+      className="inline-flex items-center gap-1 font-mono text-[13px] font-semibold tabular-nums"
+      style={{ color }}
+      aria-label={`${sign === "positive" ? "outperformed" : sign === "negative" ? "underperformed" : "matched"} active by ${delta}`}
     >
-      {isNeutral ? null : isPositive ? (
-        <TrendingUp aria-hidden="true" className="delta-badge-icon" />
-      ) : (
-        <TrendingDown aria-hidden="true" className="delta-badge-icon" />
-      )}
+      {sign === "positive" ? (
+        <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+      ) : sign === "negative" ? (
+        <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
+      ) : null}
       {delta}
     </span>
   );
@@ -41,14 +49,17 @@ export default async function AlternativeDetailPage({
 
   const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
   const activePathLabel = "Active Portfolio";
-  const bestBranchLabel =
-    session.bestBranch === "Illustrative governed path" ? activePathLabel : session.bestBranch;
 
   return (
-    <>
-      <Link className="back-link" href="/alternatives">
-        <ArrowLeft aria-hidden="true" /> All alternatives
+    <div className="space-y-8">
+      <Link
+        href="/alternatives"
+        className="inline-flex items-center gap-1.5 text-[12px] text-[#64748B] outline-none transition-colors hover:text-[#CBD5E1] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        All alternatives
       </Link>
+
       <PageHeader
         eyebrow={`${session.symbol} · ShadowFund Multiverse Session`}
         title={session.title}
@@ -56,132 +67,149 @@ export default async function AlternativeDetailPage({
       >
         <StateBadge state="simulated" />
       </PageHeader>
-      <DemoDataNotice />
 
-      {/* Outcome comparison header */}
-      <div className="alt-outcome-grid">
-        <div className="alt-outcome-actual prism-glass-card">
-          <span className="alt-outcome-label">{activePathLabel}</span>
-          <span
-            className="alt-outcome-pnl"
-            aria-label={`Active Portfolio outcome: ${session.chosenPathPnl}`}
-          >
-            {session.chosenPathPnl}
+      {/* Outcome comparison cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={`${SECTION_CARD} border-l-2 border-l-[#547D83] p-5`}>
+          <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+            {activePathLabel}
           </span>
-          <span className="alt-outcome-sub">Versioned fixture · no broker submission</span>
+          <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
+            {session.chosenPathPnl}
+          </p>
+          <p className="mt-1 text-[11px] text-[#64748B]">
+            Versioned fixture · no broker submission
+          </p>
         </div>
         {shadowBranches.map((branch) => (
-          <div key={branch.id} className="alt-outcome-shadow prism-glass-card">
-            <span className="alt-outcome-label">{branch.label}</span>
-            <span className="alt-outcome-pnl alt-outcome-pnl--shadow">{branch.pnl}</span>
-            <div className="alt-outcome-delta-row">
-              <span className="alt-outcome-sub">vs Active:</span>
+          <div key={branch.id} className={`${SECTION_CARD} p-5`}>
+            <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+              {branch.label}
+            </span>
+            <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#818CF8]">
+              {branch.pnl}
+            </p>
+            <div className="mt-1 flex items-center gap-2 text-[11px] text-[#64748B]">
+              <span>vs Active:</span>
               <DeltaBadge delta={branch.deltaVsChosen} />
             </div>
           </div>
         ))}
       </div>
 
-      <Section
-        id="branch-path"
-        title="Trajectory Comparison vs. Chosen Path"
-        description="Each line shows a non-executable branch relative to the same fixture timeline. The teal chosen path is the comparison reference."
-      >
-        <StoryLineChart
-          title="Cumulative Decision Trajectories"
-          description="Interactive trajectory view. Toggle shadow branches on or off to isolate any comparison."
-          summary={
-            session.bestBranch === "Illustrative governed path"
-              ? `Chosen path finished ${session.bestDelta} ahead of all shadow alternatives`
-              : `${bestBranchLabel} finished ${session.bestDelta} relative to the Active Portfolio path`
-          }
-          data={session.path}
-          valuePrefix="$"
-          series={[
-            { key: "chosenPath", label: activePathLabel, color: "#547D83" },
-            {
-              key: "alternative",
-              label:
-                session.alternativeLabel ??
-                (session.bestBranch === "Illustrative governed path"
-                  ? "Shadow: Unhedged Alternative"
-                  : session.bestBranch),
-              color: "#818CF8",
-              dashed: true,
-            },
-            { key: "benchmark", label: "Shadow: Cash Baseline", color: "#94A3B8", dashed: true },
-          ]}
+      {/* Trajectory chart */}
+      <section aria-labelledby="branch-path">
+        <SectionHeading
+          id="branch-path"
+          icon={GitCompareArrows}
+          title="Trajectory Comparison vs. Chosen Path"
+          subtitle="Each line is a non-executable branch on the same fixture timeline; the teal chosen path is the reference."
+          accent="#818CF8"
         />
-      </Section>
+        <StoryBranchChart data={session.path} />
+      </section>
 
-      <Section
-        id="branch-matrix"
-        title="Shadow Branch Results vs. Chosen Path"
-        description="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
-      >
-        <div className="table-wrap prism-glass-card">
-          <table>
-            <caption>ShadowFund branch comparison vs. Active Portfolio path</caption>
+      {/* Branch matrix */}
+      <section aria-labelledby="branch-matrix">
+        <SectionHeading
+          id="branch-matrix"
+          icon={Table2}
+          title="Shadow Branch Results vs. Chosen Path"
+          subtitle="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
+          accent="#818CF8"
+        />
+        <div className={`${SECTION_CARD} overflow-x-auto`}>
+          <table className="w-full min-w-[52rem] border-collapse text-left">
+            <caption className="sr-only">
+              ShadowFund branch comparison vs. Active Portfolio path
+            </caption>
             <thead>
-              <tr>
-                <th>Branch</th>
-                <th>Variation Tested</th>
-                <th>Final P&amp;L</th>
-                <th>vs Active (Δ)</th>
-                <th>Max Drawdown</th>
-                <th>Coverage</th>
-                <th>State</th>
+              <tr className="border-b border-white/8">
+                {[
+                  "Branch",
+                  "Variation Tested",
+                  "Final P&L",
+                  "vs Active (Δ)",
+                  "Max Drawdown",
+                  "Coverage",
+                  "State",
+                ].map((label) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className="px-5 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]"
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {session.branches.map((branch) => (
-                <tr
-                  key={branch.id}
-                  className={branch.id === "chosen" ? "bg-[#547D83]/10 font-semibold" : ""}
-                >
-                  <th scope="row">
-                    {branch.label === "Illustrative governed path" ? activePathLabel : branch.label}
-                  </th>
-                  <td>{branch.variation}</td>
-                  <td className="font-mono tabular-nums font-semibold text-[#00D084]">
-                    {branch.pnl}
-                  </td>
-                  <td className="font-mono tabular-nums">
-                    <DeltaBadge delta={branch.deltaVsChosen} />
-                  </td>
-                  <td className="font-mono tabular-nums text-[#FF6B6B]">{branch.drawdown}</td>
-                  <td className="font-mono tabular-nums">{branch.coverage}</td>
-                  <td>
-                    <StateBadge state={branch.status} />
-                  </td>
-                </tr>
-              ))}
+              {session.branches.map((branch) => {
+                const isActive = branch.id === "chosen";
+                return (
+                  <tr
+                    key={branch.id}
+                    className="not-last:border-b not-last:border-white/8"
+                    style={isActive ? { background: "rgba(84,125,131,0.1)" } : undefined}
+                  >
+                    <th
+                      scope="row"
+                      className="px-5 py-3.5 text-[14px] font-semibold text-[#F8FAFC]"
+                    >
+                      {branch.label === "Illustrative governed path"
+                        ? activePathLabel
+                        : branch.label}
+                    </th>
+                    <td className="px-5 py-3.5 text-[13px] text-[#94A3B8]">{branch.variation}</td>
+                    <td className="px-5 py-3.5 font-mono text-[14px] font-semibold tabular-nums text-[#00D084]">
+                      {branch.pnl}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <DeltaBadge delta={branch.deltaVsChosen} />
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-[14px] tabular-nums text-[#FF6B6B]">
+                      {branch.drawdown}
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-[14px] tabular-nums text-[#CBD5E1]">
+                      {branch.coverage}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <StateBadge state={branch.status} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      </Section>
+      </section>
 
-      <Section
-        id="limitations"
-        title="Simulation Constraints &amp; Model Boundaries"
-        description="Explicit assumptions and limitations preserved for audit integrity."
-      >
-        <ul className="limitation-list space-y-2">
+      {/* Limitations */}
+      <section aria-labelledby="limitations">
+        <SectionHeading
+          id="limitations"
+          icon={ShieldCheck}
+          title="Simulation Constraints & Model Boundaries"
+          subtitle="Explicit assumptions and limitations preserved for audit integrity."
+          accent="#818CF8"
+        />
+        <ul className="space-y-3">
           {session.limitations.map((limitation) => (
-            <li key={limitation} className="prism-glass-card p-3 flex items-center gap-3">
-              <ShieldCheck aria-hidden="true" className="text-[#818CF8]" />
-              <span className="text-sm text-slate-200">{limitation}</span>
+            <li key={limitation} className={`${SECTION_CARD} flex items-start gap-3 p-4`}>
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#818CF8]" aria-hidden="true" />
+              <span className="text-[14px] leading-relaxed text-[#CBD5E1]">{limitation}</span>
             </li>
           ))}
         </ul>
-        <div className="inspector-note">
-          <ShieldCheck aria-hidden="true" />
-          <p>
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[#818CF8]/30 bg-[#818CF8]/10 p-4">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C7D2FE]" aria-hidden="true" />
+          <p className="text-[13px] leading-relaxed text-[#CBD5E1]">
             These branches can supply evidence for review. They cannot submit, amend, cancel, or
             authorize an order.
           </p>
         </div>
-      </Section>
-    </>
+      </section>
+    </div>
   );
 }

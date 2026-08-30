@@ -5,7 +5,7 @@ import { proxy } from "@/proxy";
 
 describe("authentication proxy", () => {
   it("FRS-019 redirects unauthenticated workspace requests to login", () => {
-    const response = proxy(new NextRequest("http://localhost/research"));
+    const response = proxy(new NextRequest("http://localhost/portfolio"));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("http://localhost/login");

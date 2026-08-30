@@ -1,5 +1,5 @@
-import { DateRangeControl } from "@/components/workspace/date-range-control";
 import { PageHeader } from "@/components/workspace/workspace-ui";
+import { RangePresets } from "@/components/workspace/range-presets";
 import { MarketTrackerShell } from "@/features/market/market-tracker-shell";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 
@@ -16,8 +16,9 @@ export default async function MarketTrackerPage({
         eyebrow="Market tracker"
         title="Read the market around every decision"
         description="A future server-owned market adapter will pair normalized price bars with verified paper activity and PRISM decision traces. This skeleton defines the interaction boundary without fabricating market data."
-      />
-      <DateRangeControl range={range} />
+      >
+        <RangePresets range={range} />
+      </PageHeader>
       <MarketTrackerShell range={range} />
     </>
   );
