@@ -16,7 +16,6 @@ from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.historical.stock import StockHistoricalDataClient
 from alpaca.data.requests import (
     NewsRequest,
-    OptionBarsRequest,
     OptionChainRequest,
     StockBarsRequest,
     StockLatestTradeRequest,
@@ -167,29 +166,51 @@ class AlpacaPyGateway:
         start: datetime | None = None,
         end: datetime | None = None,
         limit: int = 2000,
+        feed: str = "indicative",
     ) -> list[dict[str, Any]]:
         """Retrieve historical option bars for model-derived IV observations."""
-
-        request = OptionBarsRequest(
-            symbol_or_symbols=option_symbol,
-            timeframe=TimeFrame.Day,
-            start=start,
-            end=end,
-            limit=limit,
-        )
-        response = self.options.get_option_bars(request)
-        data_map = getattr(response, "data", response)
-        values: Any = data_map.get(option_symbol, []) if isinstance(data_map, dict) else data_map
-        if not isinstance(values, (list, tuple)):
+        try:
+            params: dict[str, Any] = {
+                "symbols": option_symbol,
+                "timeframe": "1Day",
+                "feed": feed,
+            }
+            if start is not None:
+                params["start"] = start.isoformat()
+            if end is not None:
+                params["end"] = end.isoformat()
+            if limit is not None:
+                params["limit"] = limit
+            raw_bars = self.options._get_marketdata(
+                path="/options/bars",
+                params=params,
+                page_size=10_000,
+            )
+            values = raw_bars.get(option_symbol, []) if isinstance(raw_bars, dict) else []
+            bars: list[dict[str, Any]] = []
+            for bar in values:
+                timestamp = getattr(bar, "timestamp", None) or (
+                    bar.get("t") if isinstance(bar, dict) else None
+                )
+                close = getattr(bar, "close", None) or (
+                    bar.get("c") if isinstance(bar, dict) else None
+                )
+                if timestamp is None or close is None:
+                    continue
+                if isinstance(timestamp, str):
+                    try:
+                        timestamp = datetime.fromisoformat(timestamp)
+                    except ValueError:
+                        continue
+                bars.append({"timestamp": timestamp, "close": Decimal(str(close))})
+            return bars
+        except Exception as exc:
+            logger.warning(
+                "Alpaca option bars fetch skipped for %s (%s); proceeding with quote IV",
+                option_symbol,
+                exc,
+            )
             return []
-        bars: list[dict[str, Any]] = []
-        for bar in values:
-            timestamp = getattr(bar, "timestamp", None)
-            close = getattr(bar, "close", None)
-            if timestamp is None or close is None:
-                continue
-            bars.append({"timestamp": timestamp, "close": Decimal(str(close))})
-        return bars
 
     def get_iv_rank_history(
         self,
