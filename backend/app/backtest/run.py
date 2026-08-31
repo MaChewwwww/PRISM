@@ -29,6 +29,11 @@ from app.shadowfund.service import ShadowFundService
 START = "2026-08-24"
 END = "2026-08-28"
 SYMBOLS = ["NVDA", "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "META"]
+# Alpaca returns stock bars in ascending order.  The replay gateway requests a
+# 730-day lookback, so a 250-row limit only returns the oldest part of that
+# range and can stop well before the historical checkpoint.  Keep enough
+# headroom for the full daily-bar window plus non-trading days.
+HISTORICAL_BAR_LIMIT = 1000
 DISCLOSURE = (
     "Important disclosure: This backtest is a hypothetical historical simulation and does not "
     "represent actual trading performance. Backtested results do not guarantee future results. "
@@ -337,7 +342,9 @@ async def _replay_agents(
                 # Persist market/news evidence independently so a single
                 # unavailable SEC or LLM dependency cannot erase inputs.
                 try:
-                    await asyncio.to_thread(historical.get_stock_bars, symbol, limit=250)
+                    await asyncio.to_thread(
+                        historical.get_stock_bars, symbol, limit=HISTORICAL_BAR_LIMIT
+                    )
                 except Exception as exc:
                     warnings.append(_safe_warning(checkpoint, symbol, exc))
                 try:

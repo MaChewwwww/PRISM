@@ -263,5 +263,12 @@ def test_backtest_core_universe_has_a_sec_companyfacts_mapping() -> None:
     assert all(symbol in SEC_CIK_BY_SYMBOL for symbol in backtest_run.SYMBOLS)
 
 
+def test_backtest_bar_limit_covers_the_full_historical_lookback() -> None:
+    # HistoricalResearchGateway asks Alpaca for 730 calendar days.  The API
+    # returns ascending rows, so the replay limit must not truncate that
+    # window before its checkpoint.
+    assert backtest_run.HISTORICAL_BAR_LIMIT >= 730
+
+
 def test_backtest_digest_handles_timestamped_provider_inputs() -> None:
     assert backtest_run._digest({"observed_at": datetime(2026, 8, 24, 20, tzinfo=UTC)})
