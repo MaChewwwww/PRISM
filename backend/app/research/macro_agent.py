@@ -23,7 +23,7 @@ from app.contracts.models import (
     MarketStressLevel,
     RateEnvironment,
 )
-from app.core.llm_gateway import LLMGateway
+from app.core.llm_gateway import LLMError, LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.research.models import MacroAnalysisModel
 
@@ -417,12 +417,34 @@ class MacroeconomicAgent:
             "7. Provide a synthesis thesis."
         )
 
-        llm_response = await self.llm_gateway.complete_structured(
-            prompt=prompt,
-            response_model=MacroAnalysisLLMOutput,
-            system_prompt=SYSTEM_PROMPT,
-            trace_id=trace_id,
-        )
+        llm_response = None
+        last_llm_exc: LLMError | None = None
+        for attempt in range(2):
+            try:
+                llm_response = await self.llm_gateway.complete_structured(
+                    prompt=prompt,
+                    response_model=MacroAnalysisLLMOutput,
+                    system_prompt=SYSTEM_PROMPT,
+                    trace_id=trace_id,
+                    timeout_seconds=120.0,
+                    max_tokens=2048,
+                )
+                break
+            except LLMError as exc:
+                last_llm_exc = exc
+                logger.warning(
+                    "Macro LLM attempt %d failed for %s: %s",
+                    attempt + 1,
+                    sym,
+                    type(exc).__name__,
+                )
+                if attempt == 0:
+                    await asyncio.sleep(2)
+
+        if llm_response is None:
+            if last_llm_exc is not None:
+                raise last_llm_exc
+            raise ValueError("Failed to obtain valid parsed output from LLM gateway")
 
         if not llm_response.parsed:
             raise ValueError(

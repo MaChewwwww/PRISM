@@ -127,6 +127,19 @@ async def _recover_interrupted_runs(session: AsyncSession, *, recovered_at: date
     return len(rows)
 
 
+def _expected_report_count() -> int:
+    """Return the exact number of weekday/symbol replay decisions required."""
+
+    checkpoint = datetime.fromisoformat(f"{START}T00:00:00+00:00")
+    end = datetime.fromisoformat(f"{END}T00:00:00+00:00")
+    trading_days = 0
+    while checkpoint <= end:
+        if checkpoint.weekday() < 5:
+            trading_days += 1
+        checkpoint += timedelta(days=1)
+    return trading_days * len(SYMBOLS)
+
+
 async def run() -> int:
     settings = get_settings()
     if settings.environment != "staging" or not settings.backtest_simulation_enabled:
@@ -191,16 +204,22 @@ async def run() -> int:
                 json.dumps({"reports": [], "input_manifests": []}, indent=2), encoding="utf-8"
             )
             _write_historical_artifacts(output, [], [], warnings)
+        expected_report_count = _expected_report_count()
+        replay_complete = len(reports) == expected_report_count
         summary.update(
             {
-                "outcome": "COMPLETED" if reports else "DATA_UNAVAILABLE",
+                "outcome": "COMPLETED" if replay_complete else "DATA_UNAVAILABLE",
                 "agent_reports": len(reports),
+                "expected_agent_reports": expected_report_count,
                 "warnings": warnings,
                 "reason": (
                     "Agent replay completed. Virtual options remain NO_TRADE when historical "
                     "contracts or quotes are unavailable."
-                    if reports
-                    else "No point-in-time AI research report could be completed."
+                    if replay_complete
+                    else (
+                        f"Agent replay produced {len(reports)} of {expected_report_count} "
+                        "expected point-in-time research reports; the run remains inactive."
+                    )
                 ),
             }
         )
@@ -261,11 +280,12 @@ async def run() -> int:
             summary["post_analysis_state"] = post_analysis.state
             from sqlalchemy import update
 
-            await session.execute(update(BacktestRunModel).values(is_active_presentation=False))
+            if replay_complete:
+                await session.execute(update(BacktestRunModel).values(is_active_presentation=False))
         running_record.completed_at = datetime.now(UTC)
         running_record.status = summary["outcome"]
         running_record.summary_json = json.dumps(summary, default=str)
-        running_record.is_active_presentation = bool(reports)
+        running_record.is_active_presentation = replay_complete
         session.add(
             BacktestAuditEventModel(
                 id=str(uuid4()),
