@@ -242,6 +242,7 @@ class MacroeconomicAgent:
         db_session: AsyncSession | None = None,
         *,
         strict: bool = False,
+        evaluation_at: datetime | None = None,
     ) -> MacroAnalysisReport:
         sym = symbol.strip().upper()
         active_model = self.llm_gateway._settings.llm_model or "default"
@@ -429,7 +430,7 @@ class MacroeconomicAgent:
             )
 
         output: MacroAnalysisLLMOutput = llm_response.parsed
-        now_utc = datetime.now(UTC)
+        now_utc = (evaluation_at or datetime.now(UTC)).astimezone(UTC)
         report_id = uuid4()
 
         report = MacroAnalysisReport(

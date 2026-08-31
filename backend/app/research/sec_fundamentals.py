@@ -8,8 +8,9 @@ raised so the caller can record ``NO_TRADE`` rather than filling values in.
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -33,49 +34,100 @@ class SecFundamentalsUnavailable(RuntimeError):
     """The SEC record cannot safely support autonomous fundamental analysis."""
 
 
-def _annual_values(facts: dict[str, Any], tags: tuple[str, ...]) -> list[tuple[Decimal, datetime]]:
-    """Return annual USD/USD-per-share facts ordered by filing date."""
+def _parse_timestamp(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _annual_values(
+    facts: dict[str, Any],
+    tags: tuple[str, ...],
+    *,
+    include_instant: bool = False,
+) -> list[tuple[Decimal, datetime]]:
+    """Return sourced annual (or explicitly instant) facts by period end.
+
+    SEC Companyfacts contains multiple aliases, taxonomies, amendments, and
+    comparative periods in one response.  We collect all matching aliases,
+    reject quarterly frames when an annual value is required, then keep the
+    newest filing for each distinct period end.  This prevents stale aliases
+    and same-filing comparative values from silently replacing one another.
+    """
+    candidates: list[tuple[datetime, datetime, Decimal, int]] = []
+    # Companyfacts responses nest taxonomies below the top-level ``facts``
+    # object.  Keep the adapter strict: an absent or malformed taxonomy simply
+    # yields no values and fails closed at the caller instead of using fixtures.
+    facts_by_taxonomy = facts.get("facts", {})
+    if not isinstance(facts_by_taxonomy, dict):
+        return []
+    annual_forms = {"10-K", "10-K/A", "20-F", "20-F/A"}
+    taxonomies = (
+        facts_by_taxonomy.get("us-gaap", {}),
+        facts_by_taxonomy.get("dei", {}),
+    )
+    for tag_priority, tag in enumerate(tags):
+        for taxonomy in taxonomies:
+            if not isinstance(taxonomy, dict):
+                continue
+            fact = taxonomy.get(tag)
+            if not isinstance(fact, dict):
+                continue
+            units = fact.get("units", {})
+            if not isinstance(units, dict):
+                continue
+            unit_values: list[Any] = []
+            for unit_name in ("USD", "USD/shares", "shares"):
+                values_for_unit = units.get(unit_name)
+                if isinstance(values_for_unit, list):
+                    unit_values.extend(values_for_unit)
+            for entry in unit_values:
+                if not isinstance(entry, dict):
+                    continue
+                form = str(entry.get("form", "")).upper()
+                frame = str(entry.get("frame", ""))
+                start = entry.get("start")
+                annual = form in annual_forms or re.fullmatch(r"CY\d{4}", frame) is not None
+                instant = (
+                    include_instant
+                    and start is None
+                    and (form in annual_forms or form in {"10-Q", "10-Q/A"} or frame.endswith("I"))
+                )
+                if not annual and not instant:
+                    continue
+                period_end = _parse_timestamp(entry.get("end"))
+                if period_end is None:
+                    continue
+                try:
+                    value = Decimal(str(entry["val"]))
+                except (KeyError, TypeError, ValueError):
+                    continue
+                filed_at = _parse_timestamp(entry.get("filed", entry.get("end"))) or period_end
+                candidates.append((period_end, filed_at, value, tag_priority))
+
+    candidates.sort(key=lambda item: (item[0], item[1], -item[3]), reverse=True)
+    seen_periods: set[date] = set()
     values: list[tuple[Decimal, datetime]] = []
-    usgaap = facts.get("us-gaap", {})
-    for tag in tags:
-        units = usgaap.get(tag, {}).get("units", {})
-        unit_values = units.get("USD") or units.get("USD/shares") or units.get("shares")
-        if not isinstance(unit_values, list):
+    for period_end, filed_at, value, _tag_priority in candidates:
+        if period_end.date() in seen_periods:
             continue
-        for entry in unit_values:
-            # Annual values must be 10-K/20-F facts or explicitly carry a one
-            # year frame.  Quarterly values are not silently added together.
-            form = str(entry.get("form", ""))
-            frame = str(entry.get("frame", ""))
-            if form not in {"10-K", "10-K/A", "20-F", "20-F/A"} and not frame.startswith("CY"):
-                continue
-            try:
-                value = Decimal(str(entry["val"]))
-                end = datetime.fromisoformat(str(entry["end"])).replace(tzinfo=UTC)
-            except (KeyError, TypeError, ValueError):
-                continue
-            filed = str(entry.get("filed", entry.get("end", "")))
-            try:
-                filed_at = datetime.fromisoformat(filed).replace(tzinfo=UTC)
-            except ValueError:
-                filed_at = end
-            values.append((value, filed_at))
-        if values:
-            break
-    values.sort(key=lambda item: item[1], reverse=True)
-    # SEC may repeat a fact across amended filings. Keep one value per date.
-    deduped: list[tuple[Decimal, datetime]] = []
-    for value, filed_at in values:
-        if filed_at.date() in {d.date() for _, d in deduped}:
-            continue
-        deduped.append((value, filed_at))
-    return deduped
+        seen_periods.add(period_end.date())
+        values.append((value, filed_at))
+    return values
 
 
 def _value(
-    facts: dict[str, Any], tags: tuple[str, ...], name: str
+    facts: dict[str, Any],
+    tags: tuple[str, ...],
+    name: str,
+    *,
+    include_instant: bool = False,
 ) -> tuple[Decimal, Decimal, datetime]:
-    values = _annual_values(facts, tags)
+    values = _annual_values(facts, tags, include_instant=include_instant)
     if not values:
         raise SecFundamentalsUnavailable(f"SEC fact unavailable: {name}")
     current, current_at = values[0]
@@ -87,10 +139,10 @@ def _filed_by_checkpoint(value: Any, checkpoint: datetime) -> bool:
     if not isinstance(value, dict):
         return False
     filed = value.get("filed", value.get("end"))
-    try:
-        return datetime.fromisoformat(str(filed)).replace(tzinfo=UTC) <= checkpoint
-    except (TypeError, ValueError):
+    parsed = _parse_timestamp(filed)
+    if parsed is None or checkpoint.tzinfo is None or checkpoint.utcoffset() is None:
         return False
+    return parsed <= checkpoint.astimezone(UTC)
 
 
 def fetch_sec_company_financials(
@@ -136,20 +188,33 @@ def fetch_sec_company_financials(
                         value for value in values if _filed_by_checkpoint(value, checkpoint)
                     ]
 
-    revenue, prior_revenue, as_of = _value(
+    revenue, prior_revenue, revenue_as_of = _value(
         facts,
         ("RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet"),
         "revenue",
     )
-    gross_profit, prior_gross_profit, _ = _value(facts, ("GrossProfit",), "gross profit")
+    try:
+        gross_profit, prior_gross_profit, _ = _value(facts, ("GrossProfit",), "gross profit")
+    except SecFundamentalsUnavailable:
+        cost_of_revenue, prior_cost_of_revenue, _ = _value(
+            facts,
+            ("CostOfRevenue", "CostOfGoodsAndServicesSold"),
+            "gross profit or cost of revenue",
+        )
+        gross_profit = revenue - cost_of_revenue
+        prior_gross_profit = prior_revenue - prior_cost_of_revenue
     operating_income, prior_operating_income, _ = _value(
         facts, ("OperatingIncomeLoss",), "operating income"
     )
     net_income, prior_net_income, _ = _value(facts, ("NetIncomeLoss", "ProfitLoss"), "net income")
     eps, _, _ = _value(facts, ("EarningsPerShareDiluted",), "diluted EPS")
-    total_assets, prior_assets, _ = _value(facts, ("Assets",), "assets")
-    current_assets, _, _ = _value(facts, ("AssetsCurrent",), "current assets")
-    current_liabilities, _, _ = _value(facts, ("LiabilitiesCurrent",), "current liabilities")
+    total_assets, prior_assets, _ = _value(facts, ("Assets",), "assets", include_instant=True)
+    current_assets, prior_current_assets, _ = _value(
+        facts, ("AssetsCurrent",), "current assets", include_instant=True
+    )
+    current_liabilities, prior_current_liabilities, _ = _value(
+        facts, ("LiabilitiesCurrent",), "current liabilities", include_instant=True
+    )
     equity, _, _ = _value(
         facts,
         (
@@ -157,6 +222,7 @@ def fetch_sec_company_financials(
             "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
         ),
         "stockholders equity",
+        include_instant=True,
     )
     retained_earnings, _, _ = _value(
         facts,
@@ -165,6 +231,7 @@ def fetch_sec_company_financials(
             "RetainedEarningsAccumulatedDeficitIncludingAccumulatedOtherComprehensiveIncome",
         ),
         "retained earnings",
+        include_instant=True,
     )
     cash, _, _ = _value(
         facts,
@@ -173,6 +240,7 @@ def fetch_sec_company_financials(
             "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
         ),
         "cash",
+        include_instant=True,
     )
     ocf, prior_ocf, _ = _value(
         facts,
@@ -184,28 +252,47 @@ def fetch_sec_company_financials(
         ("PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"),
         "capital expenditure",
     )
-    debt, _, _ = _value(
-        facts,
-        (
-            "LongTermDebtAndFinanceLeaseObligationsCurrent",
-            "LongTermDebtCurrent",
-            "LongTermDebtNoncurrent",
-        ),
-        "debt",
-    )
+    debt_parts: list[tuple[Decimal, Decimal]] = []
+    for debt_tags in (
+        ("LongTermDebtAndFinanceLeaseObligationsCurrent", "LongTermDebtCurrent"),
+        ("LongTermDebtNoncurrent",),
+    ):
+        try:
+            debt_current, debt_prior, _ = _value(facts, debt_tags, "debt", include_instant=True)
+        except SecFundamentalsUnavailable:
+            continue
+        debt_parts.append((debt_current, debt_prior))
+    if not debt_parts:
+        raise SecFundamentalsUnavailable("SEC fact unavailable: debt")
+    debt = sum((part[0] for part in debt_parts), Decimal("0"))
     interest, _, _ = _value(
         facts,
-        ("InterestExpenseNonOperating", "InterestExpenseDebt"),
+        (
+            "InterestExpense",
+            "InterestExpenseNonOperating",
+            "InterestExpenseDebt",
+            "FinanceLeaseInterestExpense",
+        ),
         "interest expense",
     )
-    shares, _, _ = _value(
+    shares, prior_shares, _ = _value(
         facts,
-        ("EntityCommonStockSharesOutstanding", "CommonStocksIncludingAdditionalPaidInCapital"),
+        (
+            "EntityCommonStockSharesOutstanding",
+            "CommonStockSharesOutstanding",
+            "CommonStocksIncludingAdditionalPaidInCapital",
+        ),
         "shares outstanding",
+        include_instant=True,
     )
-    depreciation, _, _ = _value(
+    depreciation, prior_depreciation, _ = _value(
         facts,
-        ("DepreciationDepletionAndAmortization", "DepreciationAmortizationAndAccretionNet"),
+        (
+            "DepreciationDepletionAndAmortization",
+            "DepreciationAmortizationAndAccretionNet",
+            "Depreciation",
+            "AmortizationOfIntangibleAssets",
+        ),
         "depreciation and amortization",
     )
 
@@ -213,7 +300,9 @@ def fetch_sec_company_financials(
         return value / Decimal("1000000")
 
     prior_ratio = (
-        (current_assets / current_liabilities) if current_liabilities != 0 else Decimal("0")
+        (prior_current_assets / prior_current_liabilities)
+        if prior_current_liabilities != 0
+        else Decimal("0")
     )
     prior_margin = (
         (prior_gross_profit / prior_revenue) * Decimal("100")
@@ -222,7 +311,7 @@ def fetch_sec_company_financials(
     )
     # EBITDA is derived only from sourced operating income and D&A facts.
     ebitda = operating_income + depreciation
-    prior_ebitda = prior_operating_income + depreciation
+    prior_ebitda = prior_operating_income + prior_depreciation
     return CompanyFinancials(
         symbol=sym,
         company_name=str(facts.get("entityName", sym)),
@@ -248,6 +337,7 @@ def fetch_sec_company_financials(
         prior_current_ratio=prior_ratio,
         prior_gross_margin_pct=prior_margin,
         retained_earnings=millions(retained_earnings),
+        prior_shares_outstanding_millions=millions(prior_shares),
         provenance="sec_filing",
-        data_as_of=as_of,
+        data_as_of=revenue_as_of,
     )

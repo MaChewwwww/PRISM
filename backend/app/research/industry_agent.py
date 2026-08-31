@@ -290,6 +290,7 @@ class IndustryIntelligenceAgent:
         db_session: AsyncSession | None = None,
         *,
         strict: bool = False,
+        evaluation_at: datetime | None = None,
     ) -> IndustryAnalysisReport:
         sym = symbol.strip().upper()
         sector_name, sector_etf, default_peers = DEFAULT_SECTOR_REGISTRY.get(sym, DEFAULT_FALLBACK)
@@ -495,7 +496,7 @@ class IndustryIntelligenceAgent:
             raise ValueError("Failed to obtain valid parsed output from LLM gateway")
 
         analysis_output: IndustryAnalysisLLMOutput = llm_response.parsed
-        now_utc = datetime.now(UTC)
+        now_utc = (evaluation_at or datetime.now(UTC)).astimezone(UTC)
         report_id = uuid4()
 
         report = IndustryAnalysisReport(
