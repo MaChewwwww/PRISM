@@ -938,6 +938,7 @@ class TradeDecisionReport(ContractBase):
         "live_research"
     )
     evidence_freshness_seconds: int | None = Field(default=None, ge=0)
+    analog_count: int = Field(default=0, ge=0)
 
 
 class NoTradeDecision(ContractBase):

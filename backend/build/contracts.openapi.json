@@ -565,6 +565,10 @@
             ],
             "title": "Allocationmultiplier"
           },
+          "branchKey": {
+            "title": "Branchkey",
+            "type": "string"
+          },
           "capitalAtRisk": {
             "anyOf": [
               {
@@ -682,6 +686,16 @@
             ],
             "title": "Refusalreason"
           },
+          "simulatedFill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlternativeSimulatedFill"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "status": {
             "enum": [
               "open",
@@ -709,6 +723,7 @@
         },
         "required": [
           "id",
+          "branchKey",
           "label",
           "variation",
           "pnl",
@@ -867,6 +882,16 @@
             ],
             "title": "Rulesetversion"
           },
+          "simulation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlternativeSimulationMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sourceMode": {
             "anyOf": [
               {
@@ -947,6 +972,206 @@
           "limitations"
         ],
         "title": "AlternativeSession",
+        "type": "object"
+      },
+      "AlternativeSimulatedFill": {
+        "additionalProperties": false,
+        "properties": {
+          "costModel": {
+            "const": "observed_nbbo_touch",
+            "title": "Costmodel",
+            "type": "string"
+          },
+          "entryAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entryat"
+          },
+          "entryPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entryprice"
+          },
+          "exitAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exitat"
+          },
+          "exitPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exitprice"
+          },
+          "exitReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exitreason"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/AlternativeSimulatedFillLeg"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "slippage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slippage"
+          },
+          "status": {
+            "enum": [
+              "filled",
+              "not_filled",
+              "incomplete"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "costModel"
+        ],
+        "title": "AlternativeSimulatedFill",
+        "type": "object"
+      },
+      "AlternativeSimulatedFillLeg": {
+        "additionalProperties": false,
+        "properties": {
+          "entryPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entryprice"
+          },
+          "exitPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exitprice"
+          },
+          "optionSymbol": {
+            "title": "Optionsymbol",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "optionSymbol",
+          "side",
+          "quantity"
+        ],
+        "title": "AlternativeSimulatedFillLeg",
+        "type": "object"
+      },
+      "AlternativeSimulationMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "cadenceSeconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Cadenceseconds",
+            "type": "integer"
+          },
+          "costModel": {
+            "const": "observed_nbbo_touch",
+            "title": "Costmodel",
+            "type": "string"
+          },
+          "kind": {
+            "const": "historical_options",
+            "title": "Kind",
+            "type": "string"
+          },
+          "windowEnd": {
+            "format": "date-time",
+            "title": "Windowend",
+            "type": "string"
+          },
+          "windowStart": {
+            "format": "date-time",
+            "title": "Windowstart",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "windowStart",
+          "windowEnd",
+          "cadenceSeconds",
+          "costModel"
+        ],
+        "title": "AlternativeSimulationMeta",
         "type": "object"
       },
       "AltmanZone": {
@@ -6799,6 +7024,12 @@
       "TradeDecisionReport": {
         "additionalProperties": false,
         "properties": {
+          "analog_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Analog Count",
+            "type": "integer"
+          },
           "composite_opportunity_score": {
             "anyOf": [
               {

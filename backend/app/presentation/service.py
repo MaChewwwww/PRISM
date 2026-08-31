@@ -376,6 +376,7 @@ def _branch(raw: dict[str, Any]) -> AlternativeBranch:
     variation = raw["variation"]
     return AlternativeBranch(
         id=branch_id,
+        branch_key=branch_id,
         label=label,
         variation=variation.replace("active allocation", "chosen-path allocation"),
         pnl=raw["pnl"],

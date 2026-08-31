@@ -805,6 +805,8 @@ export interface components {
         AlternativeBranch: {
             /** Allocationmultiplier */
             allocationMultiplier?: string | null;
+            /** Branchkey */
+            branchKey: string;
             /** Capitalatrisk */
             capitalAtRisk?: string | null;
             /**
@@ -838,6 +840,7 @@ export interface components {
             pnl: string;
             /** Refusalreason */
             refusalReason?: string | null;
+            simulatedFill?: components["schemas"]["AlternativeSimulatedFill"] | null;
             /**
              * Status
              * @enum {string}
@@ -900,6 +903,7 @@ export interface components {
             refusalReasons?: string[];
             /** Rulesetversion */
             rulesetVersion?: string | null;
+            simulation?: components["schemas"]["AlternativeSimulationMeta"] | null;
             /** Sourcemode */
             sourceMode?: ("production" | "staging") | null;
             /**
@@ -920,6 +924,76 @@ export interface components {
             title: string;
             /** Valuationpolicyversion */
             valuationPolicyVersion?: string | null;
+        };
+        /** AlternativeSimulatedFill */
+        AlternativeSimulatedFill: {
+            /**
+             * Costmodel
+             * @constant
+             */
+            costModel: "observed_nbbo_touch";
+            /** Entryat */
+            entryAt?: string | null;
+            /** Entryprice */
+            entryPrice?: string | null;
+            /** Exitat */
+            exitAt?: string | null;
+            /** Exitprice */
+            exitPrice?: string | null;
+            /** Exitreason */
+            exitReason?: string | null;
+            /** Legs */
+            legs?: components["schemas"]["AlternativeSimulatedFillLeg"][];
+            /** Quantity */
+            quantity?: number | null;
+            /** Slippage */
+            slippage?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "filled" | "not_filled" | "incomplete";
+        };
+        /** AlternativeSimulatedFillLeg */
+        AlternativeSimulatedFillLeg: {
+            /** Entryprice */
+            entryPrice?: string | null;
+            /** Exitprice */
+            exitPrice?: string | null;
+            /** Optionsymbol */
+            optionSymbol: string;
+            /** Quantity */
+            quantity: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "buy" | "sell";
+        };
+        /** AlternativeSimulationMeta */
+        AlternativeSimulationMeta: {
+            /** Cadenceseconds */
+            cadenceSeconds: number;
+            /**
+             * Costmodel
+             * @constant
+             */
+            costModel: "observed_nbbo_touch";
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "historical_options";
+            /**
+             * Windowend
+             * Format: date-time
+             */
+            windowEnd: string;
+            /**
+             * Windowstart
+             * Format: date-time
+             */
+            windowStart: string;
         };
         /**
          * AltmanZone
@@ -3514,6 +3588,11 @@ export interface components {
         };
         /** TradeDecisionReport */
         TradeDecisionReport: {
+            /**
+             * Analog Count
+             * @default 0
+             */
+            analog_count: number;
             /**
              * Composite Opportunity Score
              * Format: decimal-string

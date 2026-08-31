@@ -6,6 +6,7 @@ dependency on the autonomous worker, account state, or paper-order adapters.
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -20,6 +21,9 @@ from app.presentation.models import (
     AlternativeBranch,
     AlternativeCollection,
     AlternativeSession,
+    AlternativeSimulatedFill,
+    AlternativeSimulatedFillLeg,
+    AlternativeSimulationMeta,
     ChartPoint,
     DataMode,
     DateRange,
@@ -28,6 +32,7 @@ from app.presentation.models import (
 )
 from app.shadowfund.models import (
     ShadowBranchModel,
+    ShadowObservationModel,
     ShadowSessionModel,
     ShadowValuationModel,
 )
@@ -42,6 +47,18 @@ def _money(value: Decimal | None) -> str:
 
 def _number(value: Decimal | None) -> str:
     return "—" if value is None else f"{value:,.2f}"
+
+
+def _parse_datetime(value: object) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(UTC)
 
 
 def _date_range(start: datetime | None = None, end: datetime | None = None) -> DateRange | None:
@@ -172,10 +189,25 @@ class BacktestPresentationRepository:
                     )
                 ).all()
             )
+        observations = list(
+            (
+                await self._session.scalars(
+                    select(ShadowObservationModel)
+                    .where(ShadowObservationModel.session_id == row.id)
+                    .order_by(ShadowObservationModel.observed_at)
+                )
+            ).all()
+        )
         chosen = next((branch for branch in branches if branch.chosen_path), None)
         chosen_value = self._latest(values_by_branch.get(chosen.id, [])) if chosen else None
         projected = [
-            self._branch_projection(branch, values_by_branch[branch.id], chosen_value)
+            self._branch_projection(
+                branch,
+                values_by_branch[branch.id],
+                chosen_value,
+                observations,
+                include_simulated_fill=row.source_mode == "staging",
+            )
             for branch in branches
         ]
         comparable = [
@@ -232,6 +264,17 @@ class BacktestPresentationRepository:
             profile_version=row.profile_version,
             valuation_policy_version=row.valuation_policy_version,
             refusal_reasons=[branch.reason for branch in branches if branch.reason],
+            simulation=(
+                AlternativeSimulationMeta(
+                    kind="historical_options",
+                    window_start=datetime(2026, 8, 24, 13, 30, tzinfo=UTC),
+                    window_end=datetime(2026, 8, 27, 20, tzinfo=UTC),
+                    cadence_seconds=300,
+                    cost_model="observed_nbbo_touch",
+                )
+                if row.source_mode == "staging"
+                else None
+            ),
         )
 
     @staticmethod
@@ -243,10 +286,16 @@ class BacktestPresentationRepository:
         branch: ShadowBranchModel,
         values: list[ShadowValuationModel],
         chosen_latest: ShadowValuationModel | None,
+        observations: list[ShadowObservationModel] | None = None,
+        include_simulated_fill: bool = False,
     ) -> AlternativeBranch:
         latest = self._latest(values)
+        simulated_fill = (
+            self._simulated_fill(branch, observations or []) if include_simulated_fill else None
+        )
         return AlternativeBranch(
             id=branch.id,
+            branch_key=branch.branch_key,
             label=branch.label,
             variation=branch.variation,
             pnl=_money(latest.net_pnl if latest else None),
@@ -273,6 +322,59 @@ class BacktestPresentationRepository:
             valuation_confidence=latest.confidence if latest else None,
             refusal_reason=branch.reason,
             chosen_path=branch.chosen_path,
+            simulated_fill=simulated_fill,
+        )
+
+    @staticmethod
+    def _simulated_fill(
+        branch: ShadowBranchModel,
+        observations: list[ShadowObservationModel],
+    ) -> AlternativeSimulatedFill | None:
+        """Project fill metadata while keeping raw quote payloads server-side."""
+
+        for observation in reversed(observations):
+            try:
+                payload = json.loads(observation.payload_json)
+            except (TypeError, ValueError):
+                continue
+            fills = payload.get("fills") if isinstance(payload, dict) else None
+            item = fills.get(branch.id) if isinstance(fills, dict) else None
+            if not isinstance(item, dict):
+                continue
+            legs: list[AlternativeSimulatedFillLeg] = []
+            for value in item.get("legs", []):
+                if not isinstance(value, dict):
+                    continue
+                try:
+                    legs.append(AlternativeSimulatedFillLeg.model_validate(value))
+                except ValueError:
+                    continue
+            status_value = str(item.get("status", "incomplete"))
+            status = (
+                cast(Literal["filled", "not_filled", "incomplete"], status_value)
+                if status_value in {"filled", "not_filled", "incomplete"}
+                else "incomplete"
+            )
+            return AlternativeSimulatedFill(
+                status=status,
+                quantity=int(item["quantity"]) if item.get("quantity") is not None else None,
+                entry_at=_parse_datetime(item.get("entry_at")),
+                entry_price=str(item["entry_price"])
+                if item.get("entry_price") is not None
+                else None,
+                exit_at=_parse_datetime(item.get("exit_at")),
+                exit_price=str(item["exit_price"]) if item.get("exit_price") is not None else None,
+                slippage=str(item["slippage"]) if item.get("slippage") is not None else None,
+                exit_reason=str(item["exit_reason"]) if item.get("exit_reason") else branch.reason,
+                cost_model="observed_nbbo_touch",
+                legs=legs,
+            )
+        if branch.strategy_json is None:
+            return None
+        return AlternativeSimulatedFill(
+            status="incomplete" if branch.state == "incomplete" else "not_filled",
+            exit_reason=branch.reason,
+            cost_model="observed_nbbo_touch",
         )
 
     def _path(

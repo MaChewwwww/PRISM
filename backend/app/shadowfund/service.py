@@ -50,6 +50,7 @@ class ShadowFundService:
         source_mode: str,
         source_feed: str,
         candidate_strategies: dict[str, OptionStrategy] | None = None,
+        chosen_strategy: OptionStrategy | None = None,
         backtest_run_id: str | None = None,
         refusal_reason: str | None = None,
         horizon_at: datetime | None = None,
@@ -103,12 +104,16 @@ class ShadowFundService:
             session,
             record,
             key="chosen",
-            label="Chosen path: Cash",
-            variation="No confirmed paper fill; cash is the recorded chosen path.",
-            strategy=None,
+            label=("Chosen path: simulated entry" if chosen_strategy else "Chosen path: Cash"),
+            variation=(
+                "Deterministic historical NBBO entry and mark-to-market path."
+                if chosen_strategy
+                else "No confirmed paper fill; cash is the recorded chosen path."
+            ),
+            strategy=chosen_strategy,
             multiplier=Decimal("1"),
             chosen_path=True,
-            state="complete",
+            state="open" if chosen_strategy else "complete",
         )
         await self._add_branch(
             session,
@@ -122,6 +127,12 @@ class ShadowFundService:
             state="complete",
         )
         candidates = candidate_strategies or {}
+        # A deterministic rejection (including a virtual P0-P5 rejection) is
+        # a complete cash-only study.  Only explicit data-unavailable reasons
+        # remain incomplete and therefore keep a staging run inactive.
+        no_trade_complete = source_mode == "staging" and not has_proposal and not (
+            refusal_reason is not None and refusal_reason.startswith("DATA_UNAVAILABLE")
+        )
         await self._add_candidate_branch(
             session,
             record,
@@ -130,6 +141,7 @@ class ShadowFundService:
             variation="0.5x fractional virtual option economics.",
             strategy=proposal.strategy if proposal else None,
             multiplier=Decimal("0.5"),
+            empty_state="complete" if no_trade_complete else "incomplete",
         )
         await self._add_candidate_branch(
             session,
@@ -139,6 +151,7 @@ class ShadowFundService:
             variation="Opposite directional thesis selected deterministically.",
             strategy=candidates.get("contrarian"),
             multiplier=Decimal("1"),
+            empty_state="complete" if no_trade_complete else "incomplete",
         )
         await self._add_candidate_branch(
             session,
@@ -148,6 +161,7 @@ class ShadowFundService:
             variation="Agent 7 intent with deterministically selected contracts.",
             strategy=candidates.get("ai_alternative"),
             multiplier=Decimal("1"),
+            empty_state="complete" if no_trade_complete else "incomplete",
         )
         return record
 
@@ -540,6 +554,7 @@ class ShadowFundService:
         variation: str,
         strategy: OptionStrategy | None,
         multiplier: Decimal,
+        empty_state: str = "incomplete",
     ) -> None:
         await self._add_branch(
             session,
@@ -550,8 +565,12 @@ class ShadowFundService:
             strategy=strategy,
             multiplier=multiplier,
             chosen_path=False,
-            state="open" if strategy else "incomplete",
-            reason=None if strategy else "DATA_UNAVAILABLE: no eligible deterministic strategy",
+            state="open" if strategy else empty_state,
+            reason=(
+                None
+                if strategy or empty_state == "complete"
+                else "DATA_UNAVAILABLE: no eligible deterministic strategy"
+            ),
         )
 
     async def _add_branch(

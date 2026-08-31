@@ -614,6 +614,7 @@ class TradingDecisionAgent:
                 provenance or ("illustrative_fixture" if allow_illustrative else "live_research")
             ),
             evidence_freshness_seconds=30,
+            analog_count=reaction_report.analog_count,
         )
 
         # Cache in PostgreSQL
