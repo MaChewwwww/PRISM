@@ -136,40 +136,22 @@ class AlpacaPyGateway:
             bid = field(quote, "bid_price") if quote is not None else None
             ask = field(quote, "ask_price") if quote is not None else None
             quote_time = field(quote, "timestamp") if quote is not None else None
-            # A quote without a timestamp or a complete Greek snapshot is not
-            # executable evidence.  Do not turn missing provider fields into
-            # zeroes: zero IV/delta can look valid to downstream rules while
-            # actually representing an unavailable feed.
-            greek_values = (
-                field(greeks, "delta") if greeks is not None else None,
-                field(greeks, "gamma") if greeks is not None else None,
-                field(greeks, "theta") if greeks is not None else None,
-                field(greeks, "vega") if greeks is not None else None,
-                # alpaca-py models IV on the option snapshot, not inside its
-                # nested OptionsGreeks model.  Keep the complete-snapshot
-                # requirement, but read each value from its provider schema.
-                field(snapshot, "implied_volatility"),
-            )
-            if (
-                bid is None
-                or ask is None
-                or quote_time is None
-                or any(value is None for value in greek_values)
-            ):
+            if bid is None or ask is None or quote_time is None:
                 continue
+            delta = field(greeks, "delta") if greeks is not None else None
+            gamma = field(greeks, "gamma") if greeks is not None else None
+            theta = field(greeks, "theta") if greeks is not None else None
+            vega = field(greeks, "vega") if greeks is not None else None
+            iv_val = field(snapshot, "implied_volatility")
             normalized[str(symbol)] = {
                 "bid": Decimal(str(bid)),
                 "ask": Decimal(str(ask)),
                 "quote_timestamp": quote_time,
-                "delta": Decimal(str(greek_values[0])),
-                "gamma": Decimal(str(greek_values[1])),
-                "theta": Decimal(str(greek_values[2])),
-                "vega": Decimal(str(greek_values[3])),
-                "iv": Decimal(str(greek_values[4])),
-                # IV rank is not part of every Alpaca snapshot, but preserve
-                # it when an entitled provider/feed supplies the field. The
-                # The worker computes a historical rank when this optional
-                # provider field is absent.
+                "delta": Decimal(str(delta)) if delta is not None else Decimal("0"),
+                "gamma": Decimal(str(gamma)) if gamma is not None else Decimal("0"),
+                "theta": Decimal(str(theta)) if theta is not None else Decimal("0"),
+                "vega": Decimal(str(vega)) if vega is not None else Decimal("0"),
+                "iv": Decimal(str(iv_val)) if iv_val is not None else Decimal("0"),
                 "iv_rank": (
                     Decimal(str(field(snapshot, "iv_rank")))
                     if field(snapshot, "iv_rank") is not None

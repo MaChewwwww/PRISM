@@ -83,6 +83,7 @@ def test_option_selection_rejects_stale_quotes() -> None:
         )
     except ValueError as exc:
         assert "No fresh" in str(exc)
+        assert "quote_stale=1" in str(exc)
     else:
         raise AssertionError("stale quote must not produce a strategy")
 
