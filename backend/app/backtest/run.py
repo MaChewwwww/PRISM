@@ -415,6 +415,46 @@ def _safe_warning(checkpoint: datetime, symbol: str, exc: Exception) -> str:
     return f"{checkpoint.date()} {symbol}: {type(exc).__name__}{suffix}"
 
 
+def _fallback_no_trade_report(
+    *,
+    checkpoint: datetime,
+    symbol: str,
+    trace_id: object,
+    inputs: dict[str, Any],
+    exc: Exception,
+) -> dict[str, Any]:
+    """Return a deterministic report when one symbol's replay cannot finish.
+
+    A strict specialist failure must not erase the symbol/checkpoint from the
+    four-session schedule.  Recording an explicit data-unavailable ``NO_TRADE``
+    keeps report counts complete while preserving the fail-closed outcome.
+    """
+
+    reason = f"DATA_UNAVAILABLE: {type(exc).__name__}"
+    payload = {
+        "trace_id": str(trace_id),
+        "checkpoint": checkpoint.isoformat(),
+        "symbol": symbol,
+        "reason": reason,
+        "input_digest": _digest(inputs),
+    }
+    return {
+        "trace_id": trace_id,
+        "checkpoint": checkpoint,
+        "symbol": symbol,
+        "digest": _digest(payload),
+        "decision": {"symbol": symbol, "verdict": "no_trade", "direction": None},
+        "reason": reason,
+        "input_digest": _digest(inputs),
+        "option_contracts": [],
+        "option_quotes": [],
+        "option_contracts_raw": [],
+        "option_quotes_raw": [],
+        "candidate_strategies": {},
+        "virtual_authorization": {},
+    }
+
+
 def _write_historical_artifacts(
     output: Path,
     input_manifests: list[dict[str, Any]],
@@ -1165,8 +1205,26 @@ async def _replay_agents(
                 reports.append(report)
             except (SecFundamentalsUnavailable, ValueError) as exc:
                 warnings.append(_safe_warning(checkpoint, symbol, exc))
+                reports.append(
+                    _fallback_no_trade_report(
+                        checkpoint=checkpoint,
+                        symbol=symbol,
+                        trace_id=trace_id,
+                        inputs=historical.inputs,
+                        exc=exc,
+                    )
+                )
             except Exception as exc:
                 warnings.append(_safe_warning(checkpoint, symbol, exc))
+                reports.append(
+                    _fallback_no_trade_report(
+                        checkpoint=checkpoint,
+                        symbol=symbol,
+                        trace_id=trace_id,
+                        inputs=historical.inputs,
+                        exc=exc,
+                    )
+                )
         input_manifests.append(
             {
                 "checkpoint": checkpoint.isoformat(),
