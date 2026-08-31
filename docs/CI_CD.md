@@ -4,11 +4,12 @@
 
 ```text
 typed feature branch -> reviewed pull request -> staging
+typed feature branch -> reviewed urgent pull request -> main
 staging -> reviewed promotion pull request -> main
 main CI success -> protected production deployment
 ```
 
-Direct changes to `staging` and `main` are prohibited outside the documented repository bootstrap. Branch policy validates typed branches into `staging` and permits only `staging` into `main`.
+Direct changes to `staging` and `main` are prohibited outside the documented repository bootstrap. Branch policy validates typed branches into `staging` and permits either `staging` or a typed `feature/*`, `fix/*`, `chore/*`, `docs/*`, `refactor/*`, `test/*`, or `ci/*` branch into `main`. Direct-main pull requests retain the same required CI, security, container, and review controls; they are for urgent releases and do not authorize a direct push or bypass.
 
 ## Continuous integration
 

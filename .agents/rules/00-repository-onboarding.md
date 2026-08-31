@@ -35,7 +35,7 @@ Resolve contradictions explicitly; do not silently choose the most convenient so
 
 - Confirm the application name is PRISM and consume authorized values, including any fixed hackathon window, from the versioned registry; keep only values absent from the register unresolved.
 - Confirm the task stays inside paper trading.
-- Confirm normal work is on an allowed branch based on `staging`; do not commit directly to `staging` or `main` after bootstrap.
+- Confirm normal work is on an allowed typed branch: base work targeting `staging` on `staging`, and direct-main work on current `main`; do not commit directly to either protected branch after bootstrap.
 - Find the existing module, contract, fixture, and test before creating a parallel implementation.
 - Update generated contracts through the generator.
 - Run the relevant checks and update documentation in the same change.
