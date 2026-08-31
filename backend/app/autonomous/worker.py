@@ -6,6 +6,7 @@ import json
 import logging
 import re
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
@@ -80,6 +81,13 @@ logger = logging.getLogger(__name__)
 
 AUTONOMOUS_SYMBOLS = ("NVDA", "TSLA", "AAPL", "MSFT", "AMD", "GOOGL", "AMZN")
 WORKER_VERSION = "production-parity-v3"
+
+
+@dataclass(frozen=True)
+class CandidateResearchOutcome:
+    candidate: tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]] | None = None
+    rejection_code: str | None = None
+    rejection_reason: str | None = None
 
 
 def _field(value: Any, *names: str, default: Any = None) -> Any:
@@ -260,22 +268,50 @@ class AutonomousWorker:
                 # cycle if its bounded, auditable state cannot be proven.
                 active_profile = await ProfileGovernanceService().get_active(session)
                 candidates: list[tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]]] = []
+                rejections: dict[str, dict[str, str]] = {}
                 for symbol in symbols:
-                    candidate = await self._research_candidate(
+                    candidate_outcome = await self._research_candidate(
                         session, gateway, symbol, portfolio, now, active_profile
                     )
-                    if candidate is not None:
-                        candidates.append(candidate)
+                    if candidate_outcome.candidate is not None:
+                        candidates.append(candidate_outcome.candidate)
+                    else:
+                        code = candidate_outcome.rejection_code or "REJECTED"
+                        reason_msg = (
+                            candidate_outcome.rejection_reason
+                            or "Candidate rejected during research"
+                        )
+                        rejections[symbol] = {
+                            "code": code,
+                            "reason": reason_msg,
+                        }
+                        logger.info(
+                            "Autonomous candidate rejected for %s: %s (%s)",
+                            symbol,
+                            code,
+                            reason_msg,
+                        )
                 candidates.sort(
                     key=lambda item: _decimal(item[2].get("opportunity_score")), reverse=True
                 )
 
                 if not candidates:
+                    if rejections:
+                        summary_parts = [
+                            f"{sym}: {info['code']} ({info['reason']})"
+                            for sym, info in rejections.items()
+                        ]
+                        reason_text = (
+                            f"No eligible deterministic proposal - {'; '.join(summary_parts)}"
+                        )
+                    else:
+                        reason_text = "No eligible deterministic proposal"
                     await self._record(
                         session,
                         now,
                         "NO_TRADE",
-                        "No eligible deterministic proposal",
+                        reason_text,
+                        evidence={"candidate_rejections": rejections} if rejections else None,
                     )
                     await session.commit()
                     return "NO_TRADE"
@@ -426,7 +462,7 @@ class AutonomousWorker:
         portfolio: dict[str, Any],
         now: datetime,
         active_profile: ActiveProfile,
-    ) -> tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]] | None:
+    ) -> CandidateResearchOutcome:
         trace_id = uuid4()
         try:
             bars = await asyncio.to_thread(
@@ -437,7 +473,7 @@ class AutonomousWorker:
                 limit=2000,
             )
             if len(bars) < 40:
-                raise HistoricalAnalogUnavailable("Five-year bars are unavailable")
+                raise HistoricalAnalogUnavailable("Five-year bars are unavailable (< 40 bars)")
             financials = await asyncio.to_thread(
                 fetch_sec_company_financials,
                 symbol,
@@ -452,11 +488,18 @@ class AutonomousWorker:
                 allow_illustrative=False,
                 financials=financials,
             )
-            if report.verdict is not TradeVerdict.PROPOSE_TRADE or report.direction.value not in {
-                "bullish",
-                "bearish",
-            }:
-                return None
+            if report.verdict is not TradeVerdict.PROPOSE_TRADE:
+                return CandidateResearchOutcome(
+                    rejection_code="NO_TRADE_DECISION",
+                    rejection_reason=f"Agent verdict is {report.verdict.value}",
+                )
+            if report.direction.value not in {"bullish", "bearish"}:
+                return CandidateResearchOutcome(
+                    rejection_code="NO_TRADE_DECISION",
+                    rejection_reason=(
+                        f"Actionable direction required; received {report.direction.value}"
+                    ),
+                )
             # AI proposes an exit policy, but profile-owned take-profit and
             # fixed stop values are bound deterministically before a proposal
             # can be persisted or authorized.
@@ -496,6 +539,26 @@ class AutonomousWorker:
                 quote = quotes.get(contract_symbol)
                 if quote is not None and "price_increment" not in quote:
                     quote["price_increment"] = contract.get("price_increment", "0.01")
+
+            # Persist fresh IV observations present in the option chain quotes
+            # so history is accumulated even if this specific candidate is rejected later.
+            for contract_sym, quote_data in quotes.items():
+                if isinstance(quote_data, dict):
+                    raw_iv = _decimal(quote_data.get("iv"), Decimal("NaN"))
+                    if raw_iv.is_finite() and Decimal("0") < raw_iv < Decimal("10"):
+                        quote_ts = quote_data.get("quote_timestamp")
+                        obs_ts = quote_ts if isinstance(quote_ts, datetime) else now
+                        await self._persist_iv_observation(
+                            session,
+                            symbol,
+                            IvObservation(
+                                observed_at=obs_ts,
+                                implied_volatility=raw_iv,
+                                source="alpaca_option_chain",
+                                option_symbol=contract_sym,
+                            ),
+                        )
+
             strategy = select_option_strategy(
                 contracts,
                 quotes,
@@ -625,17 +688,33 @@ class AutonomousWorker:
             )
             await session.flush()
             context["research_bundle_digest"] = bundle_digest
-            return proposal, analog, context
-        except (
-            SecFundamentalsUnavailable,
-            HistoricalAnalogUnavailable,
-            OptionSelectionError,
-            IvRankUnavailable,
-        ):
-            return None
+            return CandidateResearchOutcome(candidate=(proposal, analog, context))
+        except SecFundamentalsUnavailable as exc:
+            return CandidateResearchOutcome(
+                rejection_code="SEC_FUNDAMENTALS_UNAVAILABLE",
+                rejection_reason=str(exc) or "SEC company financials unavailable",
+            )
+        except HistoricalAnalogUnavailable as exc:
+            return CandidateResearchOutcome(
+                rejection_code="HISTORICAL_ANALOG_UNAVAILABLE",
+                rejection_reason=str(exc) or "Historical analog bars unavailable",
+            )
+        except OptionSelectionError as exc:
+            return CandidateResearchOutcome(
+                rejection_code="OPTION_SELECTION_REJECTED",
+                rejection_reason=str(exc) or "Option selection criteria not satisfied",
+            )
+        except IvRankUnavailable as exc:
+            return CandidateResearchOutcome(
+                rejection_code="IV_RANK_UNAVAILABLE",
+                rejection_reason=str(exc) or "Implied volatility rank unavailable",
+            )
         except Exception as exc:
             logger.warning("Research candidate rejected for %s: %s", symbol, type(exc).__name__)
-            return None
+            return CandidateResearchOutcome(
+                rejection_code="RESEARCH_ERROR",
+                rejection_reason=f"{type(exc).__name__}: {exc!s}",
+            )
 
     async def _mark_open_shadow_sessions(
         self, session: AsyncSession, gateway: AlpacaPyGateway, now: datetime
@@ -1617,13 +1696,22 @@ class AutonomousWorker:
         return bool(result.scalar())
 
     async def _record(
-        self, session: AsyncSession, started_at: datetime, outcome: str, reason: str
+        self,
+        session: AsyncSession,
+        started_at: datetime,
+        outcome: str,
+        reason: str,
+        *,
+        evidence: dict[str, Any] | None = None,
     ) -> None:
         cycle_id = str(uuid4())
+        root_evidence: dict[str, Any] = {"symbols": AUTONOMOUS_SYMBOLS, "reason": reason}
+        if evidence:
+            root_evidence.update(evidence)
         root = build_evaluation_root(
             trace_id=uuid4(),
             outcome=outcome,
-            evidence={"symbols": AUTONOMOUS_SYMBOLS, "reason": reason},
+            evidence=root_evidence,
         )
         session.add(
             AutonomousCycleModel(
