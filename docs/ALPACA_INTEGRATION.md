@@ -25,7 +25,21 @@ For the BA-authorized hackathon window, official scoring uses total account equi
 
 Read requests use bounded timeouts and typed response validation. Retries are limited to transient failures and honor provider guidance; mutating requests are never blindly retried. Before execution, the service refreshes account/options-level state and contract tradability. Rate-limit responses create an explicit degraded condition rather than stale success.
 
+For live autonomous research, the gateway retrieves an IEX latest stock trade separately from historical daily bars. The latest trade's price and UTC timestamp are the bounded live-market observation used for the BA-authorized freshness check at the start of a cycle; daily bars remain historical evidence for technical/reaction/analogue calculations and cannot satisfy that gate. The worker still refreshes execution-critical option quotes before deterministic authorization. An unavailable or stale latest trade produces a no-trade result before specialist LLM calls. This behavior was verified against Alpaca's [latest stock trade](https://docs.alpaca.markets/us/reference/stocklatesttrades-1) and [latest stock bar](https://docs.alpaca.markets/us/reference/stocklatestbars-1) references on 2026-08-31.
+
 The CLI receives an argument array and JSON through standard input; no shell-built command is permitted. Credentials are supplied only in the child-process environment. stdout/stderr are parsed and redacted before persistence or logging.
+
+## Local paper-account monitor
+
+`scripts/monitor_paper_account.py` is an operator-only, read-only diagnostic. It loads the ignored local `.env.production` explicitly, then reuses the application `Settings` validation and typed `AlpacaPyGateway` to call only `get_account()` and `get_all_positions()`. It does not import an execution adapter, run an autonomous cycle, mutate PRISM state, or submit/cancel an order. Account numbers and IDs remain redacted in output.
+
+Run it from the repository root with the locked backend environment:
+
+```powershell
+uv run --project backend python scripts/monitor_paper_account.py
+```
+
+The underlying paper endpoints are Alpaca's [`GET /v2/account`](https://docs.alpaca.markets/us/reference/getaccount-1) and [`GET /v2/positions`](https://docs.alpaca.markets/us/reference/getallopenpositions). Their schemas and the pinned `alpaca-py` 0.44.0 release were reviewed on 2026-08-31.
 
 ## Ambiguous submissions
 

@@ -37,6 +37,7 @@ from app.research.models import TradeDecisionModel
 from app.research.news_agent import NewsIntelligenceAgent
 from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
+from app.rules.registry import get_authorized_ruleset
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +229,11 @@ class TradingDecisionAgent:
         settings = self.llm_gateway._settings
         active_model = f"{settings.llm_provider}:{settings.llm_model or 'default'}"
         now_utc = (as_of or datetime.now(UTC)).astimezone(UTC)
-        freshness_cutoff = now_utc.timestamp() - 30
+        data_freshness_seconds = get_authorized_ruleset().parameters.data_freshness_seconds
+        freshness_cutoff = now_utc.timestamp() - data_freshness_seconds
+        requires_live_market_trade = (
+            not allow_illustrative and provenance != "historical_simulation"
+        )
 
         # Check DB Cache
         if db_session is not None and allow_illustrative:
@@ -303,16 +308,48 @@ class TradingDecisionAgent:
                 logger.warning("Error checking decision cache: %s", type(exc).__name__)
 
         # 1. Concurrently Fetch Market Bars and News in Worker Threads (Non-blocking I/O)
-        bars, news_articles = await asyncio.gather(
-            asyncio.to_thread(self.alpaca_gateway.get_stock_bars, sym, limit=250),
-            asyncio.to_thread(self.alpaca_gateway.get_news, sym, limit=5),
-        )
+        if requires_live_market_trade:
+            bars, news_articles, latest_trade = await asyncio.gather(
+                asyncio.to_thread(self.alpaca_gateway.get_stock_bars, sym, limit=250),
+                asyncio.to_thread(self.alpaca_gateway.get_news, sym, limit=5),
+                asyncio.to_thread(self.alpaca_gateway.get_stock_latest_trade, sym),
+            )
+        else:
+            bars, news_articles = await asyncio.gather(
+                asyncio.to_thread(self.alpaca_gateway.get_stock_bars, sym, limit=250),
+                asyncio.to_thread(self.alpaca_gateway.get_news, sym, limit=5),
+            )
+            latest_trade = None
 
         if not bars or "close" not in bars[-1]:
             raise ValueError(f"No fresh market bars available for {sym}")
         if not allow_illustrative and not news_articles:
             raise ValueError(f"No current sourced news evidence available for {sym}")
-        current_price = Decimal(str(bars[-1]["close"]))
+        if requires_live_market_trade:
+            latest_timestamp = latest_trade.get("timestamp") if latest_trade else None
+            latest_price = latest_trade.get("price") if latest_trade else None
+            latest_age_seconds = (
+                (now_utc - latest_timestamp.astimezone(UTC)).total_seconds()
+                if isinstance(latest_timestamp, datetime)
+                and latest_timestamp.tzinfo is not None
+                and latest_timestamp.utcoffset() is not None
+                else None
+            )
+            if (
+                not isinstance(latest_timestamp, datetime)
+                or latest_timestamp.tzinfo is None
+                or latest_timestamp.utcoffset() is None
+                or latest_age_seconds is None
+                or latest_age_seconds < 0
+                or latest_age_seconds > data_freshness_seconds
+                or latest_price is None
+            ):
+                raise ValueError(f"Current market trade is unavailable or stale for {sym}")
+            current_price = Decimal(str(latest_price))
+            market_observed_at = latest_timestamp.astimezone(UTC)
+        else:
+            current_price = Decimal(str(bars[-1]["close"]))
+            market_observed_at = None
 
         # 2. Concurrently Execute Specialist Agents
         reaction_agent = MarketReactionAgent(self.llm_gateway)
@@ -374,6 +411,7 @@ class TradingDecisionAgent:
                 event_category=evt_cat,
                 strict=True,
                 evaluation_at=now_utc,
+                market_observed_at=market_observed_at,
             )
         else:
             catalyst = (
@@ -415,6 +453,7 @@ class TradingDecisionAgent:
                 event_age_seconds=0,
                 event_category=NewsEventCategory.OTHER,
                 strict=False,
+                market_observed_at=market_observed_at,
             )
             news_report, industry_report, macro_report, reaction_report = await asyncio.gather(
                 news_coro, industry_coro, macro_coro, reaction_coro
@@ -439,7 +478,7 @@ class TradingDecisionAgent:
         if (
             not allow_illustrative
             and provenance != "historical_simulation"
-            and reaction_report.freshness_seconds > 30
+            and reaction_report.freshness_seconds > data_freshness_seconds
         ):
             raise ValueError(f"Market reaction evidence is stale for {sym}")
 
@@ -613,7 +652,7 @@ class TradingDecisionAgent:
             provenance=(
                 provenance or ("illustrative_fixture" if allow_illustrative else "live_research")
             ),
-            evidence_freshness_seconds=30,
+            evidence_freshness_seconds=data_freshness_seconds,
             analog_count=reaction_report.analog_count,
         )
 

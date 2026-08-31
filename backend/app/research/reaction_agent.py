@@ -273,6 +273,7 @@ class MarketReactionAgent:
         *,
         strict: bool = False,
         evaluation_at: datetime | None = None,
+        market_observed_at: datetime | None = None,
     ) -> ResearchReport:
         """Evaluate the market reaction and produce a formal ResearchReport contract."""
         active_model = self.llm_gateway._settings.llm_model or "default"
@@ -448,6 +449,13 @@ class MarketReactionAgent:
                 )
             )
 
+        freshness_seconds = (
+            max(0, int((now_utc - market_observed_at.astimezone(UTC)).total_seconds()))
+            if market_observed_at is not None
+            and market_observed_at.tzinfo is not None
+            and market_observed_at.utcoffset() is not None
+            else _freshness_seconds(bars, now_utc)
+        )
         report = ResearchReport(
             id=uuid4(),
             trace_id=trace_id,
@@ -455,7 +463,7 @@ class MarketReactionAgent:
             symbol=symbol,
             thesis=parsed.thesis,
             confidence=Decimal(str(round(parsed.confidence, 4))),
-            freshness_seconds=_freshness_seconds(bars, now_utc),
+            freshness_seconds=freshness_seconds,
             evidence=evidence_items,
             limitations=parsed.limitations,
             actual_reaction_pct=metrics["actual_reaction_pct"],
