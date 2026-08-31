@@ -145,7 +145,10 @@ class AlpacaPyGateway:
                 field(greeks, "gamma") if greeks is not None else None,
                 field(greeks, "theta") if greeks is not None else None,
                 field(greeks, "vega") if greeks is not None else None,
-                field(greeks, "implied_volatility") if greeks is not None else None,
+                # alpaca-py models IV on the option snapshot, not inside its
+                # nested OptionsGreeks model.  Keep the complete-snapshot
+                # requirement, but read each value from its provider schema.
+                field(snapshot, "implied_volatility"),
             )
             if (
                 bid is None
