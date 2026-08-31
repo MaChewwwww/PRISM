@@ -20,6 +20,9 @@ NEWS_FIELDS_MIGRATION_PATH = (
 RESEARCH_FIELDS_MIGRATION_PATH = (
     BACKEND_ROOT / "alembic" / "versions" / "20260831_0012_research_model_fields.py"
 )
+NEWS_FIELDS_REPAIR_MIGRATION_PATH = (
+    BACKEND_ROOT / "alembic" / "versions" / "20260831_0013_news_analysis_fields_repair.py"
+)
 
 
 def _config(output: StringIO | None = None) -> Config:
@@ -43,8 +46,8 @@ def test_initial_migration_is_an_empty_database_baseline(
     assert initial is not None
     assert initial.down_revision is None
     assert head is not None
-    assert head.revision == "20260831_0012"
-    assert head.down_revision == "20260831_0011"
+    assert head.revision == "20260831_0013"
+    assert head.down_revision == "20260831_0012"
 
     with redirect_stdout(output):
         command.upgrade(config, "head", sql=True)
@@ -209,3 +212,35 @@ def test_research_fields_migration_reconciles_all_legacy_model_tables(
         for column in columns
     }
     assert set(added) == expected
+
+
+def test_news_fields_repair_migration_adds_fields_missing_from_applied_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "news_fields_repair_migration", NEWS_FIELDS_REPAIR_MIGRATION_PATH
+    )
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    added: list[str] = []
+
+    class ExistingInspector:
+        def has_table(self, table_name: str) -> bool:
+            return table_name == "llm_event_analyses"
+
+        def get_columns(self, table_name: str) -> list[dict[str, str]]:
+            assert table_name == "llm_event_analyses"
+            return [{"name": "id"}, {"name": "event_category"}]
+
+    monkeypatch.setattr(migration.op, "get_bind", lambda: object())
+    monkeypatch.setattr(migration.context, "is_offline_mode", lambda: False)
+    monkeypatch.setattr(migration.sa, "inspect", lambda _bind: ExistingInspector())
+    monkeypatch.setattr(
+        migration.op, "add_column", lambda _table, column: added.append(column.name)
+    )
+
+    migration.upgrade()
+
+    assert added == ["event_age_seconds"]
