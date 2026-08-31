@@ -302,6 +302,23 @@ async def test_news_intelligence_agent_analysis_and_caching() -> None:
     mock_llm_gateway.complete_structured.assert_not_called()
     mock_session.add.assert_not_called()
 
+    # Historical replay may see the same article at multiple checkpoints. A
+    # strict replay read can reuse only an analysis created at or before the
+    # requested checkpoint, avoiding a unique raw-digest persistence failure.
+    later_checkpoint = datetime.now(UTC) + timedelta(days=1)
+    mock_scalar.scalar_one_or_none.return_value = cached_db_model
+    strict_cached = await agent.analyze_article(
+        article=article,
+        symbol="AAPL",
+        trace_id=trace_id,
+        db_session=mock_session,
+        strict=True,
+        evaluation_at=later_checkpoint,
+    )
+    assert strict_cached.event_age_seconds > 24 * 60 * 60
+    mock_llm_gateway.complete_structured.assert_not_called()
+    mock_session.add.assert_not_called()
+
 
 def test_calculate_news_sentiment_score_weighting() -> None:
     trace_id = uuid4()

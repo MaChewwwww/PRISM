@@ -11,9 +11,16 @@ from app.market.alpaca_gateway import AlpacaPyGateway
 class HistoricalResearchGateway:
     """Expose only market/news observations available at one replay checkpoint."""
 
-    def __init__(self, gateway: AlpacaPyGateway, *, checkpoint: datetime) -> None:
+    def __init__(
+        self,
+        gateway: AlpacaPyGateway,
+        *,
+        checkpoint: datetime,
+        require_checkpoint_data: bool = False,
+    ) -> None:
         self._gateway = gateway
         self._checkpoint = checkpoint.astimezone(UTC)
+        self._require_checkpoint_data = require_checkpoint_data
         self._bars_cache: dict[str, list[dict[str, Any]]] = {}
         self._news_cache: dict[str, list[dict[str, Any]]] = {}
         self.inputs: dict[str, Any] = {
@@ -29,6 +36,7 @@ class HistoricalResearchGateway:
         cached = self._bars_cache.get(normalized_symbol)
         if cached is not None and (requested_limit is None or len(cached) >= int(requested_limit)):
             self.inputs["bars"][normalized_symbol] = cached
+            self._ensure_checkpoint_coverage(normalized_symbol, cached)
             return cached
         requested_start = kwargs.pop("start", self._checkpoint - timedelta(days=730))
         requested_end = kwargs.pop("end", self._checkpoint)
@@ -45,7 +53,14 @@ class HistoricalResearchGateway:
         filtered.sort(key=lambda row: row["timestamp"].astimezone(UTC))
         self._bars_cache[normalized_symbol] = filtered
         self.inputs["bars"][normalized_symbol] = filtered
+        self._ensure_checkpoint_coverage(normalized_symbol, filtered)
         return filtered
+
+    def _ensure_checkpoint_coverage(self, symbol: str, rows: list[dict[str, Any]]) -> None:
+        if self._require_checkpoint_data and not any(
+            row["timestamp"].astimezone(UTC).date() == self._checkpoint.date() for row in rows
+        ):
+            raise ValueError(f"Historical bars do not reach checkpoint for {symbol}")
 
     def get_news(self, symbol: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         normalized_symbol = symbol.strip().upper()

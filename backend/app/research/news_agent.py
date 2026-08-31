@@ -193,12 +193,18 @@ class NewsIntelligenceAgent:
         active_model = self.llm_gateway._settings.llm_model or "default"
 
         # Check DB cache first
-        if db_session is not None and not strict:
+        # Strict historical replay may reuse an analysis for an article that
+        # remains in the provider window on later checkpoints, but never use a
+        # row created after the requested point in time.  Live strict calls do
+        # not have an evaluation checkpoint and therefore always recompute.
+        if db_session is not None and (not strict or evaluation_at is not None):
             try:
                 query = select(LLMEventAnalysisModel).where(
                     LLMEventAnalysisModel.article_id == article_id,
                     LLMEventAnalysisModel.model_name == active_model,
                 )
+                if strict and evaluation_at is not None:
+                    query = query.where(LLMEventAnalysisModel.created_at <= evaluation_at)
                 result = await db_session.execute(query)
                 cached_model = result.scalar_one_or_none()
 
@@ -234,7 +240,7 @@ class NewsIntelligenceAgent:
                         headline=cached_model.headline,
                         source=cached_model.source or source_raw,
                         source_confidence=Decimal(str(cached_model.source_confidence)),
-                        event_age_seconds=cached_model.event_age_seconds,
+                        event_age_seconds=event_age_seconds,
                         event_category=(
                             NewsEventCategory(cached_model.event_category)
                             if cached_model.event_category in NewsEventCategory._value2member_map_

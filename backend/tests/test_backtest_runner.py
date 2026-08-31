@@ -211,6 +211,23 @@ def test_historical_research_gateway_caches_normalized_provider_reads() -> None:
     assert calls == {"bars": 1, "news": 1}
 
 
+def test_historical_research_gateway_rejects_stale_checkpoint_window() -> None:
+    checkpoint = datetime(2026, 8, 24, 20, tzinfo=UTC)
+
+    class Gateway:
+        def get_stock_bars(self, _symbol: str, **_kwargs: object) -> list[dict[str, object]]:
+            return [{"timestamp": checkpoint - timedelta(days=1), "close": "100"}]
+
+    historical = HistoricalResearchGateway(
+        Gateway(),
+        checkpoint=checkpoint,
+        require_checkpoint_data=True,  # type: ignore[arg-type]
+    )
+    with pytest.raises(ValueError, match="do not reach checkpoint"):
+        historical.get_stock_bars("NVDA", limit=1)
+    assert historical.inputs["bars"]["NVDA"]
+
+
 def test_historical_artifacts_include_fingerprint_and_portfolio_projection(tmp_path: Path) -> None:
     checkpoint = "2026-08-24T20:00:00+00:00"
     manifests = [

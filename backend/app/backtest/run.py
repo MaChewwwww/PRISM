@@ -326,7 +326,11 @@ async def _replay_agents(
         if checkpoint.weekday() >= 5:
             checkpoint += timedelta(days=1)
             continue
-        historical = HistoricalResearchGateway(gateway, checkpoint=checkpoint)
+        historical = HistoricalResearchGateway(
+            gateway,
+            checkpoint=checkpoint,
+            require_checkpoint_data=True,
+        )
         for symbol in SYMBOLS:
             trace_id = uuid4()
             try:
