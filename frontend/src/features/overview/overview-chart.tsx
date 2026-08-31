@@ -94,7 +94,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
     const labels: Array<{ index: number; label: string }> = [];
     const interval = Math.max(1, Math.ceil(points.length / 6));
     let lastShownMonth = "";
-    
+
     for (let i = 0; i < points.length; i++) {
       if (i === 0 || i === points.length - 1 || i % interval === 0) {
         const [year, month] = points[i].date.split("-").slice(0, 2);
@@ -116,7 +116,9 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
   const activePoint = activeIndex !== null ? points[activeIndex] : null;
 
   // Default to last point if not selected
-  const defaultSelected = selected || (points.length > 0 ? { point: points[points.length - 1], index: points.length - 1 } : null);
+  const defaultSelected =
+    selected ||
+    (points.length > 0 ? { point: points[points.length - 1], index: points.length - 1 } : null);
 
   if (points.length === 0) {
     return (
@@ -262,9 +264,19 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
             )}
           </div>
 
-          <div className="overview-chart-x-axis mt-3 border-t border-white/8 pt-3" style={{ position: "relative", height: "1.4rem" }}>
+          <div
+            className="overview-chart-x-axis mt-3 border-t border-white/8 pt-3"
+            style={{ position: "relative", height: "1.4rem" }}
+          >
             {xAxisLabels.map(({ index, label }) => (
-              <span key={`${index}`} style={{ position: "absolute", left: `${scale.xFor(index)}%`, transform: "translateX(-50%)" }}>
+              <span
+                key={`${index}`}
+                style={{
+                  position: "absolute",
+                  left: `${scale.xFor(index)}%`,
+                  transform: "translateX(-50%)",
+                }}
+              >
                 {label}
               </span>
             ))}
@@ -295,10 +307,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
           aria-label="Selected point detail"
         >
           {defaultSelected && (
-            <ChartDetailPanel
-              point={defaultSelected.point}
-              onClose={() => onSelect(null)}
-            />
+            <ChartDetailPanel point={defaultSelected.point} onClose={() => onSelect(null)} />
           )}
         </aside>
       </div>
@@ -351,8 +360,6 @@ function ChartDetailPanel({ point, onClose }: { point: OverviewPoint; onClose: (
           </dd>
         </div>
       </dl>
-
-
     </aside>
   );
 }

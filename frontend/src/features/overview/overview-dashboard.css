@@ -474,7 +474,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  transition: flex-basis 200ms ease, opacity 200ms ease;
+  transition:
+    flex-basis 200ms ease,
+    opacity 200ms ease;
 }
 .overview-chart-row.has-detail .overview-chart-body {
   flex: 1 1 auto;
@@ -636,7 +638,10 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
   box-shadow: 0 12px 40px -16px rgba(84, 125, 131, 0.25);
   animation: overview-detail-slide 220ms ease both;
-  transition: opacity 200ms ease, transform 200ms ease, width 200ms ease;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    width 200ms ease;
   height: fit-content;
 }
 .overview-chart-detail-head {
