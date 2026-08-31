@@ -159,6 +159,8 @@ def test_news_fields_migration_adds_only_missing_legacy_columns(
     assert "source" not in added
     assert set(added) == {
         "source_confidence",
+        "event_age_seconds",
+        "event_category",
         "catalyst_materiality",
         "guidance_change",
         "earnings_surprise_json",
