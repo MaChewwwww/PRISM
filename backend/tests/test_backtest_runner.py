@@ -37,6 +37,13 @@ async def test_data_unavailable_run_does_not_replace_active_presentation(
         def add(self, value: object) -> None:
             self.added.append(value)
 
+        async def scalars(self, _statement: object) -> object:
+            class Result:
+                def all(self) -> list[object]:
+                    return []
+
+            return Result()
+
         async def commit(self) -> None:
             self.committed = True
 
@@ -65,6 +72,48 @@ async def test_data_unavailable_run_does_not_replace_active_presentation(
     assert run_model.is_active_presentation is False
     assert audit_model.event_type == "SIMULATION_DATA_UNAVAILABLE"
     assert session.committed is True
+
+
+@pytest.mark.asyncio
+async def test_recover_interrupted_backtest_runs_fail_closed() -> None:
+    recovered_at = datetime(2026, 8, 31, 5, tzinfo=UTC)
+    stale = BacktestRunModel(
+        id="stale-run",
+        started_at=datetime(2026, 8, 31, 3, tzinfo=UTC),
+        completed_at=None,
+        status="RUNNING",
+        start_date="2026-08-24",
+        end_date="2026-08-28",
+        symbols_json="[]",
+        artifact_dir="/tmp/stale-run",
+        summary_json=json.dumps({"outcome": "RUNNING"}),
+        is_active_presentation=False,
+    )
+
+    class Session:
+        def __init__(self) -> None:
+            self.added: list[object] = []
+
+        async def scalars(self, _statement: object) -> object:
+            class Result:
+                def all(self) -> list[object]:
+                    return [stale]
+
+            return Result()
+
+        def add(self, value: object) -> None:
+            self.added.append(value)
+
+    session = Session()
+    assert await backtest_run._recover_interrupted_runs(session, recovered_at=recovered_at) == 1
+    assert stale.status == "DATA_UNAVAILABLE"
+    assert stale.completed_at == recovered_at
+    assert stale.is_active_presentation is False
+    summary = json.loads(stale.summary_json)
+    assert summary["outcome"] == "DATA_UNAVAILABLE"
+    assert summary["recovered_at"] == recovered_at.isoformat()
+    audit = next(value for value in session.added if isinstance(value, BacktestAuditEventModel))
+    assert audit.event_type == "SIMULATION_INTERRUPTED"
 
 
 @pytest.mark.asyncio
@@ -108,6 +157,13 @@ async def test_completed_backtest_persists_one_no_recommendation_batch(
 
         def add(self, value: object) -> None:
             self.added.append(value)
+
+        async def scalars(self, _statement: object) -> object:
+            class Result:
+                def all(self) -> list[object]:
+                    return []
+
+            return Result()
 
         async def execute(self, _statement: object) -> None:
             return None

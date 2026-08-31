@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.autonomous.audit import build_evaluation_root
@@ -71,6 +72,61 @@ def _preflight(cli_path: str) -> str:
     return version.stdout.strip().splitlines()[0][:64]
 
 
+INTERRUPTED_RUN_REASON = (
+    "Backtest process ended before completion; this record was recovered when a subsequent "
+    "staging simulation started."
+)
+
+
+async def _recover_interrupted_runs(session: AsyncSession, *, recovered_at: datetime) -> int:
+    """Close abandoned runs before starting a new staging simulation.
+
+    A container restart can terminate the detached backtest process before its
+    final transaction runs.  Leaving those rows in ``RUNNING`` makes the audit
+    history claim that work is still active and can confuse operators.  A new
+    manually-triggered simulation is the explicit recovery boundary, so prior
+    running rows are finalized as fail-closed ``DATA_UNAVAILABLE`` records.
+    """
+
+    rows = list(
+        (
+            await session.scalars(
+                select(BacktestRunModel).where(BacktestRunModel.status == "RUNNING")
+            )
+        ).all()
+    )
+    for record in rows:
+        try:
+            summary = json.loads(record.summary_json)
+        except (TypeError, ValueError):
+            summary = {}
+        if not isinstance(summary, dict):
+            summary = {}
+        summary.update(
+            {
+                "outcome": "DATA_UNAVAILABLE",
+                "reason": INTERRUPTED_RUN_REASON,
+                "recovered_at": recovered_at.isoformat(),
+            }
+        )
+        record.completed_at = recovered_at
+        record.status = "DATA_UNAVAILABLE"
+        record.summary_json = json.dumps(summary, default=str)
+        record.is_active_presentation = False
+        session.add(record)
+        session.add(
+            BacktestAuditEventModel(
+                id=str(uuid4()),
+                run_id=record.id,
+                created_at=recovered_at,
+                event_type="SIMULATION_INTERRUPTED",
+                payload_digest=_digest(summary),
+                payload_json=json.dumps(summary, default=str),
+            )
+        )
+    return len(rows)
+
+
 async def run() -> int:
     settings = get_settings()
     if settings.environment != "staging" or not settings.backtest_simulation_enabled:
@@ -111,6 +167,8 @@ async def run() -> int:
     }
     init_db(settings.database_url)
     async for session in get_db_session():
+        await _recover_interrupted_runs(session, recovered_at=created_at)
+        await session.commit()
         running_record = BacktestRunModel(
             id=run_id,
             started_at=created_at,
