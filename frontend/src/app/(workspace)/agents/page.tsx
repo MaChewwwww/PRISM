@@ -227,7 +227,9 @@ export default async function AgentsPage({
                   <dl className="mt-4 space-y-2 border-t border-white/8 pt-3">
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-[11px] text-[#64748B]">Authority</dt>
-                      <dd className="text-right text-[12px] text-[#CBD5E1]">{component.authority}</dd>
+                      <dd className="text-right text-[12px] text-[#CBD5E1]">
+                        {component.authority}
+                      </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-[11px] text-[#64748B]">Kind</dt>
