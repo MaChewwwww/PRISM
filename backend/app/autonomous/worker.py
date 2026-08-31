@@ -488,7 +488,10 @@ class AutonomousWorker:
                 allow_illustrative=False,
                 financials=financials,
             )
-            if report.verdict is not TradeVerdict.PROPOSE_TRADE:
+            if report.verdict not in {
+                TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL,
+                TradeVerdict.PROPOSE_TRADE,
+            }:
                 return CandidateResearchOutcome(
                     rejection_code="NO_TRADE_DECISION",
                     rejection_reason=f"Agent verdict is {report.verdict.value}",
