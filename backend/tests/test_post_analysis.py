@@ -302,7 +302,7 @@ async def test_weekly_post_analysis_trigger_and_idempotency() -> None:
         version=1,
         parameters=ProfileParameters(
             target_position_size_pct=Decimal("2.00"),
-            opportunity_score_threshold=Decimal("84"),
+            opportunity_score_threshold=Decimal("78"),
             take_profit_pct=Decimal("75.00"),
             stop_loss_pct=Decimal("50.00"),
         ),

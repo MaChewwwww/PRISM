@@ -118,7 +118,7 @@ def test_evaluation_root_is_immutable_and_lineage_bound() -> None:
     assert first.root_digest != second.root_digest
 
 
-def test_balanced_profile_threshold_is_84() -> None:
+def test_balanced_profile_threshold_is_78() -> None:
     proposal = _proposal()
     risk = RiskAssessment(
         trace_id=proposal.trace_id,
@@ -163,9 +163,9 @@ def test_balanced_profile_threshold_is_84() -> None:
         "reward_risk_ratio": "1.50",
         "supported_options_level": 2,
     }
-    inputs["opportunity_score"] = "83"
+    inputs["opportunity_score"] = "77"
     assert authorize_proposal(proposal, risk, settings, inputs=inputs).outcome == "REJECT"
-    inputs["opportunity_score"] = "84"
+    inputs["opportunity_score"] = "78"
     assert authorize_proposal(proposal, risk, settings, inputs=inputs).outcome == "APPROVE"
 
 
@@ -213,11 +213,11 @@ def test_persisted_profile_parameters_remain_bounded_by_the_same_rule_engine() -
         "net_ev_r": "0.15",
         "reward_risk_ratio": "1.50",
         "supported_options_level": 2,
-        "opportunity_score": "84",
+        "opportunity_score": "78",
     }
     conservative = ProfileParameters(
         target_position_size_pct=Decimal("1.50"),
-        opportunity_score_threshold=Decimal("90"),
+        opportunity_score_threshold=Decimal("85"),
         take_profit_pct=Decimal("75"),
         stop_loss_pct=Decimal("50"),
     )
