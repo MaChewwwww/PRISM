@@ -6,6 +6,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
+import pytest
+
 from app.autonomous.audit import build_evaluation_root
 from app.autonomous.models import AutonomousCycleModel
 from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
@@ -344,6 +346,7 @@ def test_candidate_research_outcome_structure() -> None:
     assert outcome.rejection_reason == "Option quote spread exceeds 10 percent"
 
 
+@pytest.mark.asyncio
 async def test_record_captures_structured_candidate_rejections() -> None:
     settings = Settings(
         _env_file=None,
