@@ -195,6 +195,7 @@ async def test_completed_backtest_persists_one_no_recommendation_batch(
     monkeypatch.setattr(backtest_run, "get_db_session", sessions)
     monkeypatch.setattr(backtest_run, "ShadowFundService", ShadowService)
     monkeypatch.setattr(backtest_run, "ProfileGovernanceService", ProfileService)
+    monkeypatch.setattr(backtest_run, "_expected_report_count", lambda: 1)
     monkeypatch.setattr(
         backtest_run,
         "_replay_agents",
@@ -204,7 +205,12 @@ async def test_completed_backtest_persists_one_no_recommendation_batch(
     assert await backtest_run.run() == 0
     summary = next(tmp_path.glob("*/summary.json")).read_text(encoding="utf-8")
     assert '"post_analysis_batch_id": "batch-1"' in summary
+    assert '"expected_agent_reports": 1' in summary
     assert calls == ["session", "post_analysis", "automatic"]
+
+
+def test_expected_report_count_matches_the_fixed_one_week_window() -> None:
+    assert backtest_run._expected_report_count() == 35
 
 
 async def _no_op() -> None:

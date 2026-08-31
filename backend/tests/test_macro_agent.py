@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -15,7 +15,7 @@ from app.contracts.models import (
     RateEnvironment,
 )
 from app.core.config import Settings
-from app.core.llm_gateway import LLMCompletionResult, LLMGateway
+from app.core.llm_gateway import LLMCompletionResult, LLMGateway, LLMValidationError
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.research.macro_agent import (
     MacroAnalysisLLMOutput,
@@ -166,3 +166,52 @@ async def test_macro_agent_analyze_mocked() -> None:
     assert len(report.assets) >= 6
     assert len(report.macro_tailwinds) == 2
     assert "NVDA benefits" in report.stock_macro_sensitivity
+
+
+@pytest.mark.asyncio
+async def test_macro_agent_retries_structured_llm_validation_failure() -> None:
+    settings = Settings(
+        _env_file=None,
+        llm_provider="featherless",
+        llm_model="test-model",
+    )
+    llm_gateway = LLMGateway(settings)
+    output = MacroAnalysisLLMOutput(
+        macro_regime=MacroRegime.RISK_ON,
+        rate_environment=RateEnvironment.RATE_CUT_CYCLE,
+        asset_macro_impact=AssetMacroImpact.MODERATE_TAILWIND,
+        macro_tailwinds=["Easing financial conditions"],
+        macro_headwinds=["Sticky inflation"],
+        stock_macro_sensitivity="The target benefits from lower discount rates.",
+        thesis="Macro conditions are modestly supportive.",
+    )
+    llm_gateway.complete_structured = AsyncMock(  # type: ignore[method-assign]
+        side_effect=[
+            LLMValidationError("empty structured response"),
+            LLMCompletionResult(
+                raw_content=output.model_dump_json(),
+                parsed=output,
+                model="test-model",
+                provider="featherless",
+                raw_digest="b" * 64,
+                prompt_tokens=100,
+                completion_tokens=40,
+                total_tokens=140,
+                latency_ms=120,
+                trace_id=uuid4(),
+            ),
+        ]
+    )
+    alpaca_gateway = MagicMock(spec=AlpacaPyGateway)
+    alpaca_gateway.get_stock_bars.return_value = [
+        {"close": 500.0 + i, "timestamp": "2026-08-28T00:00:00Z"} for i in range(25)
+    ]
+    alpaca_gateway.get_news.return_value = []
+
+    agent = MacroeconomicAgent(llm_gateway=llm_gateway, alpaca_gateway=alpaca_gateway)
+    with patch("app.research.macro_agent.asyncio.sleep", new_callable=AsyncMock):
+        report = await agent.analyze_macro(symbol="GOOGL", trace_id=uuid4())
+
+    assert report.symbol == "GOOGL"
+    assert report.macro_regime == MacroRegime.RISK_ON
+    assert llm_gateway.complete_structured.await_count == 2
