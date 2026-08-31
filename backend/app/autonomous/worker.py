@@ -545,10 +545,12 @@ class AutonomousWorker:
 
             # Persist fresh IV observations present in the option chain quotes
             # so history is accumulated even if this specific candidate is rejected later.
+            valid_ivs = []
             for contract_sym, quote_data in quotes.items():
                 if isinstance(quote_data, dict):
                     raw_iv = _decimal(quote_data.get("iv"), Decimal("NaN"))
                     if raw_iv.is_finite() and Decimal("0") < raw_iv < Decimal("10"):
+                        valid_ivs.append(raw_iv)
                         quote_ts = quote_data.get("quote_timestamp")
                         obs_ts = quote_ts if isinstance(quote_ts, datetime) else now
                         await self._persist_iv_observation(
@@ -561,6 +563,18 @@ class AutonomousWorker:
                                 option_symbol=contract_sym,
                             ),
                         )
+            if valid_ivs:
+                median_iv = sorted(valid_ivs)[len(valid_ivs) // 2]
+                await self._persist_iv_observation(
+                    session,
+                    symbol,
+                    IvObservation(
+                        observed_at=now,
+                        implied_volatility=median_iv,
+                        source="alpaca_option_chain_median",
+                        option_symbol=symbol,
+                    ),
+                )
 
             strategy = select_option_strategy(
                 contracts,
@@ -973,11 +987,17 @@ class AutonomousWorker:
         if len(contract_observations) >= self.settings.iv_rank_min_observations:
             observations = contract_observations
         else:
-            observations = [
+            underlying_scoped = [
                 item
                 for item in observations + provider_observations
                 if item.option_symbol in {None, underlying}
             ]
+            if len(underlying_scoped) >= self.settings.iv_rank_min_observations:
+                observations = underlying_scoped
+            elif observations or provider_observations:
+                observations = observations + provider_observations
+            else:
+                observations = []
         derived_observations: list[IvObservation] = []
         if len(observations) < self.settings.iv_rank_min_observations:
             option_bars = await asyncio.to_thread(
