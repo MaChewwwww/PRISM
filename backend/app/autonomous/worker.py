@@ -270,6 +270,16 @@ class AutonomousWorker:
                     key=lambda item: _decimal(item[2].get("opportunity_score")), reverse=True
                 )
 
+                if not candidates:
+                    await self._record(
+                        session,
+                        now,
+                        "NO_TRADE",
+                        "No eligible deterministic proposal",
+                    )
+                    await session.commit()
+                    return "NO_TRADE"
+
                 open_positions = len(positions)
                 if open_positions >= self.settings.autonomous_max_open_positions:
                     await self._record(session, now, "NO_TRADE", "Six-position cap reached")
