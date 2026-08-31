@@ -12,6 +12,7 @@ from app.autonomous.audit import build_evaluation_root
 from app.autonomous.models import AutonomousCycleModel, OptionIvObservationModel
 from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
 from app.contracts.models import (
+    ExitPolicy,
     OptionLeg,
     OptionSide,
     OptionStrategy,
@@ -531,3 +532,80 @@ async def test_calculate_iv_rank_falls_back_to_underlying_observations() -> None
     # 0.35 ranks around the middle of 0.30..0.48, so rank is between 20% and 50%
     assert Decimal("20") <= rank_result.rank <= Decimal("50")
     assert rank_result.observation_count >= 5
+
+
+def test_authorization_uses_fresh_timestamp_to_prevent_expiry() -> None:
+    from app.execution.validation import validate_authorization
+
+    now = datetime.now(UTC)
+    proposal = _proposal()
+    proposal.strategy = OptionStrategy(
+        kind=StrategyKind.LONG_CALL,
+        legs=[
+            OptionLeg(
+                symbol="NVDA260909C00220000",
+                underlying="NVDA",
+                expiration="2026-09-09",
+                option_type=OptionType.CALL,
+                side=OptionSide.BUY,
+                strike_price=Decimal("220"),
+                position_intent="buy_to_open",
+            )
+        ],
+        limit_price=Decimal("4.00"),
+    )
+    proposal.exit_policy = ExitPolicy(
+        take_profit_pct=Decimal("75.0"),
+        stop_loss_pct=Decimal("50.0"),
+        dte_threshold=7,
+        max_hold_days=4,
+    )
+    risk = RiskAssessment(
+        trace_id=proposal.trace_id,
+        proposal_id=proposal.id,
+        verdict="acceptable",
+        max_loss=Decimal("1"),
+        findings=[],
+        data_fresh=True,
+    )
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="1.0.0",
+    )
+    inputs = {
+        "market_fresh": True,
+        "analog_count": 30,
+        "fundamentals_sourced": True,
+        "account_verified": True,
+        "open_positions": 0,
+        "buying_power_ok": True,
+        "cash_buffer_ok": True,
+        "concentration_ok": True,
+        "portfolio_controls_complete": True,
+        "sector_concentration_ok": True,
+        "cluster_concentration_ok": True,
+        "greeks_risk_ok": True,
+        "expiration_concentration_ok": True,
+        "position_size_ok": True,
+        "aggregate_risk_ok": True,
+        "quote_age_seconds": 1,
+        "spread_pct": "5",
+        "market_open": True,
+        "within_entry_window": True,
+        "before_force_flatten": True,
+        "opportunity_score": "85",
+        "net_ev_r": "0.50",
+        "reward_risk_ratio": "2.00",
+        "account_observed_at": now,
+        "supported_options_level": 3,
+        "iv_rank_available": True,
+        "iv_rank": "35",
+        "market_regime": "normal",
+        "portfolio_risk_state": "normal",
+    }
+    decision = authorize_proposal(proposal, risk, settings, inputs=inputs, now=now)
+    assert decision.outcome.value == "APPROVE"
+    # Authorization must pass execution validation without raising ExecutionRejected
+    validate_authorization(proposal, decision, settings)
