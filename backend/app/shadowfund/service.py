@@ -130,8 +130,10 @@ class ShadowFundService:
         # A deterministic rejection (including a virtual P0-P5 rejection) is
         # a complete cash-only study.  Only explicit data-unavailable reasons
         # remain incomplete and therefore keep a staging run inactive.
-        no_trade_complete = source_mode == "staging" and not has_proposal and not (
-            refusal_reason is not None and refusal_reason.startswith("DATA_UNAVAILABLE")
+        no_trade_complete = (
+            source_mode == "staging"
+            and not has_proposal
+            and not (refusal_reason is not None and refusal_reason.startswith("DATA_UNAVAILABLE"))
         )
         await self._add_candidate_branch(
             session,
