@@ -1265,7 +1265,9 @@ class AutonomousWorker:
                 continue
             timestamp = quote.get("quote_timestamp")
             if isinstance(timestamp, datetime) and timestamp.tzinfo is not None:
-                quote_ages.append(Decimal(str((now - timestamp.astimezone(UTC)).total_seconds())))
+                quote_ages.append(
+                    Decimal(str(max(0.0, (now - timestamp.astimezone(UTC)).total_seconds())))
+                )
             bid = _decimal(quote.get("bid"))
             ask = _decimal(quote.get("ask"))
             midpoint = (bid + ask) / Decimal("2")

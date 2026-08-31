@@ -46,7 +46,7 @@ def _quote_price(
     if not isinstance(timestamp, datetime) or timestamp.tzinfo is None:
         raise OptionSelectionError("Option quote timestamp is missing")
     age = (now - timestamp.astimezone(UTC)).total_seconds()
-    if age < 0 or age > 30:
+    if age < -300 or age > 30:
         raise OptionSelectionError("Option quote is stale")
     if (ask - bid) / ((ask + bid) / Decimal("2")) > Decimal("0.10"):
         raise OptionSelectionError("Option quote spread exceeds 10 percent")

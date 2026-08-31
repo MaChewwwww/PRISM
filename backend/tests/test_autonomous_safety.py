@@ -87,6 +87,37 @@ def test_option_selection_rejects_stale_quotes() -> None:
         raise AssertionError("stale quote must not produce a strategy")
 
 
+def test_option_selection_accepts_quotes_during_cycle() -> None:
+    now = datetime(2026, 8, 30, 13, 30, tzinfo=UTC)
+    contracts = [
+        {
+            "symbol": "NVDA270910C00100000",
+            "underlying": "NVDA",
+            "expiration": "2026-09-10",
+            "strike": "100",
+            "option_type": "call",
+            "active": True,
+            "tradable": True,
+        }
+    ]
+    quotes = {
+        contracts[0]["symbol"]: {
+            "bid": "1.00",
+            "ask": "1.02",
+            "quote_timestamp": now + timedelta(seconds=15),
+        }
+    }
+    strategy = select_option_strategy(
+        contracts,
+        quotes,
+        underlying_price=Decimal("100"),
+        direction="bullish",
+        structure="long",
+        now=now,
+    )
+    assert strategy.legs[0].symbol == "NVDA270910C00100000"
+
+
 def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> None:
     proposal = _proposal()
     risk = RiskAssessment(
