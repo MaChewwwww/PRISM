@@ -686,13 +686,30 @@ class TradingDecisionAgent:
                     model_name=active_model,
                     raw_digest=llm_response.raw_digest,
                 )
-                db_session.add(db_record)
-                await db_session.commit()
-                logger.info("Persisted TradeDecisionReport for %s to database", sym)
+                result = await db_session.execute(
+                    select(TradeDecisionModel.id).where(
+                        TradeDecisionModel.raw_digest == llm_response.raw_digest
+                    )
+                )
+                if result.scalar_one_or_none() is None:
+                    db_session.add(db_record)
+                    await db_session.commit()
+                    logger.info("Persisted TradeDecisionReport for %s to database", sym)
+                else:
+                    logger.info(
+                        "TradeDecisionReport for %s already cached with digest %s",
+                        sym,
+                        llm_response.raw_digest,
+                    )
             except Exception as exc:
                 logger.warning("Failed to cache TradeDecisionReport: %s", type(exc).__name__)
                 await db_session.rollback()
-                if not allow_illustrative:
+                check_result = await db_session.execute(
+                    select(TradeDecisionModel.id).where(
+                        TradeDecisionModel.raw_digest == llm_response.raw_digest
+                    )
+                )
+                if check_result.scalar_one_or_none() is None and not allow_illustrative:
                     raise RuntimeError("Durable decision persistence is unavailable") from exc
 
         return decision

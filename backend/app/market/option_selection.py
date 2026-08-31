@@ -64,7 +64,7 @@ def _quote_price(
     ) * increment
 
 
-def select_option_strategy(
+def select_candidate_option_strategies(
     contracts: list[dict[str, Any]],
     quotes: dict[str, dict[str, Any]],
     *,
@@ -75,8 +75,11 @@ def select_option_strategy(
     exit_dte_threshold: int = 7,
     force_flatten_at: datetime | None = None,
     pricing: Literal["midpoint", "entry_touch"] = "midpoint",
-) -> OptionStrategy:
-    """Select a fresh ATM long or adjacent OTM debit spread from live inputs."""
+    max_candidates: int = 5,
+) -> list[OptionStrategy]:
+    """Select candidate option strategies across near-the-money strikes
+    for the earliest valid expiration.
+    """
     if now.tzinfo is None or underlying_price <= 0:
         raise OptionSelectionError("Selection inputs are invalid")
     min_expiration = now.date() + timedelta(days=exit_dte_threshold)
@@ -140,52 +143,107 @@ def select_option_strategy(
         raise OptionSelectionError(msg)
     expiration = min(item[0] for item in candidates)
     same_expiration = [item for item in candidates if item[0] == expiration]
-    long_item = min(same_expiration, key=lambda item: abs(item[1] - underlying_price))
-    long_exp, long_strike, long_contract, long_price = long_item
-    long_leg = OptionLeg(
-        symbol=str(long_contract["symbol"]),
-        underlying=str(long_contract["underlying"]),
-        expiration=long_exp.isoformat(),
-        option_type=option_type,
-        side=OptionSide.BUY,
-        strike_price=long_strike,
-        position_intent="buy_to_open",
-    )
-    if structure == "long":
-        kind = StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
-        return OptionStrategy(kind=kind, legs=[long_leg], limit_price=long_price)
-    if option_type == OptionType.CALL:
-        short_pool = [item for item in same_expiration if item[1] > long_strike]
-        kind = StrategyKind.CALL_DEBIT_SPREAD
-    else:
-        short_pool = [item for item in same_expiration if item[1] < long_strike]
-        kind = StrategyKind.PUT_DEBIT_SPREAD
-    if not short_pool:
-        kind = StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
-        return OptionStrategy(kind=kind, legs=[long_leg], limit_price=long_price)
-    short_item = min(short_pool, key=lambda item: abs(item[1] - long_strike))
-    short_exp, short_strike, short_contract, short_price = short_item
-    if pricing == "entry_touch":
-        # The short leg is sold at its bid when opening a debit spread.
-        short_price = _quote_price(
-            quotes[str(short_contract["symbol"])],
-            now,
-            entry_touch=True,
-            opening_side="sell",
+    sorted_items = sorted(same_expiration, key=lambda item: abs(item[1] - underlying_price))
+    selected_items = sorted_items[:max_candidates]
+
+    strategies: list[OptionStrategy] = []
+    kind = (
+        (StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT)
+        if structure == "long"
+        else (
+            StrategyKind.CALL_DEBIT_SPREAD
+            if option_type == OptionType.CALL
+            else StrategyKind.PUT_DEBIT_SPREAD
         )
-        debit = long_price - short_price
-    else:
-        debit = long_price - short_price
-    if debit <= 0:
-        kind = StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
-        return OptionStrategy(kind=kind, legs=[long_leg], limit_price=long_price)
-    short_leg = OptionLeg(
-        symbol=str(short_contract["symbol"]),
-        underlying=str(short_contract["underlying"]),
-        expiration=short_exp.isoformat(),
-        option_type=option_type,
-        side=OptionSide.SELL,
-        strike_price=short_strike,
-        position_intent="sell_to_open",
     )
-    return OptionStrategy(kind=kind, legs=[long_leg, short_leg], limit_price=debit)
+
+    for long_exp, long_strike, long_contract, long_price in selected_items:
+        long_leg = OptionLeg(
+            symbol=str(long_contract["symbol"]),
+            underlying=str(long_contract["underlying"]),
+            expiration=long_exp.isoformat(),
+            option_type=option_type,
+            side=OptionSide.BUY,
+            strike_price=long_strike,
+            position_intent="buy_to_open",
+        )
+        if structure == "long":
+            strategies.append(OptionStrategy(kind=kind, legs=[long_leg], limit_price=long_price))
+            continue
+
+        if option_type == OptionType.CALL:
+            short_pool = [item for item in same_expiration if item[1] > long_strike]
+        else:
+            short_pool = [item for item in same_expiration if item[1] < long_strike]
+
+        if not short_pool:
+            fallback_kind = (
+                StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
+            )
+            strategies.append(
+                OptionStrategy(kind=fallback_kind, legs=[long_leg], limit_price=long_price)
+            )
+            continue
+
+        short_item = min(short_pool, key=lambda item: abs(item[1] - long_strike))
+        short_exp, short_strike, short_contract, short_price = short_item
+        if pricing == "entry_touch":
+            short_price = _quote_price(
+                quotes[str(short_contract["symbol"])],
+                now,
+                entry_touch=True,
+                opening_side="sell",
+            )
+            debit = long_price - short_price
+        else:
+            debit = long_price - short_price
+
+        if debit <= 0:
+            fallback_kind = (
+                StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
+            )
+            strategies.append(
+                OptionStrategy(kind=fallback_kind, legs=[long_leg], limit_price=long_price)
+            )
+            continue
+
+        short_leg = OptionLeg(
+            symbol=str(short_contract["symbol"]),
+            underlying=str(short_contract["underlying"]),
+            expiration=short_exp.isoformat(),
+            option_type=option_type,
+            side=OptionSide.SELL,
+            strike_price=short_strike,
+            position_intent="sell_to_open",
+        )
+        strategies.append(OptionStrategy(kind=kind, legs=[long_leg, short_leg], limit_price=debit))
+
+    return strategies
+
+
+def select_option_strategy(
+    contracts: list[dict[str, Any]],
+    quotes: dict[str, dict[str, Any]],
+    *,
+    underlying_price: Decimal,
+    direction: Literal["bullish", "bearish"],
+    structure: Literal["long", "debit_spread"],
+    now: datetime,
+    exit_dte_threshold: int = 7,
+    force_flatten_at: datetime | None = None,
+    pricing: Literal["midpoint", "entry_touch"] = "midpoint",
+) -> OptionStrategy:
+    """Select a fresh ATM long or adjacent OTM debit spread from live inputs."""
+    strategies = select_candidate_option_strategies(
+        contracts,
+        quotes,
+        underlying_price=underlying_price,
+        direction=direction,
+        structure=structure,
+        now=now,
+        exit_dte_threshold=exit_dte_threshold,
+        force_flatten_at=force_flatten_at,
+        pricing=pricing,
+        max_candidates=1,
+    )
+    return strategies[0]

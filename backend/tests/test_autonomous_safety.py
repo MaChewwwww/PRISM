@@ -609,3 +609,73 @@ def test_authorization_uses_fresh_timestamp_to_prevent_expiry() -> None:
     assert decision.outcome.value == "APPROVE"
     # Authorization must pass execution validation without raising ExecutionRejected
     validate_authorization(proposal, decision, settings)
+
+
+def test_candidate_option_strategies_returns_multiple_valid_strikes() -> None:
+    from app.market.option_selection import select_candidate_option_strategies
+
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    contracts = [
+        {
+            "symbol": "NVDA260909C00215000",
+            "underlying": "NVDA",
+            "expiration": "2026-09-09",
+            "strike": "215.0",
+            "option_type": "call",
+            "active": True,
+            "tradable": True,
+        },
+        {
+            "symbol": "NVDA260909C00220000",
+            "underlying": "NVDA",
+            "expiration": "2026-09-09",
+            "strike": "220.0",
+            "option_type": "call",
+            "active": True,
+            "tradable": True,
+        },
+        {
+            "symbol": "NVDA260909C00225000",
+            "underlying": "NVDA",
+            "expiration": "2026-09-09",
+            "strike": "225.0",
+            "option_type": "call",
+            "active": True,
+            "tradable": True,
+        },
+    ]
+    quotes = {
+        "NVDA260909C00215000": {
+            "bid": "6.00",
+            "ask": "6.20",
+            "quote_timestamp": now - timedelta(seconds=2),
+            "price_increment": "0.01",
+        },
+        "NVDA260909C00220000": {
+            "bid": "3.90",
+            "ask": "4.10",
+            "quote_timestamp": now - timedelta(seconds=2),
+            "price_increment": "0.01",
+        },
+        "NVDA260909C00225000": {
+            "bid": "2.10",
+            "ask": "2.30",
+            "quote_timestamp": now - timedelta(seconds=2),
+            "price_increment": "0.01",
+        },
+    }
+    candidates = select_candidate_option_strategies(
+        contracts,
+        quotes,
+        underlying_price=Decimal("220.0"),
+        direction="bullish",
+        structure="long",
+        now=now,
+        max_candidates=3,
+    )
+    assert len(candidates) == 3
+    # The first candidate is the closest ATM strike (220.0)
+    assert candidates[0].legs[0].strike_price == Decimal("220.0")
+    # All candidate strikes are preserved
+    strikes = {c.legs[0].strike_price for c in candidates}
+    assert strikes == {Decimal("215.0"), Decimal("220.0"), Decimal("225.0")}
