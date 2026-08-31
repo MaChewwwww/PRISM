@@ -276,6 +276,7 @@ def test_alpaca_gateway_get_option_chain_reads_iv_from_snapshot() -> None:
     }
     request = mock_options_client.get_option_chain.call_args.args[0]
     assert request.underlying_symbol == "NVDA"
+    assert request.feed.value == "indicative"
 
 
 @pytest.mark.asyncio
