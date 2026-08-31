@@ -55,6 +55,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/autonomous/cycles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cycles */
+        get: operations["cycles_api_v1_autonomous_cycles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Decisions */
+        get: operations["decisions_api_v1_autonomous_decisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Executions */
+        get: operations["executions_api_v1_autonomous_executions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/autonomous/kill-switch": {
         parameters: {
             query?: never;
@@ -66,6 +117,23 @@ export interface paths {
         put?: never;
         /** Autonomous Kill Switch */
         post: operations["autonomous_kill_switch_api_v1_autonomous_kill_switch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/portfolio/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Portfolio */
+        get: operations["latest_portfolio_api_v1_autonomous_portfolio_latest_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1137,6 +1205,231 @@ export interface components {
          * @enum {string}
          */
         AuthorizationOutcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+        /** AutonomousCycleCollection */
+        AutonomousCycleCollection: {
+            /** Empty Message */
+            empty_message?: string | null;
+            /** Items */
+            items: components["schemas"]["AutonomousCycleRead"][];
+        };
+        /**
+         * AutonomousCycleRead
+         * @description Redacted immutable outcome from one autonomous worker cycle.
+         */
+        AutonomousCycleRead: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "NO_TRADE" | "SUBMITTED" | "FAILED";
+            /** Reason */
+            reason: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Symbols */
+            symbols: string[];
+            /** Worker Version */
+            worker_version: string;
+        };
+        /** AutonomousDecisionCollection */
+        AutonomousDecisionCollection: {
+            /** Empty Message */
+            empty_message?: string | null;
+            /** Items */
+            items: components["schemas"]["AutonomousDecisionRead"][];
+        };
+        /**
+         * AutonomousDecisionRead
+         * @description Joined proposal, risk, and deterministic-authorization read model.
+         */
+        AutonomousDecisionRead: {
+            /**
+             * Authorization Outcome
+             * @enum {string}
+             */
+            authorization_outcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Decision At
+             * Format: date-time
+             */
+            decision_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Profile Version */
+            profile_version: number;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Risk Verdict */
+            risk_verdict?: string | null;
+            /** Rule Trace */
+            rule_trace: components["schemas"]["AutonomousRuleTraceSummary"][];
+            /** Ruleset Version */
+            ruleset_version: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** AutonomousExecutionCollection */
+        AutonomousExecutionCollection: {
+            /** Empty Message */
+            empty_message?: string | null;
+            /** Items */
+            items: components["schemas"]["AutonomousExecutionRead"][];
+        };
+        /**
+         * AutonomousExecutionRead
+         * @description Sanitized paper-order receipt; broker and client identifiers stay server-side.
+         */
+        AutonomousExecutionRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code?: string | null;
+            /** Filled Average Price */
+            filled_average_price?: string | null;
+            /**
+             * Filled Quantity
+             * Format: decimal-string
+             */
+            filled_quantity: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Reconciled At */
+            reconciled_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "submitted" | "reconciling" | "rejected" | "filled" | "failed";
+            /** Submitted At */
+            submitted_at?: string | null;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** AutonomousPortfolioLatest */
+        AutonomousPortfolioLatest: {
+            /** Empty Message */
+            empty_message?: string | null;
+            snapshot?: components["schemas"]["AutonomousPortfolioSnapshot"] | null;
+        };
+        /** AutonomousPortfolioSnapshot */
+        AutonomousPortfolioSnapshot: {
+            /** Account Values Complete */
+            account_values_complete: boolean;
+            /** Account Verified */
+            account_verified: boolean;
+            /** Buying Power */
+            buying_power?: string | null;
+            /** Cash */
+            cash?: string | null;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Portfolio Value */
+            portfolio_value?: string | null;
+            /** Positions */
+            positions: components["schemas"]["AutonomousPositionRead"][];
+            /** Start Of Day Equity */
+            start_of_day_equity?: string | null;
+            /** Supported Options Level */
+            supported_options_level?: number | null;
+        };
+        /**
+         * AutonomousPositionRead
+         * @description Normalized position fields safe for the authenticated operator surface.
+         */
+        AutonomousPositionRead: {
+            /** Asset Class */
+            asset_class: string;
+            /** Average Entry Price */
+            average_entry_price?: string | null;
+            /** Correlated Cluster */
+            correlated_cluster?: string | null;
+            /** Delta */
+            delta?: string | null;
+            /** Expiration */
+            expiration?: string | null;
+            /** Market Value */
+            market_value?: string | null;
+            /** Metadata Complete */
+            metadata_complete: boolean;
+            /** Quantity */
+            quantity?: string | null;
+            /** Quote Age Seconds */
+            quote_age_seconds?: string | null;
+            /** Sector */
+            sector?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Underlying */
+            underlying: string;
+            /** Unrealized Pl */
+            unrealized_pl?: string | null;
+            /** Unrealized Plpc */
+            unrealized_plpc?: string | null;
+            /** Vega */
+            vega?: string | null;
+        };
+        /** AutonomousRuleTraceSummary */
+        AutonomousRuleTraceSummary: {
+            /** Explanation */
+            explanation: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "PASS" | "MODIFY" | "FAIL";
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "P0" | "P1" | "P2" | "P3" | "P4" | "P5";
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Rule Id */
+            rule_id: string;
+        };
         /** AutonomousStatus */
         AutonomousStatus: {
             /** Autonomous Enabled */
@@ -3935,6 +4228,120 @@ export interface operations {
             };
         };
     };
+    cycles_api_v1_autonomous_cycles_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousCycleCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decisions_api_v1_autonomous_decisions_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+                symbol?: string | null;
+                outcome?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousDecisionCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    executions_api_v1_autonomous_executions_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+                status?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousExecutionCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     autonomous_kill_switch_api_v1_autonomous_kill_switch_post: {
         parameters: {
             query?: never;
@@ -3959,6 +4366,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AutonomousStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    latest_portfolio_api_v1_autonomous_portfolio_latest_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousPortfolioLatest"];
                 };
             };
             /** @description Validation Error */

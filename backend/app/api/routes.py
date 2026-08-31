@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import router as auth_router
 from app.api.models import AutonomousStatus, HealthResponse, KillSwitchRequest, SystemStatus
 from app.autonomous.control import control_payload, get_or_create_control, set_kill_switch
+from app.autonomous.routes import router as autonomous_read_router
 from app.core.auth.dependencies import get_current_user
 from app.core.config import Settings, get_settings
 from app.core.database import check_database, get_db_session
@@ -23,6 +24,7 @@ from app.research.routes import router as research_router
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth_router)
+router.include_router(autonomous_read_router)
 router.include_router(research_router)
 router.include_router(presentation_router)
 router.include_router(profiles_router)
@@ -176,9 +178,14 @@ def system_status(
     current_user: Annotated[str, Depends(get_current_user)],
 ) -> SystemStatus:
     cli_available, cli_version = cli_status(settings)
+    account_verified, options_level = paper_account_status(settings)
     if settings.execution_enabled and not cli_available:
         state: Literal["ready", "degraded", "unavailable", "misconfigured"] = "misconfigured"
-    elif not settings.credentials_present or not cli_available:
+    elif (
+        not settings.credentials_present
+        or not cli_available
+        or (settings.execution_enabled and not account_verified)
+    ):
         state = "degraded"
     else:
         state = "ready"
@@ -190,6 +197,6 @@ def system_status(
         cli_available=cli_available,
         cli_version=cli_version,
         credentials_present=settings.credentials_present,
-        account_verified=False,
-        supported_options_level=None,
+        account_verified=account_verified,
+        supported_options_level=options_level,
     )
