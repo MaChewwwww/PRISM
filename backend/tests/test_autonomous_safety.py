@@ -18,6 +18,7 @@ from app.contracts.models import (
     OptionType,
     RiskAssessment,
     TradeProposal,
+    TradeVerdict,
 )
 from app.core.config import Settings
 from app.market.option_selection import select_option_strategy
@@ -392,3 +393,14 @@ async def test_record_captures_structured_candidate_rejections() -> None:
     assert cycle_models[0].outcome == "NO_TRADE"
     assert "NVDA: OPTION_SELECTION_REJECTED" in cycle_models[0].reason
     assert "AAPL: IV_RANK_UNAVAILABLE" in cycle_models[0].reason
+
+
+def test_trade_verdict_affirmative_options_proposal() -> None:
+    affirmative = {
+        TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL,
+        TradeVerdict.PROPOSE_TRADE,
+    }
+    assert TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL in affirmative
+    assert TradeVerdict.PROPOSE_TRADE in affirmative
+    assert TradeVerdict.NO_TRADE not in affirmative
+    assert TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL.value == "proceed_to_options_proposal"
