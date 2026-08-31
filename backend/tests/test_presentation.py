@@ -33,7 +33,7 @@ def test_authorized_ruleset_matches_ba_baseline() -> None:
     assert window.official_scoring_at == window.force_flatten_by
     assert window.window_outer_boundary_at.isoformat() == "2026-09-04T13:30:00+00:00"
     assert window.scoring_basis == "total_account_equity"
-    assert str(ruleset.profiles["balanced"].opportunity_score_threshold) == "84"
+    assert str(ruleset.profiles["balanced"].opportunity_score_threshold) == "78"
 
 
 def test_fixture_repository_exposes_replaceable_read_boundary() -> None:
@@ -74,6 +74,8 @@ def test_presentation_endpoints_are_authenticated_and_fixture_labeled() -> None:
             payload = response.json()
             assert payload["meta"]["dataMode"] == "illustrative_fixture"
             assert payload["meta"]["fixtureVersion"] == "prism-demo-v1"
+            if path == "/api/v1/presentation/alternatives":
+                assert payload["data"]["sessions"][0]["branches"][0]["branchKey"] == "chosen"
             serialized = response.text.lower()
             assert "alpaca paper trading account" not in serialized
             assert "active portfolio (paper)" not in serialized

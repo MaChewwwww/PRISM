@@ -10,8 +10,10 @@ from app.contracts.models import (
     MACDCrossover,
     MACDSignal,
     MovingAverages,
+    PriceDisplacement,
     QuantitativeAnalysisReport,
     RSICondition,
+    TrendConfirmation,
     TrendDirection,
 )
 
@@ -183,7 +185,7 @@ def compute_atr_and_volatility(
         true_ranges.append(tr)
 
     atr_sample = true_ranges[-period:] if len(true_ranges) >= period else true_ranges
-    atr = sum(atr_sample) / Decimal(str(len(atr_sample))) if atr_sample else Decimal("1.0")
+    atr = sum(atr_sample) / Decimal(str(len(atr_sample))) if atr_sample else Decimal("0.0")
 
     # Annualized volatility from returns: std_dev(daily returns) * sqrt(252) * 100.
     # Keep the calculation Decimal-safe so binary floating point never crosses the
@@ -197,15 +199,130 @@ def compute_atr_and_volatility(
         ]
         if returns:
             mean_ret = sum(returns, Decimal("0")) / Decimal(str(len(returns)))
-            var_ret = sum((r - mean_ret) ** 2 for r in returns) / Decimal(str(len(returns)))
+            var_ret = sum((r - mean_ret) ** 2 for r in returns) / Decimal(
+                str(max(1, len(returns) - 1))
+            )
             daily_std = var_ret.sqrt()
             ann_vol = daily_std * Decimal("252").sqrt() * Decimal("100")
         else:
             ann_vol = Decimal("0")
+
     else:
         ann_vol = Decimal("0.0")
 
     return round(atr, 2), round(ann_vol, 2)
+
+
+def compute_gap_and_displacement(bars: list[dict[str, Any]]) -> PriceDisplacement:
+    """Deterministically compute opening gap size and 1d/3d/5d/20d price displacement."""
+    if not bars:
+        return PriceDisplacement(
+            gap_size_pct=Decimal("0.0"),
+            displacement_1d_pct=Decimal("0.0"),
+            displacement_3d_pct=None,
+            displacement_5d_pct=None,
+            displacement_20d_pct=None,
+        )
+
+    closes = [_to_decimal(b["close"]) for b in bars]
+    opens = [_to_decimal(b.get("open", b["close"])) for b in bars]
+
+    # Gap size: latest bar open vs previous bar close
+    if len(bars) >= 2 and closes[-2] > Decimal("0"):
+        gap_size = ((opens[-1] - closes[-2]) / closes[-2]) * Decimal("100.0")
+    else:
+        gap_size = Decimal("0.0")
+
+    # 1-day displacement
+    if len(closes) >= 2 and closes[-2] > Decimal("0"):
+        disp_1d = ((closes[-1] - closes[-2]) / closes[-2]) * Decimal("100.0")
+    else:
+        disp_1d = Decimal("0.0")
+
+    # 3-day displacement
+    disp_3d = None
+    if len(closes) >= 4 and closes[-4] > Decimal("0"):
+        disp_3d = round(((closes[-1] - closes[-4]) / closes[-4]) * Decimal("100.0"), 2)
+
+    # 5-day displacement
+    disp_5d = None
+    if len(closes) >= 6 and closes[-6] > Decimal("0"):
+        disp_5d = round(((closes[-1] - closes[-6]) / closes[-6]) * Decimal("100.0"), 2)
+
+    # 20-day displacement
+    disp_20d = None
+    if len(closes) >= 21 and closes[-21] > Decimal("0"):
+        disp_20d = round(((closes[-1] - closes[-21]) / closes[-21]) * Decimal("100.0"), 2)
+
+    return PriceDisplacement(
+        gap_size_pct=round(gap_size, 2),
+        displacement_1d_pct=round(disp_1d, 2),
+        displacement_3d_pct=disp_3d,
+        displacement_5d_pct=disp_5d,
+        displacement_20d_pct=disp_20d,
+    )
+
+
+def compute_trend_confirmation(
+    current_price: Decimal,
+    sma_20: Decimal | None,
+    sma_50: Decimal | None,
+    sma_200: Decimal | None,
+    rsi_14: Decimal,
+    macd: MACDSignal,
+    percent_b: Decimal,
+) -> TrendConfirmation:
+    """Deterministically determine moving average stack alignment and trend confirmation state."""
+    has_all_smas = sma_20 is not None and sma_50 is not None and sma_200 is not None
+
+    if has_all_smas:
+        assert sma_20 is not None and sma_50 is not None and sma_200 is not None
+        # Strong Uptrend: Price > 20 > 50 > 200
+        if (
+            current_price >= sma_20 > sma_50 > sma_200
+            and rsi_14 >= Decimal("45.0")
+            and macd.histogram >= Decimal("-0.5")
+        ):
+            return TrendConfirmation.STRONG_UPTREND_CONFIRMED
+
+        # Pullback in Uptrend: 20 > 50 > 200, but Price dipped below 20 with healthy RSI
+        if sma_20 > sma_50 > sma_200 and current_price < sma_20 and rsi_14 >= Decimal("35.0"):
+            return TrendConfirmation.PULLBACK_IN_UPTREND
+
+        # Breakdown Confirmed: Price < 20 < 50 < 200
+        if current_price <= sma_20 < sma_50 < sma_200:
+            return TrendConfirmation.BREAKDOWN_CONFIRMED
+
+        # Golden cross state: 50 > 200 and recent bullish momentum
+        if (
+            sma_50 >= sma_200
+            and current_price > sma_50
+            and macd.crossover == MACDCrossover.BULLISH_CROSS
+        ):
+            return TrendConfirmation.GOLDEN_CROSS
+
+        # Death cross state: 50 < 200 and price below 50
+        if (
+            sma_50 < sma_200
+            and current_price < sma_50
+            and macd.crossover == MACDCrossover.BEARISH_CROSS
+        ):
+            return TrendConfirmation.DEATH_CROSS
+
+    # Oversold bounce: severe oversold condition with initial reversal signal
+    if (rsi_14 <= Decimal("32.0") or percent_b <= Decimal("0.05")) and (
+        macd.histogram > Decimal("0") or macd.crossover == MACDCrossover.BULLISH_CROSS
+    ):
+        return TrendConfirmation.OVERSOLD_BOUNCE
+
+    # Fallback to moving averages comparison if only 20 & 50 exist
+    if sma_20 is not None and sma_50 is not None:
+        if current_price >= sma_20 > sma_50 and rsi_14 >= Decimal("50.0"):
+            return TrendConfirmation.STRONG_UPTREND_CONFIRMED
+        if current_price <= sma_20 < sma_50 and rsi_14 <= Decimal("45.0"):
+            return TrendConfirmation.BREAKDOWN_CONFIRMED
+
+    return TrendConfirmation.RANGE_BOUND
 
 
 def compute_quantitative_analysis(
@@ -223,6 +340,7 @@ def compute_quantitative_analysis(
             symbol=symbol,
             current_price=Decimal("0.0"),
             trend=TrendDirection.NEUTRAL,
+            trend_confirmation=TrendConfirmation.RANGE_BOUND,
             momentum_score=Decimal("50.0"),
             rsi_14=Decimal("50.0"),
             rsi_condition=RSICondition.NEUTRAL,
@@ -243,6 +361,7 @@ def compute_quantitative_analysis(
             atr_14=Decimal("0.0"),
             volatility_annualized_pct=Decimal("0.0"),
             volume_surge_ratio=Decimal("1.0"),
+            price_displacement=PriceDisplacement(),
             summary="No bar data available for quantitative analysis.",
         )
 
@@ -279,9 +398,9 @@ def compute_quantitative_analysis(
 
     # 2. RSI (14)
     rsi_14 = compute_rsi(closes, 14)
-    if rsi_14 > Decimal("70.0"):
+    if rsi_14 >= Decimal("70.0"):
         rsi_condition = RSICondition.OVERBOUGHT
-    elif rsi_14 < Decimal("30.0"):
+    elif rsi_14 <= Decimal("30.0"):
         rsi_condition = RSICondition.OVERSOLD
     else:
         rsi_condition = RSICondition.NEUTRAL
@@ -304,11 +423,23 @@ def compute_quantitative_analysis(
     else:
         vol_surge = Decimal("1.0")
 
-    # 7. Trend & Composite Momentum Score (0 to 100)
-    # Component 1: Moving Averages Gradient (40 max points, centered at 20 neutral)
+    # 7. Price Displacement and Opening Gap
+    price_displacement = compute_gap_and_displacement(bars)
+
+    # 8. Trend Confirmation
+    trend_confirmation = compute_trend_confirmation(
+        current_price=current_price,
+        sma_20=sma_20,
+        sma_50=sma_50,
+        sma_200=sma_200,
+        rsi_14=rsi_14,
+        macd=macd,
+        percent_b=bollinger.percent_b,
+    )
+
+    # 9. Trend & Composite Momentum Score (0 to 100)
     sma_components: list[tuple[Decimal, Decimal]] = []
     if p_vs_sma20 is not None:
-        # Scale: -5% is 0.0, 0% is 0.5, +5% is 1.0
         factor_20 = min(
             Decimal("1.0"),
             max(Decimal("0.0"), Decimal("0.5") + (p_vs_sma20 / Decimal("10.0"))),
@@ -370,9 +501,11 @@ def compute_quantitative_analysis(
         else (f"below 50d SMA ({p_vs_sma50}%)" if p_vs_sma50 else "near moving averages")
     )
     summary = (
-        f"{trend.value.upper()} trend ({momentum_score}/100 momentum). "
+        f"{trend.value.upper()} trend ({momentum_score}/100 momentum, "
+        f"{trend_confirmation.value.replace('_', ' ')}). "
         f"Price is {sma_desc} with RSI at {rsi_14} ({rsi_condition.value}), "
-        f"MACD hist at {macd.histogram}, and {round(vol_surge, 2)}x volume surge."
+        f"gap at {price_displacement.gap_size_pct}%, MACD hist at {macd.histogram}, "
+        f"and {round(vol_surge, 2)}x volume surge."
     )
 
     now_utc = datetime.now(UTC)
@@ -383,6 +516,7 @@ def compute_quantitative_analysis(
         symbol=symbol,
         current_price=round(current_price, 2),
         trend=trend,
+        trend_confirmation=trend_confirmation,
         momentum_score=momentum_score,
         rsi_14=rsi_14,
         rsi_condition=rsi_condition,
@@ -392,5 +526,6 @@ def compute_quantitative_analysis(
         atr_14=atr_14,
         volatility_annualized_pct=vol_ann,
         volume_surge_ratio=round(vol_surge, 2),
+        price_displacement=price_displacement,
         summary=summary,
     )

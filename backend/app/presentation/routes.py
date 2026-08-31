@@ -4,8 +4,11 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth.dependencies import get_current_user
+from app.core.config import Settings, get_settings
+from app.core.database import get_db_session
 from app.presentation.models import (
     AgentObservability,
     AgentRecord,
@@ -33,6 +36,7 @@ from app.presentation.service import (
     get_portfolio,
     get_weekly_summary,
 )
+from app.presentation.shadow_repository import BacktestPresentationRepository
 
 router = APIRouter(
     prefix="/presentation",
@@ -97,16 +101,31 @@ def portfolio(from_time: FromQuery, to_time: ToQuery) -> PresentationEnvelope[Po
 
 
 @router.get("/alternatives", response_model=PresentationEnvelope[AlternativeCollection])
-def alternatives(
-    from_time: FromQuery, to_time: ToQuery
+async def alternatives(
+    from_time: FromQuery,
+    to_time: ToQuery,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> PresentationEnvelope[AlternativeCollection]:
     start, end = _validated_range(from_time, to_time)
+    if settings.environment in {"staging", "production"}:
+        return await BacktestPresentationRepository(session, settings).list_sessions(
+            start=start, end=end
+        )
     return get_alternatives(start, end)
 
 
 @router.get("/alternatives/{session_id}", response_model=PresentationEnvelope[AlternativeSession])
-def alternative(session_id: str) -> PresentationEnvelope[AlternativeSession]:
-    result = get_alternative(session_id)
+async def alternative(
+    session_id: str,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> PresentationEnvelope[AlternativeSession]:
+    result = (
+        await BacktestPresentationRepository(session, settings).get(session_id)
+        if settings.environment in {"staging", "production"}
+        else get_alternative(session_id)
+    )
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return result

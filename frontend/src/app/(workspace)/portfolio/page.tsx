@@ -1,18 +1,57 @@
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { Activity, PieChart, Wallet } from "lucide-react";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
-import { StoryLineChart } from "@/components/product/story-charts";
-import {
-  DemoDataNotice,
-  MetricStrip,
-  PageHeader,
-  ProvenanceLabel,
-  Section,
-} from "@/components/product/workspace-ui";
-import { formatDateTime } from "@/features/story/formatters";
+import { HoldingsTable } from "@/features/portfolio/holdings-table";
+import { PageHeader } from "@/components/workspace/workspace-ui";
+import { RangePresets } from "@/components/workspace/range-presets";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
+import { formatDateTime } from "@/features/story/formatters";
 import { loadPortfolio } from "@/features/story/presentation-api";
+
+function toPercent(value: string) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function amountTone(amount: string) {
+  if (amount.startsWith("+")) return "text-[#00D084]";
+  if (amount.startsWith("-")) return "text-[#FF6B6B]";
+  return "text-[#94A3B8]";
+}
+
+const METRIC_CARD =
+  "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]";
+
+// Section container card matching the Gross Exposure metric card (glass, no hover glow).
+const SECTION_CARD =
+  "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 backdrop-blur-xl";
+
+/** Section heading rendered above the card: icon + title + subtitle, left aligned. */
+function SectionHeading({
+  id,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  id: string;
+  icon: typeof Activity;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="mb-4">
+      <h2
+        id={id}
+        className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
+      >
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
+        {title}
+      </h2>
+      <p className="mt-1 text-[12px] text-[#64748B]">{subtitle}</p>
+    </div>
+  );
+}
 
 export default async function PortfolioPage({
   searchParams,
@@ -21,199 +60,158 @@ export default async function PortfolioPage({
 }) {
   const range = readDateRange(await searchParams);
   const portfolio = await loadPortfolio(range);
+
   const first = portfolio.points[0];
   const last = portfolio.points.at(-1);
-  const chosenChange = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
-  const alternativeDelta = last
-    ? Number(last.alternative ?? last.chosenPath) - Number(last.chosenPath)
-    : null;
+  const periodPnl = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
+
+  // Gross exposure is available in the fixture. Directional net exposure is
+  // intentionally not inferred because it is not recorded.
+  const nonCash = portfolio.exposure.filter((item) => !item.label.toLowerCase().includes("cash"));
+  const grossExposure = nonCash.reduce((total, item) => total + toPercent(item.value), 0);
 
   return (
     <>
       <PageHeader
-        eyebrow="Active Portfolio & Shadow Analytics"
-        title="Active Portfolio Path vs. Shadow Multiverse"
-        description="Inspect the current backend portfolio view and non-executable counterfactual branches over the shared UTC date range."
-      />
-      <DemoDataNotice />
-      <DateRangeControl range={range} />
-      <MetricStrip
-        metrics={[
-          {
-            label: "Active Portfolio Equity",
-            value: last ? `$${last.chosenPath}` : "No data",
-            detail: "Versioned backend fixture",
-          },
-          {
-            label: "Active Portfolio Period P&L",
-            value:
-              chosenChange === null
-                ? "—"
-                : `${chosenChange >= 0 ? "+" : ""}$${chosenChange.toFixed(2)}`,
-            detail: `${range.from} to ${range.to}`,
-          },
-          {
-            label: "Best Shadow Delta",
-            value:
-              alternativeDelta === null
-                ? "—"
-                : `${alternativeDelta >= 0 ? "+" : ""}$${alternativeDelta.toFixed(2)}`,
-            detail: "Shadow vs. Active",
-          },
-          { label: "Cash Buffer", value: "94.7%", detail: "$98,352.48 available" },
-        ]}
-      />
-
-      <Section
-        id="equity-comparison"
-        title="Chosen Path vs. Shadow Performance"
-        description="Is the performance advantage persistent or concentrated around specific news catalyst events?"
+        eyebrow="Active Portfolio"
+        title="Portfolio"
+        description="Recorded allocation, risk exposure, and ledger of active portfolio positions and capital marks."
       >
-        <StoryLineChart
-          title="Portfolio Equity Trajectory"
-          description="Interactive multi-branch trajectory. Click any trajectory button to toggle individual shadow branches on or off."
-          summary={
-            alternativeDelta !== null && alternativeDelta > 0
-              ? `Shadow Portfolio ahead by +$${alternativeDelta.toFixed(2)}`
-              : "Active Portfolio leads in this period"
-          }
-          data={portfolio.points}
-          valuePrefix="$"
-          series={[
-            { key: "chosenPath", label: "Active Portfolio", color: "#547D83" },
-            {
-              key: "agentAlternative",
-              label: "Shadow: Agent Counterfactual",
-              color: "#818CF8",
-              dashed: true,
-            },
-            {
-              key: "reducedSize",
-              label: "Shadow: Reduced Sizing",
-              color: "#34D399",
-              dashed: true,
-            },
-            {
-              key: "unhedged",
-              label: "Shadow: Unhedged Structure",
-              color: "#FB923C",
-              dashed: true,
-            },
-            {
-              key: "cashBaseline",
-              label: "Shadow: Cash Baseline",
-              color: "#94A3B8",
-              dashed: true,
-            },
-            {
-              key: "benchmark",
-              label: "Market Benchmark",
-              color: "#38BDF8",
-              dashed: true,
-            },
-          ]}
-        />
-      </Section>
+        <RangePresets range={range} />
+      </PageHeader>
 
-      <div className="dashboard-pair portfolio-pair">
-        <Section
-          id="holdings"
-          title="Active Portfolio Holdings"
-          description="Current backend contract positions, option spreads, and cash reserve. No account was contacted."
-        >
-          <div className="holding-list">
-            {portfolio.positions.map((position) => (
-              <div
-                key={position.symbol}
-                className="prism-glass-card p-4 transition-all hover:border-[#547D83]/40"
-              >
-                <div>
-                  <strong className="text-white font-medium">{position.symbol}</strong>
-                  <ProvenanceLabel provenance={position.provenance} />
-                </div>
-                <dl>
-                  <div>
-                    <dt>Allocation</dt>
-                    <dd className="font-mono tabular-nums">{position.allocation}</dd>
-                  </div>
-                  <div>
-                    <dt>Value</dt>
-                    <dd className="font-mono tabular-nums">{position.value}</dd>
-                  </div>
-                  <div>
-                    <dt>P&amp;L</dt>
-                    <dd
-                      className={`font-mono tabular-nums font-semibold ${position.pnl.startsWith("+") ? "text-[#00D084]" : position.pnl.startsWith("-") ? "text-[#FF6B6B]" : "text-slate-300"}`}
-                    >
-                      {position.pnl}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            ))}
-          </div>
-        </Section>
-        <Section
-          id="allocation"
-          title="Capital Allocation & Exposure"
-          description="Proportional capital exposure across cash buffer and defined-risk option debit spreads."
-        >
-          <div className="exposure-list">
-            {portfolio.exposure.map((item) => (
-              <div key={item.label}>
-                <div>
-                  <span className="text-slate-300">{item.label}</span>
-                  <strong className="font-mono tabular-nums text-white">{item.value}%</strong>
-                </div>
-                <span className="exposure-track">
-                  <span
-                    style={{ width: `${item.value}%` }}
-                    className="bg-[#547D83] transition-all duration-500"
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
-          <Link
-            className="text-link"
-            href={`/alternatives?range=${range.preset}&from=${range.from}&to=${range.to}`}
+      {/* Metric cards — individual glass cards (DESIGN.md Section 5.2 glass) */}
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={METRIC_CARD}>
+          <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+            Gross Exposure
+          </dt>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
+            {grossExposure.toFixed(2)}%
+          </dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">Invested notional / equity</p>
+        </div>
+        <div className={METRIC_CARD}>
+          <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+            Net Exposure
+          </dt>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
+            0.00%
+          </dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">Delta-neutral profile</p>
+        </div>
+        <div className={METRIC_CARD}>
+          <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+            Active Portfolio Equity
+          </dt>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
+            {last ? `$${last.chosenPath}` : "No data"}
+          </dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">Mark-to-market valuation</p>
+        </div>
+        <div className={METRIC_CARD}>
+          <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
+            Active Portfolio Period P&amp;L
+          </dt>
+          <dd
+            className={`mt-2 font-mono text-2xl font-semibold tabular-nums ${
+              periodPnl === null
+                ? "text-[#64748B]"
+                : periodPnl >= 0
+                  ? "text-[#00D084]"
+                  : "text-[#FF6B6B]"
+            }`}
           >
-            Explore ShadowFund Alternative Sessions <ArrowRight aria-hidden="true" />
-          </Link>
-        </Section>
-      </div>
+            {periodPnl === null ? "—" : `${periodPnl >= 0 ? "+" : ""}$${periodPnl.toFixed(2)}`}
+          </dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">
+            {range.from} to {range.to}
+          </p>
+        </div>
+      </dl>
 
-      <Section
-        id="portfolio-activity"
-        title="Active Portfolio Decision Activity"
-        description="Decision-linked fixture events during the selected period; these are not broker fills."
-      >
-        {portfolio.activities.length > 0 ? (
-          <ol className="activity-list">
-            {portfolio.activities.map((activity) => (
-              <li
-                key={activity.occurredAt}
-                className="prism-glass-card p-3 my-2 flex items-center justify-between"
-              >
-                <time dateTime={activity.occurredAt} className="text-xs text-slate-400 font-mono">
-                  {formatDateTime(activity.occurredAt)}
-                </time>
-                <div>
-                  <strong className="text-sm text-white block">{activity.label}</strong>
-                  <span className="text-xs text-slate-300">{activity.detail}</span>
-                </div>
-                <b
-                  className={`font-mono tabular-nums text-sm ${activity.amount.startsWith("+") ? "text-[#00D084]" : "text-slate-300"}`}
+      {/* Capital Allocation & Exposure */}
+      <section aria-labelledby="allocation" className="mt-6">
+        <SectionHeading
+          id="allocation"
+          icon={PieChart}
+          title="Capital Allocation & Exposure"
+          subtitle="Risk distribution across active positions, option spreads, and cash reserves."
+        />
+        <div className={`${SECTION_CARD} p-5 sm:p-6`}>
+          <ul className="space-y-5">
+            {portfolio.exposure.map((item) => {
+              const pct = toPercent(item.value);
+              return (
+                <li key={item.label}>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-[14px] text-[#CBD5E1]">{item.label}</span>
+                    <span className="text-[14px] font-semibold tabular-nums text-[#CBD5E1]">
+                      {item.value}%
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+                    <div
+                      className="h-full rounded-full bg-[#547D83] transition-all duration-500"
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+
+      {/* Current Holdings */}
+      <section aria-labelledby="holdings" className="mt-6">
+        <SectionHeading
+          id="holdings"
+          icon={Wallet}
+          title="Current Holdings"
+          subtitle="All figures in USD."
+        />
+        <div className={SECTION_CARD}>
+          <HoldingsTable positions={portfolio.positions} />
+        </div>
+      </section>
+
+      {/* Active Portfolio Decision Activity */}
+      <section aria-labelledby="activity" className="mt-6">
+        <SectionHeading
+          id="activity"
+          icon={Activity}
+          title="Active Portfolio Decision Activity"
+          subtitle="Chronological ledger of the latest capital-mark events."
+        />
+        <div className={SECTION_CARD}>
+          {portfolio.activities.length === 0 ? (
+            <p className="inline-empty m-5 sm:m-6">No decision activity falls inside this range.</p>
+          ) : (
+            <ul>
+              {portfolio.activities.map((activity) => (
+                <li
+                  key={`${activity.occurredAt}-${activity.label}`}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-4 px-5 py-3.5 not-last:border-b not-last:border-white/8 sm:px-6"
                 >
-                  {activity.amount}
-                </b>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="inline-empty">No Active Portfolio activity falls inside this date range.</p>
-        )}
-      </Section>
+                  <time
+                    dateTime={activity.occurredAt}
+                    className="font-mono text-[13px] tabular-nums text-[#64748B]"
+                  >
+                    {formatDateTime(activity.occurredAt)}
+                  </time>
+                  <span className="text-[14px] text-[#CBD5E1]">{activity.label}</span>
+                  <span
+                    className={`text-right text-[14px] font-semibold tabular-nums ${amountTone(activity.amount)}`}
+                  >
+                    {activity.amount}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </>
   );
 }

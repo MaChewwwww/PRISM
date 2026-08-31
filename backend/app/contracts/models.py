@@ -52,6 +52,13 @@ class ReactionClassification(StrEnum):
     FAIR_REACTION = "FAIR_REACTION"
 
 
+class CatalystDecayStatus(StrEnum):
+    FRESH_CATALYST = "fresh_catalyst"
+    ACTIVE_DIGESTION = "active_digestion"
+    AGING_CATALYST = "aging_catalyst"
+    PRICED_IN = "priced_in"
+
+
 class ResearchReport(ContractBase):
     symbol: str
     thesis: str
@@ -62,9 +69,21 @@ class ResearchReport(ContractBase):
     actual_reaction_pct: DecimalString | None = None
     expected_reaction_pct: DecimalString | None = None
     reaction_gap_pct: DecimalString | None = None
+    direction_adjusted_gap_pct: DecimalString | None = None
     volume_ratio: DecimalString | None = Field(default=None, ge=0)
     classification: ReactionClassification | None = None
     opportunity_score: DecimalString | None = Field(default=None, ge=0, le=100)
+    historical_median_reaction_pct: DecimalString | None = None
+    historical_dispersion_pct: DecimalString | None = None
+    analog_count: int = 0
+    analog_similarity_score: DecimalString = Field(default=Decimal("50.0"), ge=0, le=100)
+    historical_volatility_pct: DecimalString | None = None
+    implied_volatility_pct: DecimalString | None = None
+    iv_hv_ratio: DecimalString | None = None
+    options_implied_move_pct: DecimalString | None = None
+    event_age_hours: DecimalString = Decimal("0.0")
+    catalyst_decay_factor: DecimalString = Decimal("1.0")
+    catalyst_decay_status: CatalystDecayStatus = CatalystDecayStatus.FRESH_CATALYST
 
 
 class OptionSide(StrEnum):
@@ -88,6 +107,11 @@ class OptionLeg(BaseModel):
     strike_price: DecimalString = Field(gt=0)
     active: bool = True
     tradable: bool = True
+    # Alpaca requires an explicit position intent for every multi-leg option leg.
+    # Keep it optional at the research boundary, but execution rejects missing intents.
+    position_intent: (
+        Literal["buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"] | None
+    ) = None
 
 
 class StrategyKind(StrEnum):
@@ -122,6 +146,22 @@ class ShadowCandidate(BaseModel):
     rationale: str = ""
 
 
+class OptionPayoffEconomics(BaseModel):
+    """Deterministic option economics bound into an executable proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    method: str = Field(min_length=1)
+    expected_profit_per_contract: DecimalString
+    expected_loss_per_contract: DecimalString = Field(ge=0)
+    max_loss_per_contract: DecimalString = Field(gt=0)
+    premium_per_contract: DecimalString = Field(gt=0)
+    slippage_per_contract: DecimalString = Field(ge=0)
+    fill_probability: DecimalString = Field(ge=0, le=1)
+    net_ev_r: DecimalString
+    reward_risk_ratio: DecimalString = Field(ge=0)
+
+
 class TradeProposal(ContractBase):
     proposal_version: int = Field(default=1, ge=1)
     research_report_id: UUID
@@ -131,6 +171,8 @@ class TradeProposal(ContractBase):
     rationale: str
     exit_policy: ExitPolicy = Field(default_factory=ExitPolicy)
     shadow_candidates: list[ShadowCandidate] = Field(default_factory=list)
+    option_economics: OptionPayoffEconomics | None = None
+    research_bundle_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     proposal_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
@@ -314,6 +356,18 @@ class AuditEvent(ContractBase):
     payload: dict[str, Any]
 
 
+class EvaluationRoot(ContractBase):
+    """Immutable lineage anchor shared by authorization and ShadowFund evaluation."""
+
+    root_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    outcome: str = Field(min_length=1)
+    evidence_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    proposal_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    market_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    portfolio_snapshot_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    is_immutable: Literal[True] = True
+
+
 class AIProfileKind(StrEnum):
     CONSERVATIVE = "conservative"
     BALANCED = "balanced"
@@ -425,14 +479,59 @@ class HistoricalMarketDataRecord(ContractBase):
         return value.astimezone(UTC)
 
 
+class NewsEventCategory(StrEnum):
+    EARNINGS = "earnings"
+    GUIDANCE = "guidance"
+    M_AND_A = "m_and_a"
+    REGULATORY_LEGAL = "regulatory_legal"
+    PRODUCT_INNOVATION = "product_innovation"
+    ANALYST_ACTION = "analyst_action"
+    MANAGEMENT_CHANGE = "management_change"
+    MACRO_GEOPOLITICAL = "macro_geopolitical"
+    ROUTINE_PR = "routine_pr"
+    OTHER = "other"
+
+
+class CatalystMateriality(StrEnum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    NOISE = "noise"
+
+
+class GuidanceChange(StrEnum):
+    RAISED = "raised"
+    LOWERED = "lowered"
+    REAFFIRMED = "reaffirmed"
+    WITHDRAWN = "withdrawn"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class EarningsSurpriseData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    eps_surprise_pct: DecimalString | None = None
+    revenue_surprise_pct: DecimalString | None = None
+    quarter: str | None = None
+
+
 class LLMEventAnalysis(ContractBase):
     article_id: str
     symbol: str
     headline: str
-    event_type: str
+    source: str = "unknown"
+    source_confidence: DecimalString = Field(default=Decimal("50.0"), ge=0, le=100)
+    event_age_seconds: int = Field(default=0, ge=0)
+    event_category: NewsEventCategory = NewsEventCategory.OTHER
+    event_type: str = "other"
+    catalyst_materiality: CatalystMateriality = CatalystMateriality.MEDIUM
     sentiment: str
     significance_score: DecimalString = Field(ge=0, le=100)
     expected_reaction_pct: DecimalString | None = None
+    guidance_change: GuidanceChange = GuidanceChange.NOT_APPLICABLE
+    earnings_surprise: EarningsSurpriseData | None = None
+    has_contradictory_signals: bool = False
+    contradiction_notes: str | None = None
     rationale: str
     model_name: str
     prompt_version: str
@@ -484,17 +583,379 @@ class BollingerBands(BaseModel):
     percent_b: DecimalString
 
 
+class TrendConfirmation(StrEnum):
+    STRONG_UPTREND_CONFIRMED = "strong_uptrend_confirmed"
+    PULLBACK_IN_UPTREND = "pullback_in_uptrend"
+    GOLDEN_CROSS = "golden_cross"
+    RANGE_BOUND = "range_bound"
+    OVERSOLD_BOUNCE = "oversold_bounce"
+    DEATH_CROSS = "death_cross"
+    BREAKDOWN_CONFIRMED = "breakdown_confirmed"
+
+
+class PriceDisplacement(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    gap_size_pct: DecimalString = Decimal("0.0")
+    displacement_1d_pct: DecimalString = Decimal("0.0")
+    displacement_3d_pct: DecimalString | None = None
+    displacement_5d_pct: DecimalString | None = None
+    displacement_20d_pct: DecimalString | None = None
+
+
 class QuantitativeAnalysisReport(ContractBase):
     symbol: str = Field(min_length=1)
     current_price: DecimalString = Field(ge=0)
     trend: TrendDirection
+    trend_confirmation: TrendConfirmation = TrendConfirmation.RANGE_BOUND
     momentum_score: DecimalString = Field(ge=0, le=100)
     rsi_14: DecimalString = Field(ge=0, le=100)
     rsi_condition: RSICondition
     macd: MACDSignal
     moving_averages: MovingAverages
     bollinger_bands: BollingerBands
-    atr_14: DecimalString = Field(ge=0)
-    volatility_annualized_pct: DecimalString = Field(ge=0)
-    volume_surge_ratio: DecimalString = Field(ge=0)
+    atr_14: DecimalString
+    volatility_annualized_pct: DecimalString
+    volume_surge_ratio: DecimalString
+    price_displacement: PriceDisplacement = Field(default_factory=PriceDisplacement)
     summary: str
+
+
+class CompetitiveMoat(StrEnum):
+    WIDE = "wide"
+    NARROW = "narrow"
+    NONE = "none"
+    DETERIORATING = "deteriorating"
+
+
+class RelativePerformance(StrEnum):
+    OUTPERFORMING = "outperforming"
+    UNDERPERFORMING = "underperforming"
+    MIXED = "mixed"
+    INLINE = "inline"
+
+
+class IndustrySentiment(StrEnum):
+    POSITIVE = "positive"
+    MODERATELY_POSITIVE = "moderately_positive"
+    MIXED = "mixed"
+    MODERATELY_NEGATIVE = "moderately_negative"
+    NEGATIVE = "negative"
+
+
+class PeerPerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    symbol: str
+    price_change_5d_pct: DecimalString
+    price_change_20d_pct: DecimalString
+
+
+class SectorRegimeConfirmation(StrEnum):
+    LEADING_SECTOR_OUTPERFORMER = "leading_sector_outperformer"
+    IDIOSYNCRATIC_DECOUPLING = "idiosyncratic_decoupling"
+    BROAD_BETA_CONVERGENCE = "broad_beta_convergence"
+    SECTOR_UNDER_PRESSURE = "sector_under_pressure"
+    LAGGING_IN_BULL_SECTOR = "lagging_in_bull_sector"
+
+
+class PeerReactionDynamics(StrEnum):
+    DIVERGENT_WINNER = "divergent_winner"
+    SYMPATHETIC_SECTOR_SURGE = "sympathetic_sector_surge"
+    ISOLATED_REACTION = "isolated_reaction"
+    PEER_DRAGGED_DOWN = "peer_dragged_down"
+
+
+class IndustryAnalysisReport(ContractBase):
+    symbol: str
+    sector_name: str
+    sector_etf: str
+    sector_health_score: DecimalString = Field(ge=0, le=100)
+    stock_return_5d_pct: DecimalString
+    stock_return_20d_pct: DecimalString
+    sector_return_5d_pct: DecimalString
+    sector_return_20d_pct: DecimalString
+    spy_return_5d_pct: DecimalString = Decimal("0.0")
+    spy_return_20d_pct: DecimalString = Decimal("0.0")
+    relative_alpha_5d_pct: DecimalString
+    relative_alpha_20d_pct: DecimalString
+    stock_vs_spy_alpha_20d_pct: DecimalString = Decimal("0.0")
+    peer_dispersion_20d_pct: DecimalString = Decimal("0.0")
+    sector_relative_performance: RelativePerformance
+    peer_relative_performance: RelativePerformance
+    sector_regime_confirmation: SectorRegimeConfirmation = (
+        SectorRegimeConfirmation.BROAD_BETA_CONVERGENCE
+    )
+    peer_reaction_dynamics: PeerReactionDynamics = PeerReactionDynamics.ISOLATED_REACTION
+    peers: list[PeerPerformance]
+    competitive_moat: CompetitiveMoat
+    overall_sentiment: IndustrySentiment
+    tailwinds: list[str] = Field(default_factory=list)
+    headwinds: list[str] = Field(default_factory=list)
+    thesis: str
+
+
+class FundamentalHealth(StrEnum):
+    EXCELLENT = "excellent"
+    HEALTHY = "healthy"
+    MODERATE = "moderate"
+    VULNERABLE = "vulnerable"
+    DISTRESSED = "distressed"
+
+
+class ValuationStance(StrEnum):
+    UNDERVALUED = "undervalued"
+    FAIRLY_VALUED = "fairly_valued"
+    PREMIUM = "premium"
+    OVERVALUED = "overvalued"
+
+
+class AltmanZone(StrEnum):
+    SAFE = "safe"
+    GREY = "grey"
+    DISTRESS = "distress"
+
+
+class ProfitabilityMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    gross_margin_pct: DecimalString
+    operating_margin_pct: DecimalString
+    net_margin_pct: DecimalString
+    roe_pct: DecimalString
+    roa_pct: DecimalString
+
+
+class SolvencyMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_ratio: DecimalString
+    debt_to_equity: DecimalString
+    interest_coverage_ratio: DecimalString
+    net_debt_millions: DecimalString
+
+
+class ValuationMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pe_ratio_ttm: DecimalString | None = None
+    ev_to_ebitda: DecimalString | None = None
+    price_to_book: DecimalString | None = None
+    fcf_yield_pct: DecimalString | None = None
+    free_cash_flow_millions: DecimalString
+
+
+class EstimateRevisionTrend(StrEnum):
+    UPWARD = "upward"
+    DOWNWARD = "downward"
+    MIXED = "mixed"
+    NEUTRAL = "neutral"
+
+
+class BalanceSheetRedFlag(StrEnum):
+    ACCRUAL_EARNINGS_DIVERGENCE = "accrual_earnings_divergence"
+    WORKING_CAPITAL_DEFICIT = "working_capital_deficit"
+    HIGH_LEVERAGE_BURDEN = "high_leverage_burden"
+    INTEREST_COVERAGE_STRAIN = "interest_coverage_strain"
+    ALTMAN_DISTRESS_RISK = "altman_distress_risk"
+    NONE_DETECTED = "none_detected"
+
+
+class EarningsSurpriseEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quarter: str | None = None
+    eps_actual: DecimalString | None = None
+    eps_consensus: DecimalString | None = None
+    eps_surprise_pct: DecimalString | None = None
+    revenue_actual_millions: DecimalString | None = None
+    revenue_consensus_millions: DecimalString | None = None
+    revenue_surprise_pct: DecimalString | None = None
+    guidance_change: GuidanceChange = GuidanceChange.NOT_APPLICABLE
+    gross_margin_surprise_bps: DecimalString | None = None
+    operating_margin_surprise_bps: DecimalString | None = None
+    estimate_revision_trend: EstimateRevisionTrend = EstimateRevisionTrend.NEUTRAL
+
+
+class FundamentalAnalysisReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    current_price: DecimalString = Field(ge=0)
+    market_cap_millions: DecimalString = Field(ge=0)
+    enterprise_value_millions: DecimalString = Field(ge=0)
+    profitability: ProfitabilityMetrics
+    solvency: SolvencyMetrics
+    valuation: ValuationMetrics
+    piotroski_f_score: int = Field(ge=0, le=9)
+    altman_z_score: DecimalString
+    altman_zone: AltmanZone
+    composite_quality_score: DecimalString = Field(ge=0, le=100)
+    fundamental_health: FundamentalHealth
+    valuation_stance: ValuationStance
+    earnings_event: EarningsSurpriseEvent | None = None
+    red_flags: list[BalanceSheetRedFlag] = Field(default_factory=list)
+    summary: str
+    provenance: Literal["illustrative_fixture", "sec_filing"] = "illustrative_fixture"
+    data_as_of: datetime | None = None
+
+
+class MacroRegime(StrEnum):
+    RISK_ON = "risk_on"
+    RISK_OFF = "risk_off"
+    EXPANSIONARY = "expansionary"
+    CONTRACTIONARY = "contractionary"
+    STAGFLATIONARY = "stagflationary"
+    TRANSITIONAL = "transitional"
+
+
+class RateEnvironment(StrEnum):
+    RATE_CUT_CYCLE = "rate_cut_cycle"
+    PAUSE_ELEVATED = "pause_elevated"
+    RISING_RATES = "rising_rates"
+    NEUTRAL = "neutral"
+
+
+class MarketStressLevel(StrEnum):
+    LOW = "low"
+    MODERATE = "moderate"
+    HIGH = "high"
+    EXTREME = "extreme"
+
+
+class MarketStressDirection(StrEnum):
+    ESCALATING = "escalating"
+    STABLE = "stable"
+    EASING = "easing"
+
+
+class EconomicEventProximity(StrEnum):
+    FOMC_DECISION_NEAR = "fomc_decision_near"
+    CPI_INFLATION_NEAR = "cpi_inflation_near"
+    JOBS_PAYROLLS_NEAR = "jobs_payrolls_near"
+    HIGH_IMPACT_EVENT_AHEAD = "high_impact_event_ahead"
+    STANDARD_CALENDAR = "standard_calendar"
+
+
+class AssetMacroImpact(StrEnum):
+    STRONG_TAILWIND = "strong_tailwind"
+    MODERATE_TAILWIND = "moderate_tailwind"
+    NEUTRAL = "neutral"
+    MODERATE_HEADWIND = "moderate_headwind"
+    SEVERE_HEADWIND = "severe_headwind"
+
+
+class MacroAssetPerformance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    asset_symbol: str
+    asset_name: str
+    price_change_5d_pct: DecimalString
+    price_change_20d_pct: DecimalString
+
+
+class MacroAnalysisReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    macro_regime: MacroRegime
+    rate_environment: RateEnvironment
+    market_stress_level: MarketStressLevel
+    market_stress_direction: MarketStressDirection = MarketStressDirection.STABLE
+    realized_volatility_pct: DecimalString = Decimal("15.0")
+    volatility_change_5d_pct: DecimalString = Decimal("0.0")
+    macro_climate_score: DecimalString = Field(ge=0, le=100)
+    economic_event_proximity: EconomicEventProximity = EconomicEventProximity.STANDARD_CALENDAR
+    asset_macro_impact: AssetMacroImpact = AssetMacroImpact.NEUTRAL
+    assets: list[MacroAssetPerformance]
+    macro_tailwinds: list[str] = Field(default_factory=list)
+    macro_headwinds: list[str] = Field(default_factory=list)
+    stock_macro_sensitivity: str
+    thesis: str
+
+
+class TradeDirection(StrEnum):
+    BULLISH = "bullish"
+    BEARISH = "bearish"
+    NEUTRAL = "neutral"
+
+
+class TradeVerdict(StrEnum):
+    PROCEED_TO_OPTIONS_PROPOSAL = "proceed_to_options_proposal"
+    NO_TRADE = "no_trade"
+    PROPOSE_TRADE = "propose_trade"
+
+
+class OptionStructure(StrEnum):
+    LONG_CALL = "long_call"
+    LONG_PUT = "long_put"
+    BULL_CALL_SPREAD = "bull_call_spread"
+    BEAR_PUT_SPREAD = "bear_put_spread"
+    NO_TRADE = "no_trade"
+
+
+class ShadowAlternativeIntent(BaseModel):
+    """AI research intent for a non-executable ShadowFund branch.
+
+    Contract symbols and prices are deliberately absent. Deterministic code
+    selects them from the same eligible option universe as the primary
+    proposal, and this model can never become an order payload.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    direction: Literal[TradeDirection.BULLISH, TradeDirection.BEARISH]
+    preferred_structure: Literal[
+        OptionStructure.LONG_CALL,
+        OptionStructure.LONG_PUT,
+        OptionStructure.BULL_CALL_SPREAD,
+        OptionStructure.BEAR_PUT_SPREAD,
+    ]
+    rationale: str = Field(min_length=1, max_length=500)
+
+
+class SpecialistScores(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reaction_opportunity_score: DecimalString
+    quant_momentum_score: DecimalString
+    fundamental_quality_score: DecimalString
+    sector_health_score: DecimalString
+    macro_climate_score: DecimalString
+    news_sentiment_score: DecimalString
+
+
+class TradeDecisionReport(ContractBase):
+    symbol: str = Field(min_length=1)
+    verdict: TradeVerdict
+    direction: TradeDirection
+    recommended_structure: OptionStructure
+    composite_opportunity_score: DecimalString = Field(ge=0, le=100)
+    net_ev_r: DecimalString
+    reward_risk_ratio: DecimalString
+    confidence_score: DecimalString = Field(ge=0, le=100)
+    current_price: DecimalString = Field(ge=0)
+    target_price: DecimalString | None = None
+    exit_policy: ExitPolicy
+    specialist_scores: SpecialistScores
+    evidence_summary: list[str] = Field(default_factory=list)
+    contradictions: list[str] = Field(default_factory=list)
+    contradiction_analysis: str
+    portfolio_fit: str = ""
+    options_only_constraint_acknowledged: bool = True
+    synthesis_rationale: str
+    key_risks: list[str] = Field(default_factory=list)
+    shadow_alternative_intent: ShadowAlternativeIntent | None = None
+    provenance: Literal["live_research", "historical_simulation", "illustrative_fixture"] = (
+        "live_research"
+    )
+    evidence_freshness_seconds: int | None = Field(default=None, ge=0)
+    analog_count: int = Field(default=0, ge=0)
+
+
+class NoTradeDecision(ContractBase):
+    """Explicit synthesis outcome when evidence cannot support a proposal."""
+
+    kind: Literal["no_trade"] = "no_trade"
+    symbol: str = Field(min_length=1)
+    research_bundle_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    reason: str = Field(min_length=1)
+
+
+class ProposalDecision(ContractBase):
+    """Canonical proposal result, bound to the immutable research bundle."""
+
+    kind: Literal["proposal"] = "proposal"
+    research_bundle_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    proposal: TradeProposal
+
+
+DecisionSynthesisResult = Annotated[ProposalDecision | NoTradeDecision, Field(discriminator="kind")]

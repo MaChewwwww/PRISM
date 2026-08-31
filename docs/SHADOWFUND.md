@@ -1,43 +1,39 @@
-# ShadowFund
+# ShadowFund / Shadow Portfolio
 
-ShadowFund is PRISM's non-executable counterfactual evaluation boundary. It compares alternate choices against the same subsequent market path without submitting, amending, or cancelling broker orders.
+ShadowFund is PRISM's durable, non-executable counterfactual engine. It never creates, authorizes, amends, cancels, or submits an order. It writes only its own immutable evaluation records and reads timestamped market observations through market-data adapters.
 
-The current skeleton exposes an `illustrative_fixture` presentation of ShadowFund branches. It does not implement valuation, persistence, provider ingestion, or a paper-account adapter, and it must not be described as a completed engine.
+## Lifecycle
 
-## Future lifecycle
+Every terminal autonomous decision (`APPROVE`, `REJECT`, `MODIFIED_PENDING_ACCEPTANCE`, and durable `NO_TRADE`) creates one session bound to an immutable evaluation-root digest. A session records the proposal and authorization linkage when available, ruleset/profile versions, source feed/mode, valuation-policy version, input digest, horizon, and explicit refusal reason.
 
-1. A completed authorization or significant rejection creates an immutable evaluation root.
-2. Each branch changes exactly one declared decision variable and references the same evidence/snapshot lineage.
-3. Timestamped market observations are normalized with source, freshness, and valuation policy.
-4. Every comparable branch is valued under the same deterministic policy.
-5. Branches close at the configured horizon or a deterministic exit.
-6. Results become asynchronous Post-Analysis evidence; they never create execution authority or activate a profile.
+Each session has the canonical branch set:
 
-## Canonical branches
+| Branch | Semantics |
+| --- | --- |
+| Chosen path | Confirmed paper fill when one is available; otherwise cash. |
+| Cash / no action | Always a complete zero-risk control. |
+| Half-size | The primary eligible strategy at exactly `0.5x` virtual economics. Fractional virtual contracts are disclosed and never sent to Alpaca. |
+| Contrarian | Opposite directional intent, with contracts selected by the existing deterministic eligibility gate. |
+| AI specialist alternative | Agent 7 supplies strict direction/structure/rationale intent only. Deterministic code selects contracts; invalid or ineligible intent is an incomplete branch. |
 
-| Branch | Variation | Provenance label |
-| --- | --- | --- |
-| Cash / no action | No position | `ShadowFund` when produced by the engine; `Illustrative fixture` in the current dataset |
-| Half size | Same structure at 0.5x allocation | Same rule |
-| Unhedged or contrarian | Explicit alternate structure/direction | Same rule |
-| Specialist alternative | A declared alternative extracted by Trading Decision | Same rule |
+Sessions with no viable proposal remain cash-only `INCOMPLETE` evidence rather than being omitted. Branch entry/marks use timestamped bid/ask observations, the authorized freshness and spread controls, approved option economics, and deterministic take-profit, stop-loss, DTE, and horizon exits. Missing, stale, incomplete, unauthorized, or entitlement-blocked observations become `INCOMPLETE` / `DATA_UNAVAILABLE`; no midpoint, fill, or favorable mark is invented.
 
-Additional branches require versioned definitions. Counterfactuals never weaken the deterministic gate.
+The production observation cadence is entry, each 5-minute autonomous cycle, virtual exit, and horizon close. The official four-trading-day scoring horizon is the BA-owned scoring/force-flatten timestamp. Staging invokes the same configured Agent 1-7 research pipeline against point-in-time historical bars, news, and SEC filings; unavailable historical option contracts/quotes remain a visible `DATA_UNAVAILABLE` / cash-only result rather than an invented trade.
 
-## Metrics and assumptions
+## Persistence and presentation
 
-A completed branch records gross/net P&L, maximum adverse/favorable excursion, drawdown, exposure duration, capital at risk, fill/valuation confidence, data completeness, and comparison delta. Options retain intrinsic/extrinsic assumptions, spread width, expiration proximity, and mark method.
+`shadow_sessions`, `shadow_branches`, `shadow_observations`, `shadow_valuations`, `shadow_post_analysis_batches`, and `shadow_profile_recommendations` are separate from paper execution, active portfolio, and backtest run records. The evaluation-root digest is unique. Each persisted observation has a SHA-256 input payload digest.
 
-Inputs may arrive late or incomplete. Missing inputs produce an explicit incomplete outcome, never a favorable imputation. Money, quantities, percentages, and ratios are decimal strings at API boundaries; timestamps are UTC.
+The existing authenticated `/presentation/alternatives` routes project these records. In production they use `data_mode=recorded`; in staging they select only the active completed backtest run and use `data_mode=simulated` with **Historical simulation** provenance. Staging branch projections retain the semantic `branch_key` and expose hypothetical touch fills, entry/exit times, slippage, and per-leg details without calling them Alpaca paper fills. No completed staging run produces a structurally valid explicit empty state, never a fixture fallback. Virtual values are never called Alpaca paper fills or Active Portfolio values.
 
-## Evaluation horizons
+The deterministic staging replay uses the August 24–27, 2026 four-session analogue, one strict decision per symbol at the 09:30 ET open, and five-minute management through the close. New entries stop at the Wednesday close and all open branches force-flatten at Thursday close. A provider preflight or required NBBO gap fails the run closed; it never creates a synthetic mark.
 
-The reusable evaluation policy supports intraday and five-trading-day views. The hackathon operating configuration uses a primary four-trading-day horizon to match its tighter holding override while retaining the intraday view. Counterfactual branches are evaluated through the official scoring point of total account equity at EOD Thursday Sep 3, 2026; the agent starts Monday Aug 31 at 09:30 ET. This does not replace the separate 14-day baseline position holding limit.
+## Post-Analysis
 
-## Limitations
+Consolidated post-analysis runs automatically every Friday after the US equity market closes (`weekly_friday_post_analysis`), at the production hackathon official scoring/force-flatten milestone (`official_scoring`), and upon completion of a staging historical backtest (`completed_historical_backtest`). The evidence-qualified `PostAnalysisAgent` gathers weekly paper executions, risk metrics, and ShadowFund counterfactual branch marks to synthesize structured findings and propose calibrations strictly within BA-authorized AI Profile fields (`target_position_size_pct`, `opportunity_score_threshold`, `take_profit_pct`, `stop_loss_pct`). When trading/shadow evidence is empty or insufficient, the system safely records an explicit fail-closed `NO_RECOMMENDATION` batch without mutating profile state. The profile-governance service validates batches deterministically and creates successor profiles through authenticated manual activation or the operator's persisted `automatic` calibration preference. Neither mode can amend an immutable ruleset or execute orders.
 
-Shadow results are simulations. They do not reproduce market impact, queue position, all latency, partial fills, price improvement, assignment, fees, or thin-options liquidity. Every result must disclose its coverage, valuation policy, and uncertainty.
+## Alpaca and data limits
 
-## Safety boundary
+Historical market-data access is read-only. Historical options data starts in February 2024; inactive contracts are historical-adapter-only. Historical option quote availability depends on the entitled feed: Basic options access is indicative and limited to recent data, so unavailable historical observations fail closed. Sources retrieved 2026-08-31: [Historical API](https://docs.alpaca.markets/us/docs/historical-api), [Historical Option Data](https://docs.alpaca.markets/us/docs/historical-option-data), and [Market Data API plans](https://docs.alpaca.markets/us/docs/about-market-data-api).
 
-ShadowFund cannot submit orders or authorize proposals. Post-Analysis can recommend changes only to the bounded AI Profile fields in `AI_PROFILES.md`; deterministic validation and manual review remain mandatory.
+ShadowFund evaluates counterfactual capability and data/governance behavior, not strategy performance. It does not model market impact, queue position, latency, partial fills, price improvement, assignment, fees, or thin-options liquidity.

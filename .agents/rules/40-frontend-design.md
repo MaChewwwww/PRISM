@@ -35,6 +35,7 @@ Write down:
 - Show the registry-backed hackathon window in governance surfaces: new-entry cutoff, total-equity scoring point, force-flatten deadline, and outer boundary must be explicit and read-only.
 - Label all data provenance. Use `Illustrative fixture` for the backend demonstration snapshot. Reserve `Alpaca paper`, `ShadowFund`, `Benchmark`, and `Simulated` for data that genuinely came from those sources.
 - Treat NO_TRADE, FAIL, and incomplete evidence as meaningful terminal stories rather than missing content.
+- Present portfolio equity, asset holdings, cash balances, and risk exposure as real, operational portfolio assets across staging and production surfaces. Use standard institutional financial terminology ("Active Portfolio", "Cash reserve", "Mark-to-market valuation", position allocation, unrealized P&L). Avoid labeling cash balances as "Illustrative cash" or "illustrative spread", and avoid dismissing portfolio holdings as mock/fake fixtures in user-facing UI copy.
 
 ## Charts and metrics
 

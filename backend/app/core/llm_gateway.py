@@ -11,6 +11,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings, get_settings
+from app.observability.usage import record_llm_usage
 
 
 class LLMError(Exception):
@@ -36,9 +37,9 @@ class LLMCompletionResult[T: BaseModel]:
     raw_digest: str
     model: str
     provider: str
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    total_tokens: int | None
     latency_ms: int
     trace_id: UUID
 
@@ -47,6 +48,19 @@ DEFAULT_SYSTEM_PROMPT = (
     "You are a specialized financial analysis and structured reasoning agent for PRISM. "
     "Output strictly valid JSON matching the schema."
 )
+
+
+_shared_client: httpx.AsyncClient | None = None
+
+
+def _get_shared_client() -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(
+            timeout=60.0,
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+        )
+    return _shared_client
 
 
 class LLMGateway:
@@ -107,6 +121,7 @@ class LLMGateway:
         temperature: float = 0.0,
         trace_id: UUID | None = None,
         timeout_seconds: float = 30.0,
+        max_tokens: int | None = None,
     ) -> LLMCompletionResult[T]:
         """Execute a completion with strict Pydantic response validation and SHA256 audit digest."""
         resolved_trace_id = trace_id or uuid4()
@@ -138,18 +153,15 @@ class LLMGateway:
             "temperature": temperature,
             "response_format": {"type": "json_object"},
         }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
 
         start_time = time.perf_counter()
         try:
-            if self._client:
-                response = await self._client.post(
-                    endpoint, json=payload, headers=headers, timeout=timeout_seconds
-                )
-            else:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        endpoint, json=payload, headers=headers, timeout=timeout_seconds
-                    )
+            client = self._client or _get_shared_client()
+            response = await client.post(
+                endpoint, json=payload, headers=headers, timeout=timeout_seconds
+            )
         except httpx.TimeoutException as exc:
             raise LLMNetworkError(f"LLM request timed out after {timeout_seconds}s") from exc
         except httpx.RequestError as exc:
@@ -162,7 +174,10 @@ class LLMGateway:
 
         resp_json = response.json()
         try:
-            raw_content = resp_json["choices"][0]["message"]["content"]
+            choice_msg = resp_json["choices"][0]["message"]
+            raw_content = choice_msg.get("content") or ""
+            if not raw_content and choice_msg.get("reasoning_content"):
+                raw_content = choice_msg.get("reasoning_content") or ""
         except (KeyError, IndexError) as exc:
             raise LLMValidationError("Malformed LLM response structure") from exc
 
@@ -170,16 +185,33 @@ class LLMGateway:
         raw_digest = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()
 
         usage = resp_json.get("usage", {})
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+        usage_available = "prompt_tokens" in usage and "completion_tokens" in usage
+        prompt_tokens = int(usage["prompt_tokens"]) if usage_available else None
+        completion_tokens = int(usage["completion_tokens"]) if usage_available else None
+        total_tokens = (
+            int(usage.get("total_tokens", (prompt_tokens or 0) + (completion_tokens or 0)))
+            if usage_available
+            else None
+        )
+        await record_llm_usage(
+            settings=self._settings,
+            trace_id=resolved_trace_id,
+            provider=provider,
+            model=target_model,
+            operation=response_model.__name__,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            latency_ms=latency_ms,
+            raw_digest=raw_digest,
+        )
 
-        # Parse and validate with Pydantic
+        # Robust JSON substring extraction
         clean_text = raw_content.strip()
-        if clean_text.startswith("```"):
-            clean_text = clean_text.strip("`")
-            if clean_text.startswith("json"):
-                clean_text = clean_text[4:].strip()
+        start_idx = clean_text.find("{")
+        end_idx = clean_text.rfind("}")
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            clean_text = clean_text[start_idx : end_idx + 1]
 
         try:
             parsed_instance = response_model.model_validate_json(clean_text)

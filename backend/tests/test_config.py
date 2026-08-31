@@ -50,7 +50,7 @@ def test_autonomous_trading_requires_explicit_execution_and_schedule() -> None:
         )
 
 
-def test_staging_autonomous_trading_window_can_be_used_for_rehearsal() -> None:
+def test_staging_rejects_autonomous_trading() -> None:
     common = {
         "_env_file": None,
         "environment": "staging",
@@ -64,8 +64,8 @@ def test_staging_autonomous_trading_window_can_be_used_for_rehearsal() -> None:
         "autonomous_trading_start_at": "2026-08-29T00:00:00Z",
         "autonomous_trading_end_at": "2026-08-30T00:00:00Z",
     }
-    settings = Settings(**common)
-    assert settings.autonomous_trading_window_active(datetime(2026, 8, 29, 12, tzinfo=UTC)) is True
+    with pytest.raises(ValidationError, match="Staging autonomous trading is prohibited"):
+        Settings(**common)
 
 
 def test_production_autonomous_trading_window_is_bounded_by_authorized_hackathon_window() -> None:
@@ -93,7 +93,7 @@ def test_production_autonomous_trading_window_is_bounded_by_authorized_hackathon
 
 def test_llm_configuration_defaults() -> None:
     settings = Settings(_env_file=None)
-    assert settings.llm_provider == "anthropic"
+    assert settings.llm_provider == "featherless"
     assert settings.llm_model is None
     assert settings.anthropic_api_key is None
     assert settings.gemini_api_key is None
@@ -110,3 +110,24 @@ def test_llm_configuration_defaults() -> None:
 def test_staging_rejects_example_authentication_secrets() -> None:
     with pytest.raises(ValidationError, match="non-example AUTH_PASSWORD"):
         Settings(_env_file=None, environment="staging")
+
+
+def test_staging_shadowfund_requires_explicit_backtest_boundary() -> None:
+    with pytest.raises(ValidationError, match="Staging ShadowFund requires"):
+        Settings(
+            _env_file=None,
+            environment="staging",
+            auth_password="staging-password-123",
+            auth_secret_key="s" * 32,
+            shadowfund_enabled=True,
+        )
+
+    settings = Settings(
+        _env_file=None,
+        environment="staging",
+        auth_password="staging-password-123",
+        auth_secret_key="s" * 32,
+        shadowfund_enabled=True,
+        backtest_simulation_enabled=True,
+    )
+    assert settings.shadowfund_enabled is True

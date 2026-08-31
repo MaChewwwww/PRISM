@@ -1,19 +1,31 @@
-import { CalendarCheck, Clock3, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { ArrowDownWideNarrow, GaugeCircle, Gavel, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Suspense } from "react";
 
-import { DemoDataNotice, PageHeader, Section, StateBadge } from "@/components/product/workspace-ui";
-import { getGovernance, getWeeklySummary } from "@/features/story/presentation-api";
+import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
+import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
+import { getGovernance } from "@/features/story/presentation-api";
+import { ProfileEditor } from "@/features/story/profile-editor";
 
-function formatEastern(value: string): string {
-  return `${new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value))} ET`;
-}
+const TH = "px-5 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]";
+const TD = "px-5 py-3.5 text-[12px] text-[#CBD5E1]";
+const TD_NUM = "px-5 py-3.5 font-mono text-[14px] tabular-nums text-[#CBD5E1]";
+
+/** Order in which final executable size is constrained (BUSINESS_RULES.md / FRG-12). */
+const SIZING_CAPS = [
+  {
+    label: "Profile target allocation",
+    detail: "Tier 2 preference — the starting point, not a floor.",
+  },
+  { label: "Per-trade stop-risk cap", detail: "1.00% normal / 0.75% volatile of current equity." },
+  { label: "Ticker / sector / cluster concentration", detail: "5.00% / 10.00% / 7.50% maximums." },
+  { label: "Aggregate portfolio-risk cap", detail: "3.00% modeled hard-stop risk maximum." },
+  { label: "Regime cap", detail: "VOLATILE caps size at 1.50% and risk at 0.75%." },
+  { label: "Liquidity cap", detail: "Bid/ask spread must stay within 10.00% of premium." },
+  { label: "Buying-power cap", detail: "At least a 5.00% cash / buying-power reserve remains." },
+];
 
 export default async function RulesPage() {
-  const [governance, summary] = await Promise.all([getGovernance(), getWeeklySummary()]);
+  const governance = await getGovernance();
 
   return (
     <>
@@ -22,153 +34,100 @@ export default async function RulesPage() {
         title="Ruleset and AI Profile Boundaries"
         description="Inspect the BA-authorized ruleset and the active Balanced profile. This surface is read-only and creates no execution authority."
       >
-        <div className="mode-stamp">
-          <ShieldCheck aria-hidden="true" /> Fails closed
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#00D084]/30 bg-[#00D084]/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#00D084]">
+          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Fails closed
         </div>
       </PageHeader>
-      <DemoDataNotice />
 
-      <Section
-        id="hackathon-window"
-        title="Hackathon operating window"
-        description="The BA-authorized registry values are UTC; the operator view includes Eastern Time labels. The score is total account equity, not cash balance."
-      >
-        <div className="table-wrap prism-glass-card">
-          <table>
-            <caption>Read-only entry, scoring, and force-flatten controls</caption>
-            <thead>
-              <tr>
-                <th>Control</th>
-                <th>UTC registry value</th>
-                <th>Operator view</th>
-                <th>Operational meaning</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(
-                [
-                  [
-                    "Trading start",
-                    governance.hackathonWindow.tradingStartAt,
-                    "First eligible entry time.",
-                  ],
-                  [
-                    "New-entry cutoff",
-                    governance.hackathonWindow.newEntryCutoffAt,
-                    "Manage or exit existing positions only after this point.",
-                  ],
-                  [
-                    "Official scoring point",
-                    governance.hackathonWindow.officialScoringAt,
-                    "Total account equity used for the official comparison.",
-                  ],
-                  [
-                    "Force-flatten deadline",
-                    governance.hackathonWindow.forceFlattenBy,
-                    "Close all positions before settlement and scoring.",
-                  ],
-                  [
-                    "Window outer boundary",
-                    governance.hackathonWindow.windowOuterBoundaryAt,
-                    "Window edge only; it does not extend scoring.",
-                  ],
-                ] as const
-              ).map(([label, value, meaning]) => (
-                <tr key={label}>
-                  <th scope="row">{label}</th>
-                  <td className="font-mono tabular-nums">{value}</td>
-                  <td>{formatEastern(value)}</td>
-                  <td>{meaning}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="inspector-note mt-3">
-          <Clock3 aria-hidden="true" />
-          <p>
-            Effective maximum hold: {governance.hackathonWindow.effectiveMaxHoldTradingDays} trading
-            days. A Sep-3-expiring contract must not be held into settlement; the 0-DTE block, DTE
-            exit, and force-flatten are cumulative controls.
-          </p>
-        </div>
-      </Section>
-
-      <Link href="/weekly-summary" className="rules-callout">
-        <span className="rules-callout-icon">
-          <Sparkles aria-hidden="true" />
-        </span>
-        <div>
-          <strong>
-            {summary.suggestions.length} bounded profile recommendation
-            {summary.suggestions.length === 1 ? "" : "s"}
-          </strong>
-          <span>
-            Post-Analysis recommendations require deterministic validation and manual review.
-          </span>
-        </div>
-        <span className="rules-callout-arrow" aria-hidden="true">
-          -&gt;
-        </span>
-      </Link>
-
-      <Section
-        id="rule-semantics"
-        title="Decision vocabulary"
-        description="Individual rule outcomes and aggregate authorization outcomes are intentionally separate."
-      >
-        <div className="semantics-row">
-          {(["PASS", "MODIFY", "FAIL"] as const).map((state) => (
-            <div key={state}>
-              <StateBadge state={state} />
-              <h3>{state}</h3>
-              <p>{governance.decisionSemantics[state]}</p>
+      {/* Ruleset identity cards */}
+      <section aria-label="Active ruleset identity" className="mt-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            { label: "Ruleset status", value: governance.rulesetStatus },
+            { label: "Active profile", value: governance.activeProfile },
+            { label: "Execution mode", value: "Paper-only · disabled" },
+          ].map((item) => (
+            <div key={item.label} className={`${SECTION_CARD} p-5`}>
+              <p className="font-mono text-[10px] uppercase tracking-[0.09em] text-[#64748B]">
+                {item.label}
+              </p>
+              <p className="mt-2 font-mono text-[16px] font-semibold capitalize tabular-nums text-[#F8FAFC] break-words">
+                {item.value}
+              </p>
             </div>
           ))}
         </div>
-        <div className="semantics-row mt-3">
-          {(["APPROVE", "REJECT", "MODIFIED_PENDING_ACCEPTANCE"] as const).map((state) => (
-            <div key={state}>
-              <StateBadge state={state} />
-              <h3>{state.replaceAll("_", " ")}</h3>
-              <p>{governance.decisionSemantics[state]}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
+      </section>
 
-      <Section
-        id="active-profile"
-        title="Active Balanced Profile"
-        description={`Ruleset ${governance.rulesetId}@${governance.rulesetVersion}. Values may vary only inside the approved bounds.`}
-      >
-        <div className="table-wrap prism-glass-card">
-          <table>
-            <caption>Read-only AI Profile parameters and deterministic bounds</caption>
+      {/* Tier 1 — Deterministic controls (locked/governed) */}
+      <section aria-labelledby="hard-controls" className="mt-8">
+        <SectionHeading
+          id="hard-controls"
+          icon={LockKeyhole}
+          title="Deterministic Controls"
+          subtitle="Locked and governed. AI Profiles and Post-Analysis cannot weaken these BA-authorized or platform-level boundaries."
+        />
+        <div className={`${SECTION_CARD} p-5 sm:p-6`}>
+          <ul className="space-y-2">
+            {governance.hardRules.map((rule) => (
+              <li key={rule.ruleId} className="rounded-xl border border-white/8 bg-white/2 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[14px] font-semibold text-[#F8FAFC]">{rule.name}</span>
+                  <span className="inline-flex shrink-0 items-center gap-1.5">
+                    <StateBadge state="enforced" />
+                    <LockKeyhole className="h-4 w-4 text-[#547D83]" aria-hidden="true" />
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-[#94A3B8]">
+                  {rule.explanation}
+                </p>
+                <code className="mt-2 inline-block rounded border border-white/8 bg-white/5 px-2 py-0.5 font-mono text-[12px] text-[#CBD5E1]">
+                  {rule.activeValue}
+                </code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Active profile (read-only summary) */}
+      <section aria-labelledby="active-profile" className="mt-6">
+        <SectionHeading
+          id="active-profile"
+          icon={Gavel}
+          title="Active Balanced Profile"
+          subtitle={`Ruleset ${governance.rulesetId}@${governance.rulesetVersion}. Values may vary only inside the approved bounds.`}
+        />
+        <div className={`${SECTION_CARD} overflow-x-auto`}>
+          <table className="w-full min-w-[44rem] border-collapse text-left">
+            <caption className="sr-only">
+              Read-only AI Profile parameters and deterministic bounds
+            </caption>
             <thead>
-              <tr>
-                <th>Parameter</th>
-                <th>Active</th>
-                <th>Minimum</th>
-                <th>Maximum</th>
-                <th>Unit</th>
-                <th>Boundary</th>
+              <tr className="border-b border-white/8">
+                {["Parameter", "Active", "Minimum", "Maximum", "Unit", "Boundary"].map((label) => (
+                  <th key={label} scope="col" className={TH}>
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {governance.profileParameters.map((parameter) => (
-                <tr key={parameter.id}>
-                  <th scope="row">
-                    {parameter.name}
-                    <span className="block text-xs font-normal text-slate-400">
+                <tr key={parameter.id} className="not-last:border-b not-last:border-white/8">
+                  <th scope="row" className="px-5 py-3.5">
+                    <strong className="block text-[14px] font-semibold text-[#F8FAFC]">
+                      {parameter.name}
+                    </strong>
+                    <span className="mt-0.5 block !text-[10px] font-normal text-[#64748B]">
                       {parameter.description}
                     </span>
                   </th>
-                  <td className="font-mono tabular-nums">{parameter.activeValue}</td>
-                  <td className="font-mono tabular-nums">{parameter.minimum}</td>
-                  <td className="font-mono tabular-nums">{parameter.maximum}</td>
-                  <td>{parameter.unit}</td>
-                  <td>
+                  <td className={TD_NUM}>{parameter.activeValue}</td>
+                  <td className={TD_NUM}>{parameter.minimum}</td>
+                  <td className={TD_NUM}>{parameter.maximum}</td>
+                  <td className={TD}>{parameter.unit}</td>
+                  <td className="px-5 py-3.5">
                     <StateBadge state="enforced" />
                   </td>
                 </tr>
@@ -176,54 +135,67 @@ export default async function RulesPage() {
             </tbody>
           </table>
         </div>
-      </Section>
+      </section>
 
-      <Section
-        id="version-history"
-        title="Ruleset history"
-        description="Activated rulesets are immutable and remain identifiable in every decision trace."
-      >
-        <ol className="version-list">
-          {governance.versions.map((version) => (
-            <li key={version.version}>
-              <div>
-                <strong>{version.version}</strong>
-                <span>{version.summary}</span>
-              </div>
-              <StateBadge state={version.state} />
-            </li>
-          ))}
-        </ol>
-      </Section>
+      {/* Configure AI profile (Tier 2, operator-configurable) */}
+      <section aria-labelledby="configure-profile" className="mt-6">
+        <Suspense fallback={null}>
+          <ProfileEditor
+            profileParameters={governance.profileParameters}
+            profiles={governance.profiles}
+          />
+        </Suspense>
+      </section>
 
-      <Section
-        id="hard-controls"
-        title="Deterministic controls"
-        description="AI Profiles and Post-Analysis cannot weaken these BA-authorized or platform-level boundaries."
-      >
-        <ol className="hard-rule-list">
-          {governance.hardRules.map((rule) => (
-            <li key={rule.ruleId}>
-              <span>{rule.priority}</span>
-              <LockKeyhole aria-hidden="true" />
-              <div>
-                <h3>{rule.name}</h3>
-                <p>{rule.explanation}</p>
-                <code>{rule.activeValue}</code>
-              </div>
-              <StateBadge state="enforced" />
-            </li>
-          ))}
-        </ol>
-        <div className="inspector-note mt-3">
-          <CalendarCheck aria-hidden="true" />
-          <p>
-            Profile recommendations are reviewed in{" "}
-            <Link href="/weekly-summary">Weekly Summary</Link>. Automatic profile switching remains
-            deferred.
+      {/* Sizing resolution explainer (compact) — ties Tier 1 to Tier 2 */}
+      <section aria-labelledby="sizing-resolution" className="mt-8">
+        <SectionHeading
+          id="sizing-resolution"
+          icon={ArrowDownWideNarrow}
+          title="How Final Position Size Is Resolved"
+          subtitle="Your Tier 2 target is only the starting preference; any Tier 1 cap can reduce it."
+        />
+        <div className={`${SECTION_CARD} p-5 sm:p-6`}>
+          <p className="text-[13px] leading-relaxed text-[#CBD5E1]">
+            Final allocation is the <span className="font-semibold text-[#F8FAFC]">minimum</span> of
+            the profile target and every hard cap below, then rounded down to a whole-contract size.
+            A tighter cap always wins.
           </p>
+          <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SIZING_CAPS.map((cap) => (
+              <div key={cap.label} className="rounded-xl border border-white/8 bg-white/2 p-3.5">
+                <dt className="text-[13px] font-semibold text-[#F8FAFC]">{cap.label}</dt>
+                <dd className="mt-0.5 text-[12px] leading-relaxed text-[#94A3B8]">{cap.detail}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      </Section>
+      </section>
+
+      {/* Decision vocabulary */}
+      <section aria-labelledby="rule-semantics" className="mt-8">
+        <SectionHeading
+          id="rule-semantics"
+          icon={GaugeCircle}
+          title="Decision Vocabulary"
+          subtitle="Individual rule outcomes and aggregate authorization outcomes are intentionally separate."
+        />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {(
+            ["PASS", "MODIFY", "FAIL", "APPROVE", "REJECT", "MODIFIED_PENDING_ACCEPTANCE"] as const
+          ).map((state) => (
+            <div key={state} className={`${SECTION_CARD} p-4`}>
+              <StateBadge state={state} />
+              <h3 className="mt-2.5 text-[13px] font-semibold text-[#F8FAFC]">
+                {state.replaceAll("_", " ")}
+              </h3>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#94A3B8]">
+                {governance.decisionSemantics[state]}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
     </>
   );
 }

@@ -30,12 +30,17 @@ const summary: WeeklySummary = {
 };
 
 describe("WeeklySummaryClient", () => {
-  it("keeps bounded recommendations in manual review without an activation action", () => {
+  it("keeps bounded recommendations in manual review and links to the profile editor", () => {
     render(<WeeklySummaryClient summary={summary} />);
 
-    expect(screen.getByText("Manual Prescriptive mode")).toBeInTheDocument();
+    expect(screen.getByText(/Manual Prescriptive mode/)).toBeInTheDocument();
     expect(screen.getByText(/Automatic switching is deferred/)).toBeInTheDocument();
     expect(screen.getByText("75.00 to 100.00")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Validate and activate profile/ })).toBeDisabled();
+
+    const applyLink = screen.getByRole("link", { name: /Apply in profile editor/ });
+    expect(applyLink).toHaveAttribute(
+      "href",
+      expect.stringContaining("/rules?apply=take_profit_pct&value=80.00"),
+    );
   });
 });

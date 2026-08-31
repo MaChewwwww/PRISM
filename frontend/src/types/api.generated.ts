@@ -55,6 +55,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/autonomous/cycles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cycles */
+        get: operations["cycles_api_v1_autonomous_cycles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Decisions */
+        get: operations["decisions_api_v1_autonomous_decisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Executions */
+        get: operations["executions_api_v1_autonomous_executions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/kill-switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Autonomous Kill Switch */
+        post: operations["autonomous_kill_switch_api_v1_autonomous_kill_switch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/portfolio/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Portfolio */
+        get: operations["latest_portfolio_api_v1_autonomous_portfolio_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/autonomous/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Autonomous Status */
+        get: operations["autonomous_status_api_v1_autonomous_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -81,6 +183,23 @@ export interface paths {
         };
         /** Ready */
         get: operations["ready_api_v1_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/llm-usage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Llm Usage Summary */
+        get: operations["llm_usage_summary_api_v1_llm_usage_summary_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -270,6 +389,157 @@ export interface paths {
         get: operations["weekly_summary_api_v1_presentation_weekly_summary_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/activate-post-analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate Post Analysis Profile */
+        post: operations["activate_post_analysis_profile_api_v1_profiles_activate_post_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/calibration-preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Calibration Preference */
+        put: operations["update_calibration_preference_api_v1_profiles_calibration_preference_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profile Governance Status */
+        get: operations["profile_governance_status_api_v1_profiles_governance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/decision/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Decision
+         * @description Perform master synthesis and return a canonical proposal or explicit NO_TRADE.
+         */
+        post: operations["synthesize_decision_api_v1_research_decision_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/decision/synthesize/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Decision Stream
+         * @description Stream decision synthesis progress via Server-Sent Events.
+         */
+        post: operations["synthesize_decision_stream_api_v1_research_decision_synthesize_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/fundamental/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Fundamental
+         * @description Perform 100% deterministic fundamental financial statement and valuation analysis.
+         */
+        post: operations["analyze_fundamental_api_v1_research_fundamental_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/industry/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Industry
+         * @description Perform industry, competitive landscape, and relative alpha intelligence analysis.
+         */
+        post: operations["analyze_industry_api_v1_research_industry_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/macro/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Macro
+         * @description Perform macroeconomic regime, interest rate, and cross-asset intelligence analysis.
+         */
+        post: operations["analyze_macro_api_v1_research_macro_analyze_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -488,6 +758,27 @@ export interface components {
          * @enum {string}
          */
         ActivationMode: "manual";
+        /** ActiveProfileResponse */
+        ActiveProfileResponse: {
+            /**
+             * Activation Mode
+             * @enum {string}
+             */
+            activation_mode: "manual" | "automatic";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            parameters: components["schemas"]["ProfileParameters"];
+            /**
+             * Profile Key
+             * @enum {string}
+             */
+            profile_key: "conservative" | "balanced" | "aggressive";
+            /** Version */
+            version: number;
+        };
         /** Activity */
         Activity: {
             /** Amount */
@@ -580,28 +871,70 @@ export interface components {
         };
         /** AlternativeBranch */
         AlternativeBranch: {
+            /** Allocationmultiplier */
+            allocationMultiplier?: string | null;
+            /** Branchkey */
+            branchKey: string;
+            /** Capitalatrisk */
+            capitalAtRisk?: string | null;
+            /**
+             * Chosenpath
+             * @default false
+             */
+            chosenPath: boolean;
             /** Coverage */
             coverage: string;
             /** Deltavschosen */
             deltaVsChosen: string;
             /** Drawdown */
             drawdown: string;
+            /** Duration */
+            duration?: string | null;
+            /** Entryexitpolicy */
+            entryExitPolicy?: string | null;
+            /** Grosspnl */
+            grossPnl?: string | null;
             /** Id */
             id: string;
             /** Label */
             label: string;
+            /** Mae */
+            mae?: string | null;
+            /** Mfe */
+            mfe?: string | null;
+            /** Netpnl */
+            netPnl?: string | null;
             /** Pnl */
             pnl: string;
+            /** Refusalreason */
+            refusalReason?: string | null;
+            simulatedFill?: components["schemas"]["AlternativeSimulatedFill"] | null;
             /**
              * Status
              * @enum {string}
              */
-            status: "complete" | "incomplete";
+            status: "open" | "complete" | "incomplete";
+            /** Valuationconfidence */
+            valuationConfidence?: string | null;
             /** Variation */
             variation: string;
         };
         /** AlternativeCollection */
         AlternativeCollection: {
+            /** Aggregatepath */
+            aggregatePath?: components["schemas"]["ChartPoint"][];
+            /**
+             * Completedsessions
+             * @default 0
+             */
+            completedSessions: number;
+            /** Emptymessage */
+            emptyMessage?: string | null;
+            /**
+             * Incompletesessions
+             * @default 0
+             */
+            incompleteSessions: number;
             /** Sessions */
             sessions: components["schemas"]["AlternativeSession"][];
         };
@@ -619,6 +952,8 @@ export interface components {
             chosenPathPnl: string;
             /** Coverage */
             coverage: string;
+            /** Evaluationrootdigest */
+            evaluationRootDigest?: string | null;
             /** Id */
             id: string;
             /** Limitations */
@@ -630,15 +965,114 @@ export interface components {
             occurredAt: string;
             /** Path */
             path: components["schemas"]["ChartPoint"][];
+            /** Profileversion */
+            profileVersion?: number | null;
+            /** Refusalreasons */
+            refusalReasons?: string[];
+            /** Rulesetversion */
+            rulesetVersion?: string | null;
+            simulation?: components["schemas"]["AlternativeSimulationMeta"] | null;
+            /** Sourcemode */
+            sourceMode?: ("production" | "staging") | null;
+            /**
+             * State
+             * @default incomplete
+             * @enum {string}
+             */
+            state: "open" | "complete" | "incomplete";
             /** Storyid */
             storyId: string;
             /** Summary */
             summary: string;
             /** Symbol */
             symbol: string;
+            /** Terminaloutcome */
+            terminalOutcome?: string | null;
             /** Title */
             title: string;
+            /** Valuationpolicyversion */
+            valuationPolicyVersion?: string | null;
         };
+        /** AlternativeSimulatedFill */
+        AlternativeSimulatedFill: {
+            /**
+             * Costmodel
+             * @constant
+             */
+            costModel: "observed_nbbo_touch";
+            /** Entryat */
+            entryAt?: string | null;
+            /** Entryprice */
+            entryPrice?: string | null;
+            /** Exitat */
+            exitAt?: string | null;
+            /** Exitprice */
+            exitPrice?: string | null;
+            /** Exitreason */
+            exitReason?: string | null;
+            /** Legs */
+            legs?: components["schemas"]["AlternativeSimulatedFillLeg"][];
+            /** Quantity */
+            quantity?: number | null;
+            /** Slippage */
+            slippage?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "filled" | "not_filled" | "incomplete";
+        };
+        /** AlternativeSimulatedFillLeg */
+        AlternativeSimulatedFillLeg: {
+            /** Entryprice */
+            entryPrice?: string | null;
+            /** Exitprice */
+            exitPrice?: string | null;
+            /** Optionsymbol */
+            optionSymbol: string;
+            /** Quantity */
+            quantity: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "buy" | "sell";
+        };
+        /** AlternativeSimulationMeta */
+        AlternativeSimulationMeta: {
+            /** Cadenceseconds */
+            cadenceSeconds: number;
+            /**
+             * Costmodel
+             * @constant
+             */
+            costModel: "observed_nbbo_touch";
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "historical_options";
+            /**
+             * Windowend
+             * Format: date-time
+             */
+            windowEnd: string;
+            /**
+             * Windowstart
+             * Format: date-time
+             */
+            windowStart: string;
+        };
+        /**
+         * AltmanZone
+         * @enum {string}
+         */
+        AltmanZone: "safe" | "grey" | "distress";
+        /**
+         * AssetMacroImpact
+         * @enum {string}
+         */
+        AssetMacroImpact: "strong_tailwind" | "moderate_tailwind" | "neutral" | "moderate_headwind" | "severe_headwind";
         /** AuditEvent */
         AuditEvent: {
             /** Actor Type */
@@ -771,6 +1205,254 @@ export interface components {
          * @enum {string}
          */
         AuthorizationOutcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+        /** AutonomousCycleCollection */
+        AutonomousCycleCollection: {
+            /** Empty Message */
+            empty_message?: string | null;
+            /** Items */
+            items: components["schemas"]["AutonomousCycleRead"][];
+        };
+        /**
+         * AutonomousCycleRead
+         * @description Redacted immutable outcome from one autonomous worker cycle.
+         */
+        AutonomousCycleRead: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "NO_TRADE" | "SUBMITTED" | "FAILED";
+            /** Reason */
+            reason: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Symbols */
+            symbols: string[];
+            /** Worker Version */
+            worker_version: string;
+        };
+        /** AutonomousDecisionCollection */
+        AutonomousDecisionCollection: {
+            /** Empty Message */
+            empty_message?: string | null;
+            /** Items */
+            items: components["schemas"]["AutonomousDecisionRead"][];
+        };
+        /**
+         * AutonomousDecisionRead
+         * @description Joined proposal, risk, and deterministic-authorization read model.
+         */
+        AutonomousDecisionRead: {
+            /**
+             * Authorization Outcome
+             * @enum {string}
+             */
+            authorization_outcome: "APPROVE" | "REJECT" | "MODIFIED_PENDING_ACCEPTANCE";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Decision At
+             * Format: date-time
+             */
+            decision_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Profile Version */
+            profile_version: number;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Risk Verdict */
+            risk_verdict?: string | null;
+            /** Rule Trace */
+            rule_trace: components["schemas"]["AutonomousRuleTraceSummary"][];
+            /** Ruleset Version */
+            ruleset_version: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** AutonomousExecutionCollection */
+        AutonomousExecutionCollection: {
+            /** Empty Message */
+            empty_message?: string | null;
+            /** Items */
+            items: components["schemas"]["AutonomousExecutionRead"][];
+        };
+        /**
+         * AutonomousExecutionRead
+         * @description Sanitized paper-order receipt; broker and client identifiers stay server-side.
+         */
+        AutonomousExecutionRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code?: string | null;
+            /** Filled Average Price */
+            filled_average_price?: string | null;
+            /**
+             * Filled Quantity
+             * Format: decimal-string
+             */
+            filled_quantity: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Reconciled At */
+            reconciled_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "submitted" | "reconciling" | "rejected" | "filled" | "failed";
+            /** Submitted At */
+            submitted_at?: string | null;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** AutonomousPortfolioLatest */
+        AutonomousPortfolioLatest: {
+            /** Empty Message */
+            empty_message?: string | null;
+            snapshot?: components["schemas"]["AutonomousPortfolioSnapshot"] | null;
+        };
+        /** AutonomousPortfolioSnapshot */
+        AutonomousPortfolioSnapshot: {
+            /** Account Values Complete */
+            account_values_complete: boolean;
+            /** Account Verified */
+            account_verified: boolean;
+            /** Buying Power */
+            buying_power?: string | null;
+            /** Cash */
+            cash?: string | null;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Portfolio Value */
+            portfolio_value?: string | null;
+            /** Positions */
+            positions: components["schemas"]["AutonomousPositionRead"][];
+            /** Start Of Day Equity */
+            start_of_day_equity?: string | null;
+            /** Supported Options Level */
+            supported_options_level?: number | null;
+        };
+        /**
+         * AutonomousPositionRead
+         * @description Normalized position fields safe for the authenticated operator surface.
+         */
+        AutonomousPositionRead: {
+            /** Asset Class */
+            asset_class: string;
+            /** Average Entry Price */
+            average_entry_price?: string | null;
+            /** Correlated Cluster */
+            correlated_cluster?: string | null;
+            /** Delta */
+            delta?: string | null;
+            /** Expiration */
+            expiration?: string | null;
+            /** Market Value */
+            market_value?: string | null;
+            /** Metadata Complete */
+            metadata_complete: boolean;
+            /** Quantity */
+            quantity?: string | null;
+            /** Quote Age Seconds */
+            quote_age_seconds?: string | null;
+            /** Sector */
+            sector?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Underlying */
+            underlying: string;
+            /** Unrealized Pl */
+            unrealized_pl?: string | null;
+            /** Unrealized Plpc */
+            unrealized_plpc?: string | null;
+            /** Vega */
+            vega?: string | null;
+        };
+        /** AutonomousRuleTraceSummary */
+        AutonomousRuleTraceSummary: {
+            /** Explanation */
+            explanation: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "PASS" | "MODIFY" | "FAIL";
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "P0" | "P1" | "P2" | "P3" | "P4" | "P5";
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Rule Id */
+            rule_id: string;
+        };
+        /** AutonomousStatus */
+        AutonomousStatus: {
+            /** Autonomous Enabled */
+            autonomous_enabled: boolean;
+            /** Execution Enabled */
+            execution_enabled: boolean;
+            /** Kill Switch Active */
+            kill_switch_active: boolean;
+            /** Reason */
+            reason: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By */
+            updated_by: string;
+        };
+        /**
+         * BalanceSheetRedFlag
+         * @enum {string}
+         */
+        BalanceSheetRedFlag: "accrual_earnings_divergence" | "working_capital_deficit" | "high_leverage_burden" | "interest_coverage_strain" | "altman_distress_risk" | "none_detected";
         /** BollingerBands */
         BollingerBands: {
             /**
@@ -799,6 +1481,31 @@ export interface components {
              */
             upper: string;
         };
+        /** CalibrationPreferenceRequest */
+        CalibrationPreferenceRequest: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "manual" | "automatic";
+        };
+        /** CalibrationPreferenceResponse */
+        CalibrationPreferenceResponse: {
+            /** Automatic Opt In */
+            automatic_opt_in: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "manual" | "automatic";
+            /** Operator Id */
+            operator_id: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** Catalyst */
         Catalyst: {
             /** Classification */
@@ -817,6 +1524,16 @@ export interface components {
             /** Source */
             source: string;
         };
+        /**
+         * CatalystDecayStatus
+         * @enum {string}
+         */
+        CatalystDecayStatus: "fresh_catalyst" | "active_digestion" | "aging_catalyst" | "priced_in";
+        /**
+         * CatalystMateriality
+         * @enum {string}
+         */
+        CatalystMateriality: "critical" | "high" | "medium" | "low" | "noise";
         /** ChartPoint */
         ChartPoint: {
             /** Agentalternative */
@@ -841,10 +1558,15 @@ export interface components {
             unhedged?: string | null;
         };
         /**
+         * CompetitiveMoat
+         * @enum {string}
+         */
+        CompetitiveMoat: "wide" | "narrow" | "none" | "deteriorating";
+        /**
          * DataMode
          * @enum {string}
          */
-        DataMode: "illustrative_fixture";
+        DataMode: "illustrative_fixture" | "recorded" | "simulated";
         /** DateRange */
         DateRange: {
             /** From */
@@ -889,6 +1611,142 @@ export interface components {
             parentId: string | null;
             /** Status */
             status: string;
+        };
+        /** DecisionSynthesisRequest */
+        DecisionSynthesisRequest: {
+            /**
+             * Symbol
+             * @description Target ticker symbol to run master 7-agent synthesis on, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /** EarningsSurpriseData */
+        EarningsSurpriseData: {
+            /**
+             * Eps Surprise Pct
+             * @default null
+             */
+            eps_surprise_pct: (number | string) | null;
+            /**
+             * Quarter
+             * @default null
+             */
+            quarter: string | null;
+            /**
+             * Revenue Surprise Pct
+             * @default null
+             */
+            revenue_surprise_pct: (number | string) | null;
+        };
+        /** EarningsSurpriseEvent */
+        EarningsSurpriseEvent: {
+            /**
+             * Eps Actual
+             * @default null
+             */
+            eps_actual: (number | string) | null;
+            /**
+             * Eps Consensus
+             * @default null
+             */
+            eps_consensus: (number | string) | null;
+            /**
+             * Eps Surprise Pct
+             * @default null
+             */
+            eps_surprise_pct: (number | string) | null;
+            /** @default neutral */
+            estimate_revision_trend: components["schemas"]["EstimateRevisionTrend"];
+            /**
+             * Gross Margin Surprise Bps
+             * @default null
+             */
+            gross_margin_surprise_bps: (number | string) | null;
+            /** @default not_applicable */
+            guidance_change: components["schemas"]["GuidanceChange"];
+            /**
+             * Operating Margin Surprise Bps
+             * @default null
+             */
+            operating_margin_surprise_bps: (number | string) | null;
+            /**
+             * Quarter
+             * @default null
+             */
+            quarter: string | null;
+            /**
+             * Revenue Actual Millions
+             * @default null
+             */
+            revenue_actual_millions: (number | string) | null;
+            /**
+             * Revenue Consensus Millions
+             * @default null
+             */
+            revenue_consensus_millions: (number | string) | null;
+            /**
+             * Revenue Surprise Pct
+             * @default null
+             */
+            revenue_surprise_pct: (number | string) | null;
+        };
+        /**
+         * EconomicEventProximity
+         * @enum {string}
+         */
+        EconomicEventProximity: "fomc_decision_near" | "cpi_inflation_near" | "jobs_payrolls_near" | "high_impact_event_ahead" | "standard_calendar";
+        /**
+         * EstimateRevisionTrend
+         * @enum {string}
+         */
+        EstimateRevisionTrend: "upward" | "downward" | "mixed" | "neutral";
+        /**
+         * EvaluationRoot
+         * @description Immutable lineage anchor shared by authorization and ShadowFund evaluation.
+         */
+        EvaluationRoot: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Evidence Digest */
+            evidence_digest: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Is Immutable
+             * @default true
+             * @constant
+             */
+            is_immutable: true;
+            /** Market Snapshot Digest */
+            market_snapshot_digest: string;
+            /** Outcome */
+            outcome: string;
+            /** Portfolio Snapshot Digest */
+            portfolio_snapshot_digest: string;
+            /**
+             * Proposal Digest
+             * @default null
+             */
+            proposal_digest: string | null;
+            /** Root Digest */
+            root_digest: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
         };
         /** Evidence */
         Evidence: {
@@ -1027,6 +1885,97 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** FundamentalAnalysisReport */
+        FundamentalAnalysisReport: {
+            /**
+             * Altman Z Score
+             * Format: decimal-string
+             */
+            altman_z_score: string;
+            altman_zone: components["schemas"]["AltmanZone"];
+            /**
+             * Composite Quality Score
+             * Format: decimal-string
+             */
+            composite_quality_score: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Current Price
+             * Format: decimal-string
+             */
+            current_price: string;
+            /** Data As Of */
+            data_as_of?: string | null;
+            earnings_event?: components["schemas"]["EarningsSurpriseEvent"] | null;
+            /**
+             * Enterprise Value Millions
+             * Format: decimal-string
+             */
+            enterprise_value_millions: string;
+            fundamental_health: components["schemas"]["FundamentalHealth"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Market Cap Millions
+             * Format: decimal-string
+             */
+            market_cap_millions: string;
+            /** Piotroski F Score */
+            piotroski_f_score: number;
+            profitability: components["schemas"]["ProfitabilityMetrics"];
+            /**
+             * Provenance
+             * @default illustrative_fixture
+             * @enum {string}
+             */
+            provenance: "illustrative_fixture" | "sec_filing";
+            /** Red Flags */
+            red_flags?: components["schemas"]["BalanceSheetRedFlag"][];
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            solvency: components["schemas"]["SolvencyMetrics"];
+            /** Summary */
+            summary: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            valuation: components["schemas"]["ValuationMetrics"];
+            valuation_stance: components["schemas"]["ValuationStance"];
+        };
+        /** FundamentalAnalysisRequest */
+        FundamentalAnalysisRequest: {
+            /**
+             * Bar Limit
+             * @description Number of recent price bars to retrieve for live valuation calculation
+             * @default 5
+             */
+            bar_limit: number;
+            /**
+             * Symbol
+             * @description Ticker symbol to analyze fundamentals for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /**
+         * FundamentalHealth
+         * @enum {string}
+         */
+        FundamentalHealth: "excellent" | "healthy" | "moderate" | "vulnerable" | "distressed";
         /** Governance */
         Governance: {
             /**
@@ -1069,6 +2018,11 @@ export interface components {
             /** Version */
             version: string;
         };
+        /**
+         * GuidanceChange
+         * @enum {string}
+         */
+        GuidanceChange: "raised" | "lowered" | "reaffirmed" | "withdrawn" | "not_applicable";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1241,22 +2195,178 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** LLMEventAnalysis */
-        LLMEventAnalysis: {
-            /** Article Id */
-            article_id: string;
+        /** IndustryAnalysisReport */
+        IndustryAnalysisReport: {
+            competitive_moat: components["schemas"]["CompetitiveMoat"];
             /**
              * Created At
              * Format: date-time
              */
             created_at?: string;
-            /** Event Type */
+            /** Headwinds */
+            headwinds?: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            overall_sentiment: components["schemas"]["IndustrySentiment"];
+            /**
+             * Peer Dispersion 20D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            peer_dispersion_20d_pct: string;
+            /** @default isolated_reaction */
+            peer_reaction_dynamics: components["schemas"]["PeerReactionDynamics"];
+            peer_relative_performance: components["schemas"]["RelativePerformance"];
+            /** Peers */
+            peers: components["schemas"]["PeerPerformance"][];
+            /**
+             * Relative Alpha 20D Pct
+             * Format: decimal-string
+             */
+            relative_alpha_20d_pct: string;
+            /**
+             * Relative Alpha 5D Pct
+             * Format: decimal-string
+             */
+            relative_alpha_5d_pct: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Sector Etf */
+            sector_etf: string;
+            /**
+             * Sector Health Score
+             * Format: decimal-string
+             */
+            sector_health_score: string;
+            /** Sector Name */
+            sector_name: string;
+            /** @default broad_beta_convergence */
+            sector_regime_confirmation: components["schemas"]["SectorRegimeConfirmation"];
+            sector_relative_performance: components["schemas"]["RelativePerformance"];
+            /**
+             * Sector Return 20D Pct
+             * Format: decimal-string
+             */
+            sector_return_20d_pct: string;
+            /**
+             * Sector Return 5D Pct
+             * Format: decimal-string
+             */
+            sector_return_5d_pct: string;
+            /**
+             * Spy Return 20D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            spy_return_20d_pct: string;
+            /**
+             * Spy Return 5D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            spy_return_5d_pct: string;
+            /**
+             * Stock Return 20D Pct
+             * Format: decimal-string
+             */
+            stock_return_20d_pct: string;
+            /**
+             * Stock Return 5D Pct
+             * Format: decimal-string
+             */
+            stock_return_5d_pct: string;
+            /**
+             * Stock Vs Spy Alpha 20D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            stock_vs_spy_alpha_20d_pct: string;
+            /** Symbol */
+            symbol: string;
+            /** Tailwinds */
+            tailwinds?: string[];
+            /** Thesis */
+            thesis: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
+        /** IndustryAnalysisRequest */
+        IndustryAnalysisRequest: {
+            /**
+             * Custom Peers
+             * @description Optional custom peer tickers to compare against
+             */
+            custom_peers?: string[] | null;
+            /**
+             * Symbol
+             * @description Ticker symbol to analyze industry for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /**
+         * IndustrySentiment
+         * @enum {string}
+         */
+        IndustrySentiment: "positive" | "moderately_positive" | "mixed" | "moderately_negative" | "negative";
+        /** KillSwitchRequest */
+        KillSwitchRequest: {
+            /** Active */
+            active: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** LLMEventAnalysis */
+        LLMEventAnalysis: {
+            /** Article Id */
+            article_id: string;
+            /** @default medium */
+            catalyst_materiality: components["schemas"]["CatalystMateriality"];
+            /**
+             * Contradiction Notes
+             * @default null
+             */
+            contradiction_notes: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** @default null */
+            earnings_surprise: components["schemas"]["EarningsSurpriseData"] | null;
+            /**
+             * Event Age Seconds
+             * @default 0
+             */
+            event_age_seconds: number;
+            /** @default other */
+            event_category: components["schemas"]["NewsEventCategory"];
+            /**
+             * Event Type
+             * @default other
+             */
             event_type: string;
             /**
              * Expected Reaction Pct
              * @default null
              */
             expected_reaction_pct: (number | string) | null;
+            /** @default not_applicable */
+            guidance_change: components["schemas"]["GuidanceChange"];
+            /**
+             * Has Contradictory Signals
+             * @default false
+             */
+            has_contradictory_signals: boolean;
             /** Headline */
             headline: string;
             /**
@@ -1285,6 +2395,17 @@ export interface components {
              * Format: decimal-string
              */
             significance_score: number | string;
+            /**
+             * Source
+             * @default unknown
+             */
+            source: string;
+            /**
+             * Source Confidence
+             * Format: decimal-string
+             * @default 50.0
+             */
+            source_confidence: number | string;
             /** Symbol */
             symbol: string;
             /**
@@ -1292,6 +2413,21 @@ export interface components {
              * Format: uuid
              */
             trace_id: string;
+        };
+        /** LLMUsageSummaryResponse */
+        LLMUsageSummaryResponse: {
+            /** Completion Tokens */
+            completion_tokens: number;
+            /** Estimated Cost Usd */
+            estimated_cost_usd?: string | null;
+            /** Prompt Tokens */
+            prompt_tokens: number;
+            /** Request Count */
+            request_count: number;
+            /** Total Tokens */
+            total_tokens: number;
+            /** Usage Available Count */
+            usage_available_count: number;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -1339,6 +2475,98 @@ export interface components {
              */
             signal: string;
         };
+        /** MacroAnalysisReport */
+        MacroAnalysisReport: {
+            /** @default neutral */
+            asset_macro_impact: components["schemas"]["AssetMacroImpact"];
+            /** Assets */
+            assets: components["schemas"]["MacroAssetPerformance"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** @default standard_calendar */
+            economic_event_proximity: components["schemas"]["EconomicEventProximity"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Macro Climate Score
+             * Format: decimal-string
+             */
+            macro_climate_score: string;
+            /** Macro Headwinds */
+            macro_headwinds?: string[];
+            macro_regime: components["schemas"]["MacroRegime"];
+            /** Macro Tailwinds */
+            macro_tailwinds?: string[];
+            /** @default stable */
+            market_stress_direction: components["schemas"]["MarketStressDirection"];
+            market_stress_level: components["schemas"]["MarketStressLevel"];
+            rate_environment: components["schemas"]["RateEnvironment"];
+            /**
+             * Realized Volatility Pct
+             * Format: decimal-string
+             * @default 15.0
+             */
+            realized_volatility_pct: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Stock Macro Sensitivity */
+            stock_macro_sensitivity: string;
+            /** Symbol */
+            symbol: string;
+            /** Thesis */
+            thesis: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            /**
+             * Volatility Change 5D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            volatility_change_5d_pct: string;
+        };
+        /** MacroAnalysisRequest */
+        MacroAnalysisRequest: {
+            /**
+             * Symbol
+             * @description Target ticker symbol to assess macroeconomic impact for, e.g. NVDA
+             */
+            symbol: string;
+        };
+        /** MacroAssetPerformance */
+        MacroAssetPerformance: {
+            /** Asset Name */
+            asset_name: string;
+            /** Asset Symbol */
+            asset_symbol: string;
+            /**
+             * Price Change 20D Pct
+             * Format: decimal-string
+             */
+            price_change_20d_pct: string;
+            /**
+             * Price Change 5D Pct
+             * Format: decimal-string
+             */
+            price_change_5d_pct: string;
+        };
+        /**
+         * MacroRegime
+         * @enum {string}
+         */
+        MacroRegime: "risk_on" | "risk_off" | "expansionary" | "contractionary" | "stagflationary" | "transitional";
         /**
          * MarketDataType
          * @enum {string}
@@ -1378,6 +2606,16 @@ export interface components {
          * @enum {string}
          */
         MarketRegime: "normal" | "volatile" | "event" | "crisis";
+        /**
+         * MarketStressDirection
+         * @enum {string}
+         */
+        MarketStressDirection: "escalating" | "stable" | "easing";
+        /**
+         * MarketStressLevel
+         * @enum {string}
+         */
+        MarketStressLevel: "low" | "moderate" | "high" | "extreme";
         /** MovingAverages */
         MovingAverages: {
             /** Price Vs Sma200 Pct */
@@ -1414,6 +2652,11 @@ export interface components {
             /** Symbols */
             symbols: string[];
         };
+        /**
+         * NewsEventCategory
+         * @enum {string}
+         */
+        NewsEventCategory: "earnings" | "guidance" | "m_and_a" | "regulatory_legal" | "product_innovation" | "analyst_action" | "management_change" | "macro_geopolitical" | "routine_pr" | "other";
         /** NewsRecord */
         NewsRecord: {
             /** Category */
@@ -1449,6 +2692,45 @@ export interface components {
             /** Symbols */
             symbols: string[];
         };
+        /**
+         * NoTradeDecision
+         * @description Explicit synthesis outcome when evidence cannot support a proposal.
+         */
+        NoTradeDecision: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Kind
+             * @default no_trade
+             * @constant
+             */
+            kind: "no_trade";
+            /** Reason */
+            reason: string;
+            /** Research Bundle Digest */
+            research_bundle_digest: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Symbol */
+            symbol: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
         /** OptionLeg */
         OptionLeg: {
             /**
@@ -1459,6 +2741,11 @@ export interface components {
             /** Expiration */
             expiration: string;
             option_type: components["schemas"]["OptionType"];
+            /**
+             * Position Intent
+             * @default null
+             */
+            position_intent: ("buy_to_open" | "buy_to_close" | "sell_to_open" | "sell_to_close") | null;
             /**
              * Ratio Qty
              * @default 1
@@ -1479,6 +2766,54 @@ export interface components {
             tradable: boolean;
             /** Underlying */
             underlying: string;
+        };
+        /**
+         * OptionPayoffEconomics
+         * @description Deterministic option economics bound into an executable proposal.
+         */
+        OptionPayoffEconomics: {
+            /**
+             * Expected Loss Per Contract
+             * Format: decimal-string
+             */
+            expected_loss_per_contract: number | string;
+            /**
+             * Expected Profit Per Contract
+             * Format: decimal-string
+             */
+            expected_profit_per_contract: number | string;
+            /**
+             * Fill Probability
+             * Format: decimal-string
+             */
+            fill_probability: number | string;
+            /**
+             * Max Loss Per Contract
+             * Format: decimal-string
+             */
+            max_loss_per_contract: number | string;
+            /** Method */
+            method: string;
+            /**
+             * Net Ev R
+             * Format: decimal-string
+             */
+            net_ev_r: number | string;
+            /**
+             * Premium Per Contract
+             * Format: decimal-string
+             */
+            premium_per_contract: number | string;
+            /**
+             * Reward Risk Ratio
+             * Format: decimal-string
+             */
+            reward_risk_ratio: number | string;
+            /**
+             * Slippage Per Contract
+             * Format: decimal-string
+             */
+            slippage_per_contract: number | string;
         };
         /**
          * OptionSide
@@ -1509,6 +2844,11 @@ export interface components {
             time_in_force: "day";
         };
         /**
+         * OptionStructure
+         * @enum {string}
+         */
+        OptionStructure: "long_call" | "long_put" | "bull_call_spread" | "bear_put_spread" | "no_trade";
+        /**
          * OptionType
          * @enum {string}
          */
@@ -1530,6 +2870,26 @@ export interface components {
             /** Stories */
             stories: components["schemas"]["StorySummary"][];
         };
+        /** PeerPerformance */
+        PeerPerformance: {
+            /**
+             * Price Change 20D Pct
+             * Format: decimal-string
+             */
+            price_change_20d_pct: string;
+            /**
+             * Price Change 5D Pct
+             * Format: decimal-string
+             */
+            price_change_5d_pct: string;
+            /** Symbol */
+            symbol: string;
+        };
+        /**
+         * PeerReactionDynamics
+         * @enum {string}
+         */
+        PeerReactionDynamics: "divergent_winner" | "sympathetic_sector_surge" | "isolated_reaction" | "peer_dragged_down";
         /** Portfolio */
         Portfolio: {
             /** Activities */
@@ -1625,15 +2985,68 @@ export interface components {
             /**
              * Fixtureversion
              * @default prism-demo-v1
-             * @constant
              */
-            fixtureVersion: "prism-demo-v1";
+            fixtureVersion: string | null;
             /**
              * Generatedat
              * Format: date-time
              */
             generatedAt: string;
+            /** Provenancenotice */
+            provenanceNotice?: string | null;
             range?: components["schemas"]["DateRange"] | null;
+        };
+        /** PriceDisplacement */
+        PriceDisplacement: {
+            /**
+             * Displacement 1D Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            displacement_1d_pct: number | string;
+            /**
+             * Displacement 20D Pct
+             * @default null
+             */
+            displacement_20d_pct: (number | string) | null;
+            /**
+             * Displacement 3D Pct
+             * @default null
+             */
+            displacement_3d_pct: (number | string) | null;
+            /**
+             * Displacement 5D Pct
+             * @default null
+             */
+            displacement_5d_pct: (number | string) | null;
+            /**
+             * Gap Size Pct
+             * Format: decimal-string
+             * @default 0.0
+             */
+            gap_size_pct: number | string;
+        };
+        /** ProfileActivationRequest */
+        ProfileActivationRequest: {
+            /**
+             * Batch Id
+             * Format: uuid
+             */
+            batch_id: string;
+        };
+        /** ProfileActivationResponse */
+        ProfileActivationResponse: {
+            /**
+             * Activated From Batch Id
+             * Format: uuid
+             */
+            activated_from_batch_id: string;
+            active_profile: components["schemas"]["ActiveProfileResponse"];
+        };
+        /** ProfileGovernanceStatusResponse */
+        ProfileGovernanceStatusResponse: {
+            active_profile: components["schemas"]["ActiveProfileResponse"];
+            preference: components["schemas"]["CalibrationPreferenceResponse"];
         };
         /** ProfileParameter */
         ProfileParameter: {
@@ -1651,6 +3064,29 @@ export interface components {
             name: string;
             /** Unit */
             unit: string;
+        };
+        /** ProfileParameters */
+        ProfileParameters: {
+            /**
+             * Opportunity Score Threshold
+             * Format: decimal-string
+             */
+            opportunity_score_threshold: string;
+            /**
+             * Stop Loss Pct
+             * Format: decimal-string
+             */
+            stop_loss_pct: string;
+            /**
+             * Take Profit Pct
+             * Format: decimal-string
+             */
+            take_profit_pct: string;
+            /**
+             * Target Position Size Pct
+             * Format: decimal-string
+             */
+            target_position_size_pct: string;
         };
         /** ProfileSuggestion */
         ProfileSuggestion: {
@@ -1706,6 +3142,70 @@ export interface components {
              */
             status: "active" | "available";
         };
+        /** ProfitabilityMetrics */
+        ProfitabilityMetrics: {
+            /**
+             * Gross Margin Pct
+             * Format: decimal-string
+             */
+            gross_margin_pct: string;
+            /**
+             * Net Margin Pct
+             * Format: decimal-string
+             */
+            net_margin_pct: string;
+            /**
+             * Operating Margin Pct
+             * Format: decimal-string
+             */
+            operating_margin_pct: string;
+            /**
+             * Roa Pct
+             * Format: decimal-string
+             */
+            roa_pct: string;
+            /**
+             * Roe Pct
+             * Format: decimal-string
+             */
+            roe_pct: string;
+        };
+        /**
+         * ProposalDecision
+         * @description Canonical proposal result, bound to the immutable research bundle.
+         */
+        ProposalDecision: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /**
+             * Kind
+             * @default proposal
+             * @constant
+             */
+            kind: "proposal";
+            proposal: components["schemas"]["TradeProposal"];
+            /** Research Bundle Digest */
+            research_bundle_digest: string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+        };
         /**
          * Provenance
          * @enum {string}
@@ -1741,6 +3241,7 @@ export interface components {
              */
             momentum_score: string;
             moving_averages: components["schemas"]["MovingAverages"];
+            price_displacement?: components["schemas"]["PriceDisplacement"];
             /**
              * Rsi 14
              * Format: decimal-string
@@ -1763,6 +3264,8 @@ export interface components {
              */
             trace_id: string;
             trend: components["schemas"]["TrendDirection"];
+            /** @default range_bound */
+            trend_confirmation: components["schemas"]["TrendConfirmation"];
             /**
              * Volatility Annualized Pct
              * Format: decimal-string
@@ -1794,6 +3297,11 @@ export interface components {
          */
         RSICondition: "oversold" | "overbought" | "neutral";
         /**
+         * RateEnvironment
+         * @enum {string}
+         */
+        RateEnvironment: "rate_cut_cycle" | "pause_elevated" | "rising_rates" | "neutral";
+        /**
          * ReactionClassification
          * @enum {string}
          */
@@ -1808,6 +3316,11 @@ export interface components {
          * @enum {string}
          */
         RecommendationState: "proposed" | "validated" | "applied" | "rejected";
+        /**
+         * RelativePerformance
+         * @enum {string}
+         */
+        RelativePerformance: "outperforming" | "underperforming" | "mixed" | "inline";
         /** ResearchReport */
         ResearchReport: {
             /**
@@ -1815,6 +3328,25 @@ export interface components {
              * @default null
              */
             actual_reaction_pct: (number | string) | null;
+            /**
+             * Analog Count
+             * @default 0
+             */
+            analog_count: number;
+            /**
+             * Analog Similarity Score
+             * Format: decimal-string
+             * @default 50.0
+             */
+            analog_similarity_score: number | string;
+            /**
+             * Catalyst Decay Factor
+             * Format: decimal-string
+             * @default 1.0
+             */
+            catalyst_decay_factor: number | string;
+            /** @default fresh_catalyst */
+            catalyst_decay_status: components["schemas"]["CatalystDecayStatus"];
             /** @default null */
             classification: components["schemas"]["ReactionClassification"] | null;
             /**
@@ -1827,6 +3359,17 @@ export interface components {
              * Format: date-time
              */
             created_at?: string;
+            /**
+             * Direction Adjusted Gap Pct
+             * @default null
+             */
+            direction_adjusted_gap_pct: (number | string) | null;
+            /**
+             * Event Age Hours
+             * Format: decimal-string
+             * @default 0.0
+             */
+            event_age_hours: number | string;
             /** Evidence */
             evidence: components["schemas"]["EvidenceItem"][];
             /**
@@ -1837,10 +3380,35 @@ export interface components {
             /** Freshness Seconds */
             freshness_seconds: number;
             /**
+             * Historical Dispersion Pct
+             * @default null
+             */
+            historical_dispersion_pct: (number | string) | null;
+            /**
+             * Historical Median Reaction Pct
+             * @default null
+             */
+            historical_median_reaction_pct: (number | string) | null;
+            /**
+             * Historical Volatility Pct
+             * @default null
+             */
+            historical_volatility_pct: (number | string) | null;
+            /**
              * Id
              * Format: uuid
              */
             id?: string;
+            /**
+             * Implied Volatility Pct
+             * @default null
+             */
+            implied_volatility_pct: (number | string) | null;
+            /**
+             * Iv Hv Ratio
+             * @default null
+             */
+            iv_hv_ratio: (number | string) | null;
             /** Limitations */
             limitations?: string[];
             /**
@@ -1848,6 +3416,11 @@ export interface components {
              * @default null
              */
             opportunity_score: (number | string) | null;
+            /**
+             * Options Implied Move Pct
+             * @default null
+             */
+            options_implied_move_pct: (number | string) | null;
             /**
              * Reaction Gap Pct
              * @default null
@@ -1995,6 +3568,33 @@ export interface components {
          * @enum {string}
          */
         RulePriority: "P0" | "P1" | "P2" | "P3" | "P4" | "P5";
+        /**
+         * SectorRegimeConfirmation
+         * @enum {string}
+         */
+        SectorRegimeConfirmation: "leading_sector_outperformer" | "idiosyncratic_decoupling" | "broad_beta_convergence" | "sector_under_pressure" | "lagging_in_bull_sector";
+        /**
+         * ShadowAlternativeIntent
+         * @description AI research intent for a non-executable ShadowFund branch.
+         *
+         *     Contract symbols and prices are deliberately absent. Deterministic code
+         *     selects them from the same eligible option universe as the primary
+         *     proposal, and this model can never become an order payload.
+         */
+        ShadowAlternativeIntent: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "bullish" | "bearish";
+            /**
+             * Preferred Structure
+             * @enum {string}
+             */
+            preferred_structure: "long_call" | "long_put" | "bull_call_spread" | "bear_put_spread";
+            /** Rationale */
+            rationale: string;
+        };
         /** ShadowCandidate */
         ShadowCandidate: {
             /**
@@ -2065,6 +3665,62 @@ export interface components {
          * @enum {string}
          */
         ShadowState: "open" | "complete" | "incomplete";
+        /** SolvencyMetrics */
+        SolvencyMetrics: {
+            /**
+             * Current Ratio
+             * Format: decimal-string
+             */
+            current_ratio: string;
+            /**
+             * Debt To Equity
+             * Format: decimal-string
+             */
+            debt_to_equity: string;
+            /**
+             * Interest Coverage Ratio
+             * Format: decimal-string
+             */
+            interest_coverage_ratio: string;
+            /**
+             * Net Debt Millions
+             * Format: decimal-string
+             */
+            net_debt_millions: string;
+        };
+        /** SpecialistScores */
+        SpecialistScores: {
+            /**
+             * Fundamental Quality Score
+             * Format: decimal-string
+             */
+            fundamental_quality_score: number | string;
+            /**
+             * Macro Climate Score
+             * Format: decimal-string
+             */
+            macro_climate_score: number | string;
+            /**
+             * News Sentiment Score
+             * Format: decimal-string
+             */
+            news_sentiment_score: number | string;
+            /**
+             * Quant Momentum Score
+             * Format: decimal-string
+             */
+            quant_momentum_score: number | string;
+            /**
+             * Reaction Opportunity Score
+             * Format: decimal-string
+             */
+            reaction_opportunity_score: number | string;
+            /**
+             * Sector Health Score
+             * Format: decimal-string
+             */
+            sector_health_score: number | string;
+        };
         /** StoryDetail */
         StoryDetail: {
             /** Alternatives */
@@ -2223,6 +3879,110 @@ export interface components {
             /** Successrate */
             successRate: string;
         };
+        /** TradeDecisionReport */
+        TradeDecisionReport: {
+            /**
+             * Analog Count
+             * @default 0
+             */
+            analog_count: number;
+            /**
+             * Composite Opportunity Score
+             * Format: decimal-string
+             */
+            composite_opportunity_score: number | string;
+            /**
+             * Confidence Score
+             * Format: decimal-string
+             */
+            confidence_score: number | string;
+            /** Contradiction Analysis */
+            contradiction_analysis: string;
+            /** Contradictions */
+            contradictions?: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Current Price
+             * Format: decimal-string
+             */
+            current_price: number | string;
+            direction: components["schemas"]["TradeDirection"];
+            /**
+             * Evidence Freshness Seconds
+             * @default null
+             */
+            evidence_freshness_seconds: number | null;
+            /** Evidence Summary */
+            evidence_summary?: string[];
+            exit_policy: components["schemas"]["ExitPolicy"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Key Risks */
+            key_risks?: string[];
+            /**
+             * Net Ev R
+             * Format: decimal-string
+             */
+            net_ev_r: number | string;
+            /**
+             * Options Only Constraint Acknowledged
+             * @default true
+             */
+            options_only_constraint_acknowledged: boolean;
+            /**
+             * Portfolio Fit
+             * @default
+             */
+            portfolio_fit: string;
+            /**
+             * Provenance
+             * @default live_research
+             * @enum {string}
+             */
+            provenance: "live_research" | "historical_simulation" | "illustrative_fixture";
+            recommended_structure: components["schemas"]["OptionStructure"];
+            /**
+             * Reward Risk Ratio
+             * Format: decimal-string
+             */
+            reward_risk_ratio: number | string;
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** @default null */
+            shadow_alternative_intent: components["schemas"]["ShadowAlternativeIntent"] | null;
+            specialist_scores: components["schemas"]["SpecialistScores"];
+            /** Symbol */
+            symbol: string;
+            /** Synthesis Rationale */
+            synthesis_rationale: string;
+            /**
+             * Target Price
+             * @default null
+             */
+            target_price: (number | string) | null;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            verdict: components["schemas"]["TradeVerdict"];
+        };
+        /**
+         * TradeDirection
+         * @enum {string}
+         */
+        TradeDirection: "bullish" | "bearish" | "neutral";
         /** TradeProposal */
         TradeProposal: {
             /**
@@ -2236,6 +3996,8 @@ export interface components {
              * Format: uuid
              */
             id?: string;
+            /** @default null */
+            option_economics: components["schemas"]["OptionPayoffEconomics"] | null;
             /** Proposal Digest */
             proposal_digest: string;
             /**
@@ -2247,6 +4009,11 @@ export interface components {
             quantity: number;
             /** Rationale */
             rationale: string;
+            /**
+             * Research Bundle Digest
+             * @default null
+             */
+            research_bundle_digest: string | null;
             /**
              * Research Report Id
              * Format: uuid
@@ -2269,6 +4036,11 @@ export interface components {
              */
             trace_id: string;
         };
+        /**
+         * TradeVerdict
+         * @enum {string}
+         */
+        TradeVerdict: "proceed_to_options_proposal" | "no_trade" | "propose_trade";
         /** TranscriptStep */
         TranscriptStep: {
             /** Actor */
@@ -2303,6 +4075,11 @@ export interface components {
             title: string;
         };
         /**
+         * TrendConfirmation
+         * @enum {string}
+         */
+        TrendConfirmation: "strong_uptrend_confirmed" | "pullback_in_uptrend" | "golden_cross" | "range_bound" | "oversold_bounce" | "death_cross" | "breakdown_confirmed";
+        /**
          * TrendDirection
          * @enum {string}
          */
@@ -2320,6 +4097,27 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** ValuationMetrics */
+        ValuationMetrics: {
+            /** Ev To Ebitda */
+            ev_to_ebitda?: string | null;
+            /** Fcf Yield Pct */
+            fcf_yield_pct?: string | null;
+            /**
+             * Free Cash Flow Millions
+             * Format: decimal-string
+             */
+            free_cash_flow_millions: string;
+            /** Pe Ratio Ttm */
+            pe_ratio_ttm?: string | null;
+            /** Price To Book */
+            price_to_book?: string | null;
+        };
+        /**
+         * ValuationStance
+         * @enum {string}
+         */
+        ValuationStance: "undervalued" | "fairly_valued" | "premium" | "overvalued";
         /** WeeklySummary */
         WeeklySummary: {
             /** Illustrativenetpnl */
@@ -2430,6 +4228,223 @@ export interface operations {
             };
         };
     };
+    cycles_api_v1_autonomous_cycles_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousCycleCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decisions_api_v1_autonomous_decisions_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+                symbol?: string | null;
+                outcome?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousDecisionCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    executions_api_v1_autonomous_executions_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+                status?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousExecutionCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autonomous_kill_switch_api_v1_autonomous_kill_switch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KillSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    latest_portfolio_api_v1_autonomous_portfolio_latest_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousPortfolioLatest"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autonomous_status_api_v1_autonomous_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomousStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     live_api_v1_health_live_get: {
         parameters: {
             query?: never;
@@ -2466,6 +4481,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    llm_usage_summary_api_v1_llm_usage_summary_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMUsageSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2848,6 +4899,298 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_post_analysis_profile_api_v1_profiles_activate_post_analysis_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileActivationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileActivationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_calibration_preference_api_v1_profiles_calibration_preference_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalibrationPreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationPreferenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    profile_governance_status_api_v1_profiles_governance_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileGovernanceStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_decision_api_v1_research_decision_synthesize_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionSynthesisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeDecisionReport"] | components["schemas"]["NoTradeDecision"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_decision_stream_api_v1_research_decision_synthesize_stream_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionSynthesisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_fundamental_api_v1_research_fundamental_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FundamentalAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundamentalAnalysisReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_industry_api_v1_research_industry_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndustryAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndustryAnalysisReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_macro_api_v1_research_macro_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MacroAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroAnalysisReport"];
                 };
             };
             /** @description Validation Error */

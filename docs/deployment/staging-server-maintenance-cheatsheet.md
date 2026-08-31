@@ -28,7 +28,7 @@ ssh -i <STAGING_SSH_KEY_PATH> -p <STAGING_SSH_PORT> \
 Inspect only non-secret configuration keys:
 
 ```bash
-grep -E '^(ENVIRONMENT|EXECUTION_ENABLED|ACTIVE_RULESET_VERSION|AUTONOMOUS_TRADING_ENABLED|AUTONOMOUS_TRADING_START_AT|AUTONOMOUS_TRADING_END_AT)=' .env
+grep -E '^(ENVIRONMENT|EXECUTION_ENABLED|ACTIVE_RULESET_VERSION|AUTONOMOUS_TRADING_ENABLED|AUTONOMOUS_TRADING_START_AT|AUTONOMOUS_TRADING_END_AT|BACKTEST_SIMULATION_ENABLED|BACKTEST_OUTPUT_DIR)=' .env
 ```
 
 Before editing an environment file, create a timestamped backup under the
@@ -58,10 +58,11 @@ Verify after a change:
 ```bash
 docker compose --env-file .env ps
 curl --fail --silent --show-error http://localhost:3005/api/v1/health/ready  # staging
-curl --fail --silent --show-error http://localhost/api/v1/health/ready     # production
+PRISM_HTTP_PORT="$(sed -n -E 's/^PRISM_HTTP_PORT=([0-9]+)$/\1/p' .env | tail -n 1)"
+curl --fail --silent --show-error "http://localhost:${PRISM_HTTP_PORT:-80}/api/v1/health/ready"  # production
 ```
 
 Execution remains paper-only and disabled by default. Production autonomous
-windows must remain inside the BA-authorized hackathon window. Staging may use
-a separate bounded rehearsal interval, but it still requires paper mode and
+windows must remain inside the BA-authorized hackathon window. Staging rejects
+autonomous trading and may use a separate historical-simulation command. It still requires paper mode and
 the deterministic authorization gate.

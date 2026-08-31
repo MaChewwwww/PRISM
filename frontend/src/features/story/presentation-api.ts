@@ -90,7 +90,7 @@ export async function loadPortfolio(range: DateRange) {
 
 export async function listAlternativeSessions(range: DateRange) {
   return (await apiGet<AlternativesEnvelope>("/presentation/alternatives", apiRangeQuery(range)))
-    .data.sessions;
+    .data;
 }
 
 export async function getAlternativeSession(id: string) {
@@ -134,14 +134,3 @@ export async function getGovernance() {
 export async function getWeeklySummary() {
   return (await apiGet<WeeklySummaryEnvelope>("/presentation/weekly-summary")).data;
 }
-
-export const legacyStoryLookup: Record<string, string> = {
-  "10000000-0000-4000-8000-000000000001": "acme-earnings-gap",
-  "20000000-0000-4000-8000-000000000001": "acme-earnings-gap",
-  "60000000-0000-4000-8000-000000000001": "acme-earnings-gap",
-  "00000000-0000-4000-8000-000000000001": "acme-earnings-gap",
-};
-
-export const legacyAlternativeLookup: Record<string, string> = {
-  "70000000-0000-4000-8000-000000000001": "session-acme-earnings",
-};

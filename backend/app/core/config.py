@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -33,13 +34,41 @@ class Settings(BaseSettings):
     execution_kill_switch: bool = True
     active_ruleset_version: str | None = None
     autonomous_trading_enabled: bool = False
+    shadowfund_enabled: bool = False
+    backtest_simulation_enabled: bool = False
+    backtest_output_dir: str = "/app/backtest-runs"
+    # Optional server-side historical options provider.  The backtest requires
+    # timestamped bid/ask observations; Alpaca's historical bars are not a
+    # substitute for this feed.  Credentials remain backend-only.
+    historical_options_url: str | None = None
+    historical_options_api_key: str | None = None
+    historical_options_feed: str = Field(default="OPRA", min_length=1)
     autonomous_trading_start_at: datetime | None = None
     autonomous_trading_end_at: datetime | None = None
+    autonomous_symbol_allowlist: list[str] = [
+        "NVDA",
+        "TSLA",
+        "AAPL",
+        "MSFT",
+        "AMD",
+        "GOOGL",
+        "AMZN",
+    ]
+    autonomous_scan_interval_seconds: int = Field(default=300, gt=0, le=3600)
+    autonomous_max_open_positions: int = Field(default=6, gt=0, le=6)
     account_state_max_age_seconds: int = Field(default=30, gt=0, le=300)
+    # Optional server-side historical IV provider.  Alpaca's chain supplies
+    # current IV/Greeks but not an IV-rank time series; when this URL is not
+    # configured PRISM uses only its own durable observations and fails closed
+    # until enough timestamped history exists.
+    iv_rank_history_url: str | None = None
+    iv_rank_history_api_key: str | None = None
+    iv_rank_lookback_days: int = Field(default=252, ge=30, le=1825)
+    iv_rank_min_observations: int = Field(default=20, ge=2, le=5000)
     cors_allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:3005"]
 
-    # AI / LLM Configuration (supports anthropic, gemini, ollama, deepseek, openai, featherless)
-    llm_provider: str = "anthropic"
+    # AI / LLM Configuration (providers implemented by LLMGateway)
+    llm_provider: str = "featherless"
     llm_model: str | None = None
     anthropic_api_key: str | None = None
     gemini_api_key: str | None = None
@@ -48,6 +77,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     featherless_api_key: str | None = None
     featherless_base_url: str = "https://api.featherless.ai/v1"
+    llm_usage_tracking_enabled: bool = True
+    # Optional operator-maintained rate card. No estimate is emitted until
+    # both values are explicitly configured for the selected provider/model.
+    llm_input_price_per_million_usd: Decimal | None = None
+    llm_output_price_per_million_usd: Decimal | None = None
+    sec_user_agent: str = "PRISM autonomous research contact: operator@prism.local"
 
     # Seeded Authentication
     auth_email: str = "operator@prism.local"
@@ -89,6 +124,10 @@ class Settings(BaseSettings):
         ):
             raise ValueError("AUTONOMOUS_TRADING_START_AT must precede AUTONOMOUS_TRADING_END_AT")
         if self.autonomous_trading_enabled:
+            if self.environment == "staging":
+                raise ValueError(
+                    "Staging autonomous trading is prohibited; use historical backtest simulation"
+                )
             if not self.execution_enabled:
                 raise ValueError("AUTONOMOUS_TRADING_ENABLED requires EXECUTION_ENABLED")
             if not self.credentials_present:
@@ -108,6 +147,14 @@ class Settings(BaseSettings):
                         "Production autonomous trading window must remain within the "
                         "BA-authorized hackathon window"
                     )
+        if self.shadowfund_enabled:
+            if self.environment == "staging" and not self.backtest_simulation_enabled:
+                raise ValueError(
+                    "Staging ShadowFund requires BACKTEST_SIMULATION_ENABLED; it cannot "
+                    "observe an autonomous worker"
+                )
+            if self.environment == "staging" and self.autonomous_trading_enabled:
+                raise ValueError("Staging ShadowFund cannot run beside autonomous trading")
         if self.environment in {"staging", "production"}:
             insecure_passwords = {
                 "prism-development-only",
@@ -135,6 +182,12 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "Staging and production AUTH_SECRET_KEY must be at least 32 characters"
                 )
+        normalized_symbols = [symbol.strip().upper() for symbol in self.autonomous_symbol_allowlist]
+        if not normalized_symbols or any(not symbol for symbol in normalized_symbols):
+            raise ValueError("AUTONOMOUS_SYMBOL_ALLOWLIST must contain at least one symbol")
+        if len(set(normalized_symbols)) != len(normalized_symbols):
+            raise ValueError("AUTONOMOUS_SYMBOL_ALLOWLIST must not contain duplicates")
+        self.autonomous_symbol_allowlist = normalized_symbols
         return self
 
     def autonomous_trading_window_active(self, now: datetime | None = None) -> bool:

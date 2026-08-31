@@ -34,6 +34,8 @@ Do not silently reconcile a conflict. Update every affected downstream artifact 
 - [ShadowFund](SHADOWFUND.md)
 - [Alpaca Integration](ALPACA_INTEGRATION.md)
 - [Market Tracker](MARKET_TRACKER.md)
+- [Historical Backtest Simulation Report (v1)](backtest/BACKTEST_SIMULATION_REPORT_V1.md)
+- [Historical Backtest Simulation Report (v2)](backtest/BACKTEST_SIMULATION_REPORT_V2.md)
 
 ## Platform, design, and operations
 

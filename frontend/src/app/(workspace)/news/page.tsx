@@ -1,29 +1,17 @@
-import { ArrowRight, Filter, Newspaper } from "lucide-react";
-import Link from "next/link";
+import { Newspaper } from "lucide-react";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
-import {
-  DemoDataNotice,
-  PageHeader,
-  ProvenanceLabel,
-  StateBadge,
-} from "@/components/product/workspace-ui";
-import { formatDateTime } from "@/features/story/formatters";
+import { PageHeader } from "@/components/workspace/workspace-ui";
+import { RangePresets } from "@/components/workspace/range-presets";
+import { NewsList } from "@/features/story/news-list";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listNews } from "@/features/story/presentation-api";
-
-function value(values: SearchValues, key: string) {
-  const found = values[key];
-  return Array.isArray(found) ? found[0] : found;
-}
 
 export default async function NewsPage({ searchParams }: { searchParams: Promise<SearchValues> }) {
   const values = await searchParams;
   const range = readDateRange(values);
-  const symbol = value(values, "symbol") ?? "all";
-  const significance = value(values, "significance") ?? "all";
-  const collection = await listNews(range, { symbol, significance });
+  const collection = await listNews(range);
   const news = collection.items;
+
   return (
     <>
       <PageHeader
@@ -31,77 +19,29 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
         title="See the evidence before the interpretation"
         description="A backend-owned illustrative feed connects source timestamps and symbols to the decision stories they influenced."
       />
-      <DemoDataNotice />
-      <DateRangeControl range={range} />
-      <div className="source-contract">
-        <Newspaper aria-hidden="true" />
-        <div>
-          <strong>Illustrative source boundary</strong>
-          <p>
-            Fields mirror the intended read-only adapter, but this response came only from the
-            versioned PRISM fixture.
-          </p>
-        </div>
-        <ProvenanceLabel provenance="illustrative_fixture" />
-      </div>
-      <form className="filter-bar" method="get">
-        <Filter aria-hidden="true" />
-        <input type="hidden" name="range" value={range.preset} />
-        <input type="hidden" name="from" value={range.from} />
-        <input type="hidden" name="to" value={range.to} />
-        <label>
-          <span>Symbol</span>
-          <select name="symbol" defaultValue={symbol}>
-            <option value="all">All symbols</option>
-            {collection.symbols.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Significance</span>
-          <select name="significance" defaultValue={significance}>
-            <option value="all">All significance</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </label>
-        <button type="submit">Apply filters</button>
-      </form>
-      {news.length > 0 ? (
-        <ol className="news-feed">
-          {news.map((item) => (
-            <li key={item.id}>
-              <div className="news-time">
-                <time dateTime={item.publishedAt}>{formatDateTime(item.publishedAt)}</time>
-                <span>{item.source}</span>
-              </div>
-              <article>
-                <div className="story-kicker">
-                  {item.symbols.map((itemSymbol) => (
-                    <span key={itemSymbol}>{itemSymbol}</span>
-                  ))}
-                  <StateBadge state={item.significance} />
-                  <span>{item.category}</span>
-                </div>
-                <h2>{item.headline}</h2>
-                <p>{item.summary}</p>
-                <div className="news-footer">
-                  <ProvenanceLabel provenance={item.provenance} />
-                  {item.storyId && (
-                    <Link href={`/stories/${item.storyId}`}>
-                      Read linked decision story <ArrowRight aria-hidden="true" />
-                    </Link>
-                  )}
-                </div>
-              </article>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="inline-empty">No illustrative news falls inside these filters.</p>
-      )}
+
+      <section aria-labelledby="news-feed" className="mt-6">
+        <NewsList
+          news={news}
+          rangeControl={<RangePresets range={range} />}
+          heading={
+            <div>
+              <h2
+                id="news-feed"
+                className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
+              >
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#818CF8]/30 bg-[#818CF8]/15 text-[#C7D2FE]">
+                  <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                Catalyst Feed
+              </h2>
+              <p className="mt-1 text-[12px] text-[#64748B]">
+                Source-timestamped signals linked to the decisions they influenced.
+              </p>
+            </div>
+          }
+        />
+      </section>
     </>
   );
 }

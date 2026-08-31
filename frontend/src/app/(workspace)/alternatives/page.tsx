@@ -1,15 +1,10 @@
-import { ArrowUpRight, GitCompareArrows } from "lucide-react";
-import Link from "next/link";
+import { GitCompareArrows } from "lucide-react";
 
-import { DateRangeControl } from "@/components/product/date-range-control";
-import { DemoDataNotice, PageHeader, StateBadge } from "@/components/product/workspace-ui";
-import { formatDate } from "@/features/story/formatters";
+import { PageHeader } from "@/components/workspace/workspace-ui";
+import { RangePresets } from "@/components/workspace/range-presets";
+import { AlternativesList } from "@/features/story/alternatives-list";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listAlternativeSessions } from "@/features/story/presentation-api";
-
-function displayBranchLabel(label: string) {
-  return label === "Illustrative governed path" ? "Active Portfolio" : label;
-}
 
 export default async function AlternativesPage({
   searchParams,
@@ -17,106 +12,39 @@ export default async function AlternativesPage({
   searchParams: Promise<SearchValues>;
 }) {
   const range = readDateRange(await searchParams);
-  const sessions = await listAlternativeSessions(range);
+  const alternatives = await listAlternativeSessions(range);
+
   return (
     <>
       <PageHeader
         eyebrow="ShadowFund Multiverse"
-        title="Compare the Paths Not Taken"
-        description="Every major decision launches parallel non-executing Shadow Portfolios to stress-test alternate choices under identical market conditions."
+        title="Shadow Portfolios"
+        description="For every decision, PRISM asks &ldquo;what if it had chosen differently?&rdquo; and replays the alternatives, not trading, trading smaller, going unhedged, on the same market conditions. None of these are real orders."
       />
-      <DemoDataNotice />
-      <DateRangeControl range={range} />
-      <div className="layer-map" aria-label="ShadowFund analysis layers">
-        <div className="prism-glass-card p-4">
-          <span className="text-[#818CF8] font-mono text-xs">Layer 01</span>
-          <h2 className="text-white font-semibold mt-1">Decision Counterfactuals</h2>
-          <p className="text-slate-300 text-xs mt-1">
-            Active Portfolio path, Cash baseline, Reduced sizing (50%), and Unhedged alternatives.
-          </p>
-        </div>
-        <div className="prism-glass-card p-4">
-          <span className="text-[#818CF8] font-mono text-xs">Layer 02</span>
-          <h2 className="text-white font-semibold mt-1">Agent Strategy Variations</h2>
-          <p className="text-slate-300 text-xs mt-1">
-            Divergent strikes, expirations, and contrarian perspectives generated simultaneously.
-          </p>
-        </div>
-        <div className="prism-glass-card p-4">
-          <span className="text-[#818CF8] font-mono text-xs">Layer 03</span>
-          <h2 className="text-white font-semibold mt-1">AI Profile Adaptation</h2>
-          <p className="text-slate-300 text-xs mt-1">
-            Counterfactual regret and alpha generate explainable recommendations for the next
-            profile.
-          </p>
-        </div>
-      </div>
-      {sessions.length > 0 ? (
-        <ol className="alternative-list space-y-3 mt-6">
-          {sessions.map((session) => (
-            <li
-              key={session.id}
-              className="prism-glass-interactive p-4 rounded-xl transition-all hover:-translate-y-0.5"
-            >
-              <div className="alternative-mark text-[#818CF8]">
-                <GitCompareArrows aria-hidden="true" />
-              </div>
-              <div>
-                <div className="story-kicker">
-                  <time>{formatDate(session.occurredAt)}</time>
-                  <span className="font-semibold text-[#38BDF8]">{session.symbol}</span>
-                  <StateBadge state="simulated" />
-                </div>
-                <h2>
-                  <Link
-                    href={`/alternatives/${session.id}`}
-                    className="hover:text-[#818CF8] transition-colors"
-                  >
-                    {session.title}
-                  </Link>
-                </h2>
-                <p className="text-slate-300 text-sm mt-1">{session.summary}</p>
-              </div>
-              <dl>
-                <div>
-                  <dt>Chosen Path</dt>
-                  <dd className="font-mono tabular-nums font-semibold text-[#00D084]">
-                    {session.chosenPathPnl}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Best Shadow Path</dt>
-                  <dd className="font-mono tabular-nums text-[#818CF8]">
-                    {displayBranchLabel(session.bestBranch)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Shadow Delta</dt>
-                  <dd className="font-mono tabular-nums">{session.bestDelta}</dd>
-                </div>
-                <div>
-                  <dt>Coverage</dt>
-                  <dd className="font-mono tabular-nums">{session.coverage}</dd>
-                </div>
-              </dl>
-              <Link
-                className="icon-link group"
-                href={`/alternatives/${session.id}`}
-                aria-label={`Open ${session.title}`}
+
+      {/* ShadowFund sessions */}
+      <section aria-labelledby="sessions" className="mt-6">
+        <AlternativesList
+          sessions={alternatives.sessions}
+          rangeControl={<RangePresets range={range} />}
+          heading={
+            <div>
+              <h2
+                id="sessions"
+                className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
               >
-                <ArrowUpRight
-                  aria-hidden="true"
-                  className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                />
-              </Link>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="inline-empty">
-          No completed ShadowFund alternative sessions fall inside this date range.
-        </p>
-      )}
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#818CF8]/30 bg-[#818CF8]/15 text-[#C7D2FE]">
+                  <GitCompareArrows className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                ShadowFund Sessions
+              </h2>
+              <p className="mt-1 text-[12px] text-[#64748B]">
+                Simulated multiverse comparisons for each recorded decision.
+              </p>
+            </div>
+          }
+        />
+      </section>
     </>
   );
 }

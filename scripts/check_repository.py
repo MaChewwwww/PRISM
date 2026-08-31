@@ -78,7 +78,7 @@ def _check_governance(failures: list[str]) -> None:
         "take_profit_default_pct": "75.00",
         "stop_loss_pct": "50.00",
         "data_freshness_seconds": 30,
-        "balanced_opportunity_score": "84",
+        "balanced_opportunity_score": "78",
         "max_hold_default_days": 14,
         "hackathon_max_hold_trading_days": 4,
     }

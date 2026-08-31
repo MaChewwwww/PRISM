@@ -25,7 +25,7 @@ production host-exposed service. Both environments use Alpaca paper mode only.
 
 Runtime secrets and environment-specific schedules are maintained in the
 server-side `.env` files and are never committed. Staging may configure a
-bounded rehearsal window with its own paper account. Production autonomous
+historical-simulation command and rejects autonomous trading. Production autonomous
 execution remains disabled unless separately reviewed and, when enabled, its
 window must match the BA-authorized hackathon trading period.
 

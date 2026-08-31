@@ -1,6 +1,6 @@
 # Data and API contracts
 
-Revision: `2026-08-29 / ecosystem-consolidation-v1`
+Revision: `2026-08-31 / deterministic-historical-options-v1`
 
 Runtime models live in `backend/app/contracts` and `backend/app/presentation`. `backend/scripts/export_contracts.py` starts from `FastAPI.app.openapi()`, then merges exported domain schemas. Committed outputs are `backend/build/contracts.openapi.json` and `frontend/src/types/api.generated.ts`.
 
@@ -22,6 +22,8 @@ The BA registry is `backend/app/rules/authorized_baseline.v1.json`. Typed contra
 
 The governance read model also exposes the registry-backed hackathon window as UTC timestamps: trading start, new-entry cutoff, official scoring point, force-flatten deadline, and outer boundary. `scoring_basis` is the closed value `total_account_equity`; the effective maximum hold is four trading days bounded by the scoring point.
 
+Autonomous research persists immutable `option_iv_observations` with provider/source, UTC observation time, and decimal IV. The worker computes IV rank from that history (or a provider-supplied current rank), and records option-payoff EV fields including premium, NBBO slippage, fill probability, maximum loss, and reward/risk in the research bundle. Portfolio snapshots retain OCC-derived underlying, sector, correlated cluster, expiration, Delta, Vega, and quote-freshness metadata used by concentration rules; unknown or stale metadata fails closed.
+
 ## Decision semantics
 
 | Scope | Values |
@@ -41,9 +43,19 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/auth/me` | Current operator session | Yes |
 | POST | `/api/v1/auth/logout` | Clears session cookie | No |
 | GET | `/api/v1/system/status` | Redacted operational state | Yes |
+| GET | `/api/v1/autonomous/status` | Durable autonomous state and kill-switch audit metadata | Yes |
+| POST | `/api/v1/autonomous/kill-switch` | Authenticated, audited kill-switch update | Yes |
+| GET | `/api/v1/autonomous/cycles` | Bounded UTC-range autonomous worker outcomes | Yes |
+| GET | `/api/v1/autonomous/decisions` | Bounded UTC-range proposal/risk/authorization summaries | Yes |
+| GET | `/api/v1/autonomous/executions` | Bounded UTC-range sanitized paper execution receipts | Yes |
+| GET | `/api/v1/autonomous/portfolio/latest` | Latest persisted normalized portfolio snapshot | Yes |
 | POST | `/api/v1/research/news/analyze` | Non-authoritative structured news research | Yes |
 | POST | `/api/v1/research/reaction/analyze` | Non-authoritative market-reaction and mispricing research | Yes |
 | POST | `/api/v1/research/quant/analyze` | Deterministic quantitative technical analysis | Yes |
+| POST | `/api/v1/research/fundamental/analyze` | Sourced fundamental analysis; illustrative fixtures are rejected | Yes |
+| POST | `/api/v1/research/industry/analyze` | Structured industry/peer research | Yes |
+| POST | `/api/v1/research/macro/analyze` | Structured macroeconomic research | Yes |
+| POST | `/api/v1/research/decision/synthesize` | Seven-agent synthesis; autonomous use requires a canonical proposal pipeline | Yes |
 | GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
 | GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
 | GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
@@ -55,10 +67,30 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/presentation/agents/{agent_id}` | Agent detail | Yes |
 | GET | `/api/v1/presentation/governance` | Active ruleset, profile, and semantics | Yes |
 | GET | `/api/v1/presentation/weekly-summary` | Manual-review profile recommendations | Yes |
+| GET | `/api/v1/profiles/governance` | Active persisted profile and authenticated operator calibration preference | Yes |
+| PUT | `/api/v1/profiles/calibration-preference` | Select manual or automatic calibration preference | Yes |
+| POST | `/api/v1/profiles/activate-post-analysis` | Manually activate a complete, validated Post-Analysis batch | Yes |
+| GET | `/api/v1/llm-usage/summary` | Aggregated provider-reported LLM tokens and optional estimated cost | Yes |
 | GET | `/api/v1/market-tracker` | **Planned, deferred** normalized bars, watchlist, and activity markers | Yes |
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
 Collection endpoints require `from` and `to` query parameters. Both must be timezone-aware UTC timestamps, and `from` must not be later than `to`.
+
+## Autonomous operational read models
+
+The authenticated autonomous read endpoints are polling-oriented projections of
+existing durable records. They never instantiate the worker, refresh Alpaca
+data, or invoke an execution adapter. `cycles`, `decisions`, and `executions`
+require a bounded UTC range and accept a maximum `limit` of 200; decisions may
+filter by symbol and authorization outcome, and executions by receipt status.
+
+`portfolio/latest` projects the newest persisted worker snapshot or returns an
+explicit empty state before the first successful account snapshot. Its values
+are normalized decimal strings. The endpoints omit broker and client order IDs,
+account identifiers, raw provider payloads, raw broker messages, credentials,
+and hidden reasoning. Recorded ShadowFund alternatives remain available only
+through `/presentation/alternatives` and retain their existing provenance
+labels and non-executable semantics.
 
 ## Presentation metadata and provenance
 
@@ -95,5 +127,17 @@ The implemented news endpoint is non-authoritative research. It uses authenticat
 Errors expose stable, safe machine codes and redacted summaries. Provider response bodies, credentials, account details, and raw exception strings are not returned. Authorization binds proposal and payload digests, ruleset/profile versions, snapshot digests, rule trace, decision time, and allowed payload.
 
 ## Generation workflow
+
+Contract generation derives the FastAPI control-plane paths and the domain schemas before emitting committed OpenAPI and TypeScript artifacts.
+
+## Profile calibration control plane
+
+`/profiles/governance` returns the active profile ID/version and bounded decimal parameters alongside the authenticated operator preference. `PUT /profiles/calibration-preference` persists `manual` or `automatic`; it does not itself activate a profile. `POST /profiles/activate-post-analysis` accepts only a draft batch UUID with one or more uniquely named authorized recommendations already within the registry bounds; unspecified fields retain their active values. The server rejects duplicated or out-of-bounds batches. Automatic activation follows the persisted operator preference. Every activation creates a successor profile and immutable audit event, while existing authorization records remain bound to the profile version they used.
+
+For `/presentation/alternatives`, production now projects persisted ShadowFund sessions with `data_mode=recorded`. Staging projects only the active completed backtest run with `data_mode=simulated` and `Historical simulation` provenance. The collection and detail expose evaluation-root digest, ruleset/profile and valuation-policy versions, terminal outcome, branch gross/net P&L, delta, MAE/MFE, drawdown, duration, capital at risk, allocation multiplier, confidence, coverage, and refusal reasons. No completed staging run returns a valid explicit empty collection, never an illustrative fixture.
+
+Historical-options sessions add `branch_key` (the stable semantic key alongside the UUID) and optional simulated-fill metadata: fill status, quantity, UTC entry/exit timestamps, net touch prices, spread-derived slippage, exit reason, cost model, and per-leg prices. Staging sessions also expose the analogue window and five-minute cadence. These fields are additive; the `/presentation/portfolio` contract remains the separate Active Portfolio/illustrative surface.
+
+The staging backtest uses a provider-neutral historical-options port requiring timestamped bid/ask observations. Missing contracts, quotes, or feed entitlement produce `DATA_UNAVAILABLE` / inactive runs; OHLC or midpoint substitutes are not valid evidence. All monetary values remain decimal strings at this boundary.
 
 Run `pnpm contracts` after contract changes. CI runs `pnpm contracts:check`; any generated diff fails the check. Repository governance checks compare the presentation catalog with OpenAPI paths and verify registry/document consistency.

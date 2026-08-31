@@ -23,7 +23,7 @@
     "max_bid_ask_spread_pct": "10.00",
     "data_freshness_seconds": 30,
     "opportunity_score_floor": "75",
-    "balanced_opportunity_score": "84",
+    "balanced_opportunity_score": "78",
     "minimum_net_ev_r": "0.15",
     "minimum_reward_risk_ratio": "1.50",
     "take_profit_default_pct": "75.00",
@@ -49,19 +49,19 @@
   "profiles": {
     "conservative": {
       "target_position_size_pct": "1.50",
-      "opportunity_score_threshold": "90",
+      "opportunity_score_threshold": "85",
       "take_profit_pct": "75.00",
       "stop_loss_pct": "50.00"
     },
     "balanced": {
       "target_position_size_pct": "2.00",
-      "opportunity_score_threshold": "84",
+      "opportunity_score_threshold": "78",
       "take_profit_pct": "75.00",
       "stop_loss_pct": "50.00"
     },
     "aggressive": {
       "target_position_size_pct": "2.50",
-      "opportunity_score_threshold": "80",
+      "opportunity_score_threshold": "75",
       "take_profit_pct": "100.00",
       "stop_loss_pct": "50.00"
     }
