@@ -28,6 +28,13 @@ def _columns() -> tuple[sa.Column[object], ...]:
             nullable=False,
             server_default=sa.text("50.0"),
         ),
+        sa.Column("event_age_seconds", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "event_category",
+            sa.String(length=50),
+            nullable=False,
+            server_default="other",
+        ),
         sa.Column(
             "catalyst_materiality",
             sa.String(length=50),
@@ -77,6 +84,8 @@ def downgrade() -> None:
             "earnings_surprise_json",
             "guidance_change",
             "catalyst_materiality",
+            "event_category",
+            "event_age_seconds",
             "source_confidence",
             "source",
         ):
@@ -95,6 +104,8 @@ def downgrade() -> None:
         "earnings_surprise_json",
         "guidance_change",
         "catalyst_materiality",
+        "event_category",
+        "event_age_seconds",
         "source_confidence",
         "source",
     ):
