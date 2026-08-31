@@ -17,6 +17,7 @@ from app.contracts.models import (
     OptionStrategy,
     OptionType,
     RiskAssessment,
+    StrategyKind,
     TradeProposal,
     TradeVerdict,
 )
@@ -117,6 +118,41 @@ def test_option_selection_accepts_quotes_during_cycle() -> None:
         now=now,
     )
     assert strategy.legs[0].symbol == "NVDA270910C00100000"
+
+
+def test_option_selection_debit_spread_fallback_to_long_leg() -> None:
+    now = datetime(2026, 8, 30, 13, 30, tzinfo=UTC)
+    contracts = [
+        {
+            "symbol": "MSFT270910C00500000",
+            "underlying": "MSFT",
+            "expiration": "2026-09-10",
+            "strike": "500",
+            "option_type": "call",
+            "active": True,
+            "tradable": True,
+        }
+    ]
+    quotes = {
+        contracts[0]["symbol"]: {
+            "bid": "2.00",
+            "ask": "2.10",
+            "quote_timestamp": now + timedelta(seconds=5),
+        }
+    }
+    # When debit_spread is requested but only 1 strike is available,
+    # it gracefully falls back to long single leg.
+    strategy = select_option_strategy(
+        contracts,
+        quotes,
+        underlying_price=Decimal("500"),
+        direction="bullish",
+        structure="debit_spread",
+        now=now,
+    )
+    assert strategy.kind == StrategyKind.LONG_CALL
+    assert len(strategy.legs) == 1
+    assert strategy.legs[0].symbol == "MSFT270910C00500000"
 
 
 def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> None:

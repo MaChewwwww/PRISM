@@ -1001,13 +1001,14 @@ class AutonomousWorker:
                 option_symbol=option_symbol,
             )
         )
+        effective_min_obs = max(1, min(len(observations), self.settings.iv_rank_min_observations))
         return (
             compute_iv_rank(
                 current_iv,
                 observations,
                 now=now,
                 lookback_days=self.settings.iv_rank_lookback_days,
-                minimum_observations=self.settings.iv_rank_min_observations,
+                minimum_observations=effective_min_obs,
             ),
             derived_observations,
         )
