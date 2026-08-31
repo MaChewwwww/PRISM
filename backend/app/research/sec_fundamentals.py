@@ -36,7 +36,11 @@ class SecFundamentalsUnavailable(RuntimeError):
 def _annual_values(facts: dict[str, Any], tags: tuple[str, ...]) -> list[tuple[Decimal, datetime]]:
     """Return annual USD/USD-per-share facts ordered by filing date."""
     values: list[tuple[Decimal, datetime]] = []
-    usgaap = facts.get("us-gaap", {})
+    # Companyfacts responses nest taxonomies below the top-level ``facts``
+    # object.  Keep the adapter strict: an absent or malformed taxonomy simply
+    # yields no values and fails closed at the caller instead of using fixtures.
+    facts_by_taxonomy = facts.get("facts", {})
+    usgaap = facts_by_taxonomy.get("us-gaap", {}) if isinstance(facts_by_taxonomy, dict) else {}
     for tag in tags:
         units = usgaap.get(tag, {}).get("units", {})
         unit_values = units.get("USD") or units.get("USD/shares") or units.get("shares")
