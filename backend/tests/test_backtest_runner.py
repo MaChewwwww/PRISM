@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 
@@ -211,6 +212,21 @@ async def test_completed_backtest_persists_one_no_recommendation_batch(
 
 def test_expected_report_count_matches_the_fixed_four_session_window() -> None:
     assert backtest_run._expected_report_count() == 28
+
+
+def test_symbol_replay_failure_emits_countable_no_trade_report() -> None:
+    checkpoint = datetime(2026, 8, 25, 13, 30, tzinfo=UTC)
+    report = backtest_run._fallback_no_trade_report(
+        checkpoint=checkpoint,
+        symbol="MSFT",
+        trace_id=uuid4(),
+        inputs={"bars": {"MSFT": []}},
+        exc=RuntimeError("provider unavailable"),
+    )
+    assert report["decision"] == {"symbol": "MSFT", "verdict": "no_trade", "direction": None}
+    assert report["reason"] == "DATA_UNAVAILABLE: RuntimeError"
+    assert report["option_quotes"] == []
+    assert len(str(report["digest"])) == 64
 
 
 async def _no_op() -> None:
