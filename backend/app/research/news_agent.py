@@ -22,6 +22,7 @@ from app.core.llm_gateway import LLMGateway
 from app.research.models import LLMEventAnalysisModel
 
 PROMPT_VERSION = "2.0"
+MAX_HEADLINE_STORAGE_CHARS = 255
 
 SYSTEM_PROMPT = (
     "You are a News Intelligence Agent for PRISM, a multi-agent trading intelligence system. "
@@ -161,6 +162,21 @@ def clean_html_and_truncate(html_content: str, max_chars: int = 2000) -> str:
     return clean_text
 
 
+def normalize_headline(headline: Any) -> str:
+    """Normalize provider headlines to the durable news-analysis limit.
+
+    Provider wires can exceed the legacy 255-character database column. Keep
+    the full source headline in the point-in-time replay payload, while using
+    a deterministic, schema-safe representation for the analysis contract and
+    cache row.
+    """
+
+    value = str(headline or "")
+    if len(value) <= MAX_HEADLINE_STORAGE_CHARS:
+        return value
+    return value[: MAX_HEADLINE_STORAGE_CHARS - 3] + "..."
+
+
 class NewsIntelligenceAgent:
     """AI specialist agent that analyzes news and market catalysts to determine sentiment/impact."""
 
@@ -179,7 +195,8 @@ class NewsIntelligenceAgent:
     ) -> LLMEventAnalysis:
         """Analyze a single news article, checking cache first to prevent duplicate LLM cost."""
         article_id = str(article["id"])
-        headline = article.get("headline", "")
+        headline_raw = str(article.get("headline") or "")
+        headline = normalize_headline(headline_raw)
         source_raw = article.get("source") or "unknown"
         created_at_raw = article.get("created_at")
         summary = article.get("summary", "")
@@ -281,7 +298,7 @@ class NewsIntelligenceAgent:
         prompt = (
             f"Analyze the following financial news article for the target asset: {symbol}\n\n"
             f"Source Wire: {source_raw}\n"
-            f"Headline: {headline}\n"
+            f"Headline: {headline_raw}\n"
             f"Summary: {summary}\n"
             f"Article Content: {clean_content}\n"
         )
@@ -392,6 +409,7 @@ class NewsIntelligenceAgent:
                 await db_session.commit()
             except Exception as exc:
                 # Database cache write failed; ignore and return result
+                await db_session.rollback()
                 if strict:
                     raise RuntimeError("News research persistence failed") from exc
 

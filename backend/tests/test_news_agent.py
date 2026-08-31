@@ -25,6 +25,7 @@ from app.research.news_agent import (
     clean_html_and_truncate,
     compute_event_age_seconds,
     compute_source_confidence,
+    normalize_headline,
 )
 
 
@@ -42,6 +43,13 @@ def test_clean_html_and_truncate() -> None:
     truncated = clean_html_and_truncate(long_text, max_chars=10)
     assert len(truncated) == 13  # 10 'A's + "..."
     assert truncated.endswith("...")
+
+
+def test_normalize_headline_respects_durable_storage_limit() -> None:
+    normalized = normalize_headline("A" * 400)
+    assert len(normalized) == 255
+    assert normalized.endswith("...")
+    assert normalize_headline(None) == ""
 
 
 def test_compute_source_confidence() -> None:
