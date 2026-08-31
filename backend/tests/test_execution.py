@@ -270,6 +270,7 @@ def test_frs_009_autonomous_trading_window_blocks_out_of_window_authorization() 
     window_now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
     decision = build_decision(
         proposal,
+        decision_at=window_now,
         expires_at=window_now + timedelta(minutes=1),
         account_observed_at=window_now,
     )

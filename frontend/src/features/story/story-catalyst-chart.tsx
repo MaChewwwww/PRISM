@@ -74,7 +74,10 @@ export function StoryCatalystChart({
     [data],
   );
 
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  // Open the detail panel by default on the last (most complete) observation.
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(
+    rows.length > 0 ? rows.length - 1 : null,
+  );
   const selected = selectedIndex !== null ? (rows[selectedIndex] ?? null) : null;
 
   function selectIndex(index: number | undefined) {

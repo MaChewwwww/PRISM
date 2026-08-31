@@ -8,16 +8,16 @@ import {
   Globe,
   Newspaper,
   Scale,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 
 /**
- * Interactive "Autonomous Agent Perspective Chain -> Synthesis" section
- * (DESIGN.md Section 7.1 steps 2-8, Section 3.3 spectral perspectives, Section
- * 5.2 glass). Three columns: the seven canonical specialists (selectable list),
- * the selected specialist's perspective detail, and the vetted synthesis.
+ * Interactive "Autonomous Agent Perspective Chain" section (DESIGN.md Section
+ * 7.1 steps 2-8, Section 3.3 spectral perspectives, Section 5.2 glass). Two
+ * columns: the seven canonical specialists (selectable list) and the selected
+ * specialist's perspective detail. The vetted candidate action is presented in
+ * the separate Proposal section, so no synthesis panel is duplicated here.
  *
  * The presentation contract does not expose per-specialist invocation metrics.
  * This fixture therefore displays provenance explicitly and never manufactures
@@ -107,27 +107,14 @@ const AGENTS: Agent[] = [
   },
 ];
 
-export type SynthesisDetail = {
-  action: string;
-  structure: string;
-  notional: string;
-  consensus: string;
-  note: string;
-};
-
-export function AgentPerspectiveChain({
-  storyId,
-  synthesis,
-}: {
-  storyId: string;
-  synthesis: SynthesisDetail;
-}) {
+export function AgentPerspectiveChain({ storyId }: { storyId: string }) {
   const [activeKey, setActiveKey] = useState<AgentKey>("news");
   const active = AGENTS.find((agent) => agent.key === activeKey) ?? AGENTS[0];
+  const isTradingDecision = active.key === "trading_decision";
   void storyId;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)] lg:items-stretch">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] lg:items-stretch">
       {/* Column 1 — one card per agent so all seven choices read as distinct */}
       <ul className="flex flex-col gap-2" aria-label="Agent perspectives">
         {AGENTS.map((agent) => {
@@ -190,69 +177,19 @@ export function AgentPerspectiveChain({
         </h3>
         <p className="mt-1.5 text-[13px] leading-relaxed text-[#94A3B8]">{active.description}</p>
 
-        <div className="mt-5 rounded-md border border-white/8 bg-white/2 p-3 text-[12px] leading-relaxed text-[#94A3B8]">
-          Invocation metrics and provider metadata were not recorded for this illustrative fixture.
-          They will appear only when emitted by the backend.
-        </div>
+        {isTradingDecision ? (
+          <div className="mt-5 rounded-md border border-[#34D399]/25 bg-[#34D399]/8 p-3 text-[12px] leading-relaxed text-[#94A3B8]">
+            The Trading Decision Agent&rsquo;s candidate is surfaced in the{" "}
+            <span className="font-semibold text-[#CBD5E1]">Proposal</span> section below. Detailed
+            agent invocation metadata is not available in this build.
+          </div>
+        ) : (
+          <div className="mt-5 rounded-md border border-white/8 bg-white/2 p-3 text-[12px] leading-relaxed text-[#94A3B8]">
+            Invocation metrics and provider metadata were not recorded for this illustrative
+            fixture. They will appear only when emitted by the backend.
+          </div>
+        )}
       </div>
-
-      {/* Column 3 — synthesis: the single candidate action the agents converge on */}
-      <aside className="rounded-xl border border-[#34D399]/25 border-t-[#34D399]/40 bg-linear-to-b from-[#34D399]/8 to-white/2 p-5 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#34D399]/30 bg-[#34D399]/15 text-[#34D399]"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-          </span>
-          <div>
-            <p className="text-[13px] font-semibold text-[#F8FAFC]">Synthesis</p>
-            <p className="text-[11px] text-[#94A3B8]">Overall decision</p>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#64748B]">
-            Candidate action
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <span className="rounded-md bg-[#00D084]/15 px-2 py-1 font-mono text-[11px] font-bold uppercase text-[#00D084]">
-              {actionVerb(synthesis.action)}
-            </span>
-            <span className="text-[15px] font-semibold text-[#F8FAFC]">{synthesis.structure}</span>
-          </div>
-        </div>
-
-        <dl className="mt-4 space-y-2 border-t border-white/8 pt-4">
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-[12px] text-[#94A3B8]">Notional</dt>
-            <dd className="m-0 font-mono text-[13px] font-semibold tabular-nums text-[#F8FAFC]">
-              {synthesis.notional}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-[12px] text-[#94A3B8]">Agent agreement</dt>
-            <dd className="m-0 font-mono text-[13px] font-semibold tabular-nums text-[#818CF8]">
-              {synthesis.consensus}
-            </dd>
-          </div>
-        </dl>
-
-        <p className="mt-4 border-t border-white/8 pt-4 text-[12px] leading-relaxed text-[#94A3B8]">
-          <span className="font-semibold text-[#CBD5E1]">Why: </span>
-          {synthesis.note}
-        </p>
-      </aside>
     </div>
   );
-}
-
-/** Extract a short verb (BUY / SELL / HOLD / NO TRADE) from the action string. */
-function actionVerb(action: string): string {
-  const upper = action.toUpperCase();
-  if (upper.includes("NO TRADE") || upper.includes("NO_TRADE")) return "NO TRADE";
-  if (upper.includes("SELL")) return "SELL";
-  if (upper.includes("HOLD")) return "HOLD";
-  if (upper.includes("BUY")) return "BUY";
-  return upper.split(/\s+/)[0] ?? "REVIEW";
 }

@@ -17,7 +17,7 @@ import type { ChartPoint } from "@/features/story/presentation-api";
  * inline per request; nothing is added to globals.css.
  */
 
-type BranchKey = "active" | "cash" | "reduced" | "agent";
+type BranchKey = "active" | "alternative" | "benchmark";
 
 type BranchSeries = {
   key: BranchKey;
@@ -26,11 +26,13 @@ type BranchSeries = {
   dashed: boolean;
 };
 
+// Series map to the paths the market_path contract actually provides:
+// chosenPath, alternative, and benchmark. Per-branch counterfactuals
+// (cash / reduced / unhedged / agent) live in the ShadowFund matrix table.
 const BRANCHES: BranchSeries[] = [
   { key: "active", label: "Chosen Path", color: "#94A3B8", dashed: false },
-  { key: "cash", label: "Cash Baseline", color: "#818CF8", dashed: true },
-  { key: "reduced", label: "Reduced Sizing", color: "#F59E0B", dashed: true },
-  { key: "agent", label: "Agent Counterfactual", color: "#34D399", dashed: true },
+  { key: "alternative", label: "Best Alternative", color: "#34D399", dashed: true },
+  { key: "benchmark", label: "Benchmark", color: "#818CF8", dashed: true },
 ];
 
 // Branches the operator can toggle (the chosen path is the fixed reference).
@@ -46,20 +48,19 @@ function toNumber(value: string | null | undefined): number | null {
 
 export function StoryBranchChart({ data }: { data: ChartPoint[] }) {
   const rows = useMemo<BranchRow[]>(() => {
-    return data.map((point) => {
-      const active = toNumber(point.chosenPath);
-      return {
-        date: point.date,
-        active,
-        cash: toNumber(point.cashBaseline),
-        reduced: toNumber(point.reducedSize),
-        agent: toNumber(point.agentAlternative),
-      };
-    });
+    return data.map((point) => ({
+      date: point.date,
+      active: toNumber(point.chosenPath),
+      alternative: toNumber(point.alternative),
+      benchmark: toNumber(point.benchmark),
+    }));
   }, [data]);
 
   const [hidden, setHidden] = useState<Set<BranchKey>>(() => new Set());
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  // Open the detail card by default on the last (most complete) observation.
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(
+    data.length > 0 ? data.length - 1 : null,
+  );
   const selected = selectedIndex !== null ? (rows[selectedIndex] ?? null) : null;
 
   const toggle = (key: BranchKey) => {
