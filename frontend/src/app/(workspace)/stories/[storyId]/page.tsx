@@ -355,108 +355,111 @@ export default async function StoryDetailPage({
                 : ""
             }
           >
-          <section
-            aria-labelledby="chapter-rules"
-            className={`space-y-5 ${story.ruleResult === "MODIFY" ? "lg:col-span-2" : ""}`}
-          >
-            <div className="border-b border-white/8 pb-4">
-              <h2
-                id="chapter-rules"
-                className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
-              >
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
-                  <Gavel className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                Deterministic Governance Gate
-              </h2>
-              <p className="mt-1 max-w-3xl text-[12px] text-[#64748B]">
-                Evaluates the exact candidate payload against hard safety constraints, grouped by
-                priority tier.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl sm:p-6">
-              {/* Aggregate outcome + legend */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <span
-                  className="rounded-md px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wide"
-                  style={{
-                    color: GATE_TONE[story.ruleResult] ?? "#64748B",
-                    background: `${GATE_TONE[story.ruleResult] ?? "#64748B"}26`,
-                  }}
-                >
-                  {aggregateGateLabel(story.ruleResult)}
-                </span>
-                <span className="text-[12px] text-[#94A3B8]">Aggregate outcome</span>
-              </div>
-
-              {/* Rule table */}
-              <div className="mt-5 border-t border-white/8">
-                <div className="grid grid-cols-[3.5rem_7rem_minmax(0,1fr)] gap-x-6 border-b border-white/8 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#64748B] sm:grid-cols-[3.5rem_7rem_11rem_minmax(0,1.8fr)]">
-                  <span>Priority</span>
-                  <span>Status</span>
-                  <span className="hidden sm:block">Rule ID</span>
-                  <span>Explanation</span>
-                </div>
-                {story.ruleChecks.map((check) => (
-                  <div
-                    key={check.name}
-                    className="grid grid-cols-[3.5rem_7rem_minmax(0,1fr)] items-start gap-x-6 gap-y-1 py-4 not-last:border-b not-last:border-white/8 sm:grid-cols-[3.5rem_7rem_11rem_minmax(0,1.8fr)]"
-                  >
-                    <span className="font-mono text-[13px] font-semibold text-[#F8FAFC]">
-                      {check.priority}
-                    </span>
-                    <span>
-                      <span
-                        className="inline-block rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide"
-                        style={{
-                          color: GATE_TONE[check.result],
-                          background: `${GATE_TONE[check.result]}26`,
-                        }}
-                      >
-                        {check.result}
-                      </span>
-                    </span>
-                    <span className="hidden font-mono text-[13px] break-words text-[#CBD5E1] sm:block">
-                      {check.ruleId}
-                    </span>
-                    <span className="text-[13px] leading-relaxed text-[#94A3B8]">
-                      <strong className="font-semibold text-[#F8FAFC]">{check.name}.</strong>{" "}
-                      {check.explanation}
-                      <span className="mt-1 block font-mono text-[11px] text-[#64748B] sm:hidden">
-                        {check.ruleId}
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Proposed modification — only when governance returned MODIFY */}
-              {story.ruleResult === "MODIFY" && <ProposedModification story={story} />}
-            </div>
-          </section>
-
-          {/* Decision Status (read-only acceptance explanation) — 1/3 column */}
-          {story.ruleResult === "MODIFY" && (
-            <section aria-labelledby="chapter-decision-status" className="space-y-5 lg:col-span-1">
+            <section
+              aria-labelledby="chapter-rules"
+              className={`space-y-5 ${story.ruleResult === "MODIFY" ? "lg:col-span-2" : ""}`}
+            >
               <div className="border-b border-white/8 pb-4">
                 <h2
-                  id="chapter-decision-status"
+                  id="chapter-rules"
                   className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
                 >
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
-                    <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Gavel className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
-                  Decision Status
+                  Deterministic Governance Gate
                 </h2>
-                <p className="mt-1 text-[12px] text-[#64748B]">
-                  Whether human acceptance would be required before this decision could proceed.
+                <p className="mt-1 max-w-3xl text-[12px] text-[#64748B]">
+                  Evaluates the exact candidate payload against hard safety constraints, grouped by
+                  priority tier.
                 </p>
               </div>
 
-              <DecisionStatusNote />
+              <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl sm:p-6">
+                {/* Aggregate outcome + legend */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <span
+                    className="rounded-md px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wide"
+                    style={{
+                      color: GATE_TONE[story.ruleResult] ?? "#64748B",
+                      background: `${GATE_TONE[story.ruleResult] ?? "#64748B"}26`,
+                    }}
+                  >
+                    {aggregateGateLabel(story.ruleResult)}
+                  </span>
+                  <span className="text-[12px] text-[#94A3B8]">Aggregate outcome</span>
+                </div>
+
+                {/* Rule table */}
+                <div className="mt-5 border-t border-white/8">
+                  <div className="grid grid-cols-[3.5rem_7rem_minmax(0,1fr)] gap-x-6 border-b border-white/8 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#64748B] sm:grid-cols-[3.5rem_7rem_11rem_minmax(0,1.8fr)]">
+                    <span>Priority</span>
+                    <span>Status</span>
+                    <span className="hidden sm:block">Rule ID</span>
+                    <span>Explanation</span>
+                  </div>
+                  {story.ruleChecks.map((check) => (
+                    <div
+                      key={check.name}
+                      className="grid grid-cols-[3.5rem_7rem_minmax(0,1fr)] items-start gap-x-6 gap-y-1 py-4 not-last:border-b not-last:border-white/8 sm:grid-cols-[3.5rem_7rem_11rem_minmax(0,1.8fr)]"
+                    >
+                      <span className="font-mono text-[13px] font-semibold text-[#F8FAFC]">
+                        {check.priority}
+                      </span>
+                      <span>
+                        <span
+                          className="inline-block rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide"
+                          style={{
+                            color: GATE_TONE[check.result],
+                            background: `${GATE_TONE[check.result]}26`,
+                          }}
+                        >
+                          {check.result}
+                        </span>
+                      </span>
+                      <span className="hidden font-mono text-[13px] break-words text-[#CBD5E1] sm:block">
+                        {check.ruleId}
+                      </span>
+                      <span className="text-[13px] leading-relaxed text-[#94A3B8]">
+                        <strong className="font-semibold text-[#F8FAFC]">{check.name}.</strong>{" "}
+                        {check.explanation}
+                        <span className="mt-1 block font-mono text-[11px] text-[#64748B] sm:hidden">
+                          {check.ruleId}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Proposed modification — only when governance returned MODIFY */}
+                {story.ruleResult === "MODIFY" && <ProposedModification story={story} />}
+              </div>
             </section>
-          )}
+
+            {/* Decision Status (read-only acceptance explanation) — 1/3 column */}
+            {story.ruleResult === "MODIFY" && (
+              <section
+                aria-labelledby="chapter-decision-status"
+                className="space-y-5 lg:col-span-1"
+              >
+                <div className="border-b border-white/8 pb-4">
+                  <h2
+                    id="chapter-decision-status"
+                    className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
+                  >
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
+                      <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                    Decision Status
+                  </h2>
+                  <p className="mt-1 text-[12px] text-[#64748B]">
+                    Whether human acceptance would be required before this decision could proceed.
+                  </p>
+                </div>
+
+                <DecisionStatusNote />
+              </section>
+            )}
           </div>
 
           {/* SECTION 07 — Paper Execution Outcome */}
@@ -801,7 +804,9 @@ function ProposalCard({ story }: { story: StoryDetail }) {
       </div>
 
       <div className="mt-5 border-t border-white/8 pt-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">Rationale</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">
+          Rationale
+        </p>
         <p className="mt-2 text-[13px] leading-relaxed text-[#CBD5E1]">{rationale}</p>
       </div>
 
