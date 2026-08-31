@@ -10,7 +10,7 @@ import pytest
 
 from app.contracts.models import CatalystDecayStatus, NewsEventCategory
 from app.core.config import Settings
-from app.core.llm_gateway import LLMCompletionResult, LLMGateway
+from app.core.llm_gateway import LLMCompletionResult, LLMGateway, LLMValidationError
 from app.market.alpaca_gateway import AlpacaPyGateway
 from app.research.models import ResearchReportModel
 from app.research.reaction_agent import (
@@ -343,3 +343,53 @@ async def test_market_reaction_agent_analysis_and_caching() -> None:
     assert cached_report.thesis == report.thesis
     mock_llm_gateway.complete_structured.assert_not_called()
     mock_session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_market_reaction_agent_retries_structured_llm_validation_failure() -> None:
+    mock_llm_gateway = AsyncMock(spec=LLMGateway)
+    mock_llm_gateway._settings = Settings(
+        _env_file=None,
+        llm_provider="featherless",
+        llm_model="DeepSeek-V4-Flash-0731",
+    )
+    parsed_output = ReactionAnalysisLLMOutput(
+        thesis="The catalyst is fairly reflected in the near-term price action.",
+        confidence=Decimal("0.70"),
+        evidence_summaries=["The observed move is close to the expected reaction."],
+        limitations=["Historical option quotes are unavailable."],
+        classification="FAIR_REACTION",
+    )
+    mock_completion = LLMCompletionResult(
+        raw_content=parsed_output.model_dump_json(),
+        parsed=parsed_output,
+        raw_digest="b" * 64,
+        model="DeepSeek-V4-Flash-0731",
+        provider="featherless",
+        prompt_tokens=100,
+        completion_tokens=40,
+        total_tokens=140,
+        latency_ms=120,
+        trace_id=uuid4(),
+    )
+    mock_llm_gateway.complete_structured.side_effect = [
+        LLMValidationError("empty structured response"),
+        mock_completion,
+    ]
+
+    agent = MarketReactionAgent(mock_llm_gateway)
+    with patch("app.research.reaction_agent.asyncio.sleep", new_callable=AsyncMock):
+        report = await agent.analyze_reaction(
+            symbol="AAPL",
+            bars=[
+                {"close": Decimal("100.0"), "volume": 1000},
+                {"close": Decimal("101.0"), "volume": 2000},
+            ],
+            catalyst_summary="Apple reports in-line results.",
+            expected_reaction_pct=Decimal("1.0"),
+            trace_id=uuid4(),
+        )
+
+    assert report.symbol == "AAPL"
+    assert report.classification == "FAIR_REACTION"
+    assert mock_llm_gateway.complete_structured.await_count == 2

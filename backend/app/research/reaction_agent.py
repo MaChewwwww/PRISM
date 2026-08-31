@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
@@ -19,7 +20,7 @@ from app.contracts.models import (
     ReactionClassification,
     ResearchReport,
 )
-from app.core.llm_gateway import LLMGateway
+from app.core.llm_gateway import LLMCompletionResult, LLMError, LLMGateway
 from app.research.models import ResearchReportModel
 
 PROMPT_VERSION = "1.0"
@@ -384,13 +385,34 @@ class MarketReactionAgent:
             "classification (UNDERREACTION|OVERREACTION|FAIR_REACTION)."
         )
 
-        completion = await self.llm_gateway.complete_structured(
-            prompt=prompt,
-            response_model=ReactionAnalysisLLMOutput,
-            system_prompt=SYSTEM_PROMPT,
-            trace_id=trace_id,
-            max_tokens=1024,
-        )
+        completion: LLMCompletionResult[ReactionAnalysisLLMOutput] | None = None
+        last_llm_exc: LLMError | None = None
+        for attempt in range(2):
+            try:
+                completion = await self.llm_gateway.complete_structured(
+                    prompt=prompt,
+                    response_model=ReactionAnalysisLLMOutput,
+                    system_prompt=SYSTEM_PROMPT,
+                    trace_id=trace_id,
+                    timeout_seconds=120.0,
+                    max_tokens=2048,
+                )
+                break
+            except LLMError as exc:
+                last_llm_exc = exc
+                logger.warning(
+                    "Reaction LLM attempt %d failed for %s: %s",
+                    attempt + 1,
+                    symbol,
+                    type(exc).__name__,
+                )
+                if attempt == 0:
+                    await asyncio.sleep(2)
+
+        if completion is None:
+            if last_llm_exc is not None:
+                raise last_llm_exc
+            raise ValueError("Failed to obtain valid parsed output from LLM gateway")
 
         parsed = completion.parsed
         if not parsed:
