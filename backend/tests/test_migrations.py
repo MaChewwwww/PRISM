@@ -14,6 +14,9 @@ from alembic import command
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "20260829_0001_news_analysis.py"
 REPORT_MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "20260829_0002_research_reports.py"
+NEWS_FIELDS_MIGRATION_PATH = (
+    BACKEND_ROOT / "alembic" / "versions" / "20260831_0011_news_analysis_fields.py"
+)
 
 
 def _config(output: StringIO | None = None) -> Config:
@@ -37,8 +40,8 @@ def test_initial_migration_is_an_empty_database_baseline(
     assert initial is not None
     assert initial.down_revision is None
     assert head is not None
-    assert head.revision == "20260831_0010"
-    assert head.down_revision == "20260831_0009"
+    assert head.revision == "20260831_0011"
+    assert head.down_revision == "20260831_0010"
 
     with redirect_stdout(output):
         command.upgrade(config, "head", sql=True)
@@ -122,3 +125,43 @@ def test_research_report_migration_adopts_compatible_table(
     )
 
     migration.upgrade()
+
+
+def test_news_fields_migration_adds_only_missing_legacy_columns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "news_fields_migration", NEWS_FIELDS_MIGRATION_PATH
+    )
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    added: list[str] = []
+
+    class ExistingInspector:
+        def has_table(self, table_name: str) -> bool:
+            return table_name == "llm_event_analyses"
+
+        def get_columns(self, table_name: str) -> list[dict[str, str]]:
+            assert table_name == "llm_event_analyses"
+            return [{"name": "source"}]
+
+    monkeypatch.setattr(migration.op, "get_bind", lambda: object())
+    monkeypatch.setattr(migration.context, "is_offline_mode", lambda: False)
+    monkeypatch.setattr(migration.sa, "inspect", lambda _bind: ExistingInspector())
+    monkeypatch.setattr(
+        migration.op, "add_column", lambda _table, column: added.append(column.name)
+    )
+
+    migration.upgrade()
+
+    assert "source" not in added
+    assert set(added) == {
+        "source_confidence",
+        "catalyst_materiality",
+        "guidance_change",
+        "earnings_surprise_json",
+        "has_contradictory_signals",
+        "contradiction_notes",
+    }
