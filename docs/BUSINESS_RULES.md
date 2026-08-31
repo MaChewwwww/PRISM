@@ -34,7 +34,7 @@ Ruleset: `prism-authorized-baseline@1.0.0`; lifecycle: `active`; effective from 
 | Maximum open positions | 6 |
 | Maximum bid/ask spread | 10.00% of premium |
 | Evidence/market-data freshness | 30 seconds maximum |
-| Opportunity score | 75 absolute floor; Balanced 84 |
+| Opportunity score | 75 absolute floor; Balanced 78 |
 | Net expected value | +0.15R minimum after material execution costs |
 | Realistic reward/risk | 1.50:1 minimum |
 | Balanced take-profit | 75.00% of initial debit |
@@ -52,7 +52,7 @@ This is a distinct, hackathon-specific operating configuration. It keeps the BA 
 
 ### Hackathon evaluation window
 
-The BA-authorized hackathon configuration follows the official evaluation window described in [PR #16](https://github.com/MaChewwwww/PRISM/pull/16) (2026-08-29). Official P&L is measured on **total account equity**, not cash balance, at **EOD Thursday September 3, 2026**. The agent starts on **Monday August 31 at 09:30 ET**. **Friday September 4 at 09:30 ET** is only the outer window boundary and is not the scoring timestamp.
+The BA-authorized hackathon configuration follows the official evaluation window described in [PR #16](https://github.com/MaChew/PRISM/pull/16) (2026-08-29). Official P&L is measured on **total account equity**, not cash balance, at **EOD Thursday September 3, 2026**. The agent starts on **Monday August 31 at 09:30 ET**. **Friday September 4 at 09:30 ET** is only the outer window boundary and is not the scoring timestamp.
 
 The four-session operating window is bounded as follows:
 
@@ -79,9 +79,9 @@ The production worker uses a 5-minute (300-second) cadence, seven-symbol allowli
 
 | Profile | Target allocation | Opportunity threshold | Take-profit | Stop-loss |
 | --- | ---: | ---: | ---: | ---: |
-| Conservative | 1.50% | 90 | 75.00% | 50.00% fixed |
-| Balanced | 2.00% | 84 | 75.00% | 50.00% fixed |
-| Aggressive | 2.50% | 80 | 100.00% | 50.00% fixed |
+| Conservative | 1.50% | 85 | 75.00% | 50.00% fixed |
+| Balanced | 2.00% | 78 | 75.00% | 50.00% fixed |
+| Aggressive | 2.50% | 75 | 100.00% | 50.00% fixed |
 
 Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 through 95; take-profit 75.00% through 100.00%; stop-loss exactly 50.00%.
 

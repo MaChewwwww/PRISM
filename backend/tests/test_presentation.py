@@ -33,7 +33,7 @@ def test_authorized_ruleset_matches_ba_baseline() -> None:
     assert window.official_scoring_at == window.force_flatten_by
     assert window.window_outer_boundary_at.isoformat() == "2026-09-04T13:30:00+00:00"
     assert window.scoring_basis == "total_account_equity"
-    assert str(ruleset.profiles["balanced"].opportunity_score_threshold) == "84"
+    assert str(ruleset.profiles["balanced"].opportunity_score_threshold) == "78"
 
 
 def test_fixture_repository_exposes_replaceable_read_boundary() -> None:

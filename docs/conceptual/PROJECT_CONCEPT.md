@@ -159,7 +159,7 @@ The active ruleset is `prism-authorized-baseline@1.0.0`, with Balanced as the de
 | Drawdown response | CAUTION at 1.50%; DEFENSIVE at 2.25%; HALT at 3.00% start-of-day drawdown |
 | Evidence quality | Market and evidence freshness no more than 30 seconds |
 | Execution quality | Bid/ask spread no more than 10.00% of premium |
-| Opportunity quality | Absolute score floor 75; Balanced threshold 84 |
+| Opportunity quality | Absolute score floor 75; Balanced threshold 78 |
 | Economics | Net expected value at least +0.15R and realistic reward/risk at least 1.50:1 |
 | Standard exit | Balanced take-profit 75.00%; fixed stop-loss 50.00%; DTE exit default 7 days |
 | Holding period | Reusable baseline 14 days; separate hackathon override 4 trading days |
@@ -187,9 +187,9 @@ AI Profiles express strategy preference inside non-negotiable rules. They cannot
 
 | Profile | Target allocation | Opportunity threshold | Take-profit | Stop-loss |
 | --- | ---: | ---: | ---: | ---: |
-| Conservative | 1.50% | 90 | 75.00% | 50.00% fixed |
-| Balanced | 2.00% | 84 | 75.00% | 50.00% fixed |
-| Aggressive | 2.50% | 80 | 100.00% | 50.00% fixed |
+| Conservative | 1.50% | 85 | 75.00% | 50.00% fixed |
+| Balanced | 2.00% | 78 | 75.00% | 50.00% fixed |
+| Aggressive | 2.50% | 75 | 100.00% | 50.00% fixed |
 
 Post-Analysis may recommend changes only to target size, opportunity threshold, take-profit, and the fixed stop-loss field. Recommendations must stay within authorized bounds and pass deterministic validation. A supplied, complete draft batch may be activated manually or automatically only when the authenticated operator's persisted preference is automatic; the current implementation records `NO_RECOMMENDATION` until an evidence-qualified recommendation producer is available.
 

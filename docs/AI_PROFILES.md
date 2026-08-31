@@ -26,7 +26,7 @@ PRISM persists an append-oriented AI Profile lifecycle. The registry-backed Bala
 | Field | Conservative | Balanced | Aggressive |
 | --- | ---: | ---: | ---: |
 | Target position size | 1.50% | 2.00% | 2.50% |
-| Opportunity score | 90 | 84 | 80 |
+| Opportunity score | 85 | 78 | 75 |
 | Take-profit | 75.00% | 75.00% | 100.00% |
 | Stop-loss | 50.00% | 50.00% | 50.00% |
 

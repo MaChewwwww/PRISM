@@ -150,7 +150,7 @@ In PRISM, safety is an architectural core, not an afterthought. AI models produc
 | **Concentration Limits** | `25.00%` / `50.00%` / `40.00%` | Maximum Ticker / Sector / Correlated Cluster exposure |
 | **Data Freshness** | `<= 30 seconds` | Max allowable age for market quotes and catalyst evidence |
 | **Bid/Ask Spread Cap** | `<= 10.00%` | Maximum allowable spread width relative to option premium |
-| **Opportunity Score Floor** | `75` min / `84` Balanced | Minimum research score required for proposal generation (`90` Conservative, `80` Aggressive) |
+| **Opportunity Score Floor** | `75` min / `78` Balanced | Minimum research score required for proposal generation (`85` Conservative, `75` Aggressive) |
 | **Trade Economics** | Net EV `>= +0.15R`, R:R `>= 1.50:1` | Mandatory mathematical edge and reward-to-risk ratio |
 | **Exit Strategy** | `75.00%` TP / `50.00%` SL | Fixed take-profit and stop-loss targets (take-profit tunable up to 100%) |
 | **DTE Exit Threshold** | `7 days` | Default expiration exit to mitigate extreme gamma risk |
