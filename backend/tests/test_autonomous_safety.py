@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
+import pytest
+
 from app.autonomous.audit import build_evaluation_root
+from app.autonomous.models import AutonomousCycleModel
+from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
 from app.contracts.models import (
     OptionLeg,
     OptionSide,
@@ -328,3 +334,61 @@ def test_high_iv_rank_requires_a_debit_spread() -> None:
         "supported_options_level": 2,
     }
     assert authorize_proposal(proposal, risk, settings, inputs=inputs).outcome == "REJECT"
+
+
+def test_candidate_research_outcome_structure() -> None:
+    outcome = CandidateResearchOutcome(
+        rejection_code="OPTION_SELECTION_REJECTED",
+        rejection_reason="Option quote spread exceeds 10 percent",
+    )
+    assert outcome.candidate is None
+    assert outcome.rejection_code == "OPTION_SELECTION_REJECTED"
+    assert outcome.rejection_reason == "Option quote spread exceeds 10 percent"
+
+
+@pytest.mark.asyncio
+async def test_record_captures_structured_candidate_rejections() -> None:
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="1.0.0",
+        shadowfund_enabled=False,
+    )
+    worker = AutonomousWorker(settings)
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+
+    added_objects: list[Any] = []
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock(side_effect=lambda obj: added_objects.append(obj))
+    mock_session.flush = AsyncMock()
+
+    rejections = {
+        "NVDA": {
+            "code": "OPTION_SELECTION_REJECTED",
+            "reason": "Option quote spread exceeds 10 percent",
+        },
+        "AAPL": {
+            "code": "IV_RANK_UNAVAILABLE",
+            "reason": "Only 0 IV observations available; 20 required",
+        },
+    }
+    reason_str = (
+        "No eligible deterministic proposal - "
+        "NVDA: OPTION_SELECTION_REJECTED (Option quote spread exceeds 10 percent); "
+        "AAPL: IV_RANK_UNAVAILABLE (Only 0 IV observations available; 20 required)"
+    )
+
+    await worker._record(
+        mock_session,
+        now,
+        "NO_TRADE",
+        reason_str,
+        evidence={"candidate_rejections": rejections},
+    )
+
+    cycle_models = [obj for obj in added_objects if isinstance(obj, AutonomousCycleModel)]
+    assert len(cycle_models) == 1
+    assert cycle_models[0].outcome == "NO_TRADE"
+    assert "NVDA: OPTION_SELECTION_REJECTED" in cycle_models[0].reason
+    assert "AAPL: IV_RANK_UNAVAILABLE" in cycle_models[0].reason
