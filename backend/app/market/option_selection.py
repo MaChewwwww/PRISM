@@ -161,7 +161,8 @@ def select_option_strategy(
         short_pool = [item for item in same_expiration if item[1] < long_strike]
         kind = StrategyKind.PUT_DEBIT_SPREAD
     if not short_pool:
-        raise OptionSelectionError("No adjacent OTM short strike for debit spread")
+        kind = StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
+        return OptionStrategy(kind=kind, legs=[long_leg], limit_price=long_price)
     short_item = min(short_pool, key=lambda item: abs(item[1] - long_strike))
     short_exp, short_strike, short_contract, short_price = short_item
     if pricing == "entry_touch":
@@ -176,7 +177,8 @@ def select_option_strategy(
     else:
         debit = long_price - short_price
     if debit <= 0:
-        raise OptionSelectionError("Debit spread must have a positive net debit")
+        kind = StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
+        return OptionStrategy(kind=kind, legs=[long_leg], limit_price=long_price)
     short_leg = OptionLeg(
         symbol=str(short_contract["symbol"]),
         underlying=str(short_contract["underlying"]),
