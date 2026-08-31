@@ -55,15 +55,20 @@ export default async function AlternativeDetailPage({
   const session = await getAlternativeSession(sessionId);
   if (!session) notFound();
 
-  const shadowBranches = session.branches.filter((branch) => branch.id !== "chosen");
-  const activePathLabel = "Active Portfolio";
+  const isHistoricalSimulation = session.simulation?.kind === "historical_options";
+  const shadowBranches = session.branches.filter(
+    (branch) => branch.branchKey !== "chosen" && Number.isFinite(parseMoney(branch.pnl)),
+  );
+  const activePathLabel = isHistoricalSimulation
+    ? "Chosen strategy (simulated)"
+    : "Active Portfolio";
   const bestBranch = shadowBranches.reduce<(typeof shadowBranches)[number] | undefined>(
     (leader, branch) =>
       !leader || parseMoney(branch.pnl) > parseMoney(leader.pnl) ? branch : leader,
     undefined,
   );
   const takeaway = branchTakeaway(
-    branchWhatIf(bestBranch?.id ?? "", bestBranch?.label ?? session.bestBranch).plain,
+    branchWhatIf(bestBranch?.branchKey ?? "", bestBranch?.label ?? session.bestBranch).plain,
     session.bestDelta,
   );
 
@@ -89,6 +94,11 @@ export default async function AlternativeDetailPage({
       <p className="text-[13px] italic leading-relaxed text-[#64748B]">
         Analysis: {session.title} — {session.summary}
       </p>
+      {session.simulation && (
+        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#547D83]">
+          Historical simulation · 5-minute marks · observed NBBO touch pricing · non-executable
+        </p>
+      )}
 
       {/* Outcome comparison cards — one "what if" per card */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -102,10 +112,14 @@ export default async function AlternativeDetailPage({
           <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {session.chosenPathPnl}
           </p>
-          <p className="mt-1 text-[11px] text-[#64748B]">Active Portfolio baseline</p>
+          <p className="mt-1 text-[11px] text-[#64748B]">
+            {isHistoricalSimulation
+              ? "Shadow Portfolio baseline; non-executable"
+              : "Active Portfolio baseline"}
+          </p>
         </div>
         {shadowBranches.map((branch) => {
-          const whatIf = branchWhatIf(branch.id, branch.label);
+          const whatIf = branchWhatIf(branch.branchKey, branch.label);
           return (
             <div key={branch.id} className={`${SECTION_CARD} p-5`}>
               <span className="text-[13px] font-semibold text-[#F8FAFC]">{whatIf.question}</span>
@@ -116,7 +130,7 @@ export default async function AlternativeDetailPage({
                 {branch.pnl}
               </p>
               <div className="mt-1 flex items-center gap-2 text-[11px] text-[#64748B]">
-                <span>vs Active:</span>
+                <span>{isHistoricalSimulation ? "vs Chosen:" : "vs Active:"}</span>
                 <DeltaBadge delta={branch.deltaVsChosen} />
               </div>
             </div>
@@ -145,7 +159,11 @@ export default async function AlternativeDetailPage({
           id="branch-path"
           icon={GitCompareArrows}
           title="Trajectory Comparison vs. Chosen Path"
-          subtitle="Each line is a non-executable branch on the same fixture timeline; the teal chosen path is the reference."
+          subtitle={
+            isHistoricalSimulation
+              ? "Each line is a non-executable branch on the same five-minute historical timeline."
+              : "Each line is a non-executable branch on the same fixture timeline; the teal chosen path is the reference."
+          }
           accent="#818CF8"
         />
         <StoryBranchChart data={session.path} />
@@ -157,13 +175,19 @@ export default async function AlternativeDetailPage({
           id="branch-matrix"
           icon={Table2}
           title="Shadow Branch Results vs. Chosen Path"
-          subtitle="Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
+          subtitle={
+            isHistoricalSimulation
+              ? "Every branch uses the same historical conditions. Delta shows how each simulation differs from the chosen path."
+              : "Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
+          }
           accent="#818CF8"
         />
         <div className={`${SECTION_CARD} overflow-x-auto`}>
           <table className="w-full min-w-[52rem] border-collapse text-left">
             <caption className="sr-only">
-              ShadowFund branch comparison vs. Active Portfolio path
+              {isHistoricalSimulation
+                ? "ShadowFund branch comparison vs. chosen path"
+                : "ShadowFund branch comparison vs. Active Portfolio path"}
             </caption>
             <thead>
               <tr className="border-b border-white/8">
@@ -171,9 +195,10 @@ export default async function AlternativeDetailPage({
                   "Branch",
                   "Variation Tested",
                   "Final P&L",
-                  "vs Active (Δ)",
+                  isHistoricalSimulation ? "vs Chosen (Δ)" : "vs Active (Δ)",
                   "Max Drawdown",
                   "Coverage",
+                  ...(isHistoricalSimulation ? ["Simulated fill"] : []),
                   "State",
                 ].map((label) => (
                   <th
@@ -188,7 +213,7 @@ export default async function AlternativeDetailPage({
             </thead>
             <tbody>
               {session.branches.map((branch) => {
-                const isActive = branch.id === "chosen";
+                const isActive = branch.branchKey === "chosen";
                 return (
                   <tr
                     key={branch.id}
@@ -197,10 +222,10 @@ export default async function AlternativeDetailPage({
                   >
                     <th scope="row" className="px-5 py-3.5">
                       <span className="block text-[14px] font-semibold text-[#F8FAFC]">
-                        {branchWhatIf(branch.id, branch.label).question}
+                        {branchWhatIf(branch.branchKey, branch.label).question}
                       </span>
                       <span className="mt-0.5 block !text-[12px] font-normal text-[#64748B]">
-                        {branchWhatIf(branch.id, branch.label).plain}
+                        {branchWhatIf(branch.branchKey, branch.label).plain}
                       </span>
                     </th>
                     <td className="px-5 py-3.5 text-[13px] text-[#94A3B8]">{branch.variation}</td>
@@ -216,6 +241,22 @@ export default async function AlternativeDetailPage({
                     <td className="px-5 py-3.5 font-mono text-[14px] tabular-nums text-[#CBD5E1]">
                       {branch.coverage}
                     </td>
+                    {isHistoricalSimulation && (
+                      <td className="px-5 py-3.5 text-[12px] text-[#94A3B8]">
+                        {branch.simulatedFill?.status === "filled" ? (
+                          <span>
+                            {branch.simulatedFill.entryPrice ?? "—"} →{" "}
+                            {branch.simulatedFill.exitPrice ?? "open"}
+                            <br />
+                            <span className="text-[#64748B]">
+                              {branch.simulatedFill.exitReason ?? "managed"}
+                            </span>
+                          </span>
+                        ) : (
+                          (branch.simulatedFill?.status ?? "—")
+                        )}
+                      </td>
+                    )}
                     <td className="px-5 py-3.5">
                       <StateBadge state={branch.status} />
                     </td>

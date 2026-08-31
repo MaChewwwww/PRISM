@@ -24,7 +24,9 @@ The production observation cadence is entry, each 5-minute autonomous cycle, vir
 
 `shadow_sessions`, `shadow_branches`, `shadow_observations`, `shadow_valuations`, `shadow_post_analysis_batches`, and `shadow_profile_recommendations` are separate from paper execution, active portfolio, and backtest run records. The evaluation-root digest is unique. Each persisted observation has a SHA-256 input payload digest.
 
-The existing authenticated `/presentation/alternatives` routes project these records. In production they use `data_mode=recorded`; in staging they select only the active completed backtest run and use `data_mode=simulated` with **Historical simulation** provenance. No completed staging run produces a structurally valid explicit empty state, never a fixture fallback. Virtual values are never called Alpaca paper fills or Active Portfolio values.
+The existing authenticated `/presentation/alternatives` routes project these records. In production they use `data_mode=recorded`; in staging they select only the active completed backtest run and use `data_mode=simulated` with **Historical simulation** provenance. Staging branch projections retain the semantic `branch_key` and expose hypothetical touch fills, entry/exit times, slippage, and per-leg details without calling them Alpaca paper fills. No completed staging run produces a structurally valid explicit empty state, never a fixture fallback. Virtual values are never called Alpaca paper fills or Active Portfolio values.
+
+The deterministic staging replay uses the August 24–27, 2026 four-session analogue, one strict decision per symbol at the 09:30 ET open, and five-minute management through the close. New entries stop at the Wednesday close and all open branches force-flatten at Thursday close. A provider preflight or required NBBO gap fails the run closed; it never creates a synthetic mark.
 
 ## Post-Analysis
 

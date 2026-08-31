@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     shadowfund_enabled: bool = False
     backtest_simulation_enabled: bool = False
     backtest_output_dir: str = "/app/backtest-runs"
+    # Optional server-side historical options provider.  The backtest requires
+    # timestamped bid/ask observations; Alpaca's historical bars are not a
+    # substitute for this feed.  Credentials remain backend-only.
+    historical_options_url: str | None = None
+    historical_options_api_key: str | None = None
+    historical_options_feed: str = Field(default="OPRA", min_length=1)
     autonomous_trading_start_at: datetime | None = None
     autonomous_trading_end_at: datetime | None = None
     autonomous_symbol_allowlist: list[str] = [

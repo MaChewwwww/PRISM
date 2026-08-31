@@ -28,7 +28,13 @@ def _as_date(value: Any) -> date:
         raise OptionSelectionError("Option expiration is invalid") from exc
 
 
-def _midpoint(record: dict[str, Any], now: datetime) -> Decimal:
+def _quote_price(
+    record: dict[str, Any],
+    now: datetime,
+    *,
+    entry_touch: bool = False,
+    opening_side: Literal["buy", "sell"] = "buy",
+) -> Decimal:
     try:
         bid = Decimal(str(record["bid"]))
         ask = Decimal(str(record["ask"]))
@@ -47,6 +53,12 @@ def _midpoint(record: dict[str, Any], now: datetime) -> Decimal:
     increment = Decimal(str(record.get("price_increment", "0.01")))
     if increment <= 0:
         raise OptionSelectionError("Option price increment is invalid")
+    if entry_touch:
+        # A buy opens at the ask.  The selector is only used for long/debit
+        # strategies, so the net debit is assembled from the long ask and
+        # short bid below.  Keep this helper's midpoint behavior as the
+        # production default for callers that still use limit economics.
+        return ask if opening_side == "buy" else bid
     return ((bid + ask) / Decimal("2") / increment).quantize(
         Decimal("1"), rounding=ROUND_HALF_UP
     ) * increment
@@ -62,6 +74,7 @@ def select_option_strategy(
     now: datetime,
     exit_dte_threshold: int = 7,
     force_flatten_at: datetime | None = None,
+    pricing: Literal["midpoint", "entry_touch"] = "midpoint",
 ) -> OptionStrategy:
     """Select a fresh ATM long or adjacent OTM debit spread from live inputs."""
     if now.tzinfo is None or underlying_price <= 0:
@@ -88,7 +101,11 @@ def select_option_strategy(
             except (KeyError, TypeError, ValueError):
                 continue
             try:
-                price = _midpoint(quotes_for_contract, now)
+                price = _quote_price(
+                    quotes_for_contract,
+                    now,
+                    entry_touch=pricing == "entry_touch",
+                )
             except OptionSelectionError:
                 continue
             candidates.append((expiration, strike, contract, price))
@@ -120,7 +137,17 @@ def select_option_strategy(
         raise OptionSelectionError("No adjacent OTM short strike for debit spread")
     short_item = min(short_pool, key=lambda item: abs(item[1] - long_strike))
     short_exp, short_strike, short_contract, short_price = short_item
-    debit = long_price - short_price
+    if pricing == "entry_touch":
+        # The short leg is sold at its bid when opening a debit spread.
+        short_price = _quote_price(
+            quotes[str(short_contract["symbol"])],
+            now,
+            entry_touch=True,
+            opening_side="sell",
+        )
+        debit = long_price - short_price
+    else:
+        debit = long_price - short_price
     if debit <= 0:
         raise OptionSelectionError("Debit spread must have a positive net debit")
     short_leg = OptionLeg(

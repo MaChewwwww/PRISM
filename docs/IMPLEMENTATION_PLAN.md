@@ -46,3 +46,7 @@ Portfolio snapshots, five-year historical analogs, PostgreSQL execution receipts
 ## Later: operations and evaluation
 
 Add restore drills, SLOs after owner approval, full observability, and threat modeling. Backend profile activation persistence, manual activation, user-configured automatic calibration, weekly Friday post-close Post-Analysis triggers, and evidence-qualified `PostAnalysisAgent` recommendation generation are implemented; manual frontend profile-activation controls remain pending. Live trading remains outside scope.
+
+## Deterministic historical-options simulator: staging-only
+
+The staging replay uses the August 24–27, 2026 four-session analogue, daily strict decisions at the 09:30 ET open, and five-minute option management through Thursday close. It requires an entitled historical NBBO provider, persists run-scoped option payloads plus ShadowFund observations/valuations, and records a backtest-only P0–P5 rule trace. Missing contracts, quotes, or entitlement remain `DATA_UNAVAILABLE` and cannot activate presentation. Simulated touch fills are projected only through `/presentation/alternatives`; production autonomous execution, paper receipts, and the Active Portfolio remain unchanged.

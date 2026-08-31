@@ -1,6 +1,6 @@
 # PRISM architecture
 
-Revision: `2026-08-30 / autonomous-paper-parity-v4`
+Revision: `2026-08-31 / deterministic-historical-options-v1`
 
 PRISM is a paper-only, auditable decision platform. It separates specialist AI analysis from deterministic authorization and broker execution. The repository includes authenticated specialist research routes, persisted research tables, strict provenance/freshness gates, SEC companyfacts sourcing, option-chain/contract adapters, deterministic P0-P5 authorization, authenticated durable autonomous controls, durable receipts/reconciliation, and a generated frontend transport contract. The order-capable autonomous worker is production-only. Staging is restricted to historical, non-executing backtest simulation.
 
@@ -85,6 +85,7 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | `proposal` | Trading Decision proposal synthesis | Canonical digest-bound proposals persisted by the autonomous worker; the public research endpoint remains `NO_TRADE` without complete binding |
 | `risk` | AI-assisted adversarial critique | Structured RiskAssessment persisted before deterministic authorization |
 | `market` | Alpaca market/news adapter | Account/portfolio, stock bars, active contracts, fresh chain quotes/Greeks, and news |
+| `backtest` | Staging historical replay | Point-in-time stock/news/SEC evidence, entitled historical option contracts/NBBO, virtual authorization, deterministic five-minute positions, and run artifacts; never imports execution |
 | `portfolio` | Durable snapshots and exposure calculations | OCC/chain-enriched account snapshots persisted per cycle with six-position, cash, ticker/sector/cluster, Greek, and expiry concentration gates |
 | `execution` | Final paper checks, translation, idempotency, reconciliation | Durable PostgreSQL receipts, client-order idempotency, restart reconciliation, and paper-only CLI submission |
 | `shadowfund` | Immutable counterfactual branches and evaluation | Non-executable session/branch/observation/valuation roots, virtual marking, and persisted presentation projection |

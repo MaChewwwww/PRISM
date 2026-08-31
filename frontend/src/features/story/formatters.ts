@@ -28,18 +28,28 @@ export function formatTokens(value: number) {
  * Plain-language "what if" framing for a ShadowFund branch. ShadowFund answers
  * "what would have happened if the decision were different?", so the UI leads
  * with the question rather than the internal branch name. Keyed off the stable
- * branch id, with a label-based fallback.
+ * semantic branch key, with a label-based fallback. The key is distinct from
+ * the persisted UUID so recorded and simulated sessions use the same labels.
  */
-export function branchWhatIf(id: string, label: string): { question: string; plain: string } {
-  switch (id) {
+export function branchWhatIf(
+  branchKey: string,
+  label: string,
+): { question: string; plain: string } {
+  switch (branchKey) {
     case "chosen":
-      return { question: "What PRISM actually did", plain: "Active Portfolio" };
+      return label.toLowerCase().includes("simulated")
+        ? { question: "Chosen strategy (simulated)", plain: "Chosen strategy" }
+        : { question: "What PRISM actually did", plain: "Active Portfolio" };
+    case "cash":
     case "no-action":
       return { question: "What if it had not traded?", plain: "Stay in cash" };
+    case "half_size":
     case "reduced-size":
       return { question: "What if it had traded half size?", plain: "Half position (50%)" };
+    case "contrarian":
     case "unhedged":
-      return { question: "What if it had gone unhedged?", plain: "Unhedged structure" };
+      return { question: "What if the thesis had been reversed?", plain: "Contrarian strategy" };
+    case "ai_alternative":
     case "agent-alternative":
       return { question: "What if it used the agent's alternative?", plain: "Agent alternative" };
     default: {

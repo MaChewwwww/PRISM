@@ -209,8 +209,8 @@ async def test_completed_backtest_persists_one_no_recommendation_batch(
     assert calls == ["session", "post_analysis", "automatic"]
 
 
-def test_expected_report_count_matches_the_fixed_one_week_window() -> None:
-    assert backtest_run._expected_report_count() == 35
+def test_expected_report_count_matches_the_fixed_four_session_window() -> None:
+    assert backtest_run._expected_report_count() == 28
 
 
 async def _no_op() -> None:

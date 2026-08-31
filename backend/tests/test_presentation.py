@@ -74,6 +74,8 @@ def test_presentation_endpoints_are_authenticated_and_fixture_labeled() -> None:
             payload = response.json()
             assert payload["meta"]["dataMode"] == "illustrative_fixture"
             assert payload["meta"]["fixtureVersion"] == "prism-demo-v1"
+            if path == "/api/v1/presentation/alternatives":
+                assert payload["data"]["sessions"][0]["branches"][0]["branchKey"] == "chosen"
             serialized = response.text.lower()
             assert "alpaca paper trading account" not in serialized
             assert "active portfolio (paper)" not in serialized

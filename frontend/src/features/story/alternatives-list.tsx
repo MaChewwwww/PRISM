@@ -30,8 +30,10 @@ function pnlTone(pnl: string): string {
 
 /** Pick the chosen branch and the best-performing alternative for a session. */
 function chosenAndBest(branches: Branch[]): { chosen?: Branch; best?: Branch } {
-  const chosen = branches.find((branch) => branch.id === "chosen");
-  const alternatives = branches.filter((branch) => branch.id !== "chosen");
+  const chosen = branches.find((branch) => branch.branchKey === "chosen");
+  const alternatives = branches.filter(
+    (branch) => branch.branchKey !== "chosen" && Number.isFinite(parseMoney(branch.pnl)),
+  );
   const best = alternatives.reduce<Branch | undefined>((leader, branch) => {
     if (!leader) return branch;
     return parseMoney(branch.pnl) > parseMoney(leader.pnl) ? branch : leader;
@@ -124,8 +126,9 @@ export function AlternativesList({
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((session) => {
             const { chosen, best } = chosenAndBest(session.branches);
+            const isHistoricalSimulation = session.simulation?.kind === "historical_options";
             const takeaway = branchTakeaway(
-              branchWhatIf(best?.id ?? "", best?.label ?? session.bestBranch).plain,
+              branchWhatIf(best?.branchKey ?? "", best?.label ?? session.bestBranch).plain,
               session.bestDelta,
             );
             return (
@@ -136,7 +139,9 @@ export function AlternativesList({
                 >
                   {/* Kicker */}
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] font-medium uppercase tracking-[0.07em] text-[#64748B]">
-                    <span className="font-semibold text-[#C7D2FE]">Shadow study</span>
+                    <span className="font-semibold text-[#C7D2FE]">
+                      {isHistoricalSimulation ? "Historical simulation" : "Shadow study"}
+                    </span>
                     <span aria-hidden="true" className="text-white/20">
                       |
                     </span>
@@ -170,13 +175,21 @@ export function AlternativesList({
                             className="h-3.5 w-3.5 shrink-0 text-[#547D83]"
                             aria-hidden="true"
                           />
-                          <span className="font-semibold text-[#F8FAFC]">What we chose</span>
+                          <span className="font-semibold text-[#F8FAFC]">
+                            {isHistoricalSimulation ? "Chosen strategy" : "Active Portfolio"}
+                          </span>
                         </dt>
                         <dd
                           className={`font-mono text-[14px] font-semibold tabular-nums ${pnlTone(chosen.pnl)}`}
                         >
                           {chosen.pnl}
                         </dd>
+                      </div>
+                    )}
+                    {chosen?.simulatedFill?.status === "filled" && (
+                      <div className="px-4 py-2 text-[11px] text-[#94A3B8]">
+                        Simulated fill {chosen.simulatedFill.entryPrice ?? "—"} →{" "}
+                        {chosen.simulatedFill.exitPrice ?? "open"}
                       </div>
                     )}
                     {best && (
@@ -187,7 +200,7 @@ export function AlternativesList({
                             aria-hidden="true"
                           />
                           <span className="text-[#CBD5E1]">
-                            Best alternative: {branchWhatIf(best.id, best.label).question}
+                            Best alternative: {branchWhatIf(best.branchKey, best.label).question}
                           </span>
                         </dt>
                         <dd

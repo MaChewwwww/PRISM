@@ -122,6 +122,7 @@ class RuleCheck(PresentationModel):
 
 class AlternativeBranch(PresentationModel):
     id: str
+    branch_key: str
     label: str
     variation: str
     pnl: str
@@ -140,6 +141,36 @@ class AlternativeBranch(PresentationModel):
     valuation_confidence: str | None = None
     refusal_reason: str | None = None
     chosen_path: bool = False
+    simulated_fill: AlternativeSimulatedFill | None = None
+
+
+class AlternativeSimulatedFillLeg(PresentationModel):
+    option_symbol: str
+    side: Literal["buy", "sell"]
+    quantity: int
+    entry_price: str | None = None
+    exit_price: str | None = None
+
+
+class AlternativeSimulatedFill(PresentationModel):
+    status: Literal["filled", "not_filled", "incomplete"]
+    quantity: int | None = None
+    entry_at: datetime | None = None
+    entry_price: str | None = None
+    exit_at: datetime | None = None
+    exit_price: str | None = None
+    slippage: str | None = None
+    exit_reason: str | None = None
+    cost_model: Literal["observed_nbbo_touch"]
+    legs: list[AlternativeSimulatedFillLeg] = Field(default_factory=list)
+
+
+class AlternativeSimulationMeta(PresentationModel):
+    kind: Literal["historical_options"]
+    window_start: datetime
+    window_end: datetime
+    cadence_seconds: int = Field(gt=0)
+    cost_model: Literal["observed_nbbo_touch"]
 
 
 class Catalyst(PresentationModel):
@@ -245,6 +276,7 @@ class AlternativeSession(PresentationModel):
     profile_version: int | None = None
     valuation_policy_version: str | None = None
     refusal_reasons: list[str] = Field(default_factory=list)
+    simulation: AlternativeSimulationMeta | None = None
 
 
 class AlternativeCollection(PresentationModel):

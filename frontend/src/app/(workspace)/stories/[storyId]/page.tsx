@@ -493,7 +493,7 @@ export default async function StoryDetailPage({
             {story.alternatives.map((branch) => {
               const name =
                 branch.label === "Illustrative governed path" ? "Active Portfolio" : branch.label;
-              const isActive = branch.id === "chosen";
+              const isActive = branch.branchKey === "chosen";
               return (
                 <div
                   key={branch.id}

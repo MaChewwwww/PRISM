@@ -1,6 +1,6 @@
 # Data and API contracts
 
-Revision: `2026-08-30 / autonomous-paper-parity-v4`
+Revision: `2026-08-31 / deterministic-historical-options-v1`
 
 Runtime models live in `backend/app/contracts` and `backend/app/presentation`. `backend/scripts/export_contracts.py` starts from `FastAPI.app.openapi()`, then merges exported domain schemas. Committed outputs are `backend/build/contracts.openapi.json` and `frontend/src/types/api.generated.ts`.
 
@@ -115,5 +115,9 @@ Contract generation derives the FastAPI control-plane paths and the domain schem
 `/profiles/governance` returns the active profile ID/version and bounded decimal parameters alongside the authenticated operator preference. `PUT /profiles/calibration-preference` persists `manual` or `automatic`; it does not itself activate a profile. `POST /profiles/activate-post-analysis` accepts only a draft batch UUID with one or more uniquely named authorized recommendations already within the registry bounds; unspecified fields retain their active values. The server rejects duplicated or out-of-bounds batches. Automatic activation follows the persisted operator preference. Every activation creates a successor profile and immutable audit event, while existing authorization records remain bound to the profile version they used.
 
 For `/presentation/alternatives`, production now projects persisted ShadowFund sessions with `data_mode=recorded`. Staging projects only the active completed backtest run with `data_mode=simulated` and `Historical simulation` provenance. The collection and detail expose evaluation-root digest, ruleset/profile and valuation-policy versions, terminal outcome, branch gross/net P&L, delta, MAE/MFE, drawdown, duration, capital at risk, allocation multiplier, confidence, coverage, and refusal reasons. No completed staging run returns a valid explicit empty collection, never an illustrative fixture.
+
+Historical-options sessions add `branch_key` (the stable semantic key alongside the UUID) and optional simulated-fill metadata: fill status, quantity, UTC entry/exit timestamps, net touch prices, spread-derived slippage, exit reason, cost model, and per-leg prices. Staging sessions also expose the analogue window and five-minute cadence. These fields are additive; the `/presentation/portfolio` contract remains the separate Active Portfolio/illustrative surface.
+
+The staging backtest uses a provider-neutral historical-options port requiring timestamped bid/ask observations. Missing contracts, quotes, or feed entitlement produce `DATA_UNAVAILABLE` / inactive runs; OHLC or midpoint substitutes are not valid evidence. All monetary values remain decimal strings at this boundary.
 
 Run `pnpm contracts` after contract changes. CI runs `pnpm contracts:check`; any generated diff fails the check. Repository governance checks compare the presentation catalog with OpenAPI paths and verify registry/document consistency.
