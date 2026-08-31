@@ -255,7 +255,11 @@ def fetch_sec_company_financials(
     debt_parts: list[tuple[Decimal, Decimal]] = []
     for debt_tags in (
         ("LongTermDebtAndFinanceLeaseObligationsCurrent", "LongTermDebtCurrent"),
-        ("LongTermDebtNoncurrent",),
+        (
+            "LongTermDebtAndFinanceLeaseObligationsNoncurrent",
+            "LongTermDebtNoncurrent",
+            "LongTermDebt",
+        ),
     ):
         try:
             debt_current, debt_prior, _ = _value(facts, debt_tags, "debt", include_instant=True)
