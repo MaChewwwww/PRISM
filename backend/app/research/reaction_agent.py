@@ -532,13 +532,32 @@ class MarketReactionAgent:
                 raw_digest=completion.raw_digest,
             )
             if db_session is not None:
-                db_session.add(db_model)
-                await db_session.commit()
+                result = await db_session.execute(
+                    select(ResearchReportModel.id).where(
+                        ResearchReportModel.raw_digest == completion.raw_digest
+                    )
+                )
+                if result.scalar_one_or_none() is None:
+                    db_session.add(db_model)
+                    await db_session.commit()
+                else:
+                    logger.info(
+                        "Market reaction for %s already cached with digest %s",
+                        symbol,
+                        completion.raw_digest,
+                    )
         except Exception as exc:
             # A cache write must never turn a non-authoritative research result into an error.
             if db_session is not None:
                 await db_session.rollback()
-            if strict:
+                check_result = await db_session.execute(
+                    select(ResearchReportModel.id).where(
+                        ResearchReportModel.raw_digest == completion.raw_digest
+                    )
+                )
+                if check_result.scalar_one_or_none() is None and strict:
+                    raise RuntimeError("Market reaction research persistence failed") from exc
+            elif strict:
                 raise RuntimeError("Market reaction research persistence failed") from exc
             logger.warning("Market reaction cache write failed for symbol=%s", symbol)
 

@@ -48,7 +48,11 @@ from app.execution.cli_gateway import (
 )
 from app.execution.models import ExecutionReceiptModel
 from app.market.alpaca_gateway import AlpacaPyGateway
-from app.market.option_selection import OptionSelectionError, select_option_strategy
+from app.market.option_selection import (
+    OptionSelectionError,
+    select_candidate_option_strategies,
+    select_option_strategy,
+)
 from app.portfolio.metadata import metadata_complete, parse_instrument
 from app.profiles.service import ActiveProfile, ProfileGovernanceService
 from app.research.decision_agent import TradingDecisionAgent
@@ -581,7 +585,7 @@ class AutonomousWorker:
                     ),
                 )
 
-            strategy = select_option_strategy(
+            candidate_strategies = select_candidate_option_strategies(
                 contracts,
                 quotes,
                 underlying_price=report.current_price,
@@ -590,16 +594,42 @@ class AutonomousWorker:
                 now=now,
                 exit_dte_threshold=exit_policy.dte_threshold,
                 force_flatten_at=get_authorized_ruleset().parameters.hackathon_window.force_flatten_by,
+                max_candidates=5,
             )
+            evaluated: list[tuple[Any, HistoricalAnalogSummary]] = []
+            for candidate_strat in candidate_strategies:
+                try:
+                    candidate_econ = compute_option_payoff_ev(
+                        analog,
+                        candidate_strat,
+                        underlying_price=report.current_price,
+                        quotes=quotes,
+                        max_spread_pct=get_authorized_ruleset().parameters.max_bid_ask_spread_pct,
+                    )
+                    evaluated.append((candidate_strat, candidate_econ))
+                except Exception:
+                    continue
+
+            if not evaluated:
+                raise OptionSelectionError(
+                    "No candidate option strategy could produce valid payoff economics"
+                )
+
+            # Sort candidate strategies by:
+            # 1. Meets authorized Net EV floor of 0.15R (True before False)
+            # 2. Net EV (descending)
+            # 3. Reward-to-Risk ratio (descending)
+            evaluated.sort(
+                key=lambda item: (
+                    item[1].net_ev_r >= Decimal("0.15"),
+                    item[1].net_ev_r,
+                    item[1].reward_risk_ratio or Decimal("0"),
+                ),
+                reverse=True,
+            )
+            strategy, option_economics = evaluated[0]
             iv_rank_by_leg, _iv_observations = await self._resolve_iv_rank(
                 session, gateway, symbol, strategy, quotes, bars, now
-            )
-            option_economics = compute_option_payoff_ev(
-                analog,
-                strategy,
-                underlying_price=report.current_price,
-                quotes=quotes,
-                max_spread_pct=get_authorized_ruleset().parameters.max_bid_ask_spread_pct,
             )
             # The option-payoff model is the only EV that reaches the
             # authorization context.  The underlying-return fields remain a
