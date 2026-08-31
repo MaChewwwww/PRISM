@@ -10,7 +10,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
-from alpaca.data.enums import DataFeed
+from alpaca.data.enums import DataFeed, OptionsFeed
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.historical.stock import StockHistoricalDataClient
@@ -118,6 +118,7 @@ class AlpacaPyGateway:
             underlying_symbol=underlying,
             expiration_date_gte=expiration_date_gte,
             expiration_date_lte=expiration_date_lte,
+            feed=OptionsFeed.INDICATIVE,
         )
         response = self.options.get_option_chain(request)
         if not isinstance(response, dict):
@@ -166,14 +167,12 @@ class AlpacaPyGateway:
         start: datetime | None = None,
         end: datetime | None = None,
         limit: int = 2000,
-        feed: str = "indicative",
     ) -> list[dict[str, Any]]:
         """Retrieve historical option bars for model-derived IV observations."""
         try:
             params: dict[str, Any] = {
                 "symbols": option_symbol,
                 "timeframe": "1Day",
-                "feed": feed,
             }
             if start is not None:
                 params["start"] = start.isoformat()
