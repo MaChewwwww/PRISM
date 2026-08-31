@@ -20,8 +20,10 @@
 .workspace:has(.overview-app) {
   max-width: none;
   padding: 0;
-  overflow: hidden;
-  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  height: auto;
+  min-height: 100vh;
 }
 
 /* ==========================================================================
@@ -31,17 +33,41 @@
    ========================================================================== */
 .overview-app {
   display: grid;
-  grid-template-rows: 4rem 1fr 1.65rem;
-  grid-template-columns: minmax(0, 1fr) 16.25rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 22rem);
   grid-template-areas:
     "header header"
     "main   side"
     "ticker ticker";
-  height: 100%;
+  min-height: calc(100vh - 1.5rem);
+  height: auto;
   min-height: 0;
   gap: 0.75rem;
   padding: 0.75rem;
+  min-width: 0;
 }
+@keyframes overview-panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overview-detail-slide {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .overview-panel {
   display: flex;
   flex-direction: column;
@@ -50,15 +76,48 @@
   border-radius: var(--radius-card);
   border: 1px solid var(--glass-border);
   border-top-color: var(--glass-border-specular);
-  background: var(--glass-fill);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.24);
 }
+
 .overview-side-title {
   color: var(--text-muted);
   font: 650 0.62rem/1 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+.overview-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-bottom: 0.8rem;
+}
+.overview-section-icon {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(84, 125, 131, 0.35);
+  background: rgba(84, 125, 131, 0.14);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.overview-section-header h3 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 1.05rem;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.overview-section-header p {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
 }
 .overview-nums {
   font-family: var(--font-mono);
@@ -89,16 +148,25 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
 }
+.overview-eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--primary);
+  font: 680 0.58rem/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
 .overview-page-title {
-  font-size: 1.05rem;
+  font-size: clamp(1.35rem, 2.2vw, 2rem);
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
   color: var(--foreground);
 }
 .overview-page-subtitle {
-  margin-top: 0.15rem;
+  margin-top: 0.3rem;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 .overview-header-center {
   flex: 1;
@@ -166,8 +234,9 @@
 }
 .overview-decisions-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 1rem;
 }
 .overview-see-all {
   display: inline-flex;
@@ -318,17 +387,27 @@
 .overview-chart-panel {
   flex: 1;
   min-height: 0;
+  padding: 1rem 1rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.55);
+  animation: overview-panel-rise 260ms ease both;
 }
+
 .overview-chart-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
 }
+
 .overview-chart-legend {
   display: flex;
-  gap: 0.9rem;
+  gap: 1.2rem;
+  flex-wrap: wrap;
   color: var(--muted-foreground);
   font-size: 0.66rem;
 }
@@ -351,10 +430,22 @@
   background: var(--primary);
 }
 .overview-legend-alt {
-  background: var(--alternative);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--alternative) 0,
+    var(--alternative) 3px,
+    transparent 3px,
+    transparent 6px
+  );
 }
 .overview-legend-bench {
-  background: var(--benchmark);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--benchmark) 0,
+    var(--benchmark) 2px,
+    transparent 2px,
+    transparent 5px
+  );
 }
 .overview-legend-gap-swatch {
   width: 0.65rem;
@@ -372,8 +463,10 @@
 .overview-chart-row {
   flex: 1;
   display: flex;
+  align-items: stretch;
   gap: 1rem;
   min-height: 0;
+  transition: gap 200ms ease;
 }
 .overview-chart-body {
   flex: 1;
@@ -381,7 +474,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  transition: flex-basis 200ms ease;
+  transition: flex-basis 200ms ease, opacity 200ms ease;
 }
 .overview-chart-row.has-detail .overview-chart-body {
   flex: 1 1 auto;
@@ -389,7 +482,9 @@
 .overview-chart-plot {
   position: relative;
   flex: 1;
-  min-height: 12rem;
+  min-height: 18rem;
+  border-radius: 0.75rem;
+  background: rgba(8, 11, 16, 0.18);
 }
 .overview-chart-svg {
   position: absolute;
@@ -515,24 +610,34 @@
   gap: 1rem;
 }
 .overview-chart-x-axis {
-  display: flex;
-  justify-content: space-between;
+  display: block;
+  position: relative;
   margin-top: 0.4rem;
+  padding-right: 2rem;
   color: var(--text-muted);
   font-size: 0.6rem;
   font-family: var(--font-mono);
+  text-align: center;
+  line-height: 1.4;
 }
 
-/* Chart detail panel â€” opens as a fixed-width column on the right of the
-   chart when a point is selected; the chart body flexes to fill the rest. */
+/* Chart detail panel: always visible on the right of the chart, height
+   set to fit-content so it stays compact and doesn't create excess whitespace */
 .overview-chart-detail {
   flex: 0 0 15rem;
   min-width: 0;
-  padding-left: 1rem;
-  border-left: 1px solid var(--border);
   display: grid;
   align-content: start;
   gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  box-shadow: 0 12px 40px -16px rgba(84, 125, 131, 0.25);
+  animation: overview-detail-slide 220ms ease both;
+  transition: opacity 200ms ease, transform 200ms ease, width 200ms ease;
+  height: fit-content;
 }
 .overview-chart-detail-head {
   display: flex;
@@ -630,6 +735,8 @@
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 .overview-side-panel {
@@ -716,16 +823,19 @@
 .overview-spark {
   display: flex;
   align-items: flex-end;
-  gap: 0.3rem;
+  gap: 0.22rem;
+  width: 100%;
   height: 4rem;
+  overflow: hidden;
 }
 .overview-spark-bar-wrap {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.3rem;
   height: 100%;
+  min-width: 0;
   justify-content: flex-end;
   border: 0;
   background: transparent;
@@ -757,15 +867,18 @@
   grid-area: ticker;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  padding: 0.45rem 1rem;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
   font-size: 0.62rem;
-  overflow-x: auto;
-  white-space: nowrap;
+  overflow: hidden;
+  white-space: normal;
+  text-align: center;
 }
 .overview-ticker-value {
   color: var(--muted-foreground);

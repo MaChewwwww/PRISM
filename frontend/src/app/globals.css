@@ -398,17 +398,17 @@
 .page-header h1 {
   margin: 0;
   max-width: 21ch;
-  font-size: clamp(2rem, 4.6vw, 4.25rem);
-  line-height: 0.98;
-  letter-spacing: -0.05em;
-  font-weight: 580;
+  font-size: clamp(1.3rem, 2.7vw, 2.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  font-weight: 620;
 }
 .page-header > div > p:last-child {
   max-width: 48rem;
   margin: 1rem 0 0;
   color: var(--muted-foreground);
-  font-size: 0.93rem;
-  line-height: 1.65;
+  font-size: 0.85rem;
+  line-height: 1.55;
 }
 .page-header-actions {
   flex: 0 0 auto;
@@ -2165,7 +2165,7 @@ tbody th span {
     gap: 1.2rem;
   }
   .page-header h1 {
-    font-size: 2.15rem;
+    font-size: 1.8rem;
   }
   .range-presets {
     width: 100%;

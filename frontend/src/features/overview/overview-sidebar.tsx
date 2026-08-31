@@ -1,5 +1,6 @@
 "use client";
 
+import { ChartColumn, Layers3, PieChart } from "lucide-react";
 import { useState } from "react";
 
 import type {
@@ -15,6 +16,28 @@ type Props = {
   totalDecisionStories: number;
 };
 
+function SectionHeading({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof PieChart;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="overview-section-header">
+      <span className="overview-section-icon" aria-hidden="true">
+        <Icon size={14} />
+      </span>
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
+}
+
 export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStories }: Props) {
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null);
   const [selectedExposure, setSelectedExposure] = useState<string | null>(null);
@@ -29,7 +52,11 @@ export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStor
   return (
     <aside className="overview-side">
       <section className="overview-panel overview-side-panel">
-        <span className="overview-side-title">Decision outcomes</span>
+        <SectionHeading
+          icon={ChartColumn}
+          title="Decision outcomes"
+          description="Latest decision mix across the active portfolio period."
+        />
         {outcomes.length === 0 ? (
           <p className="overview-chart-detail-empty">No outcomes in this period.</p>
         ) : (
@@ -65,7 +92,11 @@ export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStor
       </section>
 
       <section className="overview-panel overview-side-panel">
-        <span className="overview-side-title">Active Portfolio exposure</span>
+        <SectionHeading
+          icon={PieChart}
+          title="Active Portfolio exposure"
+          description="Allocation by risk posture and capital concentration."
+        />
         <div className="overview-exposure-list">
           {exposures.map((exposure) => {
             const selected = selectedExposure === exposure.label;
@@ -91,7 +122,11 @@ export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStor
       </section>
 
       <section className="overview-panel overview-snapshot-panel">
-        <span className="overview-side-title">Snapshot</span>
+        <SectionHeading
+          icon={Layers3}
+          title="Snapshot"
+          description="Most recent portfolio measurements for this period."
+        />
         <div className="overview-stats-grid overview-nums">
           <div>
             <div className="overview-stat-val">${latest?.actual.toLocaleString() ?? "—"}</div>
