@@ -275,7 +275,7 @@ def fetch_sec_company_financials(
         ),
         "interest expense",
     )
-    shares, _, _ = _value(
+    shares, prior_shares, _ = _value(
         facts,
         (
             "EntityCommonStockSharesOutstanding",
@@ -337,6 +337,7 @@ def fetch_sec_company_financials(
         prior_current_ratio=prior_ratio,
         prior_gross_margin_pct=prior_margin,
         retained_earnings=millions(retained_earnings),
+        prior_shares_outstanding_millions=millions(prior_shares),
         provenance="sec_filing",
         data_as_of=revenue_as_of,
     )
