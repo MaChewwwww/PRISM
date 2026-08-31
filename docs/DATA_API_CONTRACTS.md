@@ -45,6 +45,10 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/system/status` | Redacted operational state | Yes |
 | GET | `/api/v1/autonomous/status` | Durable autonomous state and kill-switch audit metadata | Yes |
 | POST | `/api/v1/autonomous/kill-switch` | Authenticated, audited kill-switch update | Yes |
+| GET | `/api/v1/autonomous/cycles` | Bounded UTC-range autonomous worker outcomes | Yes |
+| GET | `/api/v1/autonomous/decisions` | Bounded UTC-range proposal/risk/authorization summaries | Yes |
+| GET | `/api/v1/autonomous/executions` | Bounded UTC-range sanitized paper execution receipts | Yes |
+| GET | `/api/v1/autonomous/portfolio/latest` | Latest persisted normalized portfolio snapshot | Yes |
 | POST | `/api/v1/research/news/analyze` | Non-authoritative structured news research | Yes |
 | POST | `/api/v1/research/reaction/analyze` | Non-authoritative market-reaction and mispricing research | Yes |
 | POST | `/api/v1/research/quant/analyze` | Deterministic quantitative technical analysis | Yes |
@@ -71,6 +75,22 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
 Collection endpoints require `from` and `to` query parameters. Both must be timezone-aware UTC timestamps, and `from` must not be later than `to`.
+
+## Autonomous operational read models
+
+The authenticated autonomous read endpoints are polling-oriented projections of
+existing durable records. They never instantiate the worker, refresh Alpaca
+data, or invoke an execution adapter. `cycles`, `decisions`, and `executions`
+require a bounded UTC range and accept a maximum `limit` of 200; decisions may
+filter by symbol and authorization outcome, and executions by receipt status.
+
+`portfolio/latest` projects the newest persisted worker snapshot or returns an
+explicit empty state before the first successful account snapshot. Its values
+are normalized decimal strings. The endpoints omit broker and client order IDs,
+account identifiers, raw provider payloads, raw broker messages, credentials,
+and hidden reasoning. Recorded ShadowFund alternatives remain available only
+through `/presentation/alternatives` and retain their existing provenance
+labels and non-executable semantics.
 
 ## Presentation metadata and provenance
 

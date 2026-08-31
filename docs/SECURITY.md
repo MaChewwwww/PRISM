@@ -10,7 +10,13 @@ The current skeleton uses seeded operator credentials and an HTTP-only `prism_se
 
 Development may use non-secret local labels. Staging and production reject example/default passwords and session secrets; authentication secrets must be supplied through protected environment configuration. `/api/v1/system/status`, the news-analysis endpoint, and all presentation endpoints require authentication. Liveness and readiness remain unauthenticated for orchestration.
 
-Provider errors are classified and redacted. Logs and API responses may expose credential-presence booleans, never values, account numbers, positions, orders, raw response bodies, or hidden reasoning.
+Provider errors are classified and redacted. Logs and redacted system-status responses may expose credential-presence booleans, never values, account numbers, raw provider position/order records, raw response bodies, or hidden reasoning. Authenticated autonomous portfolio read models may expose only their documented normalized position projection.
+
+Authenticated autonomous operational read models expose only normalized cycle,
+authorization, receipt, and persisted-portfolio fields. They never invoke the
+worker or providers on behalf of the browser and omit account identifiers,
+client/broker order identifiers, raw broker messages, raw provider payloads,
+credentials, and hidden reasoning.
 
 ## Execution controls
 
