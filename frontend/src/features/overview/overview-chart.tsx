@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { X, TrendingUp } from "lucide-react";
 
 import {
   formatCurrency,
-  formatSignedCurrency,
   formatSignedPercent,
   percentChange,
   type OverviewPoint,
@@ -90,6 +88,30 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
     return [...top, ...bottom].join(" ");
   }, [points, scale]);
 
+  // Build clean x-axis labels (avoid crowding) - moved before early return to follow Rules of Hooks
+  const xAxisLabels = useMemo(() => {
+    if (points.length === 0) return [];
+    const labels: Array<{ index: number; label: string }> = [];
+    const interval = Math.max(1, Math.ceil(points.length / 6));
+    let lastShownMonth = "";
+    
+    for (let i = 0; i < points.length; i++) {
+      if (i === 0 || i === points.length - 1 || i % interval === 0) {
+        const [year, month] = points[i].date.split("-").slice(0, 2);
+        const monthStr = new Date(2000, parseInt(month) - 1).toLocaleDateString("en-US", {
+          month: "short",
+        });
+        const label = `${monthStr} '${year.slice(2)}`;
+        // Avoid showing the exact same month twice in a row
+        if (label !== lastShownMonth) {
+          labels.push({ index: i, label });
+          lastShownMonth = label;
+        }
+      }
+    }
+    return labels;
+  }, [points]);
+
   const activeIndex = selected ? selected.index : hoverIndex;
   const activePoint = activeIndex !== null ? points[activeIndex] : null;
 
@@ -121,30 +143,6 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
     }
     onSelect({ point: points[index], index });
   }
-
-  // Build clean x-axis labels (avoid crowding)
-  const xAxisLabels = useMemo(() => {
-    if (points.length === 0) return [];
-    const labels: Array<{ index: number; label: string }> = [];
-    const interval = Math.max(1, Math.ceil(points.length / 6));
-    let lastShownMonth = "";
-    
-    for (let i = 0; i < points.length; i++) {
-      if (i === 0 || i === points.length - 1 || i % interval === 0) {
-        const [year, month] = points[i].date.split("-").slice(0, 2);
-        const monthStr = new Date(2000, parseInt(month) - 1).toLocaleDateString("en-US", {
-          month: "short",
-        });
-        const label = `${monthStr} '${year.slice(2)}`;
-        // Avoid showing the exact same month twice in a row
-        if (label !== lastShownMonth) {
-          labels.push({ index: i, label });
-          lastShownMonth = label;
-        }
-      }
-    }
-    return labels;
-  }, [points]);
 
   return (
     <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl sm:p-6">
