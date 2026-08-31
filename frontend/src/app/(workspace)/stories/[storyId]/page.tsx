@@ -1,10 +1,14 @@
 import {
+  AlertTriangle,
   ChevronLeft,
   FileCheck,
+  FileText,
   Gavel,
   GitBranch,
   GitCompareArrows,
+  Info,
   Layers,
+  Lock,
   Newspaper,
   ShieldAlert,
   ShieldCheck,
@@ -35,12 +39,21 @@ const GATE_TONE: Record<string, string> = {
   NOT_EVALUATED: "#64748B",
 };
 
-/** Format the paper outcome status, e.g. "illustrative_only" -> "FILLED · PAPER ACCOUNT". */
-function formatOutcomeStatus(status: string): string {
+/**
+ * Format the governed paper outcome status honestly. Only a "pass" outcome
+ * represents a paper fill; no_trade/reject/modify/degraded must never be
+ * labelled as a fill.
+ */
+function formatOutcomeStatus(status: string): { label: string; tone: string } {
   const normalized = status.toLowerCase();
-  const filled =
-    normalized.includes("no_trade") || normalized.includes("reject") ? "NO FILL" : "FILLED";
-  return `${filled} · PAPER ACCOUNT`;
+  if (normalized.includes("pass")) return { label: "FILLED · PAPER ACCOUNT", tone: "#00D084" };
+  if (normalized.includes("no_trade")) return { label: "NO TRADE · NO FILL", tone: "#94A3B8" };
+  if (normalized.includes("reject") || normalized.includes("fail"))
+    return { label: "REJECTED · NO FILL", tone: "#FF6B6B" };
+  if (normalized.includes("modif"))
+    return { label: "MODIFIED · PENDING ACCEPTANCE", tone: "#F59E0B" };
+  if (normalized.includes("degrad")) return { label: "DEGRADED · NO FILL", tone: "#F59E0B" };
+  return { label: `${status.toUpperCase()} · NO FILL`, tone: "#94A3B8" };
 }
 
 // Aggregate gate outcome label derived from the recorded rule result.
@@ -57,11 +70,6 @@ function aggregateGateLabel(ruleResult: string): string {
     default:
       return ruleResult;
   }
-}
-
-/** Human-readable story identifier, e.g. "ACME-EARNINGS-GAP". */
-function formatStoryId(id: string): string {
-  return id.toUpperCase();
 }
 
 /**
@@ -141,8 +149,6 @@ export default async function StoryDetailPage({
           <span className="font-semibold text-[#CBD5E1]">{story.symbol}</span>
           <span aria-hidden="true">&middot;</span>
           <time dateTime={story.occurredAt}>{formatKickerTimestamp(story.occurredAt)}</time>
-          <span aria-hidden="true">&middot;</span>
-          <span>Story ID: {formatStoryId(story.id)}</span>
         </div>
 
         <p className="mt-4 max-w-3xl text-[14px] leading-relaxed text-[#CBD5E1]">{story.summary}</p>
@@ -255,20 +261,33 @@ export default async function StoryDetailPage({
                 Autonomous Agent Perspective Chain
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                Seven specialists, one vetted candidate action.
+                Seven specialists evaluated independently. The vetted candidate action is presented
+                in the Proposal section below.
               </p>
             </div>
 
-            <AgentPerspectiveChain
-              storyId={story.id}
-              synthesis={{
-                action: story.illustrativeOutcome.action,
-                structure: story.illustrativeOutcome.action,
-                notional: story.chosenPathImpact,
-                consensus: "3 / 7 aligned",
-                note: story.illustrativeOutcome.rationale,
-              }}
-            />
+            <AgentPerspectiveChain storyId={story.id} />
+          </section>
+
+          {/* SECTION 03 — Proposal (structured candidate trade) */}
+          <section aria-labelledby="chapter-proposal" className="space-y-5">
+            <div className="border-b border-white/8 pb-4">
+              <h2
+                id="chapter-proposal"
+                className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
+              >
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                Proposal
+              </h2>
+              <p className="mt-1 text-[12px] text-[#64748B]">
+                The structured candidate trade the Trading Decision Agent submitted to governance
+                &mdash; before any rule was applied.
+              </p>
+            </div>
+
+            <ProposalCard story={story} />
           </section>
 
           {/* SECTION 05 — Risk AI Critique */}
@@ -328,8 +347,18 @@ export default async function StoryDetailPage({
             </div>
           </section>
 
-          {/* SECTION 06 — Deterministic Governance Gate */}
-          <section aria-labelledby="chapter-rules" className="space-y-5">
+          {/* SECTION 06 — Governance Gate (2/3) + Decision Status (1/3) */}
+          <div
+            className={
+              story.ruleResult === "MODIFY"
+                ? "grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start"
+                : ""
+            }
+          >
+          <section
+            aria-labelledby="chapter-rules"
+            className={`space-y-5 ${story.ruleResult === "MODIFY" ? "lg:col-span-2" : ""}`}
+          >
             <div className="border-b border-white/8 pb-4">
               <h2
                 id="chapter-rules"
@@ -363,7 +392,7 @@ export default async function StoryDetailPage({
 
               {/* Rule table */}
               <div className="mt-5 border-t border-white/8">
-                <div className="grid grid-cols-[2.5rem_5rem_minmax(0,1fr)] gap-4 border-b border-white/8 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#64748B] sm:grid-cols-[2.5rem_5rem_10rem_minmax(0,1.8fr)]">
+                <div className="grid grid-cols-[3.5rem_7rem_minmax(0,1fr)] gap-x-6 border-b border-white/8 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#64748B] sm:grid-cols-[3.5rem_7rem_11rem_minmax(0,1.8fr)]">
                   <span>Priority</span>
                   <span>Status</span>
                   <span className="hidden sm:block">Rule ID</span>
@@ -372,7 +401,7 @@ export default async function StoryDetailPage({
                 {story.ruleChecks.map((check) => (
                   <div
                     key={check.name}
-                    className="grid grid-cols-[2.5rem_5rem_minmax(0,1fr)] items-start gap-4 py-3.5 not-last:border-b not-last:border-white/8 sm:grid-cols-[2.5rem_5rem_10rem_minmax(0,1.8fr)]"
+                    className="grid grid-cols-[3.5rem_7rem_minmax(0,1fr)] items-start gap-x-6 gap-y-1 py-4 not-last:border-b not-last:border-white/8 sm:grid-cols-[3.5rem_7rem_11rem_minmax(0,1.8fr)]"
                   >
                     <span className="font-mono text-[13px] font-semibold text-[#F8FAFC]">
                       {check.priority}
@@ -401,8 +430,34 @@ export default async function StoryDetailPage({
                   </div>
                 ))}
               </div>
+
+              {/* Proposed modification — only when governance returned MODIFY */}
+              {story.ruleResult === "MODIFY" && <ProposedModification story={story} />}
             </div>
           </section>
+
+          {/* Decision Status (read-only acceptance explanation) — 1/3 column */}
+          {story.ruleResult === "MODIFY" && (
+            <section aria-labelledby="chapter-decision-status" className="space-y-5 lg:col-span-1">
+              <div className="border-b border-white/8 pb-4">
+                <h2
+                  id="chapter-decision-status"
+                  className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-[#F8FAFC]"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
+                    <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                  Decision Status
+                </h2>
+                <p className="mt-1 text-[12px] text-[#64748B]">
+                  Whether human acceptance would be required before this decision could proceed.
+                </p>
+              </div>
+
+              <DecisionStatusNote />
+            </section>
+          )}
+          </div>
 
           {/* SECTION 07 — Paper Execution Outcome */}
           <section aria-labelledby="chapter-outcome" className="space-y-5">
@@ -417,7 +472,8 @@ export default async function StoryDetailPage({
                 Paper Execution Outcome
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                The governed result recorded on the paper account
+                What actually happened after governance &mdash; the final governed result, not the
+                proposal.
               </p>
             </div>
 
@@ -436,8 +492,11 @@ export default async function StoryDetailPage({
                   <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">
                     Status
                   </p>
-                  <p className="mt-2 font-mono text-[13px] font-semibold uppercase tracking-wide text-[#00D084]">
-                    {formatOutcomeStatus(story.illustrativeOutcome.status)}
+                  <p
+                    className="mt-2 font-mono text-[13px] font-semibold uppercase tracking-wide"
+                    style={{ color: formatOutcomeStatus(story.illustrativeOutcome.status).tone }}
+                  >
+                    {formatOutcomeStatus(story.illustrativeOutcome.status).label}
                   </p>
                 </div>
                 <div>
@@ -457,8 +516,9 @@ export default async function StoryDetailPage({
                   aria-hidden="true"
                 />
                 <p className="text-[13px] leading-relaxed text-[#CBD5E1]">
-                  <strong className="font-semibold text-[#F8FAFC]">Paper only.</strong> This
-                  represents a governed outcome and is not an authorization or broker receipt.
+                  <strong className="font-semibold text-[#F8FAFC]">Paper only.</strong> This is a
+                  governed outcome record, not the proposal, and not an authorization or broker
+                  receipt. Only a passed outcome represents a paper fill.
                 </p>
               </div>
             </div>
@@ -698,6 +758,145 @@ function DecisionPipeline({ nodes }: { nodes: DecisionNode[] }) {
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/** Short action verb (BUY / SELL / HOLD / NO TRADE / MODIFIED / REVIEW). */
+function actionVerb(action: string): string {
+  const upper = action.toUpperCase();
+  if (upper.includes("NO TRADE") || upper.includes("NO_TRADE") || upper.includes("NO BROKER"))
+    return "NO TRADE";
+  if (upper.includes("MODIF")) return "MODIFIED";
+  if (upper.includes("SELL")) return "SELL";
+  if (upper.includes("HOLD")) return "HOLD";
+  if (upper.includes("BUY")) return "BUY";
+  return upper.split(/\s+/)[0] ?? "REVIEW";
+}
+
+/**
+ * The structured candidate trade. The current presentation contract does not
+ * expose a TradeProposal payload (legs, notional, EV, reward/risk); it only
+ * carries the recorded action + rationale via illustrativeOutcome. We therefore
+ * render the real candidate action and explicitly mark the structured payload
+ * as not exposed rather than fabricating numbers.
+ */
+function ProposalCard({ story }: { story: StoryDetail }) {
+  const { action, rationale } = story.illustrativeOutcome;
+  // Fields a full TradeProposal would carry but the current contract omits.
+  const deferredFields = ["Structure / legs", "Notional", "Expected value", "Reward / risk"];
+
+  return (
+    <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl sm:p-6">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">
+          Candidate action
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-[#00D084]/15 px-2 py-1 font-mono text-[11px] font-bold uppercase text-[#00D084]">
+            {actionVerb(action)}
+          </span>
+          <span className="text-[15px] font-semibold text-[#F8FAFC]">{action}</span>
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-white/8 pt-4">
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#64748B]">Rationale</p>
+        <p className="mt-2 text-[13px] leading-relaxed text-[#CBD5E1]">{rationale}</p>
+      </div>
+
+      {/* Structured payload is not exposed by this contract — state it plainly. */}
+      <div className="mt-5 flex items-start gap-3 rounded-xl border border-white/8 bg-white/2 p-4">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#64748B]" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[#F8FAFC]">
+            Structured proposal payload not available
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[#94A3B8]">
+            This decision record does not expose the structured <code>TradeProposal</code>. The
+            following fields would appear here once the backend emits them:
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {deferredFields.map((field) => (
+              <li
+                key={field}
+                className="rounded border border-white/8 bg-white/5 px-2 py-0.5 font-mono text-[11px] text-[#64748B]"
+              >
+                {field} · not provided
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Explains a MODIFY governance outcome. The contract carries no revised payload
+ * (no before/after), so we surface the triggering rule(s) and reason and
+ * explicitly acknowledge that the revised payload is not in this record —
+ * without fabricating quantities.
+ */
+function ProposedModification({ story }: { story: StoryDetail }) {
+  const modifyRules = story.ruleChecks.filter((check) => check.result === "MODIFY");
+  if (modifyRules.length === 0) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/8 p-4 sm:p-5">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-[#F59E0B]" aria-hidden="true" />
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.09em] text-[#F59E0B]">
+          Modification required
+        </p>
+      </div>
+
+      <dl className="mt-3 space-y-3">
+        <div>
+          <dt className="text-[12px] text-[#64748B]">Rule(s) triggered</dt>
+          <dd className="mt-1 space-y-1.5">
+            {modifyRules.map((rule) => (
+              <p key={rule.name} className="text-[13px] leading-relaxed text-[#CBD5E1]">
+                <strong className="font-semibold text-[#F8FAFC]">{rule.name}.</strong>{" "}
+                {rule.explanation}
+              </p>
+            ))}
+          </dd>
+        </div>
+      </dl>
+
+      <p className="mt-3 border-t border-[#F59E0B]/20 pt-3 text-[12px] leading-relaxed text-[#94A3B8]">
+        A deterministic safe revision is defined by the governance rule, but the revised proposal
+        payload is <span className="font-semibold text-[#CBD5E1]">not available</span> in this
+        decision record. Original and revised values are not shown to avoid presenting an unverified
+        number as real.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Read-only explanation for a MODIFIED_PENDING_ACCEPTANCE aggregate outcome.
+ * No Accept action is rendered: decision stories are read-only, and acceptance /
+ * re-authorization APIs are deferred. Execution is disabled and fails closed.
+ */
+function DecisionStatusNote() {
+  return (
+    <div className="rounded-xl border border-[#547D83]/30 bg-[#547D83]/10 p-4 sm:p-5">
+      <div className="flex items-center gap-2">
+        <Lock className="h-4 w-4 shrink-0 text-[#B2D8DC]" aria-hidden="true" />
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.09em] text-[#B2D8DC]">
+          Modified · pending acceptance
+        </p>
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-[#CBD5E1]">
+        The proposal was safely modified by governance and would require explicit human acceptance
+        and re-authorization before any execution.
+      </p>
+      <p className="mt-2 text-[12px] leading-relaxed text-[#94A3B8]">
+        This decision story is read-only. Acceptance is not available in this build, and no
+        execution occurs &mdash; the system remains paper-only and fails closed.
+      </p>
     </div>
   );
 }
