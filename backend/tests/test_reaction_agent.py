@@ -203,6 +203,34 @@ async def test_alpaca_gateway_get_stock_bars_success() -> None:
         assert request.feed.value == "iex"
 
 
+def test_alpaca_gateway_get_stock_latest_trade_uses_iex_and_normalizes_values() -> None:
+    settings = Settings(
+        _env_file=None,
+        alpaca_api_key="key",
+        alpaca_secret_key="secret",
+    )
+    mock_stock_client = MagicMock()
+    mock_trade = MagicMock()
+    mock_trade.timestamp = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
+    mock_trade.price = 204.25
+    mock_stock_client.get_stock_latest_trade.return_value = {"AAPL": mock_trade}
+
+    with patch(
+        "app.market.alpaca_gateway.StockHistoricalDataClient",
+        return_value=mock_stock_client,
+    ):
+        gateway = AlpacaPyGateway(settings)
+        trade = gateway.get_stock_latest_trade("aapl")
+
+    assert trade == {
+        "timestamp": datetime(2026, 8, 31, 13, 30, tzinfo=UTC),
+        "price": Decimal("204.25"),
+        "source": "alpaca_stock_latest_trade_iex",
+    }
+    request = mock_stock_client.get_stock_latest_trade.call_args.args[0]
+    assert request.feed.value == "iex"
+
+
 @pytest.mark.asyncio
 async def test_market_reaction_agent_analysis_and_caching() -> None:
     mock_llm_gateway = AsyncMock(spec=LLMGateway)
@@ -267,6 +295,8 @@ async def test_market_reaction_agent_analysis_and_caching() -> None:
         trace_id=trace_id,
         db_session=mock_session,
         article_id="art-123",
+        evaluation_at=datetime(2026, 8, 31, 13, 30, tzinfo=UTC),
+        market_observed_at=datetime(2026, 8, 31, 13, 29, 52, tzinfo=UTC),
     )
 
     assert report.symbol == "AAPL"
@@ -274,6 +304,7 @@ async def test_market_reaction_agent_analysis_and_caching() -> None:
     assert "underreacted" in report.thesis.lower()
     assert len(report.evidence) >= 2
     assert len(report.limitations) == 1
+    assert report.freshness_seconds == 8
     mock_llm_gateway.complete_structured.assert_called_once()
     mock_session.add.assert_called_once()
     mock_session.commit.assert_called_once()

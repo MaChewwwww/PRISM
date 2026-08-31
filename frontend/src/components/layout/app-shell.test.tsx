@@ -19,19 +19,20 @@ describe("AppShell", () => {
 
     const expectedLinks = [
       ["Overview", "/"],
-      ["Decision stories", "/stories"],
+      ["Decision Stories", "/stories"],
       ["Portfolio", "/portfolio"],
       ["Shadow Portfolio", "/alternatives"],
-      ["News & catalysts", "/news"],
       ["Market Tracker", "/market-tracker"],
-      ["Agents & tools", "/agents"],
+      ["News & Catalysts", "/news"],
+      ["Weekly Summary", "/weekly-summary"],
+      ["Agents & Tools", "/agents"],
       ["Rules", "/rules"],
     ];
 
     for (const [name, href] of expectedLinks) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
     }
-    expect(screen.getByRole("link", { name: "Decision stories" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Decision Stories" })).toHaveAttribute(
       "aria-current",
       "page",
     );

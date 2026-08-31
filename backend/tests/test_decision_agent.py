@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
@@ -202,3 +203,31 @@ async def test_decision_agent_synthesize_mocked() -> None:
     assert proposal.exit_policy.stop_loss_pct == Decimal("50.0")
     assert proposal.exit_policy.dte_threshold == 7
     assert proposal.exit_policy.max_hold_days == 14
+
+
+@pytest.mark.asyncio
+async def test_live_decision_rejects_stale_trade_before_specialist_llm_calls() -> None:
+    now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
+    llm_gateway = AsyncMock(spec=LLMGateway)
+    llm_gateway._settings = Settings(_env_file=None, llm_model="test-model")
+    alpaca_gateway = MagicMock(spec=AlpacaPyGateway)
+    alpaca_gateway.get_stock_bars.return_value = [
+        {"close": Decimal("100"), "timestamp": now - timedelta(days=1)}
+    ]
+    alpaca_gateway.get_news.return_value = [{"id": "event-1", "headline": "Fresh event"}]
+    alpaca_gateway.get_stock_latest_trade.return_value = {
+        "timestamp": now - timedelta(seconds=31),
+        "price": Decimal("101"),
+    }
+
+    agent = TradingDecisionAgent(llm_gateway=llm_gateway, alpaca_gateway=alpaca_gateway)
+
+    with pytest.raises(ValueError, match="Current market trade is unavailable or stale"):
+        await agent.synthesize_decision(
+            symbol="NVDA",
+            trace_id=uuid4(),
+            allow_illustrative=False,
+            as_of=now,
+        )
+
+    llm_gateway.complete_structured.assert_not_called()

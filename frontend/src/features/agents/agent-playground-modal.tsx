@@ -672,7 +672,7 @@ export function TryAgentButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`inline-flex items-center gap-2 rounded-lg bg-[#547D83] hover:bg-[#669299] px-3.5 py-2 text-xs font-semibold text-white shadow-md shadow-cyan-950/40 transition hover:shadow-cyan-500/20 active:scale-95 ${className}`}
+        className={`inline-flex shrink-0 items-center gap-2 rounded-md border border-[#547D83]/40 bg-[#547D83]/20 px-4 py-2 text-[13px] font-semibold text-[#B2D8DC] outline-none transition-colors hover:bg-[#547D83]/30 focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10] active:scale-95 ${className}`}
         aria-label={label}
       >
         <Plus className="h-4 w-4 stroke-[2.5]" />

@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -19,6 +19,7 @@ from alpaca.data.requests import (
     OptionBarsRequest,
     OptionChainRequest,
     StockBarsRequest,
+    StockLatestTradeRequest,
 )
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
@@ -411,3 +412,63 @@ class AlpacaPyGateway:
                 time.sleep(delay)
                 delay *= 2.0
         return []
+
+    def get_stock_latest_trade(self, symbol: str) -> dict[str, Any] | None:
+        """Return one current IEX trade for live research freshness checks.
+
+        Historical daily bars remain the source for technical and analog
+        calculations. They are not a current-market assertion and must never
+        satisfy the autonomous live-data freshness gate.
+        """
+
+        normalized_symbol = symbol.strip().upper()
+        if not normalized_symbol:
+            raise ValueError("Stock symbol must not be blank")
+        request_params = StockLatestTradeRequest(
+            symbol_or_symbols=normalized_symbol,
+            feed=DataFeed.IEX,
+        )
+        for attempt in range(3):
+            try:
+                response = self.stocks.get_stock_latest_trade(request_params)
+                if not isinstance(response, dict):
+                    return None
+                trade = response.get(normalized_symbol)
+                if trade is None:
+                    return None
+                timestamp = (
+                    trade.get("timestamp")
+                    if isinstance(trade, dict)
+                    else getattr(trade, "timestamp", None)
+                )
+                raw_price = (
+                    trade.get("price") if isinstance(trade, dict) else getattr(trade, "price", None)
+                )
+                try:
+                    price = Decimal(str(raw_price))
+                except (InvalidOperation, TypeError, ValueError):
+                    return None
+                if (
+                    not isinstance(timestamp, datetime)
+                    or timestamp.tzinfo is None
+                    or not price.is_finite()
+                    or price <= 0
+                ):
+                    return None
+                return {
+                    "timestamp": timestamp.astimezone(UTC),
+                    "price": price,
+                    "source": "alpaca_stock_latest_trade_iex",
+                }
+            except Exception as exc:
+                logger.warning(
+                    "Alpaca latest stock trade fetch failed for %s (attempt %d/%d): %s",
+                    normalized_symbol,
+                    attempt + 1,
+                    3,
+                    type(exc).__name__,
+                )
+                if attempt == 2 or not _is_transient_provider_error(exc):
+                    raise
+                time.sleep(1.0 * (2**attempt))
+        return None

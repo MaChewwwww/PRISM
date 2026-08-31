@@ -20,14 +20,14 @@ import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const navigation = [
   { label: "Overview", icon: LayoutDashboard, href: "/" },
-  { label: "Decision stories", icon: Network, href: "/stories" },
+  { label: "Decision Stories", icon: Network, href: "/stories" },
   { label: "Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
   { label: "Shadow Portfolio", icon: GitBranch, href: "/alternatives" },
-  { label: "News & catalysts", icon: Newspaper, href: "/news" },
   { label: "Market Tracker", icon: LineChart, href: "/market-tracker" },
-  { label: "Agents & tools", icon: Sparkles, href: "/agents" },
-  { label: "Rules", icon: BookOpenCheck, href: "/rules" },
+  { label: "News & Catalysts", icon: Newspaper, href: "/news" },
   { label: "Weekly Summary", icon: CalendarCheck, href: "/weekly-summary" },
+  { label: "Agents & Tools", icon: Sparkles, href: "/agents" },
+  { label: "Rules", icon: BookOpenCheck, href: "/rules" },
 ];
 
 export type PrimaryNavProps = {
