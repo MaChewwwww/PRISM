@@ -346,12 +346,17 @@ class AutonomousWorker:
                             payload_json=risk.model_dump_json(),
                         )
                     )
+                    auth_now = datetime.now(UTC)
                     decision = authorize_proposal(
                         proposal,
                         risk,
                         self.settings,
-                        inputs={**context, "analog_count": analog.count},
-                        now=now,
+                        inputs={
+                            **context,
+                            "analog_count": analog.count,
+                            "account_observed_at": auth_now,
+                        },
+                        now=auth_now,
                         profile_key=active_profile.profile_key,
                         profile_parameters=active_profile.parameters,
                         profile_id=active_profile.id,
