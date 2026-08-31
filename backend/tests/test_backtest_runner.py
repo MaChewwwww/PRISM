@@ -228,6 +228,33 @@ def test_historical_research_gateway_rejects_stale_checkpoint_window() -> None:
     assert historical.inputs["bars"]["NVDA"]
 
 
+def test_historical_research_gateway_fetches_latest_rows_for_strict_replay() -> None:
+    checkpoint = datetime(2026, 8, 24, 20, tzinfo=UTC)
+    calls: list[dict[str, object]] = []
+    all_rows = [
+        {"timestamp": checkpoint - timedelta(days=offset), "close": str(offset)}
+        for offset in range(40, -1, -1)
+    ]
+
+    class Gateway:
+        def get_stock_bars(self, _symbol: str, **kwargs: object) -> list[dict[str, object]]:
+            calls.append(kwargs)
+            limit = int(kwargs["limit"])
+            return all_rows[:limit]
+
+    historical = HistoricalResearchGateway(
+        Gateway(),
+        checkpoint=checkpoint,
+        require_checkpoint_data=True,  # type: ignore[arg-type]
+    )
+    latest_rows = historical.get_stock_bars("SPY", limit=3)
+
+    assert calls[0]["limit"] >= 1000
+    assert len(latest_rows) == 3
+    assert latest_rows[-1]["timestamp"] == checkpoint
+    assert len(historical.inputs["bars"]["SPY"]) == len(all_rows)
+
+
 def test_historical_artifacts_include_fingerprint_and_portfolio_projection(tmp_path: Path) -> None:
     checkpoint = "2026-08-24T20:00:00+00:00"
     manifests = [

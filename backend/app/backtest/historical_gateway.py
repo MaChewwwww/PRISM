@@ -7,6 +7,11 @@ from typing import Any
 
 from app.market.alpaca_gateway import AlpacaPyGateway
 
+# Alpaca returns ascending rows.  A small limit over a long lookback therefore
+# selects the oldest observations, which can leave strict replay evidence stale
+# even though newer bars exist in the requested range.
+REPLAY_BAR_LIMIT = 1000
+
 
 class HistoricalResearchGateway:
     """Expose only market/news observations available at one replay checkpoint."""
@@ -33,15 +38,26 @@ class HistoricalResearchGateway:
     def get_stock_bars(self, symbol: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         normalized_symbol = symbol.strip().upper()
         requested_limit = kwargs.get("limit")
+        requested_limit_int = int(requested_limit) if requested_limit is not None else None
         cached = self._bars_cache.get(normalized_symbol)
-        if cached is not None and (requested_limit is None or len(cached) >= int(requested_limit)):
+        if cached is not None and (
+            requested_limit_int is None or len(cached) >= requested_limit_int
+        ):
             self.inputs["bars"][normalized_symbol] = cached
             self._ensure_checkpoint_coverage(normalized_symbol, cached)
-            return cached
+            return (
+                cached
+                if requested_limit_int is None
+                else cached[-requested_limit_int:]
+                if requested_limit_int > 0
+                else []
+            )
         requested_start = kwargs.pop("start", self._checkpoint - timedelta(days=730))
         requested_end = kwargs.pop("end", self._checkpoint)
         kwargs["start"] = requested_start
         kwargs["end"] = min(requested_end, self._checkpoint)
+        if self._require_checkpoint_data:
+            kwargs["limit"] = max(requested_limit_int or 0, REPLAY_BAR_LIMIT)
         rows = self._gateway.get_stock_bars(normalized_symbol, *args, **kwargs)
         filtered = [
             row
@@ -54,7 +70,13 @@ class HistoricalResearchGateway:
         self._bars_cache[normalized_symbol] = filtered
         self.inputs["bars"][normalized_symbol] = filtered
         self._ensure_checkpoint_coverage(normalized_symbol, filtered)
-        return filtered
+        return (
+            filtered
+            if requested_limit_int is None
+            else filtered[-requested_limit_int:]
+            if requested_limit_int > 0
+            else []
+        )
 
     def _ensure_checkpoint_coverage(self, symbol: str, rows: list[dict[str, Any]]) -> None:
         if self._require_checkpoint_data and not any(
