@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.autonomous.audit import build_evaluation_root
-from app.autonomous.models import AutonomousCycleModel
+from app.autonomous.models import AutonomousCycleModel, OptionIvObservationModel
 from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
 from app.contracts.models import (
     OptionLeg,
@@ -472,3 +472,62 @@ def test_trade_verdict_affirmative_options_proposal() -> None:
     assert TradeVerdict.PROPOSE_TRADE in affirmative
     assert TradeVerdict.NO_TRADE not in affirmative
     assert TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL.value == "proceed_to_options_proposal"
+
+
+@pytest.mark.asyncio
+async def test_calculate_iv_rank_falls_back_to_underlying_observations() -> None:
+    settings = Settings(
+        _env_file=None,
+        iv_rank_min_observations=5,
+        iv_rank_lookback_days=30,
+    )
+    worker = AutonomousWorker(settings)
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+
+    # 10 underlying-level observations across different strikes for NVDA
+    mock_scalars = [
+        OptionIvObservationModel(
+            id=str(uuid4()),
+            underlying="NVDA",
+            option_symbol=f"NVDA260910C00{200 + i * 5}000",
+            observed_at=now - timedelta(minutes=i),
+            implied_volatility=Decimal("0.30") + Decimal(i) * Decimal("0.02"),
+            source="alpaca_option_chain",
+            observation_digest=f"digest_{i}",
+        )
+        for i in range(10)
+    ]
+    mock_result = MagicMock()
+    mock_result.scalars.return_value = mock_scalars
+
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = mock_result
+
+    mock_gateway = MagicMock()
+    mock_gateway.get_option_bars.return_value = []
+
+    leg = OptionLeg(
+        symbol="NVDA260910C00220000",
+        underlying="NVDA",
+        expiration="2026-09-10",
+        option_type=OptionType.CALL,
+        side=OptionSide.BUY,
+        strike_price=Decimal("220"),
+        position_intent="buy_to_open",
+    )
+
+    rank_result, _ = await worker._compute_persisted_iv_rank(
+        mock_session,
+        "NVDA",
+        current_iv=Decimal("0.35"),
+        now=now,
+        provider_observations=[],
+        option_symbol="NVDA260910C00220000",
+        gateway=mock_gateway,
+        underlying_bars=[],
+        leg=leg,
+    )
+    assert rank_result is not None
+    # 0.35 ranks around the middle of 0.30..0.48, so rank is between 20% and 50%
+    assert Decimal("20") <= rank_result.rank <= Decimal("50")
+    assert rank_result.observation_count >= 5
