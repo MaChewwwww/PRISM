@@ -175,6 +175,7 @@ class NewsIntelligenceAgent:
         db_session: AsyncSession | None = None,
         *,
         strict: bool = False,
+        evaluation_at: datetime | None = None,
     ) -> LLMEventAnalysis:
         """Analyze a single news article, checking cache first to prevent duplicate LLM cost."""
         article_id = str(article["id"])
@@ -186,7 +187,7 @@ class NewsIntelligenceAgent:
         clean_content = clean_html_and_truncate(content_raw)
 
         source_confidence = compute_source_confidence(source_raw)
-        event_age_seconds = compute_event_age_seconds(created_at_raw)
+        event_age_seconds = compute_event_age_seconds(created_at_raw, now=evaluation_at)
 
         # Get LLM configuration to search cache by (article_id, model_name)
         active_model = self.llm_gateway._settings.llm_model or "default"
@@ -303,10 +304,11 @@ class NewsIntelligenceAgent:
             )
 
         # Construct contract schema
+        created_at = (evaluation_at or datetime.now(UTC)).astimezone(UTC)
         analysis_contract = LLMEventAnalysis(
             id=uuid4(),
             trace_id=trace_id,
-            created_at=datetime.now(UTC),
+            created_at=created_at,
             article_id=article_id,
             symbol=symbol,
             headline=headline,

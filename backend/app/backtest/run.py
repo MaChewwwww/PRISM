@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import hashlib
 import json
 import subprocess
@@ -10,6 +11,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.autonomous.audit import build_evaluation_root
 from app.backtest.historical_gateway import HistoricalResearchGateway
@@ -28,7 +31,20 @@ END = "2026-08-28"
 SYMBOLS = ["NVDA", "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "META"]
 DISCLOSURE = (
     "Important disclosure: This backtest is a hypothetical historical simulation and does not "
-    "represent actual trading performance. It does not place paper or live orders."
+    "represent actual trading performance. Backtested results do not guarantee future results. "
+    "Results depend on market-data quality, data feed selection, corporate-action handling, "
+    "fees, slippage, liquidity, taxes, execution assumptions, and implementation details. "
+    "This material is for research and educational purposes only and is not investment advice, "
+    "a recommendation, an offer, or a solicitation to buy or sell securities, options, "
+    "cryptocurrencies, or any other financial product. All investments involve risk and may "
+    "lose value. Review Alpaca's disclosures and agreements at "
+    "https://alpaca.markets/disclosures."
+)
+PAPER_DISCLOSURE = (
+    "Paper trading is a simulated environment. It does not involve real money or actual "
+    "securities transactions. Paper results may differ from live trading because of fill "
+    "assumptions, market impact, liquidity, latency, data differences, order handling, fees, "
+    "and other market conditions."
 )
 
 
@@ -37,12 +53,17 @@ def _digest(value: object) -> str:
 
 
 def _preflight(cli_path: str) -> str:
-    result = subprocess.run(
+    version = subprocess.run(
         [cli_path, "version"], capture_output=True, text=True, timeout=10, check=False
     )
-    if result.returncode != 0:
-        raise RuntimeError("Alpaca CLI preflight failed")
-    return result.stdout.strip().splitlines()[0][:64]
+    if version.returncode != 0:
+        raise RuntimeError("Alpaca CLI version preflight failed")
+    doctor = subprocess.run(
+        [cli_path, "doctor"], capture_output=True, text=True, timeout=30, check=False
+    )
+    if doctor.returncode != 0:
+        raise RuntimeError("Alpaca CLI doctor preflight failed")
+    return version.stdout.strip().splitlines()[0][:64]
 
 
 async def run() -> int:
@@ -74,7 +95,9 @@ async def run() -> int:
     }
     (output / "config.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     (output / "notes.md").write_text(
-        f"# PRISM staging historical simulation\n\n{DISCLOSURE}\n", encoding="utf-8"
+        f"# PRISM staging historical simulation\n\n{DISCLOSURE}\n\n{PAPER_DISCLOSURE}\n\n"
+        "Execution is disabled; this run uses a cash-only ShadowFund counterfactual.\n",
+        encoding="utf-8",
     )
     summary: dict[str, Any] = {
         **manifest,
@@ -83,10 +106,28 @@ async def run() -> int:
     }
     init_db(settings.database_url)
     async for session in get_db_session():
+        running_record = BacktestRunModel(
+            id=run_id,
+            started_at=created_at,
+            completed_at=None,
+            status="RUNNING",
+            start_date=START,
+            end_date=END,
+            symbols_json=json.dumps(SYMBOLS),
+            artifact_dir=str(output),
+            summary_json=json.dumps(summary, default=str),
+            is_active_presentation=False,
+        )
+        session.add(running_record)
+        await session.commit()
         try:
-            reports, warnings = await _replay_agents(settings, output)
+            reports, warnings = await _replay_agents(settings, output, session)
         except Exception as exc:
             reports, warnings = [], [f"AI replay unavailable: {type(exc).__name__}"]
+            (output / "agent-replay.json").write_text(
+                json.dumps({"reports": [], "input_manifests": []}, indent=2), encoding="utf-8"
+            )
+            _write_historical_artifacts(output, [], [], warnings)
         summary.update(
             {
                 "outcome": "COMPLETED" if reports else "DATA_UNAVAILABLE",
@@ -124,6 +165,7 @@ async def run() -> int:
                     backtest_run_id=run_id,
                     refusal_reason=report["reason"],
                     horizon_at=report["checkpoint"],
+                    created_at=report["checkpoint"],
                 )
             post_analysis = await ShadowFundService().persist_post_analysis_batch(
                 session,
@@ -157,20 +199,10 @@ async def run() -> int:
             from sqlalchemy import update
 
             await session.execute(update(BacktestRunModel).values(is_active_presentation=False))
-        session.add(
-            BacktestRunModel(
-                id=run_id,
-                started_at=created_at,
-                completed_at=datetime.now(UTC),
-                status=summary["outcome"],
-                start_date=START,
-                end_date=END,
-                symbols_json=json.dumps(SYMBOLS),
-                artifact_dir=str(output),
-                summary_json=json.dumps(summary, default=str),
-                is_active_presentation=bool(reports),
-            )
-        )
+        running_record.completed_at = datetime.now(UTC)
+        running_record.status = summary["outcome"]
+        running_record.summary_json = json.dumps(summary, default=str)
+        running_record.is_active_presentation = bool(reports)
         session.add(
             BacktestAuditEventModel(
                 id=str(uuid4()),
@@ -196,7 +228,92 @@ async def run() -> int:
     return 0
 
 
-async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, Any]], list[str]]:
+def _safe_warning(checkpoint: datetime, symbol: str, exc: Exception) -> str:
+    detail = " ".join(str(exc).split())[:180]
+    suffix = f": {detail}" if detail else ""
+    return f"{checkpoint.date()} {symbol}: {type(exc).__name__}{suffix}"
+
+
+def _write_historical_artifacts(
+    output: Path,
+    input_manifests: list[dict[str, Any]],
+    reports: list[dict[str, Any]],
+    warnings: list[str],
+) -> None:
+    """Persist provider-shaped and normalized point-in-time replay inputs."""
+    raw_dir = output / "raw"
+    normalized_dir = output / "normalized"
+    raw_dir.mkdir(exist_ok=True)
+    normalized_dir.mkdir(exist_ok=True)
+
+    for manifest in input_manifests:
+        checkpoint = str(manifest["checkpoint"])
+        slug = checkpoint.replace("+00:00", "Z").replace(":", "").replace("-", "")
+        inputs = manifest["inputs"]
+        (raw_dir / f"checkpoint_{slug}_inputs.json").write_text(
+            json.dumps(inputs, indent=2, default=str), encoding="utf-8"
+        )
+        for data_type in ("bars", "news"):
+            for symbol, rows in sorted(inputs.get(data_type, {}).items()):
+                normalized_path = normalized_dir / f"checkpoint_{slug}_{symbol}_{data_type}.csv"
+                rows = rows if isinstance(rows, list) else []
+                fields = sorted({key for row in rows if isinstance(row, dict) for key in row})
+                with normalized_path.open("w", newline="", encoding="utf-8") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=fields)
+                    writer.writeheader()
+                    for row in rows:
+                        writer.writerow({key: row.get(key) for key in fields})
+        for symbol, financials in sorted(inputs.get("fundamentals", {}).items()):
+            (normalized_dir / f"checkpoint_{slug}_{symbol}_fundamentals.json").write_text(
+                json.dumps(financials, indent=2, default=str), encoding="utf-8"
+            )
+
+    fingerprint_payload = [
+        {"checkpoint": item["checkpoint"], "input_digest": item["input_digest"]}
+        for item in input_manifests
+    ]
+    (output / "data_fingerprint.json").write_text(
+        json.dumps(
+            {
+                "algorithm": "sha256",
+                "digest": _digest(fingerprint_payload),
+                "source": "alpaca_market_data_and_sec_companyfacts",
+                "checkpoints": fingerprint_payload,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (output / "warnings.json").write_text(json.dumps(warnings, indent=2), encoding="utf-8")
+    portfolio_results = [
+        {
+            "checkpoint": report["checkpoint"],
+            "symbol": report["symbol"],
+            "decision_digest": report["digest"],
+            "terminal_outcome": "NO_TRADE",
+            "virtual_position": "cash_only",
+            "active_portfolio_impact": "none",
+            "reason": report["reason"],
+        }
+        for report in reports
+    ]
+    (output / "portfolio-results.json").write_text(
+        json.dumps(
+            {
+                "mode": "shadowfund_counterfactual",
+                "execution": "disabled",
+                "results": portfolio_results,
+            },
+            indent=2,
+            default=str,
+        ),
+        encoding="utf-8",
+    )
+
+
+async def _replay_agents(
+    settings: Any, output: Path, db_session: AsyncSession | None = None
+) -> tuple[list[dict[str, Any]], list[str]]:
     """Run Agents 1-7 over point-in-time historical evidence; never execute."""
 
     reports: list[dict[str, Any]] = []
@@ -213,19 +330,31 @@ async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, An
         for symbol in SYMBOLS:
             trace_id = uuid4()
             try:
+                # Persist market/news evidence independently so a single
+                # unavailable SEC or LLM dependency cannot erase inputs.
+                try:
+                    await asyncio.to_thread(historical.get_stock_bars, symbol, limit=250)
+                except Exception as exc:
+                    warnings.append(_safe_warning(checkpoint, symbol, exc))
+                try:
+                    await asyncio.to_thread(historical.get_news, symbol, limit=5)
+                except Exception as exc:
+                    warnings.append(_safe_warning(checkpoint, symbol, exc))
                 financials = await asyncio.to_thread(
                     fetch_sec_company_financials,
                     symbol,
                     user_agent=settings.sec_user_agent,
                     as_of=checkpoint,
                 )
+                historical.inputs["fundamentals"][symbol] = financials.model_dump(mode="json")
                 decision = await TradingDecisionAgent(
                     LLMGateway(settings),
                     historical,  # type: ignore[arg-type]
                 ).synthesize_decision(
                     symbol,
                     trace_id,
-                    allow_illustrative=True,
+                    db_session=db_session,
+                    allow_illustrative=False,
                     financials=financials,
                     as_of=checkpoint,
                     provenance="historical_simulation",
@@ -245,9 +374,9 @@ async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, An
                     }
                 )
             except (SecFundamentalsUnavailable, ValueError) as exc:
-                warnings.append(f"{checkpoint.date()} {symbol}: {type(exc).__name__}")
+                warnings.append(_safe_warning(checkpoint, symbol, exc))
             except Exception as exc:
-                warnings.append(f"{checkpoint.date()} {symbol}: {type(exc).__name__}")
+                warnings.append(_safe_warning(checkpoint, symbol, exc))
         input_manifests.append(
             {
                 "checkpoint": checkpoint.isoformat(),
@@ -255,6 +384,17 @@ async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, An
                 "inputs": historical.inputs,
             }
         )
+        # Keep artifacts durable after every checkpoint so operators can
+        # inspect progress and a later failure does not discard prior data.
+        (output / "agent-replay.json").write_text(
+            json.dumps(
+                {"reports": reports, "input_manifests": input_manifests},
+                indent=2,
+                default=str,
+            ),
+            encoding="utf-8",
+        )
+        _write_historical_artifacts(output, input_manifests, reports, warnings)
         checkpoint += timedelta(days=1)
     (output / "agent-replay.json").write_text(
         json.dumps(
@@ -264,6 +404,7 @@ async def _replay_agents(settings: Any, output: Path) -> tuple[list[dict[str, An
         ),
         encoding="utf-8",
     )
+    _write_historical_artifacts(output, input_manifests, reports, warnings)
     return reports, warnings
 
 

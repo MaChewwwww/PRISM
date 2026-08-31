@@ -334,13 +334,22 @@ class TradingDecisionAgent:
                         trace_id=trace_id,
                         db_session=db_session,
                         strict=True,
+                        evaluation_at=now_utc,
                     )
                 )
             industry_report = await industry_agent.analyze_industry(
-                symbol=sym, trace_id=trace_id, db_session=db_session, strict=True
+                symbol=sym,
+                trace_id=trace_id,
+                db_session=db_session,
+                strict=True,
+                evaluation_at=now_utc,
             )
             macro_report = await macro_agent.analyze_macro(
-                symbol=sym, trace_id=trace_id, db_session=db_session, strict=True
+                symbol=sym,
+                trace_id=trace_id,
+                db_session=db_session,
+                strict=True,
+                evaluation_at=now_utc,
             )
 
             catalyst = news_report[0].headline if news_report else f"Market movement in {sym}"
@@ -364,6 +373,7 @@ class TradingDecisionAgent:
                 event_age_seconds=evt_age,
                 event_category=evt_cat,
                 strict=True,
+                evaluation_at=now_utc,
             )
         else:
             catalyst = (
@@ -422,7 +432,15 @@ class TradingDecisionAgent:
             financials=financials,
         )
 
-        if not allow_illustrative and reaction_report.freshness_seconds > 30:
+        # Historical replay evaluates evidence at the requested checkpoint.
+        # A daily bar can be many hours old at the checkpoint while still being
+        # the latest point-in-time observation; the live path retains the
+        # strict 30-second freshness gate.
+        if (
+            not allow_illustrative
+            and provenance != "historical_simulation"
+            and reaction_report.freshness_seconds > 30
+        ):
             raise ValueError(f"Market reaction evidence is stale for {sym}")
 
         # 3. Deterministic Composite Scoring & Alignment

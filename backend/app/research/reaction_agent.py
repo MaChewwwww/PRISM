@@ -271,6 +271,7 @@ class MarketReactionAgent:
         event_category: NewsEventCategory = NewsEventCategory.OTHER,
         *,
         strict: bool = False,
+        evaluation_at: datetime | None = None,
     ) -> ResearchReport:
         """Evaluate the market reaction and produce a formal ResearchReport contract."""
         active_model = self.llm_gateway._settings.llm_model or "default"
@@ -395,7 +396,7 @@ class MarketReactionAgent:
         if not parsed:
             raise ValueError("Failed to obtain valid parsed output from LLM gateway")
 
-        now_utc = datetime.now(UTC)
+        now_utc = (evaluation_at or datetime.now(UTC)).astimezone(UTC)
         evidence_items = [
             EvidenceItem(
                 source="alpaca_market_data",

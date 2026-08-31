@@ -53,6 +53,7 @@ class ShadowFundService:
         backtest_run_id: str | None = None,
         refusal_reason: str | None = None,
         horizon_at: datetime | None = None,
+        created_at: datetime | None = None,
     ) -> ShadowSessionModel:
         """Create a complete branch set without inferring unavailable market data."""
 
@@ -64,7 +65,7 @@ class ShadowFundService:
         if existing is not None:
             return existing
 
-        now = datetime.now(UTC)
+        now = (created_at or datetime.now(UTC)).astimezone(UTC)
         has_proposal = proposal is not None
         state = "open" if has_proposal else "incomplete"
         record = ShadowSessionModel(
