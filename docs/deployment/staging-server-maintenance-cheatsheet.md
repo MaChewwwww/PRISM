@@ -58,7 +58,8 @@ Verify after a change:
 ```bash
 docker compose --env-file .env ps
 curl --fail --silent --show-error http://localhost:3005/api/v1/health/ready  # staging
-curl --fail --silent --show-error http://localhost/api/v1/health/ready     # production
+PRISM_HTTP_PORT="$(sed -n -E 's/^PRISM_HTTP_PORT=([0-9]+)$/\1/p' .env | tail -n 1)"
+curl --fail --silent --show-error "http://localhost:${PRISM_HTTP_PORT:-80}/api/v1/health/ready"  # production
 ```
 
 Execution remains paper-only and disabled by default. Production autonomous

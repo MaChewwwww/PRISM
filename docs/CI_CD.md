@@ -18,7 +18,7 @@ Pull requests and pushes targeting `staging` or `main` run repository governance
 
 `.github/workflows/deploy-staging.yml` deploys a successful `staging` push only when `STAGING_DEPLOY_ENABLED=true`; manual dispatch is also available. `.github/workflows/deploy.yml` automatically deploys a successful `main` push and supports manual dispatch as a fallback. Both verify revision ancestry and deploy an exact revision over SSH.
 
-The remote Compose command runs the one-shot Alembic migration service before backend readiness. Deployment smoke checks use unauthenticated `/api/v1/health/ready`; authenticated `/api/v1/system/status` is an operator check and requires a valid session.
+The remote Compose command runs the one-shot Alembic migration service before backend readiness. Production deployment smoke checks use unauthenticated `/api/v1/health/ready` through the numeric `PRISM_HTTP_PORT` configured in the protected server `.env`, rather than a host TLS redirect; authenticated `/api/v1/system/status` is an operator check and requires a valid session.
 
 Staging and production require distinct VPS paths, Compose project names, secrets, authentication values, Alpaca paper credentials when configured, and databases. Neither environment may enable live trading. Execution remains disabled unless separately reviewed and authorized. Autonomous trading is production-only and its schedule bounds are validated at startup; staging rejects `AUTONOMOUS_TRADING_ENABLED=true`. Staging historical backtests are manual, explicitly enabled, non-executing jobs and must not be added as a CI order test.
 
