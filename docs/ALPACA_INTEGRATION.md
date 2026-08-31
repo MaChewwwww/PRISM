@@ -27,6 +27,8 @@ Read requests use bounded timeouts and typed response validation. Retries are li
 
 For live autonomous research, the gateway retrieves an IEX latest stock trade separately from historical daily bars. The latest trade's price and UTC timestamp are the bounded live-market observation used for the BA-authorized freshness check at the start of a cycle; daily bars remain historical evidence for technical/reaction/analogue calculations and cannot satisfy that gate. The worker still refreshes execution-critical option quotes before deterministic authorization. An unavailable or stale latest trade produces a no-trade result before specialist LLM calls. This behavior was verified against Alpaca's [latest stock trade](https://docs.alpaca.markets/us/reference/stocklatesttrades-1) and [latest stock bar](https://docs.alpaca.markets/us/reference/stocklatestbars-1) references on 2026-08-31.
 
+For the locked `alpaca-py` 0.44.0 client, option-chain IV is read from each `OptionsSnapshot.implied_volatility`, while delta, gamma, theta, and vega are read from its nested `OptionsGreeks`. The gateway rejects incomplete snapshots rather than substituting missing data, but must not reject a complete provider response due to that model boundary. This mapping was verified against Alpaca's [option-chain](https://docs.alpaca.markets/us/v1.1/reference/optionchain) reference and [market-data FAQ](https://docs.alpaca.markets/us/docs/market-data-faq) on 2026-08-31.
+
 The CLI receives an argument array and JSON through standard input; no shell-built command is permitted. Credentials are supplied only in the child-process environment. stdout/stderr are parsed and redacted before persistence or logging.
 
 ## Local paper-account monitor

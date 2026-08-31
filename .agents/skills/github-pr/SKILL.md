@@ -16,10 +16,11 @@ Prepare a reviewable PR without bypassing repository governance. Root `AGENTS.md
 ## Choose the branch and base
 
 - Normal work: branch from current `staging` as `feature/<slug>`; use `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, or `ci/` when that type is more accurate. Target `staging`.
+- Urgent production work: branch from current `main` using the same typed prefixes and target `main` directly. Preserve the required checks and pull-request review; direct pushes remain prohibited.
 - If working changes are already present on `main` or `staging`, create the work branch before committing so the protected branch stays unchanged.
 - If already on an allowed work branch, reuse it unless it is unrelated to the change.
-- Promotion: a clean `staging` branch targets `main`; do not add a promotion-only commit.
-- Refuse a normal PR from `main`, a non-staging promotion into `main`, detached HEAD, or a branch with unrelated history.
+- Promotion: a clean `staging` branch targets `main`; do not add a promotion-only commit. An allowed typed branch based on current `main` may also target `main` for an urgent direct release.
+- Refuse a PR from `main`, an untyped branch into `main`, detached HEAD, or a branch with unrelated history.
 
 Fetch before branching and ensure the chosen base exists on `origin`. Use explicit base/head flags throughout; never infer `main` from GitHub's default branch.
 
