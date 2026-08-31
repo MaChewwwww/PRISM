@@ -84,33 +84,60 @@ def select_option_strategy(
         min_expiration = max(min_expiration, force_flatten_at.astimezone(UTC).date())
     option_type = OptionType.CALL if direction == "bullish" else OptionType.PUT
     candidates = []
+    diag: dict[str, int] = {
+        "expired_or_before_min_dte": 0,
+        "inactive_or_untradable": 0,
+        "wrong_type": 0,
+        "missing_quotes": 0,
+        "invalid_strike": 0,
+        "quote_error": 0,
+        "quote_stale": 0,
+        "quote_spread_exceeded": 0,
+    }
     for contract in contracts:
         expiration = _as_date(contract.get("expiration"))
-        if (
-            expiration <= min_expiration
-            or not contract.get("active")
-            or not contract.get("tradable")
-        ):
+        if expiration <= min_expiration:
+            diag["expired_or_before_min_dte"] += 1
             continue
-        if str(contract.get("option_type", "")).lower().endswith(option_type.value):
-            quotes_for_contract = quotes.get(str(contract.get("symbol")))
-            if quotes_for_contract is None:
-                continue
-            try:
-                strike = Decimal(str(contract["strike"]))
-            except (KeyError, TypeError, ValueError):
-                continue
-            try:
-                price = _quote_price(
-                    quotes_for_contract,
-                    now,
-                    entry_touch=pricing == "entry_touch",
-                )
-            except OptionSelectionError:
-                continue
-            candidates.append((expiration, strike, contract, price))
+        if not contract.get("active", True) or contract.get("tradable") is False:
+            diag["inactive_or_untradable"] += 1
+            continue
+        if not str(contract.get("option_type", "")).lower().endswith(option_type.value):
+            diag["wrong_type"] += 1
+            continue
+        quotes_for_contract = quotes.get(str(contract.get("symbol")))
+        if quotes_for_contract is None:
+            diag["missing_quotes"] += 1
+            continue
+        try:
+            strike = Decimal(str(contract["strike"]))
+        except (KeyError, TypeError, ValueError):
+            diag["invalid_strike"] += 1
+            continue
+        try:
+            price = _quote_price(
+                quotes_for_contract,
+                now,
+                entry_touch=pricing == "entry_touch",
+            )
+        except OptionSelectionError as exc:
+            err_msg = str(exc)
+            if "stale" in err_msg:
+                diag["quote_stale"] += 1
+            elif "spread" in err_msg:
+                diag["quote_spread_exceeded"] += 1
+            else:
+                diag["quote_error"] += 1
+            continue
+        candidates.append((expiration, strike, contract, price))
     if not candidates:
-        raise OptionSelectionError("No fresh active option contract satisfies exit rules")
+        breakdown = [f"{k}={v}" for k, v in diag.items() if v > 0]
+        breakdown_str = f" ({', '.join(breakdown)})" if breakdown else ""
+        msg = (
+            f"No fresh active option contract satisfies exit rules; "
+            f"examined {len(contracts)} contracts{breakdown_str}"
+        )
+        raise OptionSelectionError(msg)
     expiration = min(item[0] for item in candidates)
     same_expiration = [item for item in candidates if item[0] == expiration]
     long_item = min(same_expiration, key=lambda item: abs(item[1] - underlying_price))
