@@ -6,7 +6,7 @@ export type OverviewDecision = {
   title: string;
   symbol: string;
   perspective: string;
-  outcome: "pass" | "modify" | "no_trade" | "fail" | "degraded";
+  outcome: "pass" | "modify" | "no_trade" | "fail" | "degraded" | "retrospective";
   ruleResult: "PASS" | "MODIFY" | "FAIL" | "NOT_EVALUATED";
   active: number;
   alternative: number;
@@ -52,6 +52,7 @@ const outcomeColors: Record<string, string> = {
   fail: "#FF6B6B",
   no_trade: "#547D83",
   degraded: "#94A3B8",
+  retrospective: "#F59E0B",
 };
 
 function numeric(value: string | null | undefined) {

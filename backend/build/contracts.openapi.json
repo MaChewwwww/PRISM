@@ -381,6 +381,174 @@
         "title": "AgentObservability",
         "type": "object"
       },
+      "AgentPerspective": {
+        "additionalProperties": false,
+        "properties": {
+          "agentKey": {
+            "enum": [
+              "news",
+              "quantitative",
+              "industry",
+              "fundamental",
+              "macroeconomic",
+              "market_reaction",
+              "trading_decision"
+            ],
+            "title": "Agentkey",
+            "type": "string"
+          },
+          "agentName": {
+            "title": "Agentname",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "modelName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelname"
+          },
+          "occurredAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurredat"
+          },
+          "promptVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promptversion"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "enum": [
+                  "live_research",
+                  "retrospective_reconstruction"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
+          "reconstructionLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconstructionlabel"
+          },
+          "sourceDate": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcedate"
+          },
+          "sourceDigest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcedigest"
+          },
+          "sourceTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetitle"
+          },
+          "status": {
+            "enum": [
+              "recorded",
+              "unavailable",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "agentKey",
+          "agentName",
+          "status"
+        ],
+        "title": "AgentPerspective",
+        "type": "object"
+      },
       "AgentRecord": {
         "additionalProperties": false,
         "properties": {
@@ -7318,6 +7486,13 @@
       "StoryDetail": {
         "additionalProperties": false,
         "properties": {
+          "agentPerspectives": {
+            "items": {
+              "$ref": "#/components/schemas/AgentPerspective"
+            },
+            "title": "Agentperspectives",
+            "type": "array"
+          },
           "alternatives": {
             "items": {
               "$ref": "#/components/schemas/AlternativeBranch"
@@ -7462,7 +7637,8 @@
           "modify",
           "fail",
           "no_trade",
-          "degraded"
+          "degraded",
+          "retrospective"
         ],
         "title": "StoryOutcome",
         "type": "string"

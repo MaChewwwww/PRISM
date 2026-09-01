@@ -1,3 +1,7 @@
+# Agent-decision record boundary
+
+Agent-decision monitoring records permit only redacted summaries, structured evidence/limitations, and safe model metadata. Prompts, hidden reasoning, credentials, raw provider responses, and broker payloads are not persisted in this table or returned to the frontend.
+
 # Security
 
 ## Trust boundaries

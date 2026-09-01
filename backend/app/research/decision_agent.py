@@ -29,6 +29,7 @@ from app.contracts.models import (
 )
 from app.core.llm_gateway import LLMError, LLMGateway
 from app.market.alpaca_gateway import AlpacaPyGateway
+from app.research.agent_decisions import persist_agent_decision_snapshots
 from app.research.fundamental_data import CompanyFinancials
 from app.research.fundamental_engine import compute_fundamental_analysis
 from app.research.industry_agent import IndustryIntelligenceAgent
@@ -693,6 +694,25 @@ class TradingDecisionAgent:
                 )
                 if result.scalar_one_or_none() is None:
                     db_session.add(db_record)
+                    # This audit-only snapshot is committed with the existing
+                    # decision record. It never feeds scoring, selection,
+                    # authorization, or execution.
+                    await persist_agent_decision_snapshots(
+                        db_session,
+                        trace_id=trace_id,
+                        symbol=sym,
+                        created_at=now_utc,
+                        model_name=active_model,
+                        reports={
+                            "news": news_report,
+                            "quantitative": quant_report,
+                            "industry": industry_report,
+                            "fundamental": fundamental_report,
+                            "macroeconomic": macro_report,
+                            "market_reaction": reaction_report,
+                            "trading_decision": decision,
+                        },
+                    )
                     await db_session.commit()
                     logger.info("Persisted TradeDecisionReport for %s to database", sym)
                 else:

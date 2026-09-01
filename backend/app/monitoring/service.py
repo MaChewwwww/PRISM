@@ -29,6 +29,7 @@ from app.observability.models import LLMUsageEventModel
 from app.presentation.models import (
     Activity,
     AgentObservability,
+    AgentPerspective,
     AgentRecord,
     AgentRun,
     Catalyst,
@@ -67,7 +68,8 @@ from app.presentation.models import (
 )
 from app.profiles.models import AIProfileModel
 from app.profiles.service import _parse_parameters
-from app.research.models import LLMEventAnalysisModel
+from app.research.agent_decisions import AGENT_ROSTER
+from app.research.models import AgentDecisionRecordModel, LLMEventAnalysisModel
 from app.rules.registry import get_authorized_ruleset
 from app.shadowfund.models import ShadowPostAnalysisBatchModel, ShadowProfileRecommendationModel
 
@@ -78,6 +80,14 @@ def _json(value: str) -> dict[str, Any]:
     except (TypeError, json.JSONDecodeError):
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _json_list(value: str) -> list[str]:
+    try:
+        parsed = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return [str(item) for item in parsed] if isinstance(parsed, list) else []
 
 
 def _decimal(value: object) -> Decimal | None:
@@ -336,13 +346,102 @@ class MonitoringReadService:
                 and proposals[row.proposal_id].symbol == symbol.upper()
             ]
         all_symbols = sorted({proposal.symbol for proposal in proposals.values()})
+        retros = await self._retrospective_summaries(session, start, end)
+        if outcome and outcome != "all":
+            retros = [row for row in retros if row.outcome.value == outcome]
+        if symbol and symbol != "all":
+            retros = [row for row in retros if row.symbol == symbol.upper()]
         return PresentationEnvelope(
             meta=_meta(start, end),
             data=DecisionCollection(
-                stories=[_summary(row, proposals.get(row.proposal_id)) for row in rows],
-                symbols=all_symbols,
+                stories=[_summary(row, proposals.get(row.proposal_id)) for row in rows] + retros,
+                symbols=sorted(set(all_symbols) | {row.symbol for row in retros}),
             ),
         )
+
+    async def _retrospective_summaries(
+        self, session: AsyncSession, start: datetime, end: datetime
+    ) -> list[StorySummary]:
+        rows = list(
+            (
+                await session.scalars(
+                    select(AgentDecisionRecordModel)
+                    .where(
+                        AgentDecisionRecordModel.provenance == "retrospective_reconstruction",
+                        AgentDecisionRecordModel.created_at >= start,
+                        AgentDecisionRecordModel.created_at <= end,
+                        AgentDecisionRecordModel.story_id.is_not(None),
+                        AgentDecisionRecordModel.agent_key == "trading_decision",
+                    )
+                    .order_by(AgentDecisionRecordModel.created_at.desc())
+                )
+            ).all()
+        )
+        return [
+            StorySummary(
+                id=str(row.story_id),
+                occurred_at=row.created_at.astimezone(UTC),
+                symbol=row.symbol,
+                category="Retrospective evidence",
+                title="Retrospective reconstruction — NVDA decision",
+                summary=row.summary,
+                outcome=StoryOutcome.RETROSPECTIVE,
+                rule_result="NOT_EVALUATED",
+                chosen_path_impact="No original paper receipt is linked.",
+                best_alternative_impact="Not reconstructed.",
+                lesson="Static source-limited reconstruction; not a live agent invocation.",
+            )
+            for row in rows
+        ]
+
+    async def _agent_perspectives(
+        self, session: AsyncSession, *, trace_id: str
+    ) -> list[AgentPerspective]:
+        rows = list(
+            (
+                await session.scalars(
+                    select(AgentDecisionRecordModel)
+                    .where(AgentDecisionRecordModel.trace_id == trace_id)
+                    .order_by(
+                        AgentDecisionRecordModel.created_at, AgentDecisionRecordModel.agent_key
+                    )
+                )
+            ).all()
+        )
+        by_key = {row.agent_key: row for row in rows}
+        perspectives: list[AgentPerspective] = []
+        for key, name in AGENT_ROSTER:
+            row = by_key.get(key)
+            if row is None:
+                perspectives.append(
+                    AgentPerspective(
+                        agent_key=cast(Any, key), agent_name=name, status="unavailable"
+                    )
+                )
+                continue
+            valid = row.provenance in {"live_research", "retrospective_reconstruction"}
+            perspectives.append(
+                AgentPerspective(
+                    agent_key=cast(Any, key),
+                    agent_name=row.agent_name,
+                    status="recorded" if valid else "degraded",
+                    headline=row.headline if valid else None,
+                    summary=row.summary if valid else None,
+                    evidence=_json_list(row.evidence_json) if valid else [],
+                    limitations=_json_list(row.limitations_json) if valid else [],
+                    occurred_at=row.created_at.astimezone(UTC),
+                    provenance=cast(Any, row.provenance) if valid else None,
+                    model_name=row.model_name if valid else None,
+                    prompt_version=row.prompt_version if valid else None,
+                    source_title=row.source_title if valid else None,
+                    source_date=row.source_date.astimezone(UTC)
+                    if valid and row.source_date
+                    else None,
+                    source_digest=row.source_digest if valid else None,
+                    reconstruction_label=row.reconstruction_label if valid else None,
+                )
+            )
+        return perspectives
 
     async def decision(
         self, session: AsyncSession, proposal_id: str
@@ -355,7 +454,7 @@ class MonitoringReadService:
         )
         proposal = await session.get(TradeProposalModel, proposal_id)
         if authorization is None or proposal is None:
-            return None
+            return await self._retrospective_detail(session, proposal_id)
         summary = _summary(authorization, proposal)
         proposal_payload = _json(proposal.payload_json)
         bundle = await session.get(ResearchBundleModel, proposal.research_bundle_id)
@@ -391,6 +490,7 @@ class MonitoringReadService:
             for item in trace_items
             if isinstance(item, dict)
         ]
+        perspectives = await self._agent_perspectives(session, trace_id=proposal.trace_id)
         nodes = [
             DecisionNode(
                 id=f"specialist-{index}",
@@ -398,8 +498,10 @@ class MonitoringReadService:
                 label=name,
                 actor=name,
                 component_kind="ai_specialist",
-                status="recorded" if bundle else "not_recorded",
-                detail="Recorded structured research boundary.",
+                status=next(
+                    (item.status for item in perspectives if item.agent_name == name), "unavailable"
+                ),
+                detail="Durable agent-decision snapshot when available.",
             )
             for index, name in enumerate(
                 (
@@ -554,6 +656,93 @@ class MonitoringReadService:
                 lessons=["Review the recorded rule trace and operational evidence."],
                 evidence=evidence,
                 operational_evidence=operational_evidence,
+                agent_perspectives=perspectives,
+            ),
+        )
+
+    async def _retrospective_detail(
+        self, session: AsyncSession, story_id: str
+    ) -> PresentationEnvelope[StoryDetail] | None:
+        first = await session.scalar(
+            select(AgentDecisionRecordModel)
+            .where(
+                AgentDecisionRecordModel.story_id == story_id,
+                AgentDecisionRecordModel.provenance == "retrospective_reconstruction",
+            )
+            .order_by(AgentDecisionRecordModel.created_at)
+            .limit(1)
+        )
+        if first is None:
+            return None
+        perspectives = await self._agent_perspectives(session, trace_id=first.trace_id)
+        summary = StorySummary(
+            id=story_id,
+            occurred_at=first.created_at.astimezone(UTC),
+            symbol=first.symbol,
+            category="Retrospective evidence",
+            title="Retrospective reconstruction — NVDA decision",
+            summary="Static reconstruction from the approved Day 1 evidence excerpt.",
+            outcome=StoryOutcome.RETROSPECTIVE,
+            rule_result="NOT_EVALUATED",
+            chosen_path_impact="No original paper receipt is linked.",
+            best_alternative_impact="Not reconstructed.",
+            lesson="This record is source-limited and never represents a live invocation.",
+        )
+        return PresentationEnvelope(
+            meta=_meta(as_of=first.created_at),
+            data=StoryDetail(
+                **summary.model_dump(),
+                catalyst=Catalyst(
+                    headline="Day 1 retrospective evidence",
+                    source=first.source_title or "Approved Day 1 report",
+                    published_at=first.source_date or first.created_at,
+                    classification="retrospective_reconstruction",
+                    observed_move="Not reconstructed",
+                    expected_move="Not reconstructed",
+                ),
+                market_path=[],
+                decision_tree=[
+                    DecisionNode(
+                        id=f"specialist-{index}",
+                        parent_id=None if index == 1 else f"specialist-{index - 1}",
+                        label=name,
+                        actor=name,
+                        component_kind="ai_specialist",
+                        status="retrospective_reconstruction",
+                        detail="Static source-limited reconstruction; not an original invocation.",
+                    )
+                    for index, (_, name) in enumerate(AGENT_ROSTER, start=1)
+                ],
+                transcript=[],
+                rule_checks=[],
+                illustrative_outcome=IllustrativeOutcome(
+                    action="No execution state reconstructed",
+                    status="retrospective_reconstruction",
+                    rationale=(
+                        "The approved report is evidence context only; no execution receipt was "
+                        "created."
+                    ),
+                    observed_at=first.created_at,
+                ),
+                alternatives=[],
+                lessons=[summary.lesson],
+                evidence=[
+                    Evidence(
+                        label="Day 1 approved evidence excerpt",
+                        source=first.source_title or "Day 1 report",
+                        observed_at=first.source_date or first.created_at,
+                        provenance=Provenance.RECORDED,
+                    )
+                ],
+                operational_evidence=[
+                    OperationalEvidence(
+                        label="Record provenance",
+                        value="Retrospective reconstruction — no original invocation",
+                        status="recorded",
+                        observed_at=first.created_at,
+                    )
+                ],
+                agent_perspectives=perspectives,
             ),
         )
 

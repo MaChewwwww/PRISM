@@ -804,6 +804,45 @@ export interface components {
             /** Tools */
             tools: components["schemas"]["ToolRecord"][];
         };
+        /** AgentPerspective */
+        AgentPerspective: {
+            /**
+             * Agentkey
+             * @enum {string}
+             */
+            agentKey: "news" | "quantitative" | "industry" | "fundamental" | "macroeconomic" | "market_reaction" | "trading_decision";
+            /** Agentname */
+            agentName: string;
+            /** Evidence */
+            evidence?: string[];
+            /** Headline */
+            headline?: string | null;
+            /** Limitations */
+            limitations?: string[];
+            /** Modelname */
+            modelName?: string | null;
+            /** Occurredat */
+            occurredAt?: string | null;
+            /** Promptversion */
+            promptVersion?: string | null;
+            /** Provenance */
+            provenance?: ("live_research" | "retrospective_reconstruction") | null;
+            /** Reconstructionlabel */
+            reconstructionLabel?: string | null;
+            /** Sourcedate */
+            sourceDate?: string | null;
+            /** Sourcedigest */
+            sourceDigest?: string | null;
+            /** Sourcetitle */
+            sourceTitle?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "recorded" | "unavailable" | "degraded";
+            /** Summary */
+            summary?: string | null;
+        };
         /** AgentRecord */
         AgentRecord: {
             /** Accent */
@@ -3739,6 +3778,8 @@ export interface components {
         };
         /** StoryDetail */
         StoryDetail: {
+            /** Agentperspectives */
+            agentPerspectives?: components["schemas"]["AgentPerspective"][];
             /** Alternatives */
             alternatives: components["schemas"]["AlternativeBranch"][];
             /** Bestalternativeimpact */
@@ -3789,7 +3830,7 @@ export interface components {
          * StoryOutcome
          * @enum {string}
          */
-        StoryOutcome: "pass" | "modify" | "fail" | "no_trade" | "degraded";
+        StoryOutcome: "pass" | "modify" | "fail" | "no_trade" | "degraded" | "retrospective";
         /** StorySummary */
         StorySummary: {
             /** Bestalternativeimpact */

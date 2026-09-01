@@ -72,6 +72,7 @@ class StoryOutcome(StrEnum):
     FAIL = "fail"
     NO_TRADE = "no_trade"
     DEGRADED = "degraded"
+    RETROSPECTIVE = "retrospective"
 
 
 class StorySummary(PresentationModel):
@@ -205,6 +206,32 @@ class OperationalEvidence(PresentationModel):
     observed_at: datetime | None = None
 
 
+class AgentPerspective(PresentationModel):
+    agent_key: Literal[
+        "news",
+        "quantitative",
+        "industry",
+        "fundamental",
+        "macroeconomic",
+        "market_reaction",
+        "trading_decision",
+    ]
+    agent_name: str
+    status: Literal["recorded", "unavailable", "degraded"]
+    headline: str | None = None
+    summary: str | None = None
+    evidence: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    occurred_at: datetime | None = None
+    provenance: Literal["live_research", "retrospective_reconstruction"] | None = None
+    model_name: str | None = None
+    prompt_version: str | None = None
+    source_title: str | None = None
+    source_date: datetime | None = None
+    source_digest: str | None = None
+    reconstruction_label: str | None = None
+
+
 class StoryDetail(StorySummary):
     catalyst: Catalyst
     market_path: list[ChartPoint]
@@ -216,6 +243,7 @@ class StoryDetail(StorySummary):
     lessons: list[str]
     evidence: list[Evidence]
     operational_evidence: list[OperationalEvidence] = Field(default_factory=list)
+    agent_perspectives: list[AgentPerspective] = Field(default_factory=list)
 
 
 class ExposureItem(PresentationModel):
