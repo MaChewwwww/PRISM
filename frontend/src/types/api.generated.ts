@@ -395,6 +395,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/presentation/alternatives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alternatives
+         * @description Project recorded ShadowFund sessions through the documented read model.
+         */
+        get: operations["alternatives_api_v1_presentation_alternatives_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/profiles/activate-post-analysis": {
         parameters: {
             query?: never;
@@ -4961,6 +4981,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alternatives_api_v1_presentation_alternatives_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationEnvelope_AlternativeCollection_"];
                 };
             };
             /** @description Validation Error */
