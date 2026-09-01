@@ -94,6 +94,14 @@ def test_option_selection_rejects_stale_quotes() -> None:
         raise AssertionError("stale quote must not produce a strategy")
 
 
+def test_cycle_schedule_skips_missed_ticks_without_a_catch_up_burst() -> None:
+    interval_seconds = 300
+
+    assert AutonomousWorker._advance_cycle_due(None, 100.0, interval_seconds) == 400.0
+    assert AutonomousWorker._advance_cycle_due(100.0, 250.0, interval_seconds) == 400.0
+    assert AutonomousWorker._advance_cycle_due(100.0, 700.0, interval_seconds) == 1000.0
+
+
 def test_option_selection_accepts_quotes_during_cycle() -> None:
     now = datetime(2026, 8, 30, 13, 30, tzinfo=UTC)
     contracts = [
