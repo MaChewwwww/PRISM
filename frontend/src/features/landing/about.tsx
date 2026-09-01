@@ -1,4 +1,5 @@
 import { Reveal } from "@/features/landing/reveal";
+import { SectionBackground } from "@/features/landing/section-background";
 
 const STATS = [
   { value: "24/7", label: "Continuous coverage across sessions and time zones" },
@@ -8,8 +9,9 @@ const STATS = [
 
 export function About() {
   return (
-    <section id="about" className="relative bg-[var(--color-bg)] py-28 md:py-36">
-      <div className="mx-auto max-w-[1500px] px-6 sm:px-10 lg:px-14">
+    <section id="about" className="relative overflow-hidden bg-[var(--color-bg)] py-28 md:py-36">
+      <SectionBackground variant="a" />
+      <div className="relative mx-auto max-w-[1500px] px-6 sm:px-10 lg:px-14">
         <div className="grid grid-cols-1 gap-16 md:grid-cols-2 md:items-center">
           <Reveal as="div">
             <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-[var(--color-text)] md:text-5xl">
@@ -35,9 +37,9 @@ export function About() {
                 key={stat.label}
                 as="div"
                 delay={((i % 4) + 1) as 1 | 2 | 3 | 4}
-                className="group rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg-panel)] p-6 transition-all duration-500 ease-[var(--ease-glass)] hover:-translate-y-1 hover:border-[var(--color-ice-dim)] hover:bg-[var(--color-bg-raised)] sm:col-span-1"
+                className="group rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-xl transition-all duration-300 ease-[var(--ease-glass)] hover:-translate-y-1 hover:shadow-[0_0_28px_-6px_var(--color-ice)] sm:col-span-1"
               >
-                <p className="font-display text-3xl text-[var(--color-ice)] transition-colors duration-500 group-hover:text-[var(--color-ice-soft)]">
+                <p className="font-display text-4xl tabular-nums text-[var(--color-ice)] transition-colors duration-500 group-hover:text-[var(--color-ice-soft)]">
                   {stat.value}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">

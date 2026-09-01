@@ -1,4 +1,5 @@
 import { Reveal } from "@/features/landing/reveal";
+import { SectionBackground } from "@/features/landing/section-background";
 
 const STEPS = [
   {
@@ -21,8 +22,12 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="relative bg-[var(--color-bg-panel)] py-28 md:py-36">
-      <div className="mx-auto max-w-[1500px] px-6 sm:px-10 lg:px-14">
+    <section
+      id="how-it-works"
+      className="relative overflow-hidden bg-[var(--color-bg-panel)] py-28 md:py-36"
+    >
+      <SectionBackground variant="b" />
+      <div className="relative mx-auto max-w-[1500px] px-6 sm:px-10 lg:px-14">
         <Reveal as="div" className="max-w-lg">
           <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-[var(--color-text)] md:text-5xl">
             How it works
@@ -33,30 +38,35 @@ export function HowItWorks() {
           </p>
         </Reveal>
 
-        <Reveal as="ol" className="group relative mt-16 space-y-14">
-          <span
-            aria-hidden="true"
-            className="absolute left-[15px] top-2 hidden h-[calc(100%-2rem)] w-px origin-top scale-y-0 bg-gradient-to-b from-[var(--color-ice)] via-[var(--color-ice-dim)] to-transparent transition-transform duration-[1400ms] ease-[var(--ease-glass)] group-data-[visible=true]:scale-y-100 sm:block"
-          />
+        <ol className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((step, i) => (
-            <li key={step.title} className="relative flex gap-6 sm:pl-0">
-              <span
-                className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--color-ice-dim)] bg-[var(--color-bg-panel)] text-sm text-[var(--color-ice)] transition-colors duration-500"
-                style={{ transitionDelay: `${i * 120}ms` }}
-              >
-                {i + 1}
+            <Reveal
+              key={step.title}
+              as="li"
+              delay={((i % 4) + 1) as 1 | 2 | 3 | 4}
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-xl transition-all duration-300 ease-[var(--ease-glass)] hover:-translate-y-1 hover:shadow-[0_0_28px_-6px_var(--color-ice)]"
+            >
+              {/* Connector arrow between steps on wide screens */}
+              {i < STEPS.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-[-11px] top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 place-items-center text-[var(--color-ice-dim)] lg:grid"
+                >
+                  ›
+                </span>
+              )}
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-ice-dim)] bg-[var(--color-ice)]/[0.12] font-mono text-sm font-semibold text-[var(--color-ice)]">
+                {String(i + 1).padStart(2, "0")}
               </span>
-              <div className="pt-0.5">
-                <h3 className="text-lg font-medium tracking-tight text-[var(--color-text)]">
-                  {step.title}
-                </h3>
-                <p className="mt-2 max-w-md leading-relaxed text-[var(--color-text-muted)]">
-                  {step.body}
-                </p>
-              </div>
-            </li>
+              <h3 className="mt-5 text-[1.25rem] font-semibold tracking-tight text-[var(--color-text)]">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+                {step.body}
+              </p>
+            </Reveal>
           ))}
-        </Reveal>
+        </ol>
       </div>
     </section>
   );

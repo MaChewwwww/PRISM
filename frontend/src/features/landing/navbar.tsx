@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/features/landing/button";
+import { buttonClasses } from "@/features/landing/button-classes";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -32,10 +32,10 @@ export function Navbar() {
     >
       <nav
         className={cn(
-          "flex w-full max-w-[1500px] items-center justify-between rounded-full border px-5 py-2.5 transition-all duration-500 ease-[var(--ease-glass)]",
+          "flex w-full max-w-[1500px] items-center justify-between rounded-full border border-white/8 border-t-white/16 bg-linear-to-b from-white/[0.08] to-white/[0.02] px-5 py-2.5 backdrop-blur-xl transition-all duration-500 ease-[var(--ease-glass)]",
           scrolled
-            ? "border-[var(--color-line)] bg-[#0a1011]/80 shadow-[0_8px_40px_-16px_rgba(0,0,0,0.6)] backdrop-blur-xl"
-            : "border-transparent bg-transparent",
+            ? "shadow-[0_8px_40px_-16px_rgba(0,0,0,0.7)] from-white/[0.1] to-white/[0.03]"
+            : "shadow-[0_8px_32px_-16px_rgba(0,0,0,0.5)]",
         )}
       >
         <a href="#top" className="flex items-center gap-2">
@@ -66,9 +66,9 @@ export function Navbar() {
           ))}
         </ul>
 
-        <Button asChild variant="solid" className="px-4 py-2 text-xs md:px-5 md:text-sm">
-          <Link href="/login">Log In</Link>
-        </Button>
+        <Link href="/login" className={buttonClasses("glass", "px-5 py-2 text-xs md:text-sm")}>
+          Log In
+        </Link>
       </nav>
     </header>
   );
