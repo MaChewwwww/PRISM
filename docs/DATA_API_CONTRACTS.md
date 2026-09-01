@@ -56,17 +56,17 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | POST | `/api/v1/research/industry/analyze` | Structured industry/peer research | Yes |
 | POST | `/api/v1/research/macro/analyze` | Structured macroeconomic research | Yes |
 | POST | `/api/v1/research/decision/synthesize` | Seven-agent synthesis; autonomous use requires a canonical proposal pipeline | Yes |
-| GET | `/api/v1/presentation/overview` | Illustrative overview | Yes |
-| GET | `/api/v1/presentation/decisions` | Illustrative decision collection | Yes |
-| GET | `/api/v1/presentation/decisions/{decision_id}` | Decision story and trace | Yes |
-| GET | `/api/v1/presentation/portfolio` | Illustrative chosen path and comparisons | Yes |
-| GET | `/api/v1/presentation/alternatives` | Shadow/simulated alternative collection | Yes |
-| GET | `/api/v1/presentation/alternatives/{session_id}` | Alternative detail | Yes |
-| GET | `/api/v1/presentation/news` | Illustrative news collection | Yes |
-| GET | `/api/v1/presentation/agents` | Canonical agent and authority roster | Yes |
-| GET | `/api/v1/presentation/agents/{agent_id}` | Agent detail | Yes |
-| GET | `/api/v1/presentation/governance` | Active ruleset, profile, and semantics | Yes |
-| GET | `/api/v1/presentation/weekly-summary` | Manual-review profile recommendations | Yes |
+| GET | `/api/v1/monitoring/overview` | Recorded overview projection | Yes |
+| GET | `/api/v1/monitoring/decisions` | Recorded decision collection | Yes |
+| GET | `/api/v1/monitoring/decisions/{proposal_id}` | Decision trace and operational evidence | Yes |
+| GET | `/api/v1/monitoring/portfolio` | Recorded portfolio and exit-check freshness | Yes |
+| GET | `/api/v1/monitoring/alternatives` | ShadowFund alternative collection | Yes |
+| GET | `/api/v1/monitoring/alternatives/{session_id}` | ShadowFund alternative detail | Yes |
+| GET | `/api/v1/monitoring/news` | Recorded news-analysis collection | Yes |
+| GET | `/api/v1/monitoring/agents` | Recorded model-usage projection | Yes |
+| GET | `/api/v1/monitoring/agents/{agent_id}` | Recorded model-operation detail | Yes |
+| GET | `/api/v1/monitoring/governance` | Read-only active ruleset and profile | Yes |
+| GET | `/api/v1/monitoring/weekly-summary` | Read-only post-analysis projection | Yes |
 | GET | `/api/v1/profiles/governance` | Active persisted profile and authenticated operator calibration preference | Yes |
 | PUT | `/api/v1/profiles/calibration-preference` | Select manual or automatic calibration preference | Yes |
 | POST | `/api/v1/profiles/activate-post-analysis` | Manually activate a complete, validated Post-Analysis batch | Yes |
@@ -102,7 +102,7 @@ Every presentation response includes metadata with:
 - `data_mode`;
 - `fixture_version`.
 
-The current adapter always returns `data_mode=illustrative_fixture` and `fixture_version=prism-demo-v1`. No response implies an Alpaca account request, paper order, fill, holding, P&L record, or provider/model invocation.
+Monitoring returns `data_mode=recorded` for durable production roots and `data_mode=simulated` for ShadowFund historical simulation. There is no illustrative fixture fallback. No response implies an Alpaca account request, paper order, fill, holding, P&L record, or provider/model invocation beyond its explicit recorded provenance.
 
 ## Planned Market Tracker contract (not implemented)
 

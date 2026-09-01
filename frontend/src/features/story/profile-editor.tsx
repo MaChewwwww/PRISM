@@ -15,7 +15,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { Governance } from "@/features/story/presentation-api";
+import type { Governance } from "@/features/story/monitoring-api";
 
 type ProfileParameter = Governance["profileParameters"][number];
 type ProfileSummary = Governance["profiles"][number];

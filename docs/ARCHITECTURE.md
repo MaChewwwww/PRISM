@@ -81,7 +81,7 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | `contracts` | Typed proposal, risk, governance, authorization, execution, profile, and audit records | Implemented skeleton |
 | `rules` | Versioned BA registry and deterministic policy boundary | Registry, P0-P5 evaluator, Balanced threshold 84, and typed traces implemented |
 | `research` | Provider-normalized evidence and structured research | Seven specialist workflows, SEC-sourced fundamentals, historical analog option-payoff EV, IV-rank history, and strict freshness/provenance gates |
-| `presentation` | Backend-owned read models | Fixture adapter in development/test; persisted ShadowFund alternatives in production/staging |
+| `monitoring` | Authenticated read-only operator projections | Durable audit, research, portfolio, authorization, receipt, profile, registry, and ShadowFund records; no fixture fallback |
 | `proposal` | Trading Decision proposal synthesis | Canonical digest-bound proposals persisted by the autonomous worker; the public research endpoint remains `NO_TRADE` without complete binding |
 | `risk` | AI-assisted adversarial critique | Structured RiskAssessment persisted before deterministic authorization |
 | `market` | Alpaca market/news adapter | Account/portfolio, stock bars, active contracts, fresh chain quotes/Greeks, and news |
@@ -95,11 +95,9 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 
 The current research boundary exposes authenticated, non-authoritative slices for News, Market Reaction/Mispricing, and the Quantitative Agent. Quantitative analysis is deterministic and consumes normalized historical bars to calculate RSI, MACD, SMA, Bollinger Bands, ATR, annualized volatility, volume surge, and a bounded momentum score. It returns a `QuantitativeAnalysisReport` and cannot authorize or submit an order. Provider reads remain server-side, bounded, retried only for transient failures, and surfaced through redacted errors.
 
-## Presentation skeleton
+## Monitoring read boundary
 
-All frontend story surfaces load through one server-side adapter typed from generated OpenAPI. Authenticated backend presentation endpoints expose fixed `illustrative_fixture` data with `generated_at`, `as_of`, requested UTC range, and fixture version. The fixture adapter is replaceable by later persisted and Alpaca-backed repository implementations, but those adapters are not implemented here.
-
-Presentation data never claims a broker call, paper fill, account holding, or LLM invocation. Stable fixture decision IDs and UTC range URLs preserve cross-page trace navigation.
+All workspace surfaces use authenticated `/api/v1/monitoring/*` projections typed from generated OpenAPI. These read durable PRISM roots only and return UTC `generated_at`/`as_of`, requested range, decimal strings, provenance, and explicit empty or degraded states. The browser cannot call Alpaca, invoke a model, alter a profile, or change execution state. Recorded paper fills are the only items labelled as trades; ShadowFund remains a simulation/counterfactual surface.
 
 ## Market Tracker boundary (deferred)
 

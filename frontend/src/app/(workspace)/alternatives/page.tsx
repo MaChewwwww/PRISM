@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/workspace/workspace-ui";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { AlternativesList } from "@/features/story/alternatives-list";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
-import { listAlternativeSessions } from "@/features/story/presentation-api";
+import { listAlternativeSessions } from "@/features/story/monitoring-api";
 
 export default async function AlternativesPage({
   searchParams,

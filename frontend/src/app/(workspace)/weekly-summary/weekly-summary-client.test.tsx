@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { WeeklySummary } from "@/features/story/presentation-api";
+import type { WeeklySummary } from "@/features/story/monitoring-api";
 
 import { WeeklySummaryClient } from "./weekly-summary-client";
 

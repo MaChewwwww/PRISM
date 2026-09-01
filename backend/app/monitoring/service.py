@@ -1,0 +1,844 @@
+"""Database-backed monitoring projections.
+
+This module is intentionally read-only: it does not import the autonomous
+worker, Alpaca clients, or an execution adapter.  It turns durable audit roots
+into the presentation models consumed by the authenticated operator UI.
+"""
+
+from __future__ import annotations
+
+import json
+from collections import Counter
+from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal, cast
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.autonomous.models import (
+    AuthorizationModel,
+    AutonomousCycleModel,
+    PortfolioSnapshotModel,
+    ResearchBundleModel,
+    RiskAssessmentModel,
+    TradeProposalModel,
+)
+from app.execution.models import ExecutionReceiptModel
+from app.observability.models import LLMUsageEventModel
+from app.presentation.models import (
+    Activity,
+    AgentObservability,
+    AgentRecord,
+    AgentRun,
+    Catalyst,
+    ChartPoint,
+    DataMode,
+    DateRange,
+    DecisionCollection,
+    DecisionNode,
+    Evidence,
+    ExposureItem,
+    Governance,
+    GovernanceVersion,
+    HackathonWindow,
+    IllustrativeOutcome,
+    NewsCollection,
+    NewsRecord,
+    OperationalEvidence,
+    OutcomeCount,
+    Overview,
+    Portfolio,
+    Position,
+    PresentationEnvelope,
+    PresentationMeta,
+    ProfileParameter,
+    ProfileSuggestion,
+    ProfileSummary,
+    Provenance,
+    RuleCheck,
+    StoryDetail,
+    StoryOutcome,
+    StorySummary,
+    SystemComponent,
+    ToolRecord,
+    TranscriptStep,
+    WeeklySummary,
+)
+from app.profiles.models import AIProfileModel
+from app.profiles.service import _parse_parameters
+from app.research.models import LLMEventAnalysisModel
+from app.rules.registry import get_authorized_ruleset
+from app.shadowfund.models import ShadowPostAnalysisBatchModel, ShadowProfileRecommendationModel
+
+
+def _json(value: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _decimal(value: object) -> Decimal | None:
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return parsed if parsed.is_finite() else None
+
+
+def _money(value: object) -> str:
+    amount = _decimal(value)
+    if amount is None:
+        return "—"
+    return f"{'+' if amount > 0 else ''}${amount:,.2f}"
+
+
+def _number(value: object) -> str:
+    amount = _decimal(value)
+    return "—" if amount is None else f"{amount:.2f}"
+
+
+def _range(start: datetime, end: datetime) -> DateRange:
+    return DateRange(
+        preset="custom",
+        from_date=start.astimezone(UTC).date().isoformat(),
+        to_date=end.astimezone(UTC).date().isoformat(),
+    )
+
+
+def _meta(
+    start: datetime | None = None, end: datetime | None = None, *, as_of: datetime | None = None
+) -> PresentationMeta:
+    now = datetime.now(UTC)
+    return PresentationMeta(
+        generated_at=now,
+        as_of=(as_of or now).astimezone(UTC),
+        data_mode=DataMode.RECORDED,
+        fixture_version=None,
+        provenance_notice=(
+            "Recorded PRISM monitoring data. Provider, broker, and execution details remain "
+            "redacted."
+        ),
+        range=_range(start, end) if start is not None and end is not None else None,
+    )
+
+
+def _outcome(value: str) -> StoryOutcome:
+    return {
+        "APPROVE": StoryOutcome.PASS,
+        "MODIFIED_PENDING_ACCEPTANCE": StoryOutcome.MODIFY,
+        "REJECT": StoryOutcome.FAIL,
+    }.get(value, StoryOutcome.DEGRADED)
+
+
+def _rule_result(value: str) -> str:
+    return {"APPROVE": "PASS", "MODIFIED_PENDING_ACCEPTANCE": "MODIFY", "REJECT": "FAIL"}.get(
+        value, "NOT_EVALUATED"
+    )
+
+
+def _summary(row: AuthorizationModel, proposal: TradeProposalModel | None = None) -> StorySummary:
+    symbol = proposal.symbol if proposal is not None else "UNKNOWN"
+    return StorySummary(
+        id=row.proposal_id,
+        occurred_at=row.created_at.astimezone(UTC),
+        symbol=symbol,
+        category="Recorded authorization",
+        title=f"{symbol} {row.outcome.replace('_', ' ').title()}",
+        summary="Recorded deterministic authorization outcome.",
+        outcome=_outcome(row.outcome),
+        rule_result=_rule_result(row.outcome),  # type: ignore[arg-type]
+        chosen_path_impact="—",
+        best_alternative_impact="—",
+        lesson=(
+            "Review the recorded rule trace and execution receipt before interpreting the outcome."
+        ),
+    )
+
+
+class MonitoringReadService:
+    async def _authorizations(
+        self, session: AsyncSession, start: datetime, end: datetime
+    ) -> list[AuthorizationModel]:
+        return list(
+            (
+                await session.scalars(
+                    select(AuthorizationModel)
+                    .where(
+                        AuthorizationModel.created_at >= start, AuthorizationModel.created_at <= end
+                    )
+                    .order_by(AuthorizationModel.created_at.desc())
+                )
+            ).all()
+        )
+
+    async def _proposals(
+        self, session: AsyncSession, ids: list[str]
+    ) -> dict[str, TradeProposalModel]:
+        if not ids:
+            return {}
+        rows = list(
+            (
+                await session.scalars(
+                    select(TradeProposalModel).where(TradeProposalModel.id.in_(ids))
+                )
+            ).all()
+        )
+        return {row.id: row for row in rows}
+
+    async def portfolio(
+        self, session: AsyncSession, start: datetime, end: datetime
+    ) -> PresentationEnvelope[Portfolio]:
+        snapshots = list(
+            (
+                await session.scalars(
+                    select(PortfolioSnapshotModel)
+                    .where(
+                        PortfolioSnapshotModel.observed_at >= start,
+                        PortfolioSnapshotModel.observed_at <= end,
+                    )
+                    .order_by(PortfolioSnapshotModel.observed_at)
+                )
+            ).all()
+        )
+        latest = snapshots[-1] if snapshots else None
+        payload = _json(latest.payload_json) if latest else {}
+        portfolio_value = _decimal(payload.get("portfolio_value"))
+        positions: list[Position] = []
+        for item in (
+            payload.get("positions", []) if isinstance(payload.get("positions"), list) else []
+        ):
+            if not isinstance(item, dict):
+                continue
+            value = _decimal(item.get("market_value"))
+            allocation = (
+                Decimal("0")
+                if not portfolio_value or portfolio_value == 0 or value is None
+                else value / portfolio_value * Decimal("100")
+            )
+            positions.append(
+                Position(
+                    symbol=str(item.get("symbol", "UNKNOWN")),
+                    allocation=f"{allocation:.2f}%",
+                    value=_money(value),
+                    pnl=_money(item.get("unrealized_pl")),
+                    provenance=Provenance.ALPACA_PAPER,
+                )
+            )
+        exposure = []
+        if portfolio_value and portfolio_value != 0:
+            cash = _decimal(payload.get("cash"))
+            if cash is not None:
+                exposure.append(
+                    ExposureItem(
+                        label="Cash reserve", value=f"{cash / portfolio_value * Decimal('100'):.2f}"
+                    )
+                )
+            option_value = sum(
+                (
+                    _decimal(item.get("market_value")) or Decimal("0")
+                    for item in payload.get("positions", [])
+                    if isinstance(item, dict) and item.get("asset_class") == "us_option"
+                ),
+                Decimal("0"),
+            )
+            exposure.append(
+                ExposureItem(
+                    label="Options exposure",
+                    value=f"{option_value / portfolio_value * Decimal('100'):.2f}",
+                )
+            )
+        points = [
+            ChartPoint(
+                date=row.observed_at.astimezone(UTC).isoformat(),
+                chosen_path=str(_json(row.payload_json).get("portfolio_value")),
+                pnl=None,
+            )
+            for row in snapshots
+        ]
+        cycles = list(
+            (
+                await session.scalars(
+                    select(AutonomousCycleModel)
+                    .where(
+                        AutonomousCycleModel.started_at >= start,
+                        AutonomousCycleModel.started_at <= end,
+                    )
+                    .order_by(AutonomousCycleModel.started_at.desc())
+                    .limit(50)
+                )
+            ).all()
+        )
+        activities = [
+            Activity(
+                occurred_at=row.started_at.astimezone(UTC),
+                label=f"Cycle {row.outcome.replace('_', ' ').title()}",
+                detail=row.reason,
+                amount="—",
+                provenance=Provenance.RECORDED,
+            )
+            for row in cycles
+        ]
+        latest_cycle = cycles[0] if cycles else None
+        portfolio_evidence = [
+            OperationalEvidence(
+                label="Portfolio snapshot freshness",
+                value=(
+                    latest.observed_at.astimezone(UTC).isoformat()
+                    if latest is not None
+                    else "No recorded snapshot"
+                ),
+                status="recorded" if latest is not None else "unavailable",
+                observed_at=latest.observed_at if latest is not None else None,
+            ),
+            OperationalEvidence(
+                label="Five-minute exit checks",
+                value=(
+                    "Recorded in the latest autonomous cycle"
+                    if latest_cycle is not None
+                    else "No recorded autonomous cycle"
+                ),
+                status="recorded" if latest_cycle is not None else "unavailable",
+                observed_at=latest_cycle.started_at if latest_cycle is not None else None,
+            ),
+        ]
+        return PresentationEnvelope(
+            meta=_meta(start, end, as_of=latest.observed_at if latest else None),
+            data=Portfolio(
+                points=points,
+                positions=positions,
+                activities=activities,
+                exposure=exposure,
+                operational_evidence=portfolio_evidence,
+            ),
+        )
+
+    async def decisions(
+        self,
+        session: AsyncSession,
+        start: datetime,
+        end: datetime,
+        *,
+        outcome: str | None = None,
+        symbol: str | None = None,
+    ) -> PresentationEnvelope[DecisionCollection]:
+        rows = await self._authorizations(session, start, end)
+        proposals = await self._proposals(session, [row.proposal_id for row in rows])
+        if outcome and outcome != "all":
+            rows = [row for row in rows if _outcome(row.outcome).value == outcome]
+        if symbol and symbol != "all":
+            rows = [
+                row
+                for row in rows
+                if proposals.get(row.proposal_id)
+                and proposals[row.proposal_id].symbol == symbol.upper()
+            ]
+        all_symbols = sorted({proposal.symbol for proposal in proposals.values()})
+        return PresentationEnvelope(
+            meta=_meta(start, end),
+            data=DecisionCollection(
+                stories=[_summary(row, proposals.get(row.proposal_id)) for row in rows],
+                symbols=all_symbols,
+            ),
+        )
+
+    async def decision(
+        self, session: AsyncSession, proposal_id: str
+    ) -> PresentationEnvelope[StoryDetail] | None:
+        authorization = await session.scalar(
+            select(AuthorizationModel)
+            .where(AuthorizationModel.proposal_id == proposal_id)
+            .order_by(AuthorizationModel.created_at.desc())
+            .limit(1)
+        )
+        proposal = await session.get(TradeProposalModel, proposal_id)
+        if authorization is None or proposal is None:
+            return None
+        summary = _summary(authorization, proposal)
+        proposal_payload = _json(proposal.payload_json)
+        bundle = await session.get(ResearchBundleModel, proposal.research_bundle_id)
+        bundle_payload = _json(bundle.payload_json) if bundle else {}
+        raw_decision = bundle_payload.get("decision")
+        decision_payload: dict[str, Any] = raw_decision if isinstance(raw_decision, dict) else {}
+        risk = await session.scalar(
+            select(RiskAssessmentModel)
+            .where(RiskAssessmentModel.proposal_id == proposal_id)
+            .order_by(RiskAssessmentModel.created_at.desc())
+            .limit(1)
+        )
+        receipt = await session.scalar(
+            select(ExecutionReceiptModel)
+            .where(ExecutionReceiptModel.proposal_id == proposal_id)
+            .order_by(ExecutionReceiptModel.created_at.desc())
+            .limit(1)
+        )
+        trace_items = (
+            json.loads(authorization.rule_trace_json)
+            if authorization.rule_trace_json.startswith("[")
+            else []
+        )
+        rule_checks = [
+            RuleCheck(
+                rule_id=str(item.get("rule_id", "unknown")),
+                priority=item.get("priority", "P0"),
+                name=str(item.get("rule_id", "Rule")),
+                result=item.get("outcome", "NOT_EVALUATED"),
+                reason_code=",".join(item.get("reason_codes", [])) or "RECORDED",
+                explanation=str(item.get("explanation", "Recorded deterministic result.")),
+            )
+            for item in trace_items
+            if isinstance(item, dict)
+        ]
+        nodes = [
+            DecisionNode(
+                id=f"specialist-{index}",
+                parent_id=None if index == 1 else f"specialist-{index - 1}",
+                label=name,
+                actor=name,
+                component_kind="ai_specialist",
+                status="recorded" if bundle else "not_recorded",
+                detail="Recorded structured research boundary.",
+            )
+            for index, name in enumerate(
+                (
+                    "News Agent",
+                    "Quantitative Agent",
+                    "Industry Agent",
+                    "Fundamental Agent",
+                    "Macroeconomic Agent",
+                    "Market Reaction/Mispricing Agent",
+                    "Trading Decision Agent",
+                ),
+                start=1,
+            )
+        ]
+        nodes.extend(
+            [
+                DecisionNode(
+                    id="risk",
+                    parent_id="specialist-7",
+                    label="Risk assessment",
+                    actor="Risk Management",
+                    component_kind="risk_ai",
+                    status="recorded" if risk else "not_recorded",
+                    detail="Recorded AI-assisted critique.",
+                ),
+                DecisionNode(
+                    id="rules",
+                    parent_id="risk",
+                    label="Deterministic authorization",
+                    actor="Rules Engine",
+                    component_kind="deterministic",
+                    status=authorization.outcome,
+                    detail="Recorded versioned rule trace.",
+                ),
+                DecisionNode(
+                    id="execution",
+                    parent_id="rules",
+                    label="Paper execution",
+                    actor="Paper Execution Layer",
+                    component_kind="paper",
+                    status=receipt.status if receipt else "not_submitted",
+                    detail="A receipt is required before a paper execution is claimed.",
+                ),
+            ]
+        )
+        iv_ranks = proposal_payload.get("iv_rank_by_leg", {})
+        evidence = [
+            Evidence(
+                label="Research bundle",
+                source="Recorded PRISM research",
+                observed_at=bundle.created_at.astimezone(UTC)
+                if bundle
+                else proposal.created_at.astimezone(UTC),
+                provenance=Provenance.RECORDED,
+            ),
+            Evidence(
+                label=f"IV ranks: {iv_ranks or 'not recorded'}",
+                source="Recorded option selection",
+                observed_at=proposal.created_at.astimezone(UTC),
+                provenance=Provenance.RECORDED,
+            ),
+        ]
+        action = (
+            "No paper receipt recorded" if receipt is None else f"Paper receipt {receipt.status}"
+        )
+        raw_monitoring = proposal_payload.get("monitoring_evidence")
+        monitoring: dict[str, Any] = raw_monitoring if isinstance(raw_monitoring, dict) else {}
+        iv_evidence = monitoring.get("iv_rank") if isinstance(monitoring, dict) else {}
+        strike_evidence = monitoring.get("strike_selection") if isinstance(monitoring, dict) else {}
+        profile_value = f"{authorization.profile_id} v{authorization.profile_version}"
+        operational_evidence = [
+            OperationalEvidence(
+                label="Option-chain feed",
+                value=str(monitoring.get("option_chain_feed", "Not recorded")),
+                status="recorded" if monitoring else "unavailable",
+                observed_at=proposal.created_at,
+            ),
+            OperationalEvidence(
+                label="Historical option-bars fallback",
+                value=str(monitoring.get("historical_option_bars_fallback", "Not recorded")),
+                status="recorded" if monitoring else "unavailable",
+                observed_at=proposal.created_at,
+            ),
+            OperationalEvidence(
+                label="IV rank resolution",
+                value=json.dumps(iv_evidence, sort_keys=True) if iv_evidence else "Not recorded",
+                status="recorded" if iv_evidence else "unavailable",
+                observed_at=proposal.created_at if iv_evidence else None,
+            ),
+            OperationalEvidence(
+                label="Strike selection",
+                value=json.dumps(strike_evidence, sort_keys=True)
+                if strike_evidence
+                else "Not recorded",
+                status="recorded" if strike_evidence else "unavailable",
+                observed_at=proposal.created_at if strike_evidence else None,
+            ),
+            OperationalEvidence(
+                label="Authorized profile",
+                value=profile_value,
+                status="recorded",
+                observed_at=authorization.created_at,
+            ),
+            OperationalEvidence(
+                label="Decision freshness",
+                value=authorization.created_at.astimezone(UTC).isoformat(),
+                status="recorded",
+                observed_at=authorization.created_at,
+            ),
+        ]
+        return PresentationEnvelope(
+            meta=_meta(as_of=authorization.created_at),
+            data=StoryDetail(
+                **summary.model_dump(),
+                catalyst=Catalyst(
+                    headline=str(
+                        decision_payload.get("synthesis_rationale", "Recorded research decision")
+                    ),
+                    source="PRISM research bundle",
+                    published_at=proposal.created_at.astimezone(UTC),
+                    classification=str(decision_payload.get("verdict", "recorded")),
+                    observed_move="—",
+                    expected_move="—",
+                ),
+                market_path=[],
+                decision_tree=nodes,
+                transcript=[
+                    TranscriptStep(
+                        id=str(proposal.id),
+                        occurred_at=proposal.created_at.astimezone(UTC),
+                        kind="agent_summary",
+                        actor="Trading Decision Agent",
+                        title="Recorded proposal",
+                        summary=str(
+                            proposal_payload.get("rationale", "Recorded proposal rationale.")
+                        ),
+                        model=str(decision_payload.get("model_name", "not recorded")),
+                        prompt_version=None,
+                        evidence_refs=["research bundle"],
+                    )
+                ],
+                rule_checks=rule_checks,
+                illustrative_outcome=IllustrativeOutcome(
+                    action=action,
+                    status=receipt.status if receipt else authorization.outcome,
+                    rationale="Recorded outcome; no inferred broker state is shown.",
+                    observed_at=(receipt.reconciled_at or receipt.created_at)
+                    if receipt
+                    else authorization.created_at,
+                ),
+                alternatives=[],
+                lessons=["Review the recorded rule trace and operational evidence."],
+                evidence=evidence,
+                operational_evidence=operational_evidence,
+            ),
+        )
+
+    async def overview(self, session: AsyncSession, start: datetime, end: datetime):
+        portfolio = await self.portfolio(session, start, end)
+        decisions = await self.decisions(session, start, end)
+        counts = Counter(item.outcome.value for item in decisions.data.stories)
+        return PresentationEnvelope(
+            meta=portfolio.meta,
+            data=Overview(
+                stories=decisions.data.stories,
+                portfolio=portfolio.data,
+                outcomes=[
+                    OutcomeCount(label=key, value=str(counts.get(key, 0)))
+                    for key in ("pass", "modify", "fail", "no_trade", "degraded")
+                ],
+                recommendations=[
+                    "Operational data is read-only; review recorded evidence before action."
+                ],
+            ),
+        )
+
+    async def news(
+        self,
+        session: AsyncSession,
+        start: datetime,
+        end: datetime,
+        *,
+        symbol: str | None = None,
+        significance: str | None = None,
+    ) -> PresentationEnvelope[NewsCollection]:
+        statement = (
+            select(LLMEventAnalysisModel)
+            .where(
+                LLMEventAnalysisModel.created_at >= start, LLMEventAnalysisModel.created_at <= end
+            )
+            .order_by(LLMEventAnalysisModel.created_at.desc())
+        )
+        if symbol:
+            statement = statement.where(LLMEventAnalysisModel.symbol == symbol.upper())
+        rows = list((await session.scalars(statement)).all())
+        items = [
+            NewsRecord(
+                id=row.id,
+                published_at=row.created_at.astimezone(UTC),
+                source=row.source,
+                symbols=[row.symbol],
+                headline=row.headline,
+                summary=row.rationale,
+                category=row.event_category,
+                story_id=None,
+                significance=cast(
+                    Literal["high", "medium", "low"],
+                    row.catalyst_materiality
+                    if row.catalyst_materiality in {"high", "medium", "low"}
+                    else "medium",
+                ),
+                provenance=Provenance.RECORDED,
+            )
+            for row in rows
+            if not significance or row.catalyst_materiality == significance
+        ]
+        return PresentationEnvelope(
+            meta=_meta(start, end),
+            data=NewsCollection(items=items, symbols=sorted({row.symbol for row in rows})),
+        )
+
+    async def agents(
+        self, session: AsyncSession, start: datetime, end: datetime
+    ) -> PresentationEnvelope[AgentObservability]:
+        events = list(
+            (
+                await session.scalars(
+                    select(LLMUsageEventModel)
+                    .where(
+                        LLMUsageEventModel.observed_at >= start,
+                        LLMUsageEventModel.observed_at <= end,
+                    )
+                    .order_by(LLMUsageEventModel.observed_at.desc())
+                    .limit(200)
+                )
+            ).all()
+        )
+        by_operation: dict[str, list[LLMUsageEventModel]] = {}
+        for event in events:
+            by_operation.setdefault(event.operation, []).append(event)
+        agents = [
+            AgentRecord(
+                id=operation,
+                name=operation.replace("_", " ").title(),
+                role="Recorded model operation",
+                cadence="Event-driven",
+                model=rows[0].model,
+                prompt_version="Recorded at runtime",
+                description="Provider-reported metadata only.",
+                dependencies=[],
+                stage=index + 1,
+                authority="research",
+                accent="#38BDF8",
+                runs=[
+                    AgentRun(
+                        id=row.id,
+                        occurred_at=row.observed_at.astimezone(UTC),
+                        status="complete" if row.usage_available else "degraded",
+                        trigger="recorded invocation",
+                        duration_ms=row.latency_ms,
+                        input_tokens=row.prompt_tokens or 0,
+                        output_tokens=row.completion_tokens or 0,
+                        cached_tokens=0,
+                        summary="Recorded provider metadata.",
+                    )
+                    for row in rows
+                ],
+            )
+            for index, (operation, rows) in enumerate(sorted(by_operation.items()))
+        ]
+        tools = [
+            ToolRecord(
+                id="llm",
+                name="LLM gateway",
+                kind="LLM",
+                state="used",
+                calls=len(events),
+                success_rate="Recorded usage availability",
+                median_latency="Recorded per run",
+                purpose="Structured research only.",
+            )
+        ]
+        components = [
+            SystemComponent(
+                id="rules",
+                name="Rules Engine",
+                kind="deterministic",
+                authority="Sole execution authorization",
+                description="Deterministic authorization remains separate from monitoring.",
+                stage=9,
+            ),
+            SystemComponent(
+                id="execution",
+                name="Paper Execution",
+                kind="paper_execution",
+                authority="Paper-only execution",
+                description="Receipt visibility does not confer execution control.",
+                stage=10,
+            ),
+        ]
+        return PresentationEnvelope(
+            meta=_meta(start, end),
+            data=AgentObservability(agents=agents, tools=tools, components=components),
+        )
+
+    async def governance(self, session: AsyncSession) -> PresentationEnvelope[Governance]:
+        ruleset = get_authorized_ruleset()
+        active = await session.scalar(
+            select(AIProfileModel)
+            .where(AIProfileModel.status == "active")
+            .order_by(AIProfileModel.version.desc())
+            .limit(1)
+        )
+        active_parameters = (
+            _parse_parameters(active.parameters_json)
+            if active is not None
+            else ruleset.profiles["balanced"]
+        )
+        names = {
+            "target_position_size_pct": ("Target position size", "% equity"),
+            "opportunity_score_threshold": ("Opportunity score threshold", "score"),
+            "take_profit_pct": ("Take-profit target", "% initial debit"),
+            "stop_loss_pct": ("Stop-loss limit", "% initial debit"),
+        }
+        parameters = [
+            ProfileParameter(
+                id=key,
+                name=names[key][0],
+                active_value=str(getattr(active_parameters, key)),
+                minimum=str(bound.minimum),
+                maximum=str(bound.maximum),
+                unit=names[key][1],
+                description="Bounded by the active authorized ruleset.",
+            )
+            for key, bound in ruleset.profile_bounds.items()
+        ]
+        window = ruleset.parameters.hackathon_window
+        return PresentationEnvelope(
+            meta=_meta(),
+            data=Governance(
+                ruleset_id=ruleset.ruleset_id,
+                ruleset_version=ruleset.version,
+                ruleset_status="active",
+                active_profile="balanced",
+                decision_semantics={
+                    "PASS": "Rule passed.",
+                    "MODIFY": "A new proposal requires reauthorization.",
+                    "FAIL": "Proposal stopped safely.",
+                    "APPROVE": "Bound payload may progress while valid.",
+                    "REJECT": "Proposal cannot progress.",
+                    "MODIFIED_PENDING_ACCEPTANCE": "No execution authority.",
+                },
+                hard_rules=[],
+                profile_parameters=parameters,
+                profiles=[
+                    ProfileSummary(
+                        key="balanced",
+                        status="active",
+                        parameters={
+                            key: str(value) for key, value in active_parameters.model_dump().items()
+                        },
+                    )
+                ],
+                versions=[
+                    GovernanceVersion(
+                        version=ruleset.version,
+                        state="active",
+                        summary="Active authorized ruleset.",
+                    )
+                ],
+                hackathon_window=HackathonWindow(
+                    trading_start_at=window.trading_start_at,
+                    official_scoring_at=window.official_scoring_at,
+                    window_outer_boundary_at=window.window_outer_boundary_at,
+                    force_flatten_by=window.force_flatten_by,
+                    new_entry_cutoff_at=window.new_entry_cutoff_at,
+                    effective_max_hold_trading_days=ruleset.parameters.hackathon_max_hold_trading_days,
+                    scoring_basis=window.scoring_basis,
+                ),
+            ),
+        )
+
+    async def weekly_summary(self, session: AsyncSession) -> PresentationEnvelope[WeeklySummary]:
+        batch = await session.scalar(
+            select(ShadowPostAnalysisBatchModel)
+            .order_by(ShadowPostAnalysisBatchModel.created_at.desc())
+            .limit(1)
+        )
+        if batch is None:
+            return PresentationEnvelope(
+                meta=_meta(),
+                data=WeeklySummary(
+                    week_of=datetime.now(UTC).date().isoformat(),
+                    stories_analyzed=0,
+                    illustrative_net_pnl="—",
+                    shadow_beat_chosen=0,
+                    key_findings=["No recorded post-analysis batch is available."],
+                    suggestions=[],
+                ),
+            )
+        data = _json(batch.summary_json)
+        rows = list(
+            (
+                await session.scalars(
+                    select(ShadowProfileRecommendationModel).where(
+                        ShadowProfileRecommendationModel.batch_id == batch.id
+                    )
+                )
+            ).all()
+        )
+        suggestions = [
+            ProfileSuggestion(
+                id=row.id,
+                parameter_id=row.parameter_id,
+                parameter_name=row.parameter_id.replace("_", " ").title(),
+                current_value=row.current_value,
+                suggested_value=row.suggested_value,
+                allowed_minimum="Recorded in authorized registry",
+                allowed_maximum="Recorded in authorized registry",
+                confidence=cast(
+                    Literal["high", "medium", "low"],
+                    row.confidence if row.confidence in {"high", "medium", "low"} else "medium",
+                ),
+                rationale=row.rationale,
+                week_of=batch.window_start.date().isoformat(),
+                validation_state="within_authorized_bounds",
+            )
+            for row in rows
+            if row.validation_state == "WITHIN_AUTHORIZED_BOUNDS"
+        ]
+        return PresentationEnvelope(
+            meta=_meta(as_of=batch.created_at),
+            data=WeeklySummary(
+                week_of=batch.window_start.date().isoformat(),
+                stories_analyzed=int(data.get("stories_analyzed", 0)),
+                illustrative_net_pnl="—",
+                shadow_beat_chosen=int(data.get("shadow_beat_chosen", 0)),
+                key_findings=[str(value) for value in data.get("key_findings", [])]
+                or [str(data.get("reason", "Recorded post-analysis batch."))],
+                suggestions=suggestions,
+            ),
+        )

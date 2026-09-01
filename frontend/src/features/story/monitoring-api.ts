@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import { apiRangeQuery, type DateRange } from "@/features/story/date-range";
+import { apiRangeQuery, rangeForPreset, type DateRange } from "@/features/story/date-range";
 import type { components } from "@/types/api.generated";
 
 export type Provenance = components["schemas"]["Provenance"];
@@ -27,7 +27,7 @@ type NewsEnvelope = components["schemas"]["PresentationEnvelope_NewsCollection_"
 type GovernanceEnvelope = components["schemas"]["PresentationEnvelope_Governance_"];
 type WeeklySummaryEnvelope = components["schemas"]["PresentationEnvelope_WeeklySummary_"];
 
-export class PresentationApiError extends Error {
+export class MonitoringApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -42,7 +42,7 @@ function apiBaseUrl() {
 
 async function apiGet<T>(path: string, query?: Record<string, string | undefined>): Promise<T> {
   const session = (await cookies()).get("prism_session")?.value;
-  if (!session) throw new PresentationApiError("Authentication required", 401);
+  if (!session) throw new MonitoringApiError("Authentication required", 401);
   const url = new URL(`${apiBaseUrl()}${path}`);
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
@@ -52,8 +52,8 @@ async function apiGet<T>(path: string, query?: Record<string, string | undefined
     cache: "no-store",
   });
   if (!response.ok) {
-    throw new PresentationApiError(
-      response.status === 404 ? "Presentation record not found" : "Presentation API unavailable",
+    throw new MonitoringApiError(
+      response.status === 404 ? "Recorded monitoring data not found" : "Monitoring API unavailable",
       response.status,
     );
   }
@@ -61,56 +61,57 @@ async function apiGet<T>(path: string, query?: Record<string, string | undefined
 }
 
 export async function loadDashboard(range: DateRange) {
-  return (await apiGet<OverviewEnvelope>("/presentation/overview", apiRangeQuery(range))).data;
+  return (await apiGet<OverviewEnvelope>("/monitoring/overview", apiRangeQuery(range))).data;
 }
 
 export async function listStories(
   range: DateRange,
   filters: { outcome?: string; symbol?: string } = {},
 ) {
-  const envelope = await apiGet<DecisionsEnvelope>("/presentation/decisions", {
-    ...apiRangeQuery(range),
-    ...filters,
-  });
-  return envelope.data;
+  return (
+    await apiGet<DecisionsEnvelope>("/monitoring/decisions", {
+      ...apiRangeQuery(range),
+      ...filters,
+    })
+  ).data;
 }
 
 export async function getStory(id: string) {
   try {
-    return (await apiGet<DecisionEnvelope>(`/presentation/decisions/${id}`)).data;
+    return (await apiGet<DecisionEnvelope>(`/monitoring/decisions/${id}`)).data;
   } catch (error) {
-    if (error instanceof PresentationApiError && error.status === 404) return null;
+    if (error instanceof MonitoringApiError && error.status === 404) return null;
     throw error;
   }
 }
 
 export async function loadPortfolio(range: DateRange) {
-  return (await apiGet<PortfolioEnvelope>("/presentation/portfolio", apiRangeQuery(range))).data;
+  return (await apiGet<PortfolioEnvelope>("/monitoring/portfolio", apiRangeQuery(range))).data;
 }
 
 export async function listAlternativeSessions(range: DateRange) {
-  return (await apiGet<AlternativesEnvelope>("/presentation/alternatives", apiRangeQuery(range)))
+  return (await apiGet<AlternativesEnvelope>("/monitoring/alternatives", apiRangeQuery(range)))
     .data;
 }
 
 export async function getAlternativeSession(id: string) {
   try {
-    return (await apiGet<AlternativeEnvelope>(`/presentation/alternatives/${id}`)).data;
+    return (await apiGet<AlternativeEnvelope>(`/monitoring/alternatives/${id}`)).data;
   } catch (error) {
-    if (error instanceof PresentationApiError && error.status === 404) return null;
+    if (error instanceof MonitoringApiError && error.status === 404) return null;
     throw error;
   }
 }
 
 export async function loadAgentObservability(range: DateRange) {
-  return (await apiGet<AgentsEnvelope>("/presentation/agents", apiRangeQuery(range))).data;
+  return (await apiGet<AgentsEnvelope>("/monitoring/agents", apiRangeQuery(range))).data;
 }
 
-export async function getAgent(id: string) {
+export async function getAgent(id: string, range = rangeForPreset("1m")) {
   try {
-    return (await apiGet<AgentEnvelope>(`/presentation/agents/${id}`)).data;
+    return (await apiGet<AgentEnvelope>(`/monitoring/agents/${id}`, apiRangeQuery(range))).data;
   } catch (error) {
-    if (error instanceof PresentationApiError && error.status === 404) return null;
+    if (error instanceof MonitoringApiError && error.status === 404) return null;
     throw error;
   }
 }
@@ -119,18 +120,14 @@ export async function listNews(
   range: DateRange,
   filters: { symbol?: string; significance?: string } = {},
 ) {
-  return (
-    await apiGet<NewsEnvelope>("/presentation/news", {
-      ...apiRangeQuery(range),
-      ...filters,
-    })
-  ).data;
+  return (await apiGet<NewsEnvelope>("/monitoring/news", { ...apiRangeQuery(range), ...filters }))
+    .data;
 }
 
 export async function getGovernance() {
-  return (await apiGet<GovernanceEnvelope>("/presentation/governance")).data;
+  return (await apiGet<GovernanceEnvelope>("/monitoring/governance")).data;
 }
 
 export async function getWeeklySummary() {
-  return (await apiGet<WeeklySummaryEnvelope>("/presentation/weekly-summary")).data;
+  return (await apiGet<WeeklySummaryEnvelope>("/monitoring/weekly-summary")).data;
 }

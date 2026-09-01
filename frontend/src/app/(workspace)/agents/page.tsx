@@ -17,7 +17,7 @@ import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
 import { formatTokens } from "@/features/story/formatters";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
-import { loadAgentObservability } from "@/features/story/presentation-api";
+import { loadAgentObservability } from "@/features/story/monitoring-api";
 import { TokenUsageChart } from "@/features/agents/token-usage-chart";
 import { TryAgentButton } from "@/features/agents/agent-playground-modal";
 
@@ -67,7 +67,7 @@ export default async function AgentsPage({
     {
       label: "Runs in period",
       value: String(allRuns.length),
-      detail: "Fixed illustrative history",
+      detail: "Recorded history",
       tone: "text-[#F8FAFC]",
     },
     {
@@ -120,7 +120,7 @@ export default async function AgentsPage({
             Token Usage by Agent
           </h2>
           <p className="mt-1 text-[12px] text-[#64748B]">
-            Which roles consumed the illustrative model budget in this period? Adjust the range to
+            Which roles consumed the recorded model budget in this period? Adjust the range to
             refilter just this chart.
           </p>
         </div>

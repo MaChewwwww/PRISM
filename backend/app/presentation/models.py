@@ -28,6 +28,8 @@ class Provenance(StrEnum):
     BENCHMARK = "benchmark"
     SIMULATED = "simulated"
     PLANNED_INTEGRATION = "planned_integration"
+    RECORDED = "recorded"
+    ALPACA_MARKET_DATA = "alpaca_market_data"
 
 
 class DateRange(PresentationModel):
@@ -196,6 +198,13 @@ class Evidence(PresentationModel):
     provenance: Provenance
 
 
+class OperationalEvidence(PresentationModel):
+    label: str
+    value: str
+    status: Literal["recorded", "unavailable", "degraded", "simulated"]
+    observed_at: datetime | None = None
+
+
 class StoryDetail(StorySummary):
     catalyst: Catalyst
     market_path: list[ChartPoint]
@@ -206,6 +215,7 @@ class StoryDetail(StorySummary):
     alternatives: list[AlternativeBranch]
     lessons: list[str]
     evidence: list[Evidence]
+    operational_evidence: list[OperationalEvidence] = Field(default_factory=list)
 
 
 class ExposureItem(PresentationModel):
@@ -234,6 +244,7 @@ class Portfolio(PresentationModel):
     positions: list[Position]
     activities: list[Activity]
     exposure: list[ExposureItem]
+    operational_evidence: list[OperationalEvidence] = Field(default_factory=list)
 
 
 class OutcomeCount(PresentationModel):
@@ -344,14 +355,14 @@ class NewsRecord(PresentationModel):
     id: str
     published_at: datetime
     source: str
-    provider: Literal["illustrative_fixture"] = "illustrative_fixture"
+    provider: Literal["recorded"] = "recorded"
     symbols: list[str]
     headline: str
     summary: str
     category: str
     story_id: str | None
     significance: Literal["high", "medium", "low"]
-    provenance: Provenance = Provenance.ILLUSTRATIVE_FIXTURE
+    provenance: Provenance = Provenance.RECORDED
 
 
 class NewsCollection(PresentationModel):

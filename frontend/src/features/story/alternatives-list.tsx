@@ -14,7 +14,7 @@ import {
   formatDateTime,
   parseMoney,
 } from "@/features/story/formatters";
-import type { AlternativeSession } from "@/features/story/presentation-api";
+import type { AlternativeSession } from "@/features/story/monitoring-api";
 
 const SECTION_CARD =
   "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 backdrop-blur-xl";
