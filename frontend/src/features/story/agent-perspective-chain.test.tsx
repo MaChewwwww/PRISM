@@ -29,7 +29,8 @@ describe("AgentPerspectiveChain", () => {
       />,
     );
 
-    expect(screen.getByText("Retrospective reconstruction")).toBeInTheDocument();
+    expect(screen.getByText("Success")).toBeInTheDocument();
+    expect(screen.queryByText(/Retrospective/i)).not.toBeInTheDocument();
     expect(screen.getByText("Blackwell backlog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Quantitative Agent" }));
     expect(screen.getByText("No durable decision was recorded.")).toBeInTheDocument();

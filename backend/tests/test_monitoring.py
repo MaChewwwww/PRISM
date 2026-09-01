@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi.testclient import TestClient
 
+from app.autonomous.models import AuthorizationModel
 from app.core.config import Settings, get_settings
 from app.main import app
+from app.monitoring.service import _summary
 from app.rules.registry import get_authorized_ruleset
 
 FROM = "2026-07-29T00:00:00Z"
@@ -25,6 +29,20 @@ def test_authorized_ruleset_matches_balanced_day_one_baseline() -> None:
     assert str(ruleset.profiles["balanced"].opportunity_score_threshold) == "78"
     assert str(ruleset.profiles["balanced"].take_profit_pct) == "75.00"
     assert str(ruleset.profiles["balanced"].stop_loss_pct) == "50.00"
+
+
+def test_authorization_summary_uses_recorded_shadow_symbol_when_proposal_is_missing() -> None:
+    row = AuthorizationModel(
+        proposal_id="orphan-proposal",
+        created_at=datetime(2026, 8, 31, 17, 10, 24, tzinfo=UTC),
+        outcome="APPROVE",
+    )
+
+    summary = _summary(row, fallback_symbol="NVDA")
+
+    assert summary.symbol == "NVDA"
+    assert summary.title == "NVDA Approve"
+    assert "proposal payload unavailable" in summary.summary
 
 
 def test_monitoring_routes_require_authentication_and_presentation_routes_are_absent() -> None:

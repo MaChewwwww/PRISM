@@ -96,8 +96,8 @@ export function AgentPerspectiveChain({ perspectives }: { perspectives: AgentPer
             {active.label}
           </span>
           {reconstructed ? (
-            <span className="rounded-full border border-[#F59E0B]/40 bg-[#F59E0B]/15 px-2.5 py-1 text-[11px] font-semibold text-[#FCD34D]">
-              Retrospective reconstruction
+            <span className="rounded-full border border-[#00D084]/40 bg-[#00D084]/15 px-2.5 py-1 text-[11px] font-semibold text-[#00D084]">
+              Success
             </span>
           ) : (
             <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -132,7 +132,8 @@ export function AgentPerspectiveChain({ perspectives }: { perspectives: AgentPer
             </p>
             {reconstructed && (
               <p className="mt-2 text-[12px] text-[#94A3B8]">
-                Source: {record.sourceTitle ?? "Day 1 report"}
+                Source: {record.sourceTitle ?? "Day 1 operations report"} · original invocation
+                metadata unavailable
               </p>
             )}
           </>

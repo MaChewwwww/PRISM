@@ -128,7 +128,7 @@ export function storyDecisionLabel(symbol: string, outcome: string): string {
     case "degraded":
       return `Halted \u2014 ${symbol} (incomplete evidence)`;
     case "retrospective":
-      return `Retrospective reconstruction \u2014 ${symbol}`;
+      return `Success \u2014 ${symbol}`;
     default:
       return symbol;
   }
