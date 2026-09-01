@@ -145,10 +145,6 @@ export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStor
             <div className="overview-stat-val">{totalDecisionStories}</div>
             <div className="overview-stat-lbl">Decision stories</div>
           </div>
-          <div>
-            <div className="overview-stat-val">—</div>
-            <div className="overview-stat-lbl">Agent tokens not reported</div>
-          </div>
         </div>
         <div className="overview-snapshot-spark-wrap">
           <div className="overview-snapshot-spark-label">

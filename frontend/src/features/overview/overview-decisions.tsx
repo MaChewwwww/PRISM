@@ -85,9 +85,9 @@ function AgentChip({ tag }: { tag: AgentTag }) {
   const Icon = tag.icon;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold ${tag.chipClass}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold ${tag.chipClass}`}
     >
-      <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2.5} />
+      <Icon aria-hidden="true" className="h-3 w-3" strokeWidth={2.5} />
       {tag.label}
     </span>
   );
@@ -114,11 +114,11 @@ function DecisionCard({ decision }: { decision: OverviewDecision }) {
     >
       {/* Kicker: perspective + outcome badge */}
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[13px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
+        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
           {decision.perspective}
         </span>
         <span
-          className={`rounded-full border px-2.5 py-0.5 font-mono text-[13px] font-semibold uppercase ${
+          className={`rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase ${
             outcomeLabel === "Pass"
               ? "border-[#00D084]/40 bg-[#00D084]/15 text-[#00D084]"
               : outcomeLabel === "Modify"
@@ -130,13 +130,13 @@ function DecisionCard({ decision }: { decision: OverviewDecision }) {
         </span>
       </div>
 
-      {/* Title: matches the Decision Stories card scale - use decision label */}
-      <h3 className="text-[22px] font-semibold leading-tight tracking-tight text-[#F8FAFC] transition-colors group-hover:text-[#B2D8DC]">
+      {/* Title: matches the shared card scale for cross-page consistency */}
+      <h3 className="text-[16px] font-semibold leading-snug tracking-tight text-[#F8FAFC] transition-colors group-hover:text-[#B2D8DC]">
         {decisionLabel}
       </h3>
 
       {/* Subtitle: the story title description */}
-      <p className="mt-1 text-[13px] leading-snug text-[#94A3B8]">{decision.title}</p>
+      <p className="mt-1 text-[12px] leading-snug text-[#94A3B8]">{decision.title}</p>
 
       {/* Agent perspective chip */}
       <div className="flex flex-wrap gap-2">
@@ -147,16 +147,16 @@ function DecisionCard({ decision }: { decision: OverviewDecision }) {
       <div className="mt-auto flex items-end justify-between gap-4 pt-1">
         <dl className="space-y-1.5">
           <div className="flex items-center gap-4">
-            <dt className="font-mono text-[13px] text-[#64748B]">Active Outcome</dt>
+            <dt className="font-mono text-[12px] text-[#64748B]">Active Outcome</dt>
             <dd
-              className={`m-0 font-mono text-[16px] font-semibold tabular-nums ${resultColor(decision.active)}`}
+              className={`m-0 font-mono text-[14px] font-semibold tabular-nums ${resultColor(decision.active)}`}
             >
               {formatResult(decision.active)}
             </dd>
           </div>
           <div className="flex items-center gap-4">
-            <dt className="font-mono text-[13px] text-[#64748B]">Best Shadow Path</dt>
-            <dd className="m-0 font-mono text-[16px] font-semibold tabular-nums text-[#818CF8]">
+            <dt className="font-mono text-[12px] text-[#64748B]">Best Shadow Path</dt>
+            <dd className="m-0 font-mono text-[14px] font-semibold tabular-nums text-[#818CF8]">
               {formatResult(decision.alternative)}
             </dd>
           </div>
