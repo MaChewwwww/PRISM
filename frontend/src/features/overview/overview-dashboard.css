@@ -1068,3 +1068,69 @@
   color: var(--primary-hover);
   font: 650 0.68rem/1.5 var(--font-mono);
 }
+
+/* Paper account overview panel */
+.overview-account-list {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+.overview-account-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+}
+.overview-account-row:last-child {
+  border-bottom: 0;
+}
+.overview-account-row dt {
+  color: var(--text-muted);
+}
+.overview-account-row dd {
+  margin: 0;
+  text-align: right;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.overview-account-checked {
+  margin: 0.6rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.64rem;
+}
+
+/* Open positions summary */
+.overview-positions-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+.overview-position-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.74rem;
+}
+.overview-position-row:last-child {
+  border-bottom: 0;
+}
+.overview-position-symbol {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.overview-position-value {
+  color: var(--muted-foreground);
+}
+.overview-position-pnl {
+  font-weight: 650;
+}

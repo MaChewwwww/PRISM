@@ -1,20 +1,144 @@
 "use client";
 
-import { ChartColumn, Layers3, PieChart } from "lucide-react";
+import { ChartColumn, Layers3, PieChart, Wallet } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import type {
   OverviewExposure,
   OverviewOutcome,
   OverviewPoint,
+  OverviewPosition,
 } from "@/features/overview/overview-adapter";
 
 type Props = {
   points: OverviewPoint[];
   outcomes: OverviewOutcome[];
   exposures: OverviewExposure[];
+  positions: OverviewPosition[];
+  asOf: string | null;
   totalDecisionStories: number;
 };
+
+/** Tone a signed money/percent string green (+), red (-), or muted. */
+function tone(value: string) {
+  if (value.startsWith("+")) return "var(--status-profit)";
+  if (value.startsWith("-")) return "var(--status-loss)";
+  return "var(--text-muted)";
+}
+
+/**
+ * PRISM Alpaca Paper Account Overview.
+ *
+ * Renders only the paper-account fields the presentation contract genuinely
+ * exposes. Raw account fields the security boundary withholds (account
+ * identifier, buying power, long/short market value, pattern-day-trader, day
+ * trades, margin multiplier, shorting-allowed, trading-blocked) are omitted
+ * entirely rather than shown as placeholders.
+ */
+function AccountOverviewPanel({
+  equity,
+  todaysPnl,
+  positionsCount,
+  asOf,
+}: {
+  equity: number | null;
+  todaysPnl: { change: number; pct: number } | null;
+  positionsCount: number;
+  asOf: string | null;
+}) {
+  const rows: Array<{ label: string; value: string; tone?: string; muted?: boolean }> = [
+    { label: "Account Status", value: "Active" },
+    { label: "Environment", value: "Paper account" },
+    { label: "Currency", value: "USD" },
+    {
+      label: "Portfolio Value",
+      value: equity === null ? "—" : `$${equity.toLocaleString()}`,
+    },
+    { label: "Equity", value: equity === null ? "—" : `$${equity.toLocaleString()}` },
+    {
+      label: "Today's P&L (selected range)",
+      value: todaysPnl
+        ? `${todaysPnl.change >= 0 ? "+" : "-"}$${Math.abs(todaysPnl.change).toLocaleString()} (${todaysPnl.pct.toFixed(2)}%)`
+        : "—",
+      tone: todaysPnl ? (todaysPnl.change >= 0 ? "+" : "-") : undefined,
+    },
+    { label: "Open Positions", value: String(positionsCount) },
+  ];
+
+  return (
+    <section className="overview-panel overview-side-panel">
+      <SectionHeading
+        icon={Wallet}
+        title="PRISM Alpaca Paper Account Overview"
+        description="Paper account snapshot. Fields marked Not exposed are withheld by the security boundary."
+      />
+      <dl className="overview-account-list">
+        {rows.map((row) => (
+          <div key={row.label} className="overview-account-row">
+            <dt>{row.label}</dt>
+            <dd
+              className="overview-nums"
+              style={{
+                color: row.muted
+                  ? "var(--text-muted)"
+                  : row.tone
+                    ? row.tone === "+"
+                      ? "var(--status-profit)"
+                      : "var(--status-loss)"
+                    : "var(--foreground)",
+              }}
+            >
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="overview-account-checked overview-nums">
+        Checked at (UTC):{" "}
+        {asOf
+          ? new Date(asOf).toISOString().replace("T", " ").slice(0, 19)
+          : "—"}
+      </p>
+    </section>
+  );
+}
+
+/** Compact Open Positions summary. Quantity is not exposed by the contract. */
+function OpenPositionsPanel({ positions }: { positions: OverviewPosition[] }) {
+  return (
+    <section className="overview-panel overview-side-panel">
+      <div className="overview-decisions-head">
+        <SectionHeading
+          icon={Layers3}
+          title="Open Positions"
+          description="Symbol, market value, and unrealized P&L. Quantity is not exposed."
+        />
+      </div>
+      {positions.length === 0 ? (
+        <p className="overview-chart-detail-empty">No open positions recorded.</p>
+      ) : (
+        <ul className="overview-positions-list">
+          {positions.map((position) => (
+            <li key={position.symbol} className="overview-position-row">
+              <span className="overview-position-symbol">{position.symbol}</span>
+              <span className="overview-nums overview-position-value">{position.value}</span>
+              <span
+                className="overview-nums overview-position-pnl"
+                style={{ color: tone(position.pnl) }}
+              >
+                {position.pnl}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href="/portfolio" className="overview-see-all">
+        Open full holdings ledger
+      </Link>
+    </section>
+  );
+}
 
 function SectionHeading({
   icon: Icon,
@@ -38,7 +162,14 @@ function SectionHeading({
   );
 }
 
-export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStories }: Props) {
+export function OverviewSidebar({
+  points,
+  outcomes,
+  exposures,
+  positions,
+  asOf,
+  totalDecisionStories,
+}: Props) {
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null);
   const [selectedExposure, setSelectedExposure] = useState<string | null>(null);
   const latest = points.at(-1);
@@ -48,9 +179,20 @@ export function OverviewSidebar({ points, outcomes, exposures, totalDecisionStor
       ? ((latest.actual - first.actual) / first.actual) * 100
       : 0;
   const totalOutcomes = outcomes.reduce((sum, item) => sum + item.count, 0);
+  const todaysPnl =
+    first && latest ? { change: latest.actual - first.actual, pct: periodChange } : null;
 
   return (
     <aside className="overview-side">
+      <AccountOverviewPanel
+        equity={latest ? latest.actual : null}
+        todaysPnl={todaysPnl}
+        positionsCount={positions.length}
+        asOf={asOf}
+      />
+
+      <OpenPositionsPanel positions={positions} />
+
       <section className="overview-panel overview-side-panel">
         <SectionHeading
           icon={ChartColumn}

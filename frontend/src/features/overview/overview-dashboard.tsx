@@ -15,7 +15,7 @@ import { OverviewSidebar } from "./overview-sidebar";
 // Feature-scoped styles for the Overview dashboard (see overview-dashboard.css).
 import "./overview-dashboard.css";
 
-type Overview = components["schemas"]["Overview"];
+type Overview = components["schemas"]["Overview"] & { asOf?: string };
 
 export function OverviewDashboard({ overview, range }: { overview: Overview; range: DateRange }) {
   const router = useRouter();
@@ -74,6 +74,8 @@ export function OverviewDashboard({ overview, range }: { overview: Overview; ran
         points={points}
         outcomes={view.outcomes}
         exposures={view.exposures}
+        positions={view.positions}
+        asOf={overview.asOf ?? null}
         totalDecisionStories={view.decisions.length}
       />
 
