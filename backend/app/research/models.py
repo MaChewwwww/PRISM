@@ -4,7 +4,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -217,3 +226,50 @@ class TradeDecisionModel(Base):
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+
+
+class AgentDecisionRecordModel(Base):
+    """Redacted, append-only specialist snapshot for monitoring read models.
+
+    This deliberately stores the decision-facing summary only. Prompts, provider
+    payloads, chain-of-thought, credentials, and broker payloads stay outside
+    this boundary.
+    """
+
+    __tablename__ = "agent_decision_records"
+    __table_args__ = (
+        UniqueConstraint("trace_id", "agent_key", name="uq_agent_decision_trace_key"),
+        CheckConstraint(
+            "provenance IN ('live_research', 'retrospective_reconstruction')",
+            name="ck_agent_decision_provenance",
+        ),
+        CheckConstraint(
+            "provenance != 'retrospective_reconstruction' OR "
+            "(source_title IS NOT NULL AND source_date IS NOT NULL AND source_digest IS NOT NULL "
+            "AND reconstruction_label IS NOT NULL)",
+            name="ck_agent_decision_reconstruction_source",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    trace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    proposal_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    story_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    symbol: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    agent_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    headline: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    limitations_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    provenance: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reconstruction_label: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    record_digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)

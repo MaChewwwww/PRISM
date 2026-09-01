@@ -6,6 +6,7 @@ import type { components } from "@/types/api.generated";
 export type Provenance = components["schemas"]["Provenance"];
 export type StorySummary = components["schemas"]["StorySummary"];
 export type StoryDetail = components["schemas"]["StoryDetail"];
+export type AgentPerspective = components["schemas"]["AgentPerspective"];
 export type ChartPoint = components["schemas"]["ChartPoint"];
 export type Portfolio = components["schemas"]["Portfolio"];
 export type AlternativeSession = components["schemas"]["AlternativeSession"];

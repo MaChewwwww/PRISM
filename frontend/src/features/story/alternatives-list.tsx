@@ -65,16 +65,22 @@ export function AlternativesList({
   rangeControl?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
+  // Server projections enforce this boundary. Retain a client guard so an
+  // invalid cached payload cannot render a simulated study in production.
+  const production = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
+  const productionSafeSessions = production
+    ? sessions.filter((session) => session.sourceMode === "production" && !session.simulation)
+    : sessions;
 
   const filtered = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return sessions;
+    if (!trimmed) return productionSafeSessions;
     const terms = trimmed.split(/\s+/);
-    return sessions.filter((session) => {
+    return productionSafeSessions.filter((session) => {
       const haystack = searchHaystack(session);
       return terms.every((term) => haystack.includes(term));
     });
-  }, [query, sessions]);
+  }, [productionSafeSessions, query]);
 
   return (
     <>
@@ -110,7 +116,7 @@ export function AlternativesList({
         </div>
       </div>
 
-      {sessions.length === 0 ? (
+      {productionSafeSessions.length === 0 ? (
         <div className={`${SECTION_CARD} p-6`}>
           <p className="text-[13px] text-[#94A3B8]">
             No completed ShadowFund alternative sessions fall inside this date range.

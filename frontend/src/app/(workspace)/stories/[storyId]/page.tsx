@@ -266,7 +266,7 @@ export default async function StoryDetailPage({
               </p>
             </div>
 
-            <AgentPerspectiveChain storyId={story.id} />
+            <AgentPerspectiveChain perspectives={story.agentPerspectives ?? []} />
           </section>
 
           {/* SECTION 03 — Proposal (structured candidate trade) */}

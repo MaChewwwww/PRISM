@@ -130,6 +130,12 @@ class BacktestPresentationRepository:
                     ),
                 )
             statement = statement.where(ShadowSessionModel.backtest_run_id == active_run_id)
+        else:
+            # Historical/backtest sessions never enter production monitoring.
+            statement = statement.where(
+                ShadowSessionModel.source_mode == "production",
+                ShadowSessionModel.backtest_run_id.is_(None),
+            )
         rows = list((await self._session.scalars(statement)).all())
         sessions = [await self._session_projection(row) for row in rows]
         aggregate = await self._aggregate_path(rows)
@@ -166,6 +172,8 @@ class BacktestPresentationRepository:
             )
             if active_run_id is None or row.backtest_run_id != active_run_id:
                 return None
+        elif row.source_mode != "production" or row.backtest_run_id is not None:
+            return None
         return PresentationEnvelope(meta=self._meta(), data=await self._session_projection(row))
 
     async def _session_projection(self, row: ShadowSessionModel) -> AlternativeSession:
