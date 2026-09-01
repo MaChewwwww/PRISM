@@ -1,7 +1,8 @@
 "use client";
 
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, UserCheck } from "lucide-react";
+import { ArrowLeft, Lock, Mail, Eye, EyeOff, ShieldCheck, UserCheck } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -158,6 +159,14 @@ export default function LoginPage() {
       <div className="login-bg" aria-hidden="true" />
 
       <main className="relative z-10 w-full max-w-md" aria-labelledby="login-title">
+        <Link
+          href="/"
+          className="mb-5 inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back
+        </Link>
+
         <div
           className="w-full rounded-(--radius-card) border border-(--glass-border) p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] sm:p-10"
           style={{ background: "var(--surface-strong)" }}
@@ -178,7 +187,7 @@ export default function LoginPage() {
               />
             </h1>
             <p className="mt-3 text-xs text-muted-foreground">
-              Continue to your decision stories, paper portfolio, and simulated alternatives.
+              Enter your details to continue
             </p>
           </div>
 
@@ -265,15 +274,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="text-left">
-              <button
-                type="button"
-                className="rounded-sm text-xs font-medium text-primary transition-colors hover:text-(--primary-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                tabIndex={-1}
-              >
-                Forgot Password?
-              </button>
-            </div>
 
             <Button
               type="submit"
@@ -287,7 +287,6 @@ export default function LoginPage() {
                 </span>
               ) : (
                 <>
-                  <Lock className="h-3.5 w-3.5" aria-hidden="true" />
                   Sign in
                 </>
               )}
