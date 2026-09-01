@@ -44,7 +44,7 @@ During the BA-authorized hackathon window, Trading Decision must not propose a n
 
 ## Research and opportunity score
 
-The Market Reaction/Mispricing stage may emit an opportunity score from 0 through 100, but score alone is never permission. The absolute floor is 75; Balanced requires at least 84, Conservative 90, and Aggressive 80. A proposal must independently pass realistic net EV of at least +0.15R, reward/risk of at least 1.5:1, portfolio-risk, freshness, liquidity, and execution-quality gates.
+The Market Reaction/Mispricing stage may emit an opportunity score from 0 through 100, but score alone is never permission. The absolute floor is 75; the active baseline profiles require Balanced 78, Conservative 85, and Aggressive 75. A proposal must independently pass realistic net EV of at least +0.15R, reward/risk of at least 1.5:1, portfolio-risk, freshness, liquidity, and execution-quality gates.
 
 ## Regime and structure guidance
 

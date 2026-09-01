@@ -296,7 +296,7 @@ def authorize_proposal(
                 and economics_bound
             )
             else [ReasonCode.NEGATIVE_EXPECTED_VALUE, ReasonCode.REWARD_RISK_BELOW_FLOOR],
-            "Balanced profile requires opportunity score 84, EV 0.15R, and reward/risk 1.50.",
+            "The active profile opportunity score, EV, and reward/risk thresholds must pass.",
             snapshot,
         )
     )

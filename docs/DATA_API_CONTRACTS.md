@@ -74,7 +74,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/profiles/governance` | Active persisted profile and authenticated operator calibration preference | Yes |
 | PUT | `/api/v1/profiles/calibration-preference` | Select manual or automatic calibration preference | Yes |
 | POST | `/api/v1/profiles/activate-post-analysis` | Manually activate a complete, validated Post-Analysis batch | Yes |
-| GET | `/api/v1/llm-usage/summary` | Aggregated provider-reported LLM tokens and optional estimated cost | Yes |
+| GET | `/api/v1/llm-usage/summary` | UTC-range-bounded aggregated provider-reported LLM tokens and optional estimated cost | Yes |
 | GET | `/api/v1/market-tracker` | **Planned, deferred** normalized bars, watchlist, and activity markers | Yes |
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
