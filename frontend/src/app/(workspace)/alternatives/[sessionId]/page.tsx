@@ -55,7 +55,12 @@ export default async function AlternativeDetailPage({
   const session = await getAlternativeSession(sessionId);
   if (!session) notFound();
 
-  const isHistoricalSimulation = session.simulation?.kind === "historical_options";
+  // Only explicitly staged historical sessions may show simulation-only UI.
+  // This keeps a malformed cached simulation payload from re-enabling it on
+  // a production or otherwise unclassified session.
+  const isHistoricalSimulation =
+    session.sourceMode === "staging" && session.simulation?.kind === "historical_options";
+  const isRecordedCounterfactual = !isHistoricalSimulation;
   const shadowBranches = session.branches.filter(
     (branch) => branch.branchKey !== "chosen" && Number.isFinite(parseMoney(branch.pnl)),
   );
@@ -87,7 +92,7 @@ export default async function AlternativeDetailPage({
         title={decisionLabel(session.symbol, session.chosenPathPnl).headline}
         description={decisionLabel(session.symbol, session.chosenPathPnl).question}
       >
-        <StateBadge state="simulated" />
+        <StateBadge state={isRecordedCounterfactual ? "recorded" : "simulated"} />
       </PageHeader>
 
       {/* Analysis context (the original analytical framing, kept secondary) */}
@@ -162,7 +167,7 @@ export default async function AlternativeDetailPage({
           subtitle={
             isHistoricalSimulation
               ? "Each line is a non-executable branch on the same five-minute historical timeline."
-              : "Each line is a non-executable branch on the same fixture timeline; the teal chosen path is the reference."
+              : "Each line is a non-executable branch on the recorded decision timeline; the teal chosen path is the reference."
           }
           accent="#818CF8"
         />
@@ -178,7 +183,7 @@ export default async function AlternativeDetailPage({
           subtitle={
             isHistoricalSimulation
               ? "Every branch uses the same historical conditions. Delta shows how each simulation differs from the chosen path."
-              : "Every branch uses the same fixture conditions. Delta shows how each simulation differs from the Active Portfolio path."
+              : "Every branch uses the same recorded decision conditions. Delta shows how each counterfactual differs from the Active Portfolio path."
           }
           accent="#818CF8"
         />
@@ -273,7 +278,11 @@ export default async function AlternativeDetailPage({
         <SectionHeading
           id="limitations"
           icon={ShieldCheck}
-          title="Simulation Constraints & Model Boundaries"
+          title={
+            isHistoricalSimulation
+              ? "Simulation Constraints & Model Boundaries"
+              : "Counterfactual Constraints & Model Boundaries"
+          }
           subtitle="Explicit assumptions and limitations preserved for audit integrity."
           accent="#818CF8"
         />

@@ -14,7 +14,7 @@ import {
   formatDateTime,
   parseMoney,
 } from "@/features/story/formatters";
-import type { AlternativeSession } from "@/features/story/monitoring-api";
+import type { AlternativeSession, MonitoringDataMode } from "@/features/story/monitoring-api";
 
 const SECTION_CARD =
   "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 backdrop-blur-xl";
@@ -57,20 +57,23 @@ function searchHaystack(session: AlternativeSession): string {
 
 export function AlternativesList({
   sessions,
+  dataMode,
   heading,
   rangeControl,
 }: {
   sessions: AlternativeSession[];
+  dataMode: MonitoringDataMode;
   heading?: ReactNode;
   rangeControl?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
   // Server projections enforce this boundary. Retain a client guard so an
-  // invalid cached payload cannot render a simulated study in production.
-  const production = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
-  const productionSafeSessions = production
-    ? sessions.filter((session) => session.sourceMode === "production" && !session.simulation)
-    : sessions;
+  // invalid cached payload cannot render a historical/simulated study in
+  // production. Use the API-reported mode rather than a build-time env var.
+  const productionSafeSessions =
+    dataMode === "recorded"
+      ? sessions.filter((session) => session.sourceMode === "production" && !session.simulation)
+      : sessions;
 
   const filtered = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -132,7 +135,11 @@ export function AlternativesList({
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((session) => {
             const { chosen, best } = chosenAndBest(session.branches);
-            const isHistoricalSimulation = session.simulation?.kind === "historical_options";
+            const isProductionSession =
+              dataMode === "recorded" && session.sourceMode === "production";
+            const isHistoricalSimulation =
+              !isProductionSession && session.simulation?.kind === "historical_options";
+            const isRecordedCounterfactual = isProductionSession;
             const takeaway = branchTakeaway(
               branchWhatIf(best?.branchKey ?? "", best?.label ?? session.bestBranch).plain,
               session.bestDelta,
@@ -156,7 +163,7 @@ export function AlternativesList({
                       |
                     </span>
                     <time dateTime={session.occurredAt}>{formatDateTime(session.occurredAt)}</time>
-                    <StateBadge state="simulated" />
+                    <StateBadge state={isRecordedCounterfactual ? "recorded" : "simulated"} />
                   </div>
 
                   {/* Decision headline + plain-language framing */}
@@ -192,7 +199,7 @@ export function AlternativesList({
                         </dd>
                       </div>
                     )}
-                    {chosen?.simulatedFill?.status === "filled" && (
+                    {isHistoricalSimulation && chosen?.simulatedFill?.status === "filled" && (
                       <div className="px-4 py-2 text-[11px] text-[#94A3B8]">
                         Simulated fill {chosen.simulatedFill.entryPrice ?? "—"} →{" "}
                         {chosen.simulatedFill.exitPrice ?? "open"}
