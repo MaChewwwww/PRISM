@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import math
 import re
 from contextlib import suppress
 from dataclasses import dataclass
@@ -155,8 +156,31 @@ class AutonomousWorker:
         self._last_iv_rank_resolution: dict[str, Any] = {}
         self._last_iv_rank_evidence: dict[str, Any] = {}
 
+    @staticmethod
+    def _advance_cycle_due(
+        next_cycle_due: float | None,
+        completed_at: float,
+        interval_seconds: int,
+    ) -> float:
+        """Advance a fixed-rate schedule without creating a catch-up burst.
+
+        The worker must not overlap autonomous cycles. If one cycle runs past
+        one or more scheduled ticks, the missed ticks are skipped and the next
+        due time remains on the original cadence grid.
+        """
+
+        if next_cycle_due is None:
+            return completed_at + interval_seconds
+        next_due = next_cycle_due + interval_seconds
+        while next_due <= completed_at:
+            next_due += interval_seconds
+        return next_due
+
     async def run_forever(self, stop_event: asyncio.Event) -> None:
         flatten_attempted = False
+        next_cycle_due: float | None = None
+        loop = asyncio.get_running_loop()
+        interval_seconds = self.settings.autonomous_scan_interval_seconds
         while not stop_event.is_set():
             now = datetime.now(UTC)
             in_window = self.settings.autonomous_trading_window_active(now)
@@ -177,19 +201,38 @@ class AutonomousWorker:
                 if not flatten_due and not await asyncio.to_thread(
                     self._market_is_open, AlpacaPyGateway(self.settings)
                 ):
-                    await self._wait(
-                        stop_event, min(self.settings.autonomous_scan_interval_seconds, 60)
-                    )
+                    next_cycle_due = None
+                    await self._wait(stop_event, min(interval_seconds, 60))
                     continue
+                cycle_started = loop.time()
+                if next_cycle_due is None:
+                    next_cycle_due = cycle_started
                 try:
                     outcome = await self.run_cycle(now=now)
                 except Exception:
                     logger.exception("Autonomous cycle failed closed")
                     outcome = "FAILED"
+                cycle_completed = loop.time()
+                cycle_duration = cycle_completed - cycle_started
+                if cycle_duration >= interval_seconds:
+                    logger.warning(
+                        "Autonomous cycle exceeded configured interval: "
+                        "duration=%.3fs interval=%ss outcome=%s",
+                        cycle_duration,
+                        interval_seconds,
+                        outcome,
+                    )
                 if flatten_due and outcome == "FLATTENED":
                     flatten_attempted = True
-                await self._wait(stop_event, self.settings.autonomous_scan_interval_seconds)
+                next_cycle_due = self._advance_cycle_due(
+                    next_cycle_due,
+                    cycle_completed,
+                    interval_seconds,
+                )
+                wait_seconds = max(0, math.ceil(next_cycle_due - cycle_completed))
+                await self._wait(stop_event, wait_seconds)
             else:
+                next_cycle_due = None
                 try:
                     async for session in get_db_session():
                         if await self._acquire_cycle_lock(session):
@@ -197,9 +240,7 @@ class AutonomousWorker:
                             await session.commit()
                 except Exception:
                     logger.exception("Weekly post-analysis check failed closed")
-                await self._wait(
-                    stop_event, min(self.settings.autonomous_scan_interval_seconds, 60)
-                )
+                await self._wait(stop_event, min(interval_seconds, 60))
 
     async def _wait(self, stop_event: asyncio.Event, seconds: int) -> None:
         try:
