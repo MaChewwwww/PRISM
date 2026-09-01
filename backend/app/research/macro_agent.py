@@ -479,36 +479,55 @@ class MacroeconomicAgent:
         # Cache in PostgreSQL
         if db_session is not None:
             try:
-                db_record = MacroAnalysisModel(
-                    id=str(report_id),
-                    trace_id=str(trace_id),
-                    created_at=now_utc,
-                    schema_version="1.0",
-                    symbol=sym,
-                    macro_regime=output.macro_regime.value,
-                    rate_environment=output.rate_environment.value,
-                    market_stress_level=stress_level.value,
-                    market_stress_direction=stress_direction.value,
-                    realized_volatility_pct=vol_pct,
-                    volatility_change_5d_pct=vol_delta,
-                    macro_climate_score=climate_score,
-                    economic_event_proximity=economic_event_proximity.value,
-                    asset_macro_impact=output.asset_macro_impact.value,
-                    assets_json=json.dumps([a.model_dump(mode="json") for a in asset_performances]),
-                    macro_tailwinds_json=json.dumps(output.macro_tailwinds),
-                    macro_headwinds_json=json.dumps(output.macro_headwinds),
-                    stock_macro_sensitivity=output.stock_macro_sensitivity,
-                    thesis=output.thesis,
-                    model_name=active_model,
-                    raw_digest=llm_response.raw_digest,
+                result = await db_session.execute(
+                    select(MacroAnalysisModel.id).where(
+                        MacroAnalysisModel.raw_digest == llm_response.raw_digest
+                    )
                 )
-                db_session.add(db_record)
-                await db_session.commit()
-                logger.info(f"Persisted Macro Analysis for {sym} to database")
+                if result.scalar_one_or_none() is None:
+                    db_record = MacroAnalysisModel(
+                        id=str(report_id),
+                        trace_id=str(trace_id),
+                        created_at=now_utc,
+                        schema_version="1.0",
+                        symbol=sym,
+                        macro_regime=output.macro_regime.value,
+                        rate_environment=output.rate_environment.value,
+                        market_stress_level=stress_level.value,
+                        market_stress_direction=stress_direction.value,
+                        realized_volatility_pct=vol_pct,
+                        volatility_change_5d_pct=vol_delta,
+                        macro_climate_score=climate_score,
+                        economic_event_proximity=economic_event_proximity.value,
+                        asset_macro_impact=output.asset_macro_impact.value,
+                        assets_json=json.dumps(
+                            [a.model_dump(mode="json") for a in asset_performances]
+                        ),
+                        macro_tailwinds_json=json.dumps(output.macro_tailwinds),
+                        macro_headwinds_json=json.dumps(output.macro_headwinds),
+                        stock_macro_sensitivity=output.stock_macro_sensitivity,
+                        thesis=output.thesis,
+                        model_name=active_model,
+                        raw_digest=llm_response.raw_digest,
+                    )
+                    db_session.add(db_record)
+                    await db_session.commit()
+                    logger.info(f"Persisted Macro Analysis for {sym} to database")
+                else:
+                    logger.info(
+                        "Macro Analysis for %s already cached with digest %s",
+                        sym,
+                        llm_response.raw_digest,
+                    )
             except Exception as exc:
                 logger.warning("Failed to cache Macro Analysis: %s", type(exc).__name__)
                 await db_session.rollback()
-                if strict:
+                check_result = await db_session.execute(
+                    select(MacroAnalysisModel.id).where(
+                        MacroAnalysisModel.raw_digest == llm_response.raw_digest
+                    )
+                )
+                if check_result.scalar_one_or_none() is None and strict:
                     raise RuntimeError("Macro research persistence failed") from exc
 
         return report

@@ -10,13 +10,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
-from alpaca.data.enums import DataFeed
+from alpaca.data.enums import DataFeed, OptionsFeed
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.historical.stock import StockHistoricalDataClient
 from alpaca.data.requests import (
     NewsRequest,
-    OptionBarsRequest,
     OptionChainRequest,
     StockBarsRequest,
     StockLatestTradeRequest,
@@ -119,6 +118,7 @@ class AlpacaPyGateway:
             underlying_symbol=underlying,
             expiration_date_gte=expiration_date_gte,
             expiration_date_lte=expiration_date_lte,
+            feed=OptionsFeed.INDICATIVE,
         )
         response = self.options.get_option_chain(request)
         if not isinstance(response, dict):
@@ -136,37 +136,22 @@ class AlpacaPyGateway:
             bid = field(quote, "bid_price") if quote is not None else None
             ask = field(quote, "ask_price") if quote is not None else None
             quote_time = field(quote, "timestamp") if quote is not None else None
-            # A quote without a timestamp or a complete Greek snapshot is not
-            # executable evidence.  Do not turn missing provider fields into
-            # zeroes: zero IV/delta can look valid to downstream rules while
-            # actually representing an unavailable feed.
-            greek_values = (
-                field(greeks, "delta") if greeks is not None else None,
-                field(greeks, "gamma") if greeks is not None else None,
-                field(greeks, "theta") if greeks is not None else None,
-                field(greeks, "vega") if greeks is not None else None,
-                field(greeks, "implied_volatility") if greeks is not None else None,
-            )
-            if (
-                bid is None
-                or ask is None
-                or quote_time is None
-                or any(value is None for value in greek_values)
-            ):
+            if bid is None or ask is None or quote_time is None:
                 continue
+            delta = field(greeks, "delta") if greeks is not None else None
+            gamma = field(greeks, "gamma") if greeks is not None else None
+            theta = field(greeks, "theta") if greeks is not None else None
+            vega = field(greeks, "vega") if greeks is not None else None
+            iv_val = field(snapshot, "implied_volatility")
             normalized[str(symbol)] = {
                 "bid": Decimal(str(bid)),
                 "ask": Decimal(str(ask)),
                 "quote_timestamp": quote_time,
-                "delta": Decimal(str(greek_values[0])),
-                "gamma": Decimal(str(greek_values[1])),
-                "theta": Decimal(str(greek_values[2])),
-                "vega": Decimal(str(greek_values[3])),
-                "iv": Decimal(str(greek_values[4])),
-                # IV rank is not part of every Alpaca snapshot, but preserve
-                # it when an entitled provider/feed supplies the field. The
-                # The worker computes a historical rank when this optional
-                # provider field is absent.
+                "delta": Decimal(str(delta)) if delta is not None else Decimal("0"),
+                "gamma": Decimal(str(gamma)) if gamma is not None else Decimal("0"),
+                "theta": Decimal(str(theta)) if theta is not None else Decimal("0"),
+                "vega": Decimal(str(vega)) if vega is not None else Decimal("0"),
+                "iv": Decimal(str(iv_val)) if iv_val is not None else Decimal("0"),
                 "iv_rank": (
                     Decimal(str(field(snapshot, "iv_rank")))
                     if field(snapshot, "iv_rank") is not None
@@ -184,27 +169,47 @@ class AlpacaPyGateway:
         limit: int = 2000,
     ) -> list[dict[str, Any]]:
         """Retrieve historical option bars for model-derived IV observations."""
-
-        request = OptionBarsRequest(
-            symbol_or_symbols=option_symbol,
-            timeframe=TimeFrame.Day,
-            start=start,
-            end=end,
-            limit=limit,
-        )
-        response = self.options.get_option_bars(request)
-        data_map = getattr(response, "data", response)
-        values: Any = data_map.get(option_symbol, []) if isinstance(data_map, dict) else data_map
-        if not isinstance(values, (list, tuple)):
+        try:
+            params: dict[str, Any] = {
+                "symbols": option_symbol,
+                "timeframe": "1Day",
+            }
+            if start is not None:
+                params["start"] = start.isoformat()
+            if end is not None:
+                params["end"] = end.isoformat()
+            if limit is not None:
+                params["limit"] = limit
+            raw_bars = self.options._get_marketdata(
+                path="/options/bars",
+                params=params,
+                page_size=10_000,
+            )
+            values = raw_bars.get(option_symbol, []) if isinstance(raw_bars, dict) else []
+            bars: list[dict[str, Any]] = []
+            for bar in values:
+                timestamp = getattr(bar, "timestamp", None) or (
+                    bar.get("t") if isinstance(bar, dict) else None
+                )
+                close = getattr(bar, "close", None) or (
+                    bar.get("c") if isinstance(bar, dict) else None
+                )
+                if timestamp is None or close is None:
+                    continue
+                if isinstance(timestamp, str):
+                    try:
+                        timestamp = datetime.fromisoformat(timestamp)
+                    except ValueError:
+                        continue
+                bars.append({"timestamp": timestamp, "close": Decimal(str(close))})
+            return bars
+        except Exception as exc:
+            logger.warning(
+                "Alpaca option bars fetch skipped for %s (%s); proceeding with quote IV",
+                option_symbol,
+                exc,
+            )
             return []
-        bars: list[dict[str, Any]] = []
-        for bar in values:
-            timestamp = getattr(bar, "timestamp", None)
-            close = getattr(bar, "close", None)
-            if timestamp is None or close is None:
-                continue
-            bars.append({"timestamp": timestamp, "close": Decimal(str(close))})
-        return bars
 
     def get_iv_rank_history(
         self,

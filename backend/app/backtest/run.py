@@ -973,7 +973,10 @@ async def _replay_agents(
                     report["reason"] = (
                         "DATA_UNAVAILABLE: historical NBBO provider is not configured"
                     )
-                elif selection is not None and decision.verdict.value == "propose_trade":
+                elif selection is not None and decision.verdict.value in {
+                    "propose_trade",
+                    "proceed_to_options_proposal",
+                }:
                     try:
                         contract_key = (symbol, checkpoint.date())
                         if contract_key not in contract_cache:

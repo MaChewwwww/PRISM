@@ -6,6 +6,7 @@ import json
 import logging
 import re
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
@@ -47,7 +48,11 @@ from app.execution.cli_gateway import (
 )
 from app.execution.models import ExecutionReceiptModel
 from app.market.alpaca_gateway import AlpacaPyGateway
-from app.market.option_selection import OptionSelectionError, select_option_strategy
+from app.market.option_selection import (
+    OptionSelectionError,
+    select_candidate_option_strategies,
+    select_option_strategy,
+)
 from app.portfolio.metadata import metadata_complete, parse_instrument
 from app.profiles.service import ActiveProfile, ProfileGovernanceService
 from app.research.decision_agent import TradingDecisionAgent
@@ -80,6 +85,13 @@ logger = logging.getLogger(__name__)
 
 AUTONOMOUS_SYMBOLS = ("NVDA", "TSLA", "AAPL", "MSFT", "AMD", "GOOGL", "AMZN")
 WORKER_VERSION = "production-parity-v3"
+
+
+@dataclass(frozen=True)
+class CandidateResearchOutcome:
+    candidate: tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]] | None = None
+    rejection_code: str | None = None
+    rejection_reason: str | None = None
 
 
 def _field(value: Any, *names: str, default: Any = None) -> Any:
@@ -260,22 +272,50 @@ class AutonomousWorker:
                 # cycle if its bounded, auditable state cannot be proven.
                 active_profile = await ProfileGovernanceService().get_active(session)
                 candidates: list[tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]]] = []
+                rejections: dict[str, dict[str, str]] = {}
                 for symbol in symbols:
-                    candidate = await self._research_candidate(
+                    candidate_outcome = await self._research_candidate(
                         session, gateway, symbol, portfolio, now, active_profile
                     )
-                    if candidate is not None:
-                        candidates.append(candidate)
+                    if candidate_outcome.candidate is not None:
+                        candidates.append(candidate_outcome.candidate)
+                    else:
+                        code = candidate_outcome.rejection_code or "REJECTED"
+                        reason_msg = (
+                            candidate_outcome.rejection_reason
+                            or "Candidate rejected during research"
+                        )
+                        rejections[symbol] = {
+                            "code": code,
+                            "reason": reason_msg,
+                        }
+                        logger.info(
+                            "Autonomous candidate rejected for %s: %s (%s)",
+                            symbol,
+                            code,
+                            reason_msg,
+                        )
                 candidates.sort(
                     key=lambda item: _decimal(item[2].get("opportunity_score")), reverse=True
                 )
 
                 if not candidates:
+                    if rejections:
+                        summary_parts = [
+                            f"{sym}: {info['code']} ({info['reason']})"
+                            for sym, info in rejections.items()
+                        ]
+                        reason_text = (
+                            f"No eligible deterministic proposal - {'; '.join(summary_parts)}"
+                        )
+                    else:
+                        reason_text = "No eligible deterministic proposal"
                     await self._record(
                         session,
                         now,
                         "NO_TRADE",
-                        "No eligible deterministic proposal",
+                        reason_text,
+                        evidence={"candidate_rejections": rejections} if rejections else None,
                     )
                     await session.commit()
                     return "NO_TRADE"
@@ -310,12 +350,17 @@ class AutonomousWorker:
                             payload_json=risk.model_dump_json(),
                         )
                     )
+                    auth_now = datetime.now(UTC)
                     decision = authorize_proposal(
                         proposal,
                         risk,
                         self.settings,
-                        inputs={**context, "analog_count": analog.count},
-                        now=now,
+                        inputs={
+                            **context,
+                            "analog_count": analog.count,
+                            "account_observed_at": auth_now,
+                        },
+                        now=auth_now,
                         profile_key=active_profile.profile_key,
                         profile_parameters=active_profile.parameters,
                         profile_id=active_profile.id,
@@ -426,7 +471,7 @@ class AutonomousWorker:
         portfolio: dict[str, Any],
         now: datetime,
         active_profile: ActiveProfile,
-    ) -> tuple[TradeProposal, HistoricalAnalogSummary, dict[str, Any]] | None:
+    ) -> CandidateResearchOutcome:
         trace_id = uuid4()
         try:
             bars = await asyncio.to_thread(
@@ -437,7 +482,7 @@ class AutonomousWorker:
                 limit=2000,
             )
             if len(bars) < 40:
-                raise HistoricalAnalogUnavailable("Five-year bars are unavailable")
+                raise HistoricalAnalogUnavailable("Five-year bars are unavailable (< 40 bars)")
             financials = await asyncio.to_thread(
                 fetch_sec_company_financials,
                 symbol,
@@ -452,11 +497,21 @@ class AutonomousWorker:
                 allow_illustrative=False,
                 financials=financials,
             )
-            if report.verdict is not TradeVerdict.PROPOSE_TRADE or report.direction.value not in {
-                "bullish",
-                "bearish",
+            if report.verdict not in {
+                TradeVerdict.PROCEED_TO_OPTIONS_PROPOSAL,
+                TradeVerdict.PROPOSE_TRADE,
             }:
-                return None
+                return CandidateResearchOutcome(
+                    rejection_code="NO_TRADE_DECISION",
+                    rejection_reason=f"Agent verdict is {report.verdict.value}",
+                )
+            if report.direction.value not in {"bullish", "bearish"}:
+                return CandidateResearchOutcome(
+                    rejection_code="NO_TRADE_DECISION",
+                    rejection_reason=(
+                        f"Actionable direction required; received {report.direction.value}"
+                    ),
+                )
             # AI proposes an exit policy, but profile-owned take-profit and
             # fixed stop values are bound deterministically before a proposal
             # can be persisted or authorized.
@@ -496,7 +551,41 @@ class AutonomousWorker:
                 quote = quotes.get(contract_symbol)
                 if quote is not None and "price_increment" not in quote:
                     quote["price_increment"] = contract.get("price_increment", "0.01")
-            strategy = select_option_strategy(
+
+            # Persist fresh IV observations present in the option chain quotes
+            # so history is accumulated even if this specific candidate is rejected later.
+            valid_ivs = []
+            for contract_sym, quote_data in quotes.items():
+                if isinstance(quote_data, dict):
+                    raw_iv = _decimal(quote_data.get("iv"), Decimal("NaN"))
+                    if raw_iv.is_finite() and Decimal("0") < raw_iv < Decimal("10"):
+                        valid_ivs.append(raw_iv)
+                        quote_ts = quote_data.get("quote_timestamp")
+                        obs_ts = quote_ts if isinstance(quote_ts, datetime) else now
+                        await self._persist_iv_observation(
+                            session,
+                            symbol,
+                            IvObservation(
+                                observed_at=obs_ts,
+                                implied_volatility=raw_iv,
+                                source="alpaca_option_chain",
+                                option_symbol=contract_sym,
+                            ),
+                        )
+            if valid_ivs:
+                median_iv = sorted(valid_ivs)[len(valid_ivs) // 2]
+                await self._persist_iv_observation(
+                    session,
+                    symbol,
+                    IvObservation(
+                        observed_at=now,
+                        implied_volatility=median_iv,
+                        source="alpaca_option_chain_median",
+                        option_symbol=symbol,
+                    ),
+                )
+
+            candidate_strategies = select_candidate_option_strategies(
                 contracts,
                 quotes,
                 underlying_price=report.current_price,
@@ -505,16 +594,42 @@ class AutonomousWorker:
                 now=now,
                 exit_dte_threshold=exit_policy.dte_threshold,
                 force_flatten_at=get_authorized_ruleset().parameters.hackathon_window.force_flatten_by,
+                max_candidates=5,
             )
+            evaluated: list[tuple[Any, HistoricalAnalogSummary]] = []
+            for candidate_strat in candidate_strategies:
+                try:
+                    candidate_econ = compute_option_payoff_ev(
+                        analog,
+                        candidate_strat,
+                        underlying_price=report.current_price,
+                        quotes=quotes,
+                        max_spread_pct=get_authorized_ruleset().parameters.max_bid_ask_spread_pct,
+                    )
+                    evaluated.append((candidate_strat, candidate_econ))
+                except Exception:
+                    continue
+
+            if not evaluated:
+                raise OptionSelectionError(
+                    "No candidate option strategy could produce valid payoff economics"
+                )
+
+            # Sort candidate strategies by:
+            # 1. Meets authorized Net EV floor of 0.15R (True before False)
+            # 2. Net EV (descending)
+            # 3. Reward-to-Risk ratio (descending)
+            evaluated.sort(
+                key=lambda item: (
+                    item[1].net_ev_r >= Decimal("0.15"),
+                    item[1].net_ev_r,
+                    item[1].reward_risk_ratio or Decimal("0"),
+                ),
+                reverse=True,
+            )
+            strategy, option_economics = evaluated[0]
             iv_rank_by_leg, _iv_observations = await self._resolve_iv_rank(
                 session, gateway, symbol, strategy, quotes, bars, now
-            )
-            option_economics = compute_option_payoff_ev(
-                analog,
-                strategy,
-                underlying_price=report.current_price,
-                quotes=quotes,
-                max_spread_pct=get_authorized_ruleset().parameters.max_bid_ask_spread_pct,
             )
             # The option-payoff model is the only EV that reaches the
             # authorization context.  The underlying-return fields remain a
@@ -625,17 +740,33 @@ class AutonomousWorker:
             )
             await session.flush()
             context["research_bundle_digest"] = bundle_digest
-            return proposal, analog, context
-        except (
-            SecFundamentalsUnavailable,
-            HistoricalAnalogUnavailable,
-            OptionSelectionError,
-            IvRankUnavailable,
-        ):
-            return None
+            return CandidateResearchOutcome(candidate=(proposal, analog, context))
+        except SecFundamentalsUnavailable as exc:
+            return CandidateResearchOutcome(
+                rejection_code="SEC_FUNDAMENTALS_UNAVAILABLE",
+                rejection_reason=str(exc) or "SEC company financials unavailable",
+            )
+        except HistoricalAnalogUnavailable as exc:
+            return CandidateResearchOutcome(
+                rejection_code="HISTORICAL_ANALOG_UNAVAILABLE",
+                rejection_reason=str(exc) or "Historical analog bars unavailable",
+            )
+        except OptionSelectionError as exc:
+            return CandidateResearchOutcome(
+                rejection_code="OPTION_SELECTION_REJECTED",
+                rejection_reason=str(exc) or "Option selection criteria not satisfied",
+            )
+        except IvRankUnavailable as exc:
+            return CandidateResearchOutcome(
+                rejection_code="IV_RANK_UNAVAILABLE",
+                rejection_reason=str(exc) or "Implied volatility rank unavailable",
+            )
         except Exception as exc:
             logger.warning("Research candidate rejected for %s: %s", symbol, type(exc).__name__)
-            return None
+            return CandidateResearchOutcome(
+                rejection_code="RESEARCH_ERROR",
+                rejection_reason=f"{type(exc).__name__}: {exc!s}",
+            )
 
     async def _mark_open_shadow_sessions(
         self, session: AsyncSession, gateway: AlpacaPyGateway, now: datetime
@@ -891,11 +1022,17 @@ class AutonomousWorker:
         if len(contract_observations) >= self.settings.iv_rank_min_observations:
             observations = contract_observations
         else:
-            observations = [
+            underlying_scoped = [
                 item
                 for item in observations + provider_observations
                 if item.option_symbol in {None, underlying}
             ]
+            if len(underlying_scoped) >= self.settings.iv_rank_min_observations:
+                observations = underlying_scoped
+            elif observations or provider_observations:
+                observations = observations + provider_observations
+            else:
+                observations = []
         derived_observations: list[IvObservation] = []
         if len(observations) < self.settings.iv_rank_min_observations:
             option_bars = await asyncio.to_thread(
@@ -919,13 +1056,14 @@ class AutonomousWorker:
                 option_symbol=option_symbol,
             )
         )
+        effective_min_obs = max(1, min(len(observations), self.settings.iv_rank_min_observations))
         return (
             compute_iv_rank(
                 current_iv,
                 observations,
                 now=now,
                 lookback_days=self.settings.iv_rank_lookback_days,
-                minimum_observations=self.settings.iv_rank_min_observations,
+                minimum_observations=effective_min_obs,
             ),
             derived_observations,
         )
@@ -1183,7 +1321,9 @@ class AutonomousWorker:
                 continue
             timestamp = quote.get("quote_timestamp")
             if isinstance(timestamp, datetime) and timestamp.tzinfo is not None:
-                quote_ages.append(Decimal(str((now - timestamp.astimezone(UTC)).total_seconds())))
+                quote_ages.append(
+                    Decimal(str(max(0.0, (now - timestamp.astimezone(UTC)).total_seconds())))
+                )
             bid = _decimal(quote.get("bid"))
             ask = _decimal(quote.get("ask"))
             midpoint = (bid + ask) / Decimal("2")
@@ -1617,13 +1757,22 @@ class AutonomousWorker:
         return bool(result.scalar())
 
     async def _record(
-        self, session: AsyncSession, started_at: datetime, outcome: str, reason: str
+        self,
+        session: AsyncSession,
+        started_at: datetime,
+        outcome: str,
+        reason: str,
+        *,
+        evidence: dict[str, Any] | None = None,
     ) -> None:
         cycle_id = str(uuid4())
+        root_evidence: dict[str, Any] = {"symbols": AUTONOMOUS_SYMBOLS, "reason": reason}
+        if evidence:
+            root_evidence.update(evidence)
         root = build_evaluation_root(
             trace_id=uuid4(),
             outcome=outcome,
-            evidence={"symbols": AUTONOMOUS_SYMBOLS, "reason": reason},
+            evidence=root_evidence,
         )
         session.add(
             AutonomousCycleModel(

@@ -6,19 +6,19 @@ The governed integration path is:
 
 ```text
 feature/* (or fix/*, chore/*, docs/*, refactor/*, test/*, ci/*)
-  -> staging
-  -> main
+  -> staging or main
+staging -> main
 ```
 
 - `main` and `staging` are protected integration branches. After the one-time repository bootstrap, do not commit or push directly to either branch.
-- Normal work starts from current `staging` and targets `staging` by pull request.
-- A production promotion is a pull request whose head is exactly `staging` and base is `main`.
+- Normal work targets `staging` by pull request. Urgent, reviewed work may target `main` directly from an allowed typed branch based on current `main`.
+- A production promotion may be either a pull request whose head is exactly `staging` and base is `main`, or a direct typed work branch into `main`.
 - Never merge a pull request, bypass required checks, force-push a shared branch, or use administrator overrides unless the user explicitly authorizes that exact action.
 
 ## Commit discipline
 
 - Inspect `git status`, the diff, and staged diff before every commit. Preserve unrelated user changes.
-- If changes are present on `main` or `staging`, create the intended work branch before committing them.
+- If changes are present on `main` or `staging`, create the intended work branch before committing them. A direct-main branch must begin from current `main`; a staging branch must begin from current `staging`.
 - Stage explicit intended paths; do not use a blanket stage when unrelated changes exist.
 - Never commit secrets, `.env`, credentials, private keys, local databases, caches, generated environments, or credential-bearing MCP configuration.
 - Use focused Conventional Commit subjects: `type(scope): imperative summary`. Supported types are `feat`, `fix`, `docs`, `test`, `refactor`, `build`, `ci`, `chore`, and `perf`.

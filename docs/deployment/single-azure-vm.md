@@ -18,8 +18,8 @@ production host-exposed service. Both environments use Alpaca paper mode only.
 
 1. Implement application and infrastructure changes locally.
 2. Run `pnpm verify` and `pnpm docker:config`.
-3. Open a pull request targeting `staging`; do not edit source files on the VM.
-4. After approval and merge, the staging workflow deploys the exact revision.
+3. Open a pull request targeting `staging`, or use an urgent reviewed typed pull request targeting `main`; do not edit source files on the VM.
+4. After approval and merge, the staging workflow deploys the exact revision when the target is `staging`.
 5. The production workflow deploys only from the protected `main` branch.
 6. Confirm the migration service completes and readiness is healthy.
 
