@@ -48,7 +48,23 @@ class AutonomousCycleRead(BaseModel):
     outcome: Literal["NO_TRADE", "SUBMITTED", "FAILED"]
     symbols: list[str]
     reason: str
+    exit_checks: list["AutonomousExitCheck"]
     worker_version: str
+
+
+class AutonomousExitCheck(BaseModel):
+    """Safe evidence for a mandatory position-exit decision."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str
+    result: Literal["exit", "hold", "exit_failed", "exit_pending"]
+    reason: Literal[
+        "pnl_threshold",
+        "max_hold_days",
+        "dte_threshold",
+        "no_exit_condition",
+    ]
 
 
 class AutonomousCycleCollection(BaseModel):
@@ -100,7 +116,19 @@ class AutonomousExecutionRead(BaseModel):
 
     id: UUID
     trace_id: UUID
-    proposal_id: UUID
+    proposal_id: UUID | None = None
+    operation: Literal["entry", "exit"]
+    symbol: str | None = None
+    exit_reason: (
+        Literal[
+            "pnl_threshold",
+            "max_hold_days",
+            "dte_threshold",
+            "hackathon_force_flatten",
+        ]
+        | None
+    ) = None
+    requested_quantity: DecimalString | None = None
     status: Literal["pending", "submitted", "reconciling", "rejected", "filled", "failed"]
     filled_quantity: DecimalString
     filled_average_price: DecimalString | None = None

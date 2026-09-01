@@ -19,6 +19,7 @@ from app.contracts.models import (
     OptionSide,
     OptionStrategy,
     OptionType,
+    ReasonCode,
     RiskAssessment,
     StrategyKind,
     TradeProposal,
@@ -299,6 +300,91 @@ def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> No
     assert decision.outcome == "REJECT"
     assert [rule.priority for rule in decision.rule_trace] == ["P0", "P1", "P2", "P3", "P4", "P5"]
     assert decision.allowed_order_payload is None
+
+
+def test_p2_reason_codes_identify_only_the_failed_risk_predicate() -> None:
+    proposal = _proposal()
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="1.0.0",
+    )
+    decision = authorize_proposal(
+        proposal,
+        None,
+        settings,
+        inputs={
+            "market_regime": "normal",
+            "iv_rank_available": True,
+            "iv_rank": "25",
+        },
+    )
+
+    p2 = next(rule for rule in decision.rule_trace if rule.priority == "P2")
+
+    assert p2.reason_codes == [ReasonCode.RISK_ASSESSMENT_MISSING]
+
+
+def test_p4_reason_codes_identify_each_failed_edge_predicate() -> None:
+    proposal = _proposal()
+    risk = RiskAssessment(
+        trace_id=proposal.trace_id,
+        proposal_id=proposal.id,
+        verdict="acceptable",
+        max_loss=Decimal("1"),
+        findings=[],
+        data_fresh=True,
+    )
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="1.0.0",
+    )
+    decision = authorize_proposal(
+        proposal,
+        risk,
+        settings,
+        inputs={
+            "market_fresh": True,
+            "analog_count": 30,
+            "fundamentals_sourced": True,
+            "account_verified": True,
+            "open_positions": 0,
+            "buying_power_ok": True,
+            "cash_buffer_ok": True,
+            "concentration_ok": True,
+            "position_size_ok": True,
+            "aggregate_risk_ok": True,
+            "portfolio_controls_complete": True,
+            "sector_concentration_ok": True,
+            "cluster_concentration_ok": True,
+            "greeks_risk_ok": True,
+            "expiration_concentration_ok": True,
+            "market_open": True,
+            "iv_rank_available": True,
+            "iv_rank": "25",
+            "market_regime": "normal",
+            "portfolio_risk_state": "normal",
+            "quote_age_seconds": 1,
+            "spread_pct": "5",
+            "within_entry_window": True,
+            "before_force_flatten": True,
+            "opportunity_score": "77",
+            "net_ev_r": "0.10",
+            "reward_risk_ratio": "1.40",
+            "supported_options_level": 2,
+        },
+    )
+
+    p4 = next(rule for rule in decision.rule_trace if rule.priority == "P4")
+
+    assert p4.reason_codes == [
+        ReasonCode.OPPORTUNITY_SCORE_BELOW_FLOOR,
+        ReasonCode.EXPECTED_VALUE_BELOW_FLOOR,
+        ReasonCode.REWARD_RISK_BELOW_FLOOR,
+    ]
 
 
 def test_evaluation_root_is_immutable_and_lineage_bound() -> None:
