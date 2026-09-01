@@ -3,7 +3,7 @@ import { Network } from "lucide-react";
 import { PageHeader } from "@/components/workspace/workspace-ui";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
-import { listStories } from "@/features/story/presentation-api";
+import { listStories } from "@/features/story/monitoring-api";
 import { StoryList } from "@/features/story/story-list";
 
 export default async function StoriesPage({
@@ -40,7 +40,7 @@ export default async function StoriesPage({
                 Decision Feed
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                {stories.length} illustrative {stories.length === 1 ? "story" : "stories"} in this
+                {stories.length} recorded {stories.length === 1 ? "decision" : "decisions"} in this
                 range.
               </p>
             </div>

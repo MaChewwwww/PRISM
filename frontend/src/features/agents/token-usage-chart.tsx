@@ -88,7 +88,7 @@ export function TokenUsageChart({
 
       <StoryColumnChart
         title="Visible token consumption"
-        description="Input, output, and cached tokens from fixed demo runs. No provider billing claim is made."
+        description="Input, output, and cached tokens from recorded runs. No provider billing claim is made."
         summary={`${formatTokens(total)} visible tokens`}
         data={data}
         barName="Tokens"

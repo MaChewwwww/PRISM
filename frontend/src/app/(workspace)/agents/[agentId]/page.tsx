@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
 import { formatTokens } from "@/features/story/formatters";
-import { getAgent } from "@/features/story/presentation-api";
+import { getAgent } from "@/features/story/monitoring-api";
 import { StoryColumnChart } from "@/features/story/story-charts";
 import { RunHistory } from "@/features/agents/run-history";
 import { TryAgentButton, type AgentAction } from "@/features/agents/agent-playground-modal";
@@ -62,7 +62,7 @@ export default async function AgentDetailPage({
     {
       label: "Average duration",
       value: runs.length ? `${averageDuration} ms` : "\u2014",
-      detail: "Fixture latency",
+      detail: "Recorded latency",
     },
   ];
   const runItems = runs.map((run) => ({
@@ -158,7 +158,7 @@ export default async function AgentDetailPage({
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <StoryColumnChart
             title="Visible token consumption"
-            description="Input, output, and cached tokens from fixed demo runs. No provider billing claim is made."
+            description="Input, output, and cached tokens from recorded runs. No provider billing claim is made."
             summary={`${formatTokens(tokens)} visible tokens`}
             data={tokenBreakdown}
             barName="Tokens"

@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/workspace/workspace-ui";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { NewsList } from "@/features/story/news-list";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
-import { listNews } from "@/features/story/presentation-api";
+import { listNews } from "@/features/story/monitoring-api";
 
 export default async function NewsPage({ searchParams }: { searchParams: Promise<SearchValues> }) {
   const values = await searchParams;
@@ -17,7 +17,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
       <PageHeader
         eyebrow="News and catalysts"
         title="See the evidence before the interpretation"
-        description="A backend-owned illustrative feed connects source timestamps and symbols to the decision stories they influenced."
+        description="Recorded backend news analysis connects source timestamps and symbols to decisions when evidence exists."
       />
 
       <section aria-labelledby="news-feed" className="mt-6">

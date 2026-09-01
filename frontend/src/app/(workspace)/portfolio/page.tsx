@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/workspace/workspace-ui";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { formatDateTime } from "@/features/story/formatters";
-import { loadPortfolio } from "@/features/story/presentation-api";
+import { loadPortfolio } from "@/features/story/monitoring-api";
 
 function toPercent(value: string) {
   const parsed = Number.parseFloat(value);
@@ -65,8 +65,7 @@ export default async function PortfolioPage({
   const last = portfolio.points.at(-1);
   const periodPnl = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
 
-  // Gross exposure is available in the fixture. Directional net exposure is
-  // intentionally not inferred because it is not recorded.
+  // Directional net exposure is not inferred from recorded gross exposure.
   const nonCash = portfolio.exposure.filter((item) => !item.label.toLowerCase().includes("cash"));
   const grossExposure = nonCash.reduce((total, item) => total + toPercent(item.value), 0);
 
@@ -95,10 +94,8 @@ export default async function PortfolioPage({
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Net Exposure
           </dt>
-          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
-            0.00%
-          </dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Delta-neutral profile</p>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">—</dd>
+          <p className="mt-1 text-[11px] text-[#64748B]">Not recorded in this projection</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -129,6 +126,29 @@ export default async function PortfolioPage({
           </p>
         </div>
       </dl>
+
+      <section aria-labelledby="operational-evidence" className="mt-6">
+        <SectionHeading
+          id="operational-evidence"
+          icon={Activity}
+          title="Operational Evidence"
+          subtitle="Recorded freshness and exit-check state. Unavailable evidence is explicit."
+        />
+        <div className={`${SECTION_CARD} divide-y divide-white/8`}>
+          {(portfolio.operationalEvidence ?? []).map((item) => (
+            <div
+              key={item.label}
+              className="flex flex-wrap items-baseline justify-between gap-3 p-4"
+            >
+              <span className="text-sm text-[#CBD5E1]">{item.label}</span>
+              <span className="font-mono text-xs text-[#94A3B8]">{item.value}</span>
+              <span className="state-badge" data-state={item.status}>
+                {item.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Capital Allocation & Exposure */}
       <section aria-labelledby="allocation" className="mt-6">

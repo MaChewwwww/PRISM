@@ -42,16 +42,18 @@ REQUIRED_RULES = {
     ]
 }
 
-PRESENTATION_PATHS = {
-    "/api/v1/presentation/overview",
-    "/api/v1/presentation/decisions",
-    "/api/v1/presentation/decisions/{decision_id}",
-    "/api/v1/presentation/portfolio",
-    "/api/v1/presentation/alternatives",
-    "/api/v1/presentation/news",
-    "/api/v1/presentation/agents",
-    "/api/v1/presentation/governance",
-    "/api/v1/presentation/weekly-summary",
+MONITORING_PATHS = {
+    "/api/v1/monitoring/overview",
+    "/api/v1/monitoring/decisions",
+    "/api/v1/monitoring/decisions/{proposal_id}",
+    "/api/v1/monitoring/portfolio",
+    "/api/v1/monitoring/alternatives",
+    "/api/v1/monitoring/alternatives/{session_id}",
+    "/api/v1/monitoring/news",
+    "/api/v1/monitoring/agents",
+    "/api/v1/monitoring/agents/{agent_id}",
+    "/api/v1/monitoring/governance",
+    "/api/v1/monitoring/weekly-summary",
 }
 SPECIALIST_NAMES = (
     "News Agent",
@@ -165,18 +167,14 @@ def _check_governance(failures: list[str]) -> None:
             encoding="utf-8"
         )
     )
-    missing_paths = PRESENTATION_PATHS - set(openapi.get("paths", {}))
+    missing_paths = MONITORING_PATHS - set(openapi.get("paths", {}))
     if missing_paths:
-        failures.append(
-            f"OpenAPI is missing presentation paths: {sorted(missing_paths)}"
-        )
+        failures.append(f"OpenAPI is missing monitoring paths: {sorted(missing_paths)}")
     api_catalog = (ROOT / "docs" / "DATA_API_CONTRACTS.md").read_text(encoding="utf-8")
-    uncatalogued = [
-        path for path in PRESENTATION_PATHS if f"`{path}`" not in api_catalog
-    ]
+    uncatalogued = [path for path in MONITORING_PATHS if f"`{path}`" not in api_catalog]
     if uncatalogued:
         failures.append(
-            f"API catalog is missing presentation paths: {sorted(uncatalogued)}"
+            f"API catalog is missing monitoring paths: {sorted(uncatalogued)}"
         )
     docs_index = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
     if "[Market Tracker](MARKET_TRACKER.md)" not in docs_index:

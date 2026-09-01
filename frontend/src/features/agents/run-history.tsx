@@ -84,7 +84,7 @@ export function RunHistory({
       {filtered.length === 0 ? (
         <div className={`${SECTION_CARD} p-6`}>
           <p className="text-[13px] text-[#94A3B8]">
-            No illustrative runs fall inside this date range.
+            No recorded runs fall inside this date range.
           </p>
         </div>
       ) : (

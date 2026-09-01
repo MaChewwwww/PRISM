@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD } from "@/components/workspace/section-heading";
-import type { WeeklySummary } from "@/features/story/presentation-api";
+import type { WeeklySummary } from "@/features/story/monitoring-api";
 
 const CONFIDENCE_TONE: Record<string, string> = {
   high: "#00D084",

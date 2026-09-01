@@ -151,6 +151,9 @@ class AutonomousWorker:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._last_option_bars_fallback: str = "not_attempted"
+        self._last_iv_rank_resolution: dict[str, Any] = {}
+        self._last_iv_rank_evidence: dict[str, Any] = {}
 
     async def run_forever(self, stop_event: asyncio.Event) -> None:
         flatten_attempted = False
@@ -253,9 +256,15 @@ class AutonomousWorker:
                     await self._record(session, now, "NO_TRADE", "Hackathon force-flatten executed")
                     await session.commit()
                     return "FLATTENED"
-                exits_ok, exited_symbols = await self._manage_exits(positions, now)
+                exits_ok, exited_symbols, exit_checks = await self._manage_exits(positions, now)
                 if not exits_ok:
-                    await self._record(session, now, "FAILED", "Mandatory position exit failed")
+                    await self._record(
+                        session,
+                        now,
+                        "FAILED",
+                        "Mandatory position exit failed",
+                        evidence={"position_exit_checks": exit_checks},
+                    )
                     await session.commit()
                     return "FAILED"
                 if exited_symbols:
@@ -315,14 +324,23 @@ class AutonomousWorker:
                         now,
                         "NO_TRADE",
                         reason_text,
-                        evidence={"candidate_rejections": rejections} if rejections else None,
+                        evidence={
+                            "candidate_rejections": rejections,
+                            "position_exit_checks": exit_checks,
+                        },
                     )
                     await session.commit()
                     return "NO_TRADE"
 
                 open_positions = len(positions)
                 if open_positions >= self.settings.autonomous_max_open_positions:
-                    await self._record(session, now, "NO_TRADE", "Six-position cap reached")
+                    await self._record(
+                        session,
+                        now,
+                        "NO_TRADE",
+                        "Six-position cap reached",
+                        evidence={"position_exit_checks": exit_checks},
+                    )
                     await session.commit()
                     return "NO_TRADE"
 
@@ -443,7 +461,13 @@ class AutonomousWorker:
                     if submitted:
                         open_positions += 1
                 outcome = "SUBMITTED" if submitted else "NO_TRADE"
-                await self._record(session, now, outcome, "Production-parity cycle completed")
+                await self._record(
+                    session,
+                    now,
+                    outcome,
+                    "Production-parity cycle completed",
+                    evidence={"position_exit_checks": exit_checks},
+                )
                 await session.commit()
                 return outcome
             except (
@@ -597,6 +621,7 @@ class AutonomousWorker:
                 max_candidates=5,
             )
             evaluated: list[tuple[Any, HistoricalAnalogSummary]] = []
+            candidate_evidence: list[dict[str, Any]] = []
             for candidate_strat in candidate_strategies:
                 try:
                     candidate_econ = compute_option_payoff_ev(
@@ -607,7 +632,23 @@ class AutonomousWorker:
                         max_spread_pct=get_authorized_ruleset().parameters.max_bid_ask_spread_pct,
                     )
                     evaluated.append((candidate_strat, candidate_econ))
-                except Exception:
+                    candidate_evidence.append(
+                        {
+                            "strategy": candidate_strat.model_dump(mode="json"),
+                            "net_ev_r": str(candidate_econ.net_ev_r),
+                            "reward_risk_ratio": str(candidate_econ.reward_risk_ratio),
+                            "status": "evaluated",
+                            "rejection_reason": None,
+                        }
+                    )
+                except Exception as exc:
+                    candidate_evidence.append(
+                        {
+                            "strategy": candidate_strat.model_dump(mode="json"),
+                            "status": "rejected",
+                            "rejection_reason": type(exc).__name__,
+                        }
+                    )
                     continue
 
             if not evaluated:
@@ -631,6 +672,11 @@ class AutonomousWorker:
             iv_rank_by_leg, _iv_observations = await self._resolve_iv_rank(
                 session, gateway, symbol, strategy, quotes, bars, now
             )
+            selected_strategy = strategy.model_dump(mode="json")
+            for candidate in candidate_evidence:
+                if candidate.get("strategy") == selected_strategy:
+                    candidate["selected"] = True
+                    break
             # The option-payoff model is the only EV that reaches the
             # authorization context.  The underlying-return fields remain a
             # descriptive audit of the analog sample.
@@ -666,6 +712,19 @@ class AutonomousWorker:
                 ],
                 "option_economics": proposal_economics.model_dump(mode="json"),
                 "iv_rank_by_leg": {key: str(value) for key, value in iv_rank_by_leg.items()},
+                "monitoring_evidence": {
+                    "option_chain_feed": "indicative",
+                    "historical_option_bars_fallback": getattr(
+                        self, "_last_option_bars_fallback", "not_attempted"
+                    ),
+                    "iv_rank": getattr(self, "_last_iv_rank_evidence", {}),
+                    "strike_selection": {
+                        "candidates": candidate_evidence,
+                        "selected_strategy": selected_strategy,
+                        "selected_net_ev_r": str(option_economics.net_ev_r),
+                        "selected_reward_risk_ratio": str(option_economics.reward_risk_ratio),
+                    },
+                },
             }
             bundle_payload = {
                 "decision": report.model_dump(mode="json"),
@@ -922,6 +981,8 @@ class AutonomousWorker:
         """
 
         history_start = now - timedelta(days=self.settings.iv_rank_lookback_days)
+        self._last_option_bars_fallback = "not_attempted"
+        self._last_iv_rank_resolution = {}
         provider_rows: list[dict[str, Any]] = []
         if self.settings.iv_rank_history_url:
             provider_rows = await asyncio.to_thread(
@@ -932,6 +993,7 @@ class AutonomousWorker:
             )
         provider_observations = [IvObservation(**row) for row in provider_rows]
         result_by_leg: dict[str, Decimal] = {}
+        resolution_by_leg: dict[str, dict[str, Any]] = {}
         persisted: list[IvObservation] = list(provider_observations)
         # Persist provider observations before attempting rank calculation so
         # an otherwise safe NO_TRADE cycle still warms the durable history.
@@ -960,6 +1022,12 @@ class AutonomousWorker:
             await self._persist_iv_observation(session, underlying, current_observation)
             if direct_rank.is_finite() and Decimal("0") <= direct_rank <= Decimal("100"):
                 result_by_leg[leg.symbol] = direct_rank
+                resolution_by_leg[leg.symbol] = {
+                    "path": "option_chain_direct_rank",
+                    "configured_minimum_observations": self.settings.iv_rank_min_observations,
+                    "effective_observation_count": 1,
+                    "rank": str(direct_rank),
+                }
                 continue
             result, derived_observations = await self._compute_persisted_iv_rank(
                 session,
@@ -973,9 +1041,17 @@ class AutonomousWorker:
                 leg=leg,
             )
             result_by_leg[leg.symbol] = result.rank
+            resolution_by_leg[leg.symbol] = {
+                **getattr(self, "_last_iv_rank_resolution", {}),
+                "rank": str(result.rank),
+            }
             persisted.extend(derived_observations)
             for observation in derived_observations:
                 await self._persist_iv_observation(session, underlying, observation)
+        self._last_iv_rank_evidence = {
+            "configured_minimum_observations": self.settings.iv_rank_min_observations,
+            "legs": resolution_by_leg,
+        }
         return result_by_leg, persisted
 
     async def _compute_persisted_iv_rank(
@@ -1034,14 +1110,22 @@ class AutonomousWorker:
             else:
                 observations = []
         derived_observations: list[IvObservation] = []
+        fallback_status = "not_attempted"
         if len(observations) < self.settings.iv_rank_min_observations:
-            option_bars = await asyncio.to_thread(
-                gateway.get_option_bars,
-                option_symbol,
-                start=cutoff,
-                end=now,
-                limit=2000,
-            )
+            fallback_status = "attempted"
+            try:
+                option_bars = await asyncio.to_thread(
+                    gateway.get_option_bars,
+                    option_symbol,
+                    start=cutoff,
+                    end=now,
+                    limit=2000,
+                )
+            except Exception:
+                option_bars = []
+                fallback_status = "unavailable"
+            else:
+                fallback_status = "available" if option_bars else "unavailable"
             derived_observations = infer_iv_observations(
                 option_bars,
                 underlying_bars,
@@ -1057,6 +1141,13 @@ class AutonomousWorker:
             )
         )
         effective_min_obs = max(1, min(len(observations), self.settings.iv_rank_min_observations))
+        self._last_option_bars_fallback = fallback_status
+        self._last_iv_rank_resolution = {
+            "path": "durable_provider_option_bars_current_observation",
+            "configured_minimum_observations": self.settings.iv_rank_min_observations,
+            "effective_observation_count": len(observations),
+            "historical_option_bars_fallback": fallback_status,
+        }
         return (
             compute_iv_rank(
                 current_iv,
@@ -1660,7 +1751,9 @@ class AutonomousWorker:
                 success = success and result.returncode == 0
         return success
 
-    async def _manage_exits(self, positions: list[Any], now: datetime) -> tuple[bool, set[str]]:
+    async def _manage_exits(
+        self, positions: list[Any], now: datetime
+    ) -> tuple[bool, set[str], list[dict[str, str]]]:
         """Apply mandatory paper exits before evaluating any new entry.
 
         Alpaca positions expose unrealized P/L as a decimal fraction.  OCC
@@ -1669,6 +1762,7 @@ class AutonomousWorker:
         Unknown values never trigger a speculative close.
         """
         symbols: set[str] = set()
+        checks: list[dict[str, str]] = []
         max_hold_days = get_authorized_ruleset().parameters.hackathon_max_hold_trading_days
         for position in positions:
             symbol = str(_field(position, "symbol", default=""))
@@ -1676,6 +1770,7 @@ class AutonomousWorker:
             plpc = _decimal(plpc_raw, Decimal("NaN")) if plpc_raw is not None else Decimal("NaN")
             if plpc.is_finite() and (plpc >= Decimal("0.75") or plpc <= Decimal("-0.50")):
                 symbols.add(symbol)
+                checks.append({"symbol": symbol, "result": "exit", "reason": "pnl_threshold"})
                 continue
             opened_at = _field(position, "opened_at", "created_at", default=None)
             if (
@@ -1684,6 +1779,7 @@ class AutonomousWorker:
                 and (now - opened_at.astimezone(UTC)).days >= max_hold_days
             ):
                 symbols.add(symbol)
+                checks.append({"symbol": symbol, "result": "exit", "reason": "max_hold_days"})
                 continue
             match = re.search(r"(\d{6})[CP]", symbol)
             if match:
@@ -1693,8 +1789,11 @@ class AutonomousWorker:
                     expiry = None
                 if expiry is not None and (expiry - now.date()).days <= 7:
                     symbols.add(symbol)
+                    checks.append({"symbol": symbol, "result": "exit", "reason": "dte_threshold"})
+                    continue
+            checks.append({"symbol": symbol, "result": "hold", "reason": "no_exit_condition"})
         if not symbols:
-            return True, set()
+            return True, set(), checks
         runner = SubprocessRunner()
         gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
         for symbol in sorted(symbols):
@@ -1706,8 +1805,11 @@ class AutonomousWorker:
                 self.settings.alpaca_request_timeout_seconds,
             )
             if result.returncode != 0:
-                return False, symbols
-        return True, symbols
+                for check in checks:
+                    if check["symbol"] == symbol:
+                        check["result"] = "exit_failed"
+                return False, symbols, checks
+        return True, symbols, checks
 
     async def _reconcile_unfinished(self, session: AsyncSession) -> None:
         """Resolve pending submissions by persisted client order ID on restart."""
