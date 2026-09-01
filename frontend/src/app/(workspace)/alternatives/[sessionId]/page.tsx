@@ -20,7 +20,7 @@ import {
   formatDateTime,
   parseMoney,
 } from "@/features/story/formatters";
-import { getAlternativeSession } from "@/features/story/presentation-api";
+import { getAlternativeSession } from "@/features/story/monitoring-api";
 
 function deltaTone(delta: string): { color: string; sign: "positive" | "negative" | "neutral" } {
   if (delta === "—" || delta === "$0.00") return { color: "#94A3B8", sign: "neutral" };

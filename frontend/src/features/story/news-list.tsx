@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 import { ProvenanceLabel, StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD } from "@/components/workspace/section-heading";
 import { formatDateTime } from "@/features/story/formatters";
-import type { NewsRecord } from "@/features/story/presentation-api";
+import type { NewsRecord } from "@/features/story/monitoring-api";
 
 /** Lowercased haystack of the searchable fields for a news item. */
 function searchHaystack(item: NewsRecord): string {
@@ -84,7 +84,7 @@ export function NewsList({
       {news.length === 0 ? (
         <div className={`${SECTION_CARD} p-6`}>
           <p className="text-[13px] text-[#94A3B8]">
-            No illustrative news falls inside this range.
+            No recorded news analysis falls inside this range.
           </p>
         </div>
       ) : filtered.length === 0 ? (

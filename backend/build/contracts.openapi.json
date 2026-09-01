@@ -4840,11 +4840,11 @@
           },
           "provenance": {
             "$ref": "#/components/schemas/Provenance",
-            "default": "illustrative_fixture"
+            "default": "recorded"
           },
           "provider": {
-            "const": "illustrative_fixture",
-            "default": "illustrative_fixture",
+            "const": "recorded",
+            "default": "recorded",
             "title": "Provider",
             "type": "string"
           },
@@ -4957,6 +4957,48 @@
           "reason"
         ],
         "title": "NoTradeDecision",
+        "type": "object"
+      },
+      "OperationalEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "observedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observedat"
+          },
+          "status": {
+            "enum": [
+              "recorded",
+              "unavailable",
+              "degraded",
+              "simulated"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "status"
+        ],
+        "title": "OperationalEvidence",
         "type": "object"
       },
       "OptionLeg": {
@@ -5359,6 +5401,13 @@
               "$ref": "#/components/schemas/ExposureItem"
             },
             "title": "Exposure",
+            "type": "array"
+          },
+          "operationalEvidence": {
+            "items": {
+              "$ref": "#/components/schemas/OperationalEvidence"
+            },
+            "title": "Operationalevidence",
             "type": "array"
           },
           "points": {
@@ -6105,7 +6154,9 @@
           "shadow",
           "benchmark",
           "simulated",
-          "planned_integration"
+          "planned_integration",
+          "recorded",
+          "alpaca_market_data"
         ],
         "title": "Provenance",
         "type": "string"
@@ -7332,6 +7383,13 @@
             "format": "date-time",
             "title": "Occurredat",
             "type": "string"
+          },
+          "operationalEvidence": {
+            "items": {
+              "$ref": "#/components/schemas/OperationalEvidence"
+            },
+            "title": "Operationalevidence",
+            "type": "array"
           },
           "outcome": {
             "$ref": "#/components/schemas/StoryOutcome"
@@ -9122,9 +9180,9 @@
         ]
       }
     },
-    "/api/v1/presentation/agents": {
+    "/api/v1/monitoring/agents": {
       "get": {
-        "operationId": "agents_api_v1_presentation_agents_get",
+        "operationId": "agents_api_v1_monitoring_agents_get",
         "parameters": [
           {
             "in": "query",
@@ -9203,13 +9261,13 @@
         },
         "summary": "Agents",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/agents/{agent_id}": {
+    "/api/v1/monitoring/agents/{agent_id}": {
       "get": {
-        "operationId": "agent_api_v1_presentation_agents__agent_id__get",
+        "operationId": "agent_api_v1_monitoring_agents__agent_id__get",
         "parameters": [
           {
             "in": "path",
@@ -9217,6 +9275,26 @@
             "required": true,
             "schema": {
               "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
               "type": "string"
             }
           },
@@ -9277,13 +9355,13 @@
         },
         "summary": "Agent",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/alternatives": {
+    "/api/v1/monitoring/alternatives": {
       "get": {
-        "operationId": "alternatives_api_v1_presentation_alternatives_get",
+        "operationId": "alternatives_api_v1_monitoring_alternatives_get",
         "parameters": [
           {
             "in": "query",
@@ -9362,13 +9440,13 @@
         },
         "summary": "Alternatives",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/alternatives/{session_id}": {
+    "/api/v1/monitoring/alternatives/{session_id}": {
       "get": {
-        "operationId": "alternative_api_v1_presentation_alternatives__session_id__get",
+        "operationId": "alternative_api_v1_monitoring_alternatives__session_id__get",
         "parameters": [
           {
             "in": "path",
@@ -9436,13 +9514,13 @@
         },
         "summary": "Alternative",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/decisions": {
+    "/api/v1/monitoring/decisions": {
       "get": {
-        "operationId": "decisions_api_v1_presentation_decisions_get",
+        "operationId": "decisions_api_v1_monitoring_decisions_get",
         "parameters": [
           {
             "in": "query",
@@ -9553,20 +9631,20 @@
         },
         "summary": "Decisions",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/decisions/{decision_id}": {
+    "/api/v1/monitoring/decisions/{proposal_id}": {
       "get": {
-        "operationId": "decision_api_v1_presentation_decisions__decision_id__get",
+        "operationId": "decision_api_v1_monitoring_decisions__proposal_id__get",
         "parameters": [
           {
             "in": "path",
-            "name": "decision_id",
+            "name": "proposal_id",
             "required": true,
             "schema": {
-              "title": "Decision Id",
+              "title": "Proposal Id",
               "type": "string"
             }
           },
@@ -9627,13 +9705,13 @@
         },
         "summary": "Decision",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/governance": {
+    "/api/v1/monitoring/governance": {
       "get": {
-        "operationId": "governance_api_v1_presentation_governance_get",
+        "operationId": "governance_api_v1_monitoring_governance_get",
         "parameters": [
           {
             "in": "header",
@@ -9692,13 +9770,13 @@
         },
         "summary": "Governance",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/news": {
+    "/api/v1/monitoring/news": {
       "get": {
-        "operationId": "news_api_v1_presentation_news_get",
+        "operationId": "news_api_v1_monitoring_news_get",
         "parameters": [
           {
             "in": "query",
@@ -9809,13 +9887,13 @@
         },
         "summary": "News",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/overview": {
+    "/api/v1/monitoring/overview": {
       "get": {
-        "operationId": "overview_api_v1_presentation_overview_get",
+        "operationId": "overview_api_v1_monitoring_overview_get",
         "parameters": [
           {
             "in": "query",
@@ -9894,13 +9972,13 @@
         },
         "summary": "Overview",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/portfolio": {
+    "/api/v1/monitoring/portfolio": {
       "get": {
-        "operationId": "portfolio_api_v1_presentation_portfolio_get",
+        "operationId": "portfolio_api_v1_monitoring_portfolio_get",
         "parameters": [
           {
             "in": "query",
@@ -9979,13 +10057,13 @@
         },
         "summary": "Portfolio",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },
-    "/api/v1/presentation/weekly-summary": {
+    "/api/v1/monitoring/weekly-summary": {
       "get": {
-        "operationId": "weekly_summary_api_v1_presentation_weekly_summary_get",
+        "operationId": "weekly_summary_api_v1_monitoring_weekly_summary_get",
         "parameters": [
           {
             "in": "header",
@@ -10044,7 +10122,7 @@
         },
         "summary": "Weekly Summary",
         "tags": [
-          "presentation"
+          "monitoring"
         ]
       }
     },

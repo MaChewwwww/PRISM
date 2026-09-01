@@ -1,18 +1,18 @@
-import { AlertTriangle, ArrowRight, FlaskConical, LockKeyhole } from "lucide-react";
+import { AlertTriangle, ArrowRight, Database, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { Provenance } from "@/features/story/presentation-api";
+import type { Provenance } from "@/features/story/monitoring-api";
 
-export function DemoDataNotice() {
+export function RecordedDataNotice() {
   return (
     <div className="demo-notice" role="note">
-      <FlaskConical aria-hidden="true" />
+      <Database aria-hidden="true" />
       <div>
         <strong>Active Portfolio view</strong>
         <span>
-          Current backend portfolio snapshot. Provenance remains explicitly labeled as an
-          illustrative fixture; no provider request was made.
+          Recorded backend portfolio snapshot. Values are shown only when captured by the monitoring
+          read model; unavailable evidence is never substituted.
         </span>
       </div>
     </div>
@@ -73,19 +73,20 @@ export function StateBadge({ state }: { state: string }) {
   );
 }
 
-const provenanceLabels: Record<Provenance, string> = {
-  illustrative_fixture: "Illustrative fixture",
+const provenanceLabels: Partial<Record<Provenance, string>> = {
   alpaca_paper: "Alpaca paper",
   shadow: "ShadowFund",
   benchmark: "Benchmark",
   simulated: "Simulated",
   planned_integration: "Planned integration",
+  recorded: "Recorded PRISM data",
+  alpaca_market_data: "Alpaca market data",
 };
 
 export function ProvenanceLabel({ provenance }: { provenance: Provenance }) {
   return (
     <span className="provenance-label" data-provenance={provenance}>
-      {provenanceLabels[provenance] ?? provenance}
+      {provenanceLabels[provenance] ?? "Unavailable provenance"}
     </span>
   );
 }

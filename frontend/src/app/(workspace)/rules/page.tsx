@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
-import { getGovernance } from "@/features/story/presentation-api";
+import { getGovernance } from "@/features/story/monitoring-api";
 import { ProfileEditor } from "@/features/story/profile-editor";
 
 const TH = "px-5 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]";

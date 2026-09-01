@@ -7,7 +7,7 @@ export default function WorkspaceNotFound() {
     <>
       <EmptyState
         title="Story not found"
-        detail="This identifier is not part of the fixed illustrative storytelling dataset."
+        detail="No recorded monitoring data exists for this identifier."
       />
       <Link className="detail-link return-link" href="/">
         Return to overview

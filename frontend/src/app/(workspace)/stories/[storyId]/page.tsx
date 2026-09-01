@@ -22,7 +22,7 @@ import { StoryBranchChart } from "@/features/story/story-branch-chart";
 import { StoryCatalystChart } from "@/features/story/story-catalyst-chart";
 import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDateTime, formatTokens, storyDecisionLabel } from "@/features/story/formatters";
-import { getStory, type StoryDetail } from "@/features/story/presentation-api";
+import { getStory, type StoryDetail } from "@/features/story/monitoring-api";
 
 const RULE_RESULT_TONE: Record<string, string> = {
   PASS: "text-[#00D084]",
@@ -525,6 +525,32 @@ export default async function StoryDetailPage({
                 </p>
               </div>
             </div>
+          </section>
+
+          <section aria-labelledby="operational-evidence" className="space-y-5">
+            <div className="border-b border-white/8 pb-4">
+              <h2
+                id="operational-evidence"
+                className="text-lg font-semibold tracking-tight text-[#F8FAFC]"
+              >
+                Operational Evidence
+              </h2>
+              <p className="mt-1 text-[12px] text-[#64748B]">
+                IV source/count, strike selection, profile version, and freshness from the recorded
+                decision.
+              </p>
+            </div>
+            <dl className="divide-y divide-white/8 rounded-xl border border-white/8 bg-white/3">
+              {(story.operationalEvidence ?? []).map((item) => (
+                <div key={item.label} className="grid gap-2 p-4 sm:grid-cols-[13rem_1fr_auto]">
+                  <dt className="text-sm text-[#CBD5E1]">{item.label}</dt>
+                  <dd className="break-all font-mono text-xs text-[#94A3B8]">{item.value}</dd>
+                  <dd className="state-badge h-fit" data-state={item.status}>
+                    {item.status}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </section>
         </div>
 

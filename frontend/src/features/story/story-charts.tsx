@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { X } from "lucide-react";
 
-import type { ChartPoint } from "@/features/story/presentation-api";
+import type { ChartPoint } from "@/features/story/monitoring-api";
 
 type ChartSeriesKey = Exclude<keyof ChartPoint, "date">;
 
@@ -178,7 +178,7 @@ export function StoryLineChart({
         <summary>View exact values</summary>
         <div className="table-wrap">
           <table>
-            <caption>{title} exact fixture values</caption>
+            <caption>{title} exact recorded values</caption>
             <thead>
               <tr>
                 <th scope="col">Observation</th>

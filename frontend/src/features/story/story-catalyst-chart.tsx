@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
-import type { ChartPoint } from "@/features/story/presentation-api";
+import type { ChartPoint } from "@/features/story/monitoring-api";
 
 /**
  * Interactive Catalyst reaction chart (DESIGN.md Section 7.1 step 1-2 and

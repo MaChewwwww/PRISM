@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 
 import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDateTime, storyDecisionLabel } from "@/features/story/formatters";
-import type { StorySummary } from "@/features/story/presentation-api";
+import type { StorySummary } from "@/features/story/monitoring-api";
 
 /** Lowercased haystack of the searchable fields for a decision story. */
 function storyHaystack(story: StorySummary): string {

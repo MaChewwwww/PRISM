@@ -2,7 +2,7 @@ import { Lightbulb, ShieldCheck, SlidersHorizontal, TrendingUp } from "lucide-re
 
 import { PageHeader } from "@/components/workspace/workspace-ui";
 import { SECTION_CARD, SectionHeading } from "@/components/workspace/section-heading";
-import { getWeeklySummary } from "@/features/story/presentation-api";
+import { getWeeklySummary } from "@/features/story/monitoring-api";
 
 import { WeeklySummaryClient } from "./weekly-summary-client";
 

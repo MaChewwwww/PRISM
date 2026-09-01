@@ -208,7 +208,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/agents": {
+    "/api/v1/monitoring/agents": {
         parameters: {
             query?: never;
             header?: never;
@@ -216,7 +216,7 @@ export interface paths {
             cookie?: never;
         };
         /** Agents */
-        get: operations["agents_api_v1_presentation_agents_get"];
+        get: operations["agents_api_v1_monitoring_agents_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -225,7 +225,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/agents/{agent_id}": {
+    "/api/v1/monitoring/agents/{agent_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -233,7 +233,7 @@ export interface paths {
             cookie?: never;
         };
         /** Agent */
-        get: operations["agent_api_v1_presentation_agents__agent_id__get"];
+        get: operations["agent_api_v1_monitoring_agents__agent_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -242,7 +242,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/alternatives": {
+    "/api/v1/monitoring/alternatives": {
         parameters: {
             query?: never;
             header?: never;
@@ -250,7 +250,7 @@ export interface paths {
             cookie?: never;
         };
         /** Alternatives */
-        get: operations["alternatives_api_v1_presentation_alternatives_get"];
+        get: operations["alternatives_api_v1_monitoring_alternatives_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -259,7 +259,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/alternatives/{session_id}": {
+    "/api/v1/monitoring/alternatives/{session_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -267,7 +267,7 @@ export interface paths {
             cookie?: never;
         };
         /** Alternative */
-        get: operations["alternative_api_v1_presentation_alternatives__session_id__get"];
+        get: operations["alternative_api_v1_monitoring_alternatives__session_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -276,7 +276,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/decisions": {
+    "/api/v1/monitoring/decisions": {
         parameters: {
             query?: never;
             header?: never;
@@ -284,7 +284,7 @@ export interface paths {
             cookie?: never;
         };
         /** Decisions */
-        get: operations["decisions_api_v1_presentation_decisions_get"];
+        get: operations["decisions_api_v1_monitoring_decisions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -293,7 +293,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/decisions/{decision_id}": {
+    "/api/v1/monitoring/decisions/{proposal_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -301,7 +301,7 @@ export interface paths {
             cookie?: never;
         };
         /** Decision */
-        get: operations["decision_api_v1_presentation_decisions__decision_id__get"];
+        get: operations["decision_api_v1_monitoring_decisions__proposal_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -310,7 +310,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/governance": {
+    "/api/v1/monitoring/governance": {
         parameters: {
             query?: never;
             header?: never;
@@ -318,7 +318,7 @@ export interface paths {
             cookie?: never;
         };
         /** Governance */
-        get: operations["governance_api_v1_presentation_governance_get"];
+        get: operations["governance_api_v1_monitoring_governance_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -327,7 +327,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/news": {
+    "/api/v1/monitoring/news": {
         parameters: {
             query?: never;
             header?: never;
@@ -335,7 +335,7 @@ export interface paths {
             cookie?: never;
         };
         /** News */
-        get: operations["news_api_v1_presentation_news_get"];
+        get: operations["news_api_v1_monitoring_news_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -344,7 +344,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/overview": {
+    "/api/v1/monitoring/overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -352,7 +352,7 @@ export interface paths {
             cookie?: never;
         };
         /** Overview */
-        get: operations["overview_api_v1_presentation_overview_get"];
+        get: operations["overview_api_v1_monitoring_overview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -361,7 +361,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/portfolio": {
+    "/api/v1/monitoring/portfolio": {
         parameters: {
             query?: never;
             header?: never;
@@ -369,7 +369,7 @@ export interface paths {
             cookie?: never;
         };
         /** Portfolio */
-        get: operations["portfolio_api_v1_presentation_portfolio_get"];
+        get: operations["portfolio_api_v1_monitoring_portfolio_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -378,7 +378,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/presentation/weekly-summary": {
+    "/api/v1/monitoring/weekly-summary": {
         parameters: {
             query?: never;
             header?: never;
@@ -386,7 +386,7 @@ export interface paths {
             cookie?: never;
         };
         /** Weekly Summary */
-        get: operations["weekly_summary_api_v1_presentation_weekly_summary_get"];
+        get: operations["weekly_summary_api_v1_monitoring_weekly_summary_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2665,14 +2665,14 @@ export interface components {
             headline: string;
             /** Id */
             id: string;
-            /** @default illustrative_fixture */
+            /** @default recorded */
             provenance: components["schemas"]["Provenance"];
             /**
              * Provider
-             * @default illustrative_fixture
+             * @default recorded
              * @constant
              */
-            provider: "illustrative_fixture";
+            provider: "recorded";
             /**
              * Publishedat
              * Format: date-time
@@ -2730,6 +2730,20 @@ export interface components {
              * Format: uuid
              */
             trace_id: string;
+        };
+        /** OperationalEvidence */
+        OperationalEvidence: {
+            /** Label */
+            label: string;
+            /** Observedat */
+            observedAt?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "recorded" | "unavailable" | "degraded" | "simulated";
+            /** Value */
+            value: string;
         };
         /** OptionLeg */
         OptionLeg: {
@@ -2896,6 +2910,8 @@ export interface components {
             activities: components["schemas"]["Activity"][];
             /** Exposure */
             exposure: components["schemas"]["ExposureItem"][];
+            /** Operationalevidence */
+            operationalEvidence?: components["schemas"]["OperationalEvidence"][];
             /** Points */
             points: components["schemas"]["ChartPoint"][];
             /** Positions */
@@ -3210,7 +3226,7 @@ export interface components {
          * Provenance
          * @enum {string}
          */
-        Provenance: "illustrative_fixture" | "alpaca_paper" | "shadow" | "benchmark" | "simulated" | "planned_integration";
+        Provenance: "illustrative_fixture" | "alpaca_paper" | "shadow" | "benchmark" | "simulated" | "planned_integration" | "recorded" | "alpaca_market_data";
         /** QuantitativeAnalysisReport */
         QuantitativeAnalysisReport: {
             /**
@@ -3750,6 +3766,8 @@ export interface components {
              * Format: date-time
              */
             occurredAt: string;
+            /** Operationalevidence */
+            operationalEvidence?: components["schemas"]["OperationalEvidence"][];
             outcome: components["schemas"]["StoryOutcome"];
             /** Rulechecks */
             ruleChecks: components["schemas"]["RuleCheck"][];
@@ -4521,7 +4539,7 @@ export interface operations {
             };
         };
     };
-    agents_api_v1_presentation_agents_get: {
+    agents_api_v1_monitoring_agents_get: {
         parameters: {
             query: {
                 from: string;
@@ -4557,9 +4575,12 @@ export interface operations {
             };
         };
     };
-    agent_api_v1_presentation_agents__agent_id__get: {
+    agent_api_v1_monitoring_agents__agent_id__get: {
         parameters: {
-            query?: never;
+            query: {
+                from: string;
+                to: string;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -4592,7 +4613,7 @@ export interface operations {
             };
         };
     };
-    alternatives_api_v1_presentation_alternatives_get: {
+    alternatives_api_v1_monitoring_alternatives_get: {
         parameters: {
             query: {
                 from: string;
@@ -4628,7 +4649,7 @@ export interface operations {
             };
         };
     };
-    alternative_api_v1_presentation_alternatives__session_id__get: {
+    alternative_api_v1_monitoring_alternatives__session_id__get: {
         parameters: {
             query?: never;
             header?: {
@@ -4663,7 +4684,7 @@ export interface operations {
             };
         };
     };
-    decisions_api_v1_presentation_decisions_get: {
+    decisions_api_v1_monitoring_decisions_get: {
         parameters: {
             query: {
                 from: string;
@@ -4701,14 +4722,14 @@ export interface operations {
             };
         };
     };
-    decision_api_v1_presentation_decisions__decision_id__get: {
+    decision_api_v1_monitoring_decisions__proposal_id__get: {
         parameters: {
             query?: never;
             header?: {
                 authorization?: string | null;
             };
             path: {
-                decision_id: string;
+                proposal_id: string;
             };
             cookie?: {
                 prism_session?: string | null;
@@ -4736,7 +4757,7 @@ export interface operations {
             };
         };
     };
-    governance_api_v1_presentation_governance_get: {
+    governance_api_v1_monitoring_governance_get: {
         parameters: {
             query?: never;
             header?: {
@@ -4769,7 +4790,7 @@ export interface operations {
             };
         };
     };
-    news_api_v1_presentation_news_get: {
+    news_api_v1_monitoring_news_get: {
         parameters: {
             query: {
                 from: string;
@@ -4807,7 +4828,7 @@ export interface operations {
             };
         };
     };
-    overview_api_v1_presentation_overview_get: {
+    overview_api_v1_monitoring_overview_get: {
         parameters: {
             query: {
                 from: string;
@@ -4843,7 +4864,7 @@ export interface operations {
             };
         };
     };
-    portfolio_api_v1_presentation_portfolio_get: {
+    portfolio_api_v1_monitoring_portfolio_get: {
         parameters: {
             query: {
                 from: string;
@@ -4879,7 +4900,7 @@ export interface operations {
             };
         };
     };
-    weekly_summary_api_v1_presentation_weekly_summary_get: {
+    weekly_summary_api_v1_monitoring_weekly_summary_get: {
         parameters: {
             query?: never;
             header?: {

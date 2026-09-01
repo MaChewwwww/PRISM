@@ -4,17 +4,17 @@
 
 - Versioned BA ruleset/profile registry and typed governance contracts.
 - FastAPI-derived OpenAPI with real paths and generated TypeScript transport types.
-- Authenticated backend-owned illustrative presentation APIs for every story-first frontend surface.
+- Authenticated backend-owned monitoring APIs for every story-first frontend surface.
 - Canonical seven-specialist roster followed by Risk Management, deterministic Rules Engine, paper Execution boundary, ShadowFund, and asynchronous Post-Analysis.
 - Sourced IV-rank history (provider, durable chain observations, or option-bar IV inversion) and option-payoff EV with observed premium, NBBO slippage, and fill probability.
 - OCC/Alpaca-chain portfolio enrichment for sector, correlated cluster, expiration, Delta, Vega, and freshness-aware concentration controls.
-- Server-side frontend API adapter, truthful fixture provenance, read-only governance, and manual profile-recommendation review.
+- Server-side frontend monitoring adapter, recorded provenance, read-only governance, and manual profile-recommendation review.
 - Removed browser password disclosure and strengthened non-development authentication validation.
 - Alembic baseline, one-shot Compose migration, dependency-aware readiness, configurable CORS, and aligned ports/deployment documentation.
 - Governance/document semantic checks and synchronized Markdown/DOCX concept deliverables.
 - BA-authorized hackathon window is registry-backed: start Aug 31 09:30 ET, new-entry cutoff Sep 2 16:00 ET, total-equity scoring and force-flatten at Sep 3 close, and Sep 4 09:30 ET outer boundary.
 
-The general presentation dataset remains `illustrative_fixture` outside production/staging persistence. Shadow Portfolio alternatives are now a deliberate exception: production projects recorded ShadowFund sessions, and staging projects only the active completed historical-backtest run with `data_mode=simulated` and historical-simulation provenance. Neither variant represents an Alpaca paper fill or alters the Active Portfolio. Autonomous execution is production-only, uses a separate server-side paper account, and remains fail-closed until readiness, evidence, authorization, and CLI capability gates pass. Staging rejects autonomous trading and uses the separate non-executing historical backtest boundary.
+All workspace data now uses authenticated monitoring projections over durable records; there is no illustrative fixture fallback. Production projects recorded ShadowFund sessions, while staging projects only the active completed historical-backtest run with `data_mode=simulated` and historical-simulation provenance. Neither variant represents an Alpaca paper fill or alters the Active Portfolio. Autonomous execution is production-only, uses a separate server-side paper account, and remains fail-closed until readiness, evidence, authorization, and CLI capability gates pass. Staging rejects autonomous trading and uses the separate non-executing historical backtest boundary.
 
 ## Stabilization pass: implemented safeguards
 
