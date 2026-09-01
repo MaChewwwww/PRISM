@@ -66,9 +66,12 @@ export function Section({
 
 export function StateBadge({ state }: { state: string }) {
   const normalized = state.toLowerCase().replaceAll("_", "-");
+  const isDay1Decision = normalized === "retrospective";
+  const label = isDay1Decision ? "Success" : state.replaceAll("_", " ");
+  const dataState = isDay1Decision ? "pass" : normalized;
   return (
-    <span className="state-badge" data-state={normalized}>
-      {state.replaceAll("_", " ")}
+    <span className="state-badge" data-state={dataState}>
+      {label}
     </span>
   );
 }

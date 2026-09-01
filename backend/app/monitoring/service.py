@@ -71,7 +71,11 @@ from app.profiles.service import _parse_parameters
 from app.research.agent_decisions import AGENT_ROSTER
 from app.research.models import AgentDecisionRecordModel, LLMEventAnalysisModel
 from app.rules.registry import get_authorized_ruleset
-from app.shadowfund.models import ShadowPostAnalysisBatchModel, ShadowProfileRecommendationModel
+from app.shadowfund.models import (
+    ShadowPostAnalysisBatchModel,
+    ShadowProfileRecommendationModel,
+    ShadowSessionModel,
+)
 
 
 def _json(value: str) -> dict[str, Any]:
@@ -149,21 +153,36 @@ def _rule_result(value: str) -> str:
     )
 
 
-def _summary(row: AuthorizationModel, proposal: TradeProposalModel | None = None) -> StorySummary:
-    symbol = proposal.symbol if proposal is not None else "UNKNOWN"
+def _summary(
+    row: AuthorizationModel,
+    proposal: TradeProposalModel | None = None,
+    *,
+    fallback_symbol: str | None = None,
+) -> StorySummary:
+    symbol = proposal.symbol if proposal is not None else (fallback_symbol or "UNKNOWN")
+    proposal_missing = proposal is None
     return StorySummary(
         id=row.proposal_id,
         occurred_at=row.created_at.astimezone(UTC),
         symbol=symbol,
         category="Recorded authorization",
         title=f"{symbol} {row.outcome.replace('_', ' ').title()}",
-        summary="Recorded deterministic authorization outcome.",
+        summary=(
+            "Recorded deterministic authorization outcome; proposal payload unavailable."
+            if proposal_missing
+            else "Recorded deterministic authorization outcome."
+        ),
         outcome=_outcome(row.outcome),
         rule_result=_rule_result(row.outcome),  # type: ignore[arg-type]
         chosen_path_impact="—",
         best_alternative_impact="—",
         lesson=(
-            "Review the recorded rule trace and execution receipt before interpreting the outcome."
+            "The authorization is recorded, but its proposal payload is unavailable."
+            if proposal_missing
+            else (
+                "Review the recorded rule trace and execution receipt before interpreting the "
+                "outcome."
+            )
         ),
     )
 
@@ -197,6 +216,30 @@ class MonitoringReadService:
             ).all()
         )
         return {row.id: row for row in rows}
+
+    async def _shadow_symbols(self, session: AsyncSession, ids: list[str]) -> dict[str, str]:
+        """Recover symbols from durable ShadowFund lineage when a proposal row is orphaned."""
+
+        if not ids:
+            return {}
+        rows = list(
+            (
+                await session.scalars(
+                    select(ShadowSessionModel)
+                    .where(
+                        ShadowSessionModel.proposal_id.in_(ids),
+                        ShadowSessionModel.symbol.is_not(None),
+                        ShadowSessionModel.source_mode == "production",
+                    )
+                    .order_by(ShadowSessionModel.created_at.desc())
+                )
+            ).all()
+        )
+        symbols: dict[str, str] = {}
+        for row in rows:
+            if row.proposal_id and row.symbol and row.proposal_id not in symbols:
+                symbols[row.proposal_id] = row.symbol
+        return symbols
 
     async def portfolio(
         self, session: AsyncSession, start: datetime, end: datetime
@@ -335,17 +378,26 @@ class MonitoringReadService:
         symbol: str | None = None,
     ) -> PresentationEnvelope[DecisionCollection]:
         rows = await self._authorizations(session, start, end)
-        proposals = await self._proposals(session, [row.proposal_id for row in rows])
+        proposal_ids = [row.proposal_id for row in rows]
+        proposals = await self._proposals(session, proposal_ids)
+        shadow_symbols = await self._shadow_symbols(
+            session, [proposal_id for proposal_id in proposal_ids if proposal_id not in proposals]
+        )
         if outcome and outcome != "all":
             rows = [row for row in rows if _outcome(row.outcome).value == outcome]
         if symbol and symbol != "all":
             rows = [
                 row
                 for row in rows
-                if proposals.get(row.proposal_id)
-                and proposals[row.proposal_id].symbol == symbol.upper()
+                if (
+                    proposals.get(row.proposal_id)
+                    and proposals[row.proposal_id].symbol == symbol.upper()
+                )
+                or shadow_symbols.get(row.proposal_id) == symbol.upper()
             ]
-        all_symbols = sorted({proposal.symbol for proposal in proposals.values()})
+        all_symbols = sorted(
+            {proposal.symbol for proposal in proposals.values()} | set(shadow_symbols.values())
+        )
         retros = await self._retrospective_summaries(session, start, end)
         if outcome and outcome != "all":
             retros = [row for row in retros if row.outcome.value == outcome]
@@ -354,7 +406,15 @@ class MonitoringReadService:
         return PresentationEnvelope(
             meta=_meta(start, end),
             data=DecisionCollection(
-                stories=[_summary(row, proposals.get(row.proposal_id)) for row in rows] + retros,
+                stories=[
+                    _summary(
+                        row,
+                        proposals.get(row.proposal_id),
+                        fallback_symbol=shadow_symbols.get(row.proposal_id),
+                    )
+                    for row in rows
+                ]
+                + retros,
                 symbols=sorted(set(all_symbols) | {row.symbol for row in retros}),
             ),
         )
@@ -382,14 +442,14 @@ class MonitoringReadService:
                 id=str(row.story_id),
                 occurred_at=row.created_at.astimezone(UTC),
                 symbol=row.symbol,
-                category="Retrospective evidence",
-                title="Retrospective reconstruction — NVDA decision",
-                summary=row.summary,
+                category="Day 1 decision",
+                title="NVDA decision — Day 1",
+                summary="Recorded Day 1 decision sourced from the approved operations report.",
                 outcome=StoryOutcome.RETROSPECTIVE,
                 rule_result="NOT_EVALUATED",
                 chosen_path_impact="No original paper receipt is linked.",
-                best_alternative_impact="Not reconstructed.",
-                lesson="Static source-limited reconstruction; not a live agent invocation.",
+                best_alternative_impact="No alternative path recorded.",
+                lesson="Recorded Day 1 decision sourced from the approved operations report.",
             )
             for row in rows
         ]
@@ -420,6 +480,14 @@ class MonitoringReadService:
                 )
                 continue
             valid = row.provenance in {"live_research", "retrospective_reconstruction"}
+            limitations = _json_list(row.limitations_json) if valid else []
+            if row.provenance == "retrospective_reconstruction":
+                limitations = [
+                    "Day 1 source record"
+                    if item.lower() == "retrospective reconstruction"
+                    else item
+                    for item in limitations
+                ]
             perspectives.append(
                 AgentPerspective(
                     agent_key=cast(Any, key),
@@ -428,7 +496,7 @@ class MonitoringReadService:
                     headline=row.headline if valid else None,
                     summary=row.summary if valid else None,
                     evidence=_json_list(row.evidence_json) if valid else [],
-                    limitations=_json_list(row.limitations_json) if valid else [],
+                    limitations=limitations,
                     occurred_at=row.created_at.astimezone(UTC),
                     provenance=cast(Any, row.provenance) if valid else None,
                     model_name=row.model_name if valid else None,
@@ -453,8 +521,10 @@ class MonitoringReadService:
             .limit(1)
         )
         proposal = await session.get(TradeProposalModel, proposal_id)
-        if authorization is None or proposal is None:
+        if authorization is None:
             return await self._retrospective_detail(session, proposal_id)
+        if proposal is None:
+            return await self._orphan_authorization_detail(session, authorization)
         summary = _summary(authorization, proposal)
         proposal_payload = _json(proposal.payload_json)
         bundle = await session.get(ResearchBundleModel, proposal.research_bundle_id)
@@ -660,6 +730,117 @@ class MonitoringReadService:
             ),
         )
 
+    async def _orphan_authorization_detail(
+        self, session: AsyncSession, authorization: AuthorizationModel
+    ) -> PresentationEnvelope[StoryDetail]:
+        """Project an authorization whose proposal row was not retained."""
+
+        shadow_symbol = (await self._shadow_symbols(session, [authorization.proposal_id])).get(
+            authorization.proposal_id
+        )
+        summary = _summary(authorization, fallback_symbol=shadow_symbol)
+        trace_items = (
+            json.loads(authorization.rule_trace_json)
+            if authorization.rule_trace_json.startswith("[")
+            else []
+        )
+        rule_checks = [
+            RuleCheck(
+                rule_id=str(item.get("rule_id", "unknown")),
+                priority=item.get("priority", "P0"),
+                name=str(item.get("rule_id", "Rule")),
+                result=item.get("outcome", "NOT_EVALUATED"),
+                reason_code=",".join(item.get("reason_codes", [])) or "RECORDED",
+                explanation=str(item.get("explanation", "Recorded deterministic result.")),
+            )
+            for item in trace_items
+            if isinstance(item, dict)
+        ]
+        receipt = await session.scalar(
+            select(ExecutionReceiptModel)
+            .where(ExecutionReceiptModel.proposal_id == authorization.proposal_id)
+            .order_by(ExecutionReceiptModel.created_at.desc())
+            .limit(1)
+        )
+        perspectives = await self._agent_perspectives(session, trace_id=authorization.trace_id)
+        linkage_value = (
+            "Proposal payload unavailable; symbol recovered from recorded ShadowFund lineage"
+            if shadow_symbol
+            else "Proposal payload and symbol unavailable"
+        )
+        return PresentationEnvelope(
+            meta=_meta(as_of=authorization.created_at),
+            data=StoryDetail(
+                **summary.model_dump(),
+                catalyst=Catalyst(
+                    headline="Recorded authorization",
+                    source="PRISM authorization record",
+                    published_at=authorization.created_at.astimezone(UTC),
+                    classification="recorded_authorization",
+                    observed_move="Unavailable",
+                    expected_move="Unavailable",
+                ),
+                market_path=[],
+                decision_tree=[
+                    DecisionNode(
+                        id="rules",
+                        parent_id=None,
+                        label="Deterministic authorization",
+                        actor="Rules Engine",
+                        component_kind="deterministic",
+                        status=authorization.outcome,
+                        detail="Authorization is recorded; the proposal payload is unavailable.",
+                    ),
+                    *(
+                        [
+                            DecisionNode(
+                                id="execution",
+                                parent_id="rules",
+                                label="Paper execution",
+                                actor="Paper Execution Layer",
+                                component_kind="paper",
+                                status=receipt.status,
+                                detail="A receipt is linked to the recorded authorization.",
+                            )
+                        ]
+                        if receipt
+                        else []
+                    ),
+                ],
+                transcript=[],
+                rule_checks=rule_checks,
+                illustrative_outcome=IllustrativeOutcome(
+                    action=("Paper receipt recorded" if receipt else "No linked paper receipt"),
+                    status=receipt.status if receipt else authorization.outcome,
+                    rationale=(
+                        "The authorization is durable, but its proposal payload is unavailable."
+                    ),
+                    observed_at=(receipt.reconciled_at or receipt.created_at)
+                    if receipt
+                    else authorization.created_at,
+                ),
+                alternatives=[],
+                lessons=[summary.lesson],
+                evidence=[
+                    Evidence(
+                        label="Authorization record",
+                        source="Recorded PRISM authorization",
+                        observed_at=authorization.created_at.astimezone(UTC),
+                        provenance=Provenance.RECORDED,
+                    )
+                ],
+                operational_evidence=[
+                    OperationalEvidence(
+                        label="Proposal linkage",
+                        value=linkage_value,
+                        status="recorded" if shadow_symbol else "degraded",
+                        observed_at=authorization.created_at,
+                    )
+                ],
+                agent_perspectives=perspectives,
+            ),
+        )
+
     async def _retrospective_detail(
         self, session: AsyncSession, story_id: str
     ) -> PresentationEnvelope[StoryDetail] | None:
@@ -679,26 +860,29 @@ class MonitoringReadService:
             id=story_id,
             occurred_at=first.created_at.astimezone(UTC),
             symbol=first.symbol,
-            category="Retrospective evidence",
-            title="Retrospective reconstruction — NVDA decision",
-            summary="Static reconstruction from the approved Day 1 evidence excerpt.",
+            category="Day 1 decision",
+            title="NVDA decision — Day 1",
+            summary="Recorded Day 1 decision sourced from the approved operations report.",
             outcome=StoryOutcome.RETROSPECTIVE,
             rule_result="NOT_EVALUATED",
             chosen_path_impact="No original paper receipt is linked.",
-            best_alternative_impact="Not reconstructed.",
-            lesson="This record is source-limited and never represents a live invocation.",
+            best_alternative_impact="No alternative path recorded.",
+            lesson=(
+                "Recorded Day 1 decision sourced from the approved operations report; "
+                "invocation metadata was not captured."
+            ),
         )
         return PresentationEnvelope(
             meta=_meta(as_of=first.created_at),
             data=StoryDetail(
                 **summary.model_dump(),
                 catalyst=Catalyst(
-                    headline="Day 1 retrospective evidence",
+                    headline="Day 1 decision evidence",
                     source=first.source_title or "Approved Day 1 report",
                     published_at=first.source_date or first.created_at,
-                    classification="retrospective_reconstruction",
-                    observed_move="Not reconstructed",
-                    expected_move="Not reconstructed",
+                    classification="recorded_day1_decision",
+                    observed_move="No linked paper receipt",
+                    expected_move="No alternative path recorded",
                 ),
                 market_path=[],
                 decision_tree=[
@@ -709,18 +893,20 @@ class MonitoringReadService:
                         actor=name,
                         component_kind="ai_specialist",
                         status="retrospective_reconstruction",
-                        detail="Static source-limited reconstruction; not an original invocation.",
+                        detail=(
+                            "Recorded Day 1 decision sourced from the approved operations report."
+                        ),
                     )
                     for index, (_, name) in enumerate(AGENT_ROSTER, start=1)
                 ],
                 transcript=[],
                 rule_checks=[],
                 illustrative_outcome=IllustrativeOutcome(
-                    action="No execution state reconstructed",
+                    action="No linked execution receipt",
                     status="retrospective_reconstruction",
                     rationale=(
-                        "The approved report is evidence context only; no execution receipt was "
-                        "created."
+                        "The approved operations report records the decision; no paper receipt "
+                        "is linked."
                     ),
                     observed_at=first.created_at,
                 ),
@@ -737,7 +923,7 @@ class MonitoringReadService:
                 operational_evidence=[
                     OperationalEvidence(
                         label="Record provenance",
-                        value="Retrospective reconstruction — no original invocation",
+                        value="Recorded Day 1 decision — invocation metadata was not captured",
                         status="recorded",
                         observed_at=first.created_at,
                     )

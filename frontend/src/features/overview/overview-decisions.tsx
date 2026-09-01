@@ -185,6 +185,8 @@ function storyDecisionLabel(symbol: string, outcome: string): string {
       return `Rejected the proposed ${symbol} trade`;
     case "degraded":
       return `Halted — ${symbol} (incomplete evidence)`;
+    case "retrospective":
+      return `Success — ${symbol}`;
     default:
       return symbol;
   }
