@@ -169,6 +169,18 @@ class AutonomousWorker:
                 or (environment_end is not None and now >= environment_end)
             )
             if in_window or (flatten_due and not flatten_attempted):
+                # The configured autonomous interval spans the hackathon, not
+                # each regular trading session. Do not create a durable cycle,
+                # portfolio snapshot, or ShadowFund no-trade session until the
+                # broker confirms that the regular market is open. Force-flatten
+                # remains independent of this probe at the authorized boundary.
+                if not flatten_due and not await asyncio.to_thread(
+                    self._market_is_open, AlpacaPyGateway(self.settings)
+                ):
+                    await self._wait(
+                        stop_event, min(self.settings.autonomous_scan_interval_seconds, 60)
+                    )
+                    continue
                 try:
                     outcome = await self.run_cycle(now=now)
                 except Exception:
@@ -1316,8 +1328,10 @@ class AutonomousWorker:
                 position["metadata_source"] = "alpaca_position+alpaca_option_chain"
                 quote_timestamp = quote.get("quote_timestamp")
                 if isinstance(quote_timestamp, datetime) and quote_timestamp.tzinfo is not None:
+                    # ``now`` is captured before the chain request, so a valid
+                    # provider quote may be fractionally newer than the cycle.
                     position["quote_age_seconds"] = str(
-                        (now - quote_timestamp.astimezone(UTC)).total_seconds()
+                        max(0, (now - quote_timestamp.astimezone(UTC)).total_seconds())
                     )
             try:
                 parsed_position = parse_instrument(str(position.get("symbol", "")))
@@ -1331,7 +1345,6 @@ class AutonomousWorker:
                 and isinstance(position.get("delta"), str)
                 and isinstance(position.get("vega"), str)
                 and position.get("quote_timestamp") is not None
-                and _decimal(position.get("quote_age_seconds"), Decimal("999999")) >= 0
                 and _decimal(position.get("quote_age_seconds"), Decimal("999999"))
                 <= Decimal(str(get_authorized_ruleset().parameters.data_freshness_seconds))
             )
@@ -1401,8 +1414,11 @@ class AutonomousWorker:
         buying_power = _decimal(portfolio.get("buying_power"))
         order_cost = strategy.limit_price * Decimal("100")
         rules = get_authorized_ruleset().parameters
-        cash_buffer_ok = cash - order_cost >= _decimal(rules.starting_capital_usd) * (
-            Decimal("1") - _decimal(rules.cash_buffer_pct) / Decimal("100")
+        cash_buffer_ok = self._cash_reserve_ok(
+            cash=cash,
+            order_cost=order_cost,
+            portfolio_value=_decimal(portfolio.get("portfolio_value")),
+            cash_buffer_pct=_decimal(rules.cash_buffer_pct),
         )
         quote_ages: list[Decimal] = []
         spreads: list[Decimal] = []
@@ -1661,6 +1677,20 @@ class AutonomousWorker:
         return max(Decimal("0"), (starting - equity) / starting * Decimal("100"))
 
     @staticmethod
+    def _cash_reserve_ok(
+        *,
+        cash: Decimal,
+        order_cost: Decimal,
+        portfolio_value: Decimal,
+        cash_buffer_pct: Decimal,
+    ) -> bool:
+        """Check the BA minimum cash reserve against current equity."""
+        if portfolio_value <= 0 or cash_buffer_pct < 0:
+            return False
+        required_reserve = portfolio_value * cash_buffer_pct / Decimal("100")
+        return cash - order_cost >= required_reserve
+
+    @staticmethod
     def _market_regime(report: Any) -> MarketRegime:
         # Macro climate is the only persisted regime proxy in the decision
         # contract.  Derive a conservative deterministic regime rather than
@@ -1815,7 +1845,7 @@ class AutonomousWorker:
         """Resolve pending submissions by persisted client order ID on restart."""
         result = await session.execute(
             select(ExecutionReceiptModel).where(
-                ExecutionReceiptModel.status.in_(["pending", "reconciling"])
+                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"])
             )
         )
         rows = list(result.scalars())

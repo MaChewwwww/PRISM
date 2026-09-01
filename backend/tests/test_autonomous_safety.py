@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -12,6 +13,7 @@ from app.autonomous.audit import build_evaluation_root
 from app.autonomous.models import AutonomousCycleModel, OptionIvObservationModel
 from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
 from app.contracts.models import (
+    ExecutionStatus,
     ExitPolicy,
     OptionLeg,
     OptionSide,
@@ -23,6 +25,7 @@ from app.contracts.models import (
     TradeVerdict,
 )
 from app.core.config import Settings
+from app.execution.models import ExecutionReceiptModel
 from app.market.option_selection import select_option_strategy
 from app.rules.evaluator import authorize_proposal
 from app.rules.registry import ProfileParameters
@@ -154,6 +157,126 @@ def test_option_selection_debit_spread_fallback_to_long_leg() -> None:
     assert strategy.kind == StrategyKind.LONG_CALL
     assert len(strategy.legs) == 1
     assert strategy.legs[0].symbol == "MSFT270910C00500000"
+
+
+def test_cash_reserve_uses_five_percent_of_current_equity() -> None:
+    assert AutonomousWorker._cash_reserve_ok(
+        cash=Decimal("95000"),
+        order_cost=Decimal("2000"),
+        portfolio_value=Decimal("100000"),
+        cash_buffer_pct=Decimal("5"),
+    )
+    assert not AutonomousWorker._cash_reserve_ok(
+        cash=Decimal("6500"),
+        order_cost=Decimal("2000"),
+        portfolio_value=Decimal("100000"),
+        cash_buffer_pct=Decimal("5"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_position_metadata_accepts_quote_newer_than_cycle_start() -> None:
+    worker = AutonomousWorker(Settings(_env_file=None))
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    portfolio = {
+        "positions": [
+            {
+                "symbol": "NVDA260909C00220000",
+                "underlying": "NVDA",
+                "asset_class": "us_option",
+                "qty": "1",
+                "market_value": "410",
+                "avg_entry_price": "4.10",
+                "position_values_complete": True,
+            }
+        ]
+    }
+    gateway = MagicMock()
+    gateway.get_option_chain.return_value = {
+        "NVDA260909C00220000": {
+            "delta": "0.53",
+            "vega": "0.14",
+            "iv": "0.40",
+            "quote_timestamp": now + timedelta(milliseconds=800),
+        }
+    }
+
+    refreshed = await worker._refresh_position_metadata(gateway, portfolio, now)
+
+    assert refreshed["positions"][0]["quote_age_seconds"] == "0"
+    assert refreshed["positions"][0]["metadata_complete"] is True
+    assert refreshed["positions_metadata_complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_run_forever_skips_pre_market_cycle_records(monkeypatch: pytest.MonkeyPatch) -> None:
+    real_datetime = datetime
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> datetime:
+            return real_datetime(2026, 9, 1, 13, 0, tzinfo=UTC)
+
+    settings = Settings(
+        _env_file=None,
+        environment="production",
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="1.0.0",
+        autonomous_trading_enabled=True,
+        autonomous_trading_start_at="2026-08-31T13:30:00Z",
+        autonomous_trading_end_at="2026-09-03T20:00:00Z",
+        alpaca_api_key="paper-key",
+        alpaca_secret_key="paper-secret",
+        auth_password="production-password",
+        auth_secret_key="x" * 32,
+    )
+    worker = AutonomousWorker(settings)
+    stop_event = asyncio.Event()
+    worker.run_cycle = AsyncMock()
+    worker._market_is_open = MagicMock(return_value=False)
+
+    async def stop_after_wait(event: Any, _: int) -> None:
+        event.set()
+
+    worker._wait = stop_after_wait
+    monkeypatch.setattr("app.autonomous.worker.datetime", FixedDatetime)
+
+    await worker.run_forever(stop_event)
+
+    worker.run_cycle.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_includes_submitted_receipts(monkeypatch: pytest.MonkeyPatch) -> None:
+    receipt = ExecutionReceiptModel(
+        id=str(uuid4()),
+        trace_id=str(uuid4()),
+        proposal_id=str(uuid4()),
+        client_order_id="sf-test",
+        payload_digest="a" * 64,
+        status="submitted",
+        filled_quantity=Decimal("0"),
+        created_at=datetime(2026, 8, 31, 14, 0, tzinfo=UTC),
+    )
+    result = MagicMock()
+    result.scalars.return_value = [receipt]
+    session = AsyncMock()
+    session.execute.return_value = result
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    class FakeGateway:
+        async def reconcile_async(self, persisted_receipt: Any, repository: Any) -> Any:
+            assert persisted_receipt.client_order_id == "sf-test"
+            persisted_receipt.status = ExecutionStatus.FILLED
+            return persisted_receipt
+
+    monkeypatch.setattr("app.autonomous.worker.AlpacaCliExecutionGateway", lambda *_: FakeGateway())
+
+    await AutonomousWorker(Settings(_env_file=None))._reconcile_unfinished(session)
+
+    assert session.add.call_count == 1
 
 
 def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> None:
