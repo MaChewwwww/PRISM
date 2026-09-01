@@ -220,7 +220,16 @@ class ReasonCode(StrEnum):
     TICKER_CONCENTRATION_BREACH = "TICKER_CONCENTRATION_BREACH"
     HIGH_IV_SINGLE_LEG_PROHIBITED = "HIGH_IV_SINGLE_LEG_PROHIBITED"
     RISK_LIMIT_BREACH = "RISK_LIMIT_BREACH"
+    RISK_ASSESSMENT_MISSING = "RISK_ASSESSMENT_MISSING"
+    RISK_ASSESSMENT_REJECTED = "RISK_ASSESSMENT_REJECTED"
+    RISK_DATA_STALE = "RISK_DATA_STALE"
     LIQUIDITY_LIMIT_BREACH = "LIQUIDITY_LIMIT_BREACH"
+    MARKET_REGIME_BLOCKED = "MARKET_REGIME_BLOCKED"
+    IV_RANK_LIMIT_BREACH = "IV_RANK_LIMIT_BREACH"
+    INVALID_STRATEGY = "INVALID_STRATEGY"
+    ECONOMICS_MISMATCH = "ECONOMICS_MISMATCH"
+    OPPORTUNITY_SCORE_BELOW_FLOOR = "OPPORTUNITY_SCORE_BELOW_FLOOR"
+    EXPECTED_VALUE_BELOW_FLOOR = "EXPECTED_VALUE_BELOW_FLOOR"
     NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
     REWARD_RISK_BELOW_FLOOR = "REWARD_RISK_BELOW_FLOOR"
     PAYLOAD_MISMATCH = "PAYLOAD_MISMATCH"
@@ -317,12 +326,30 @@ class ExecutionStatus(StrEnum):
     FAILED = "failed"
 
 
+class ExecutionOperation(StrEnum):
+    ENTRY = "entry"
+    EXIT = "exit"
+
+
+class ExitReason(StrEnum):
+    PNL_THRESHOLD = "pnl_threshold"
+    MAX_HOLD_DAYS = "max_hold_days"
+    DTE_THRESHOLD = "dte_threshold"
+    HACKATHON_FORCE_FLATTEN = "hackathon_force_flatten"
+
+
 class ExecutionReceipt(ContractBase):
-    proposal_id: UUID
+    # Mandatory exits are position-level actions and therefore have no
+    # proposal/authorization binding. Entry receipts retain their proposal ID.
+    proposal_id: UUID | None = None
     client_order_id: str
     broker_order_id: str | None = None
     payload_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
     status: ExecutionStatus
+    operation: ExecutionOperation = ExecutionOperation.ENTRY
+    symbol: str | None = None
+    exit_reason: ExitReason | None = None
+    requested_quantity: DecimalString | None = None
     filled_quantity: DecimalString = Decimal("0")
     filled_average_price: DecimalString | None = None
     error_code: str | None = None

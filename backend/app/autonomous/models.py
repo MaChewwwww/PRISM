@@ -39,6 +39,7 @@ class AutonomousCycleModel(Base):
     )
     symbols_json: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    exit_checks_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     worker_version: Mapped[str] = mapped_column(String(32), nullable=False)
 
 

@@ -261,14 +261,17 @@ class AutonomousWorker:
                 portfolio = await self._refresh_position_metadata(gateway, portfolio, now)
                 await self._persist_portfolio_snapshot(session, portfolio)
                 if flatten_due:
-                    if not await self._force_flatten(positions):
+                    if not await self._force_flatten(session, positions):
                         await self._record(session, now, "FAILED", "Force-flatten command failed")
                         await session.commit()
                         return "FAILED"
                     await self._record(session, now, "NO_TRADE", "Hackathon force-flatten executed")
                     await session.commit()
                     return "FLATTENED"
-                exits_ok, exited_symbols, exit_checks = await self._manage_exits(positions, now)
+                await self._reconcile_exit_receipts(session, positions, now)
+                exits_ok, exited_symbols, exit_checks = await self._manage_exits(
+                    session, positions, now
+                )
                 if not exits_ok:
                     await self._record(
                         session,
@@ -279,6 +282,16 @@ class AutonomousWorker:
                     )
                     await session.commit()
                     return "FAILED"
+                if any(check["result"] == "exit_pending" for check in exit_checks):
+                    await self._record(
+                        session,
+                        now,
+                        "NO_TRADE",
+                        "Mandatory position exit pending reconciliation",
+                        evidence={"position_exit_checks": exit_checks},
+                    )
+                    await session.commit()
+                    return "NO_TRADE"
                 if exited_symbols:
                     positions = [
                         position
@@ -1414,6 +1427,9 @@ class AutonomousWorker:
         buying_power = _decimal(portfolio.get("buying_power"))
         order_cost = strategy.limit_price * Decimal("100")
         rules = get_authorized_ruleset().parameters
+        # The rule is a minimum cash reserve, not a cap that reserves the
+        # complement of the baseline account value. Use current equity so the
+        # control remains correct after gains, losses, or an account reset.
         cash_buffer_ok = self._cash_reserve_ok(
             cash=cash,
             order_cost=order_cost,
@@ -1764,25 +1780,26 @@ class AutonomousWorker:
         )
         await session.flush()
 
-    async def _force_flatten(self, positions: list[Any]) -> bool:
+    async def _force_flatten(self, session: AsyncSession, positions: list[Any]) -> bool:
         runner = SubprocessRunner()
         gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
+        repository = SqlAlchemyReceiptRepository(session)
         success = True
         for position in positions:
             symbol = str(_field(position, "symbol", default=""))
             if symbol:
-                result = await asyncio.to_thread(
-                    runner.run,
-                    [self.settings.alpaca_cli_path, "api", "DELETE", f"/v2/positions/{symbol}"],
-                    "",
-                    gateway._command_environment(),
-                    self.settings.alpaca_request_timeout_seconds,
+                receipt = await gateway.close_position_async(
+                    symbol,
+                    trace_id=uuid4(),
+                    exit_reason="hackathon_force_flatten",
+                    requested_quantity=self._position_quantity(position),
+                    repository=repository,
                 )
-                success = success and result.returncode == 0
+                success = success and receipt.status.value in {"submitted", "filled"}
         return success
 
     async def _manage_exits(
-        self, positions: list[Any], now: datetime
+        self, session: AsyncSession, positions: list[Any], now: datetime
     ) -> tuple[bool, set[str], list[dict[str, str]]]:
         """Apply mandatory paper exits before evaluating any new entry.
 
@@ -1824,28 +1841,100 @@ class AutonomousWorker:
             checks.append({"symbol": symbol, "result": "hold", "reason": "no_exit_condition"})
         if not symbols:
             return True, set(), checks
-        runner = SubprocessRunner()
-        gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
-        for symbol in sorted(symbols):
-            result = await asyncio.to_thread(
-                runner.run,
-                [self.settings.alpaca_cli_path, "api", "DELETE", f"/v2/positions/{symbol}"],
-                "",
-                gateway._command_environment(),
-                self.settings.alpaca_request_timeout_seconds,
+        gateway = AlpacaCliExecutionGateway(self.settings, SubprocessRunner(), None)  # type: ignore[arg-type]
+        repository = SqlAlchemyReceiptRepository(session)
+        active_result = await session.execute(
+            select(ExecutionReceiptModel).where(
+                ExecutionReceiptModel.operation == "exit",
+                ExecutionReceiptModel.symbol.in_(symbols),
+                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"]),
             )
-            if result.returncode != 0:
-                for check in checks:
-                    if check["symbol"] == symbol:
-                        check["result"] = "exit_failed"
-                return False, symbols, checks
-        return True, symbols, checks
+        )
+        active_exit_symbols = {
+            str(row.symbol) for row in active_result.scalars() if row.symbol is not None
+        }
+        for symbol in sorted(symbols):
+            check = next(check for check in checks if check["symbol"] == symbol)
+            if symbol in active_exit_symbols:
+                check["result"] = "exit_pending"
+                continue
+            receipt = await gateway.close_position_async(
+                symbol,
+                trace_id=uuid4(),
+                exit_reason=check["reason"],
+                requested_quantity=self._position_quantity(
+                    next(
+                        position
+                        for position in positions
+                        if str(_field(position, "symbol", default="")) == symbol
+                    )
+                ),
+                repository=repository,
+            )
+            if receipt.status.value == "filled":
+                continue
+            if receipt.status.value in {"pending", "submitted", "reconciling"}:
+                check["result"] = "exit_pending"
+                continue
+            check["result"] = "exit_failed"
+            return False, symbols, checks
+        confirmed_symbols = {check["symbol"] for check in checks if check["result"] == "exit"}
+        return True, confirmed_symbols, checks
+
+    @staticmethod
+    def _position_quantity(position: Any) -> Decimal | None:
+        quantity = _finite_decimal(_field(position, "qty", "quantity", default=None))
+        if quantity is None:
+            return None
+        return abs(quantity)
+
+    async def _reconcile_exit_receipts(
+        self, session: AsyncSession, positions: list[Any], now: datetime
+    ) -> None:
+        """Mark a submitted position close filled only after the position disappears."""
+        current_symbols = {
+            str(_field(position, "symbol", default="")).upper() for position in positions
+        }
+        result = await session.execute(
+            select(ExecutionReceiptModel).where(
+                ExecutionReceiptModel.operation == "exit",
+                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"]),
+            )
+        )
+        for row in result.scalars():
+            if not row.symbol or row.symbol.upper() in current_symbols:
+                continue
+            previous_status = row.status
+            row.status = "filled"
+            row.filled_quantity = row.requested_quantity or row.filled_quantity
+            row.error_code = None
+            row.error_message = None
+            row.reconciled_at = now
+            session.add(
+                ReconciliationEventModel(
+                    id=str(uuid4()),
+                    receipt_id=str(row.id),
+                    transition=f"{previous_status}->filled",
+                    observed_at=now,
+                    payload_json=json.dumps(
+                        {
+                            "operation": "exit",
+                            "symbol": row.symbol,
+                            "exit_reason": row.exit_reason,
+                            "confirmation": "position_absent",
+                        },
+                        sort_keys=True,
+                    ),
+                )
+            )
+        await session.flush()
 
     async def _reconcile_unfinished(self, session: AsyncSession) -> None:
         """Resolve pending submissions by persisted client order ID on restart."""
         result = await session.execute(
             select(ExecutionReceiptModel).where(
-                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"])
+                ExecutionReceiptModel.operation == "entry",
+                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"]),
             )
         )
         rows = list(result.scalars())
@@ -1901,6 +1990,16 @@ class AutonomousWorker:
         root_evidence: dict[str, Any] = {"symbols": AUTONOMOUS_SYMBOLS, "reason": reason}
         if evidence:
             root_evidence.update(evidence)
+        exit_checks = evidence.get("position_exit_checks", []) if evidence else []
+        safe_exit_checks = [
+            {
+                "symbol": str(item.get("symbol", "UNKNOWN")).upper(),
+                "result": str(item.get("result", "hold")),
+                "reason": str(item.get("reason", "no_exit_condition")),
+            }
+            for item in exit_checks
+            if isinstance(item, dict)
+        ]
         root = build_evaluation_root(
             trace_id=uuid4(),
             outcome=outcome,
@@ -1914,6 +2013,7 @@ class AutonomousWorker:
                 outcome=outcome,
                 symbols_json=json.dumps(AUTONOMOUS_SYMBOLS),
                 reason=reason,
+                exit_checks_json=json.dumps(safe_exit_checks, sort_keys=True),
                 worker_version=WORKER_VERSION,
             )
         )

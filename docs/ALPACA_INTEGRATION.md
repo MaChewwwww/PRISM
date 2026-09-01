@@ -45,7 +45,9 @@ The underlying paper endpoints are Alpaca's [`GET /v2/account`](https://docs.alp
 
 ## Ambiguous submissions
 
-The system persists the client order identifier and intent before invoking the CLI. On timeout, disconnect, or unparseable response, reconciliation looks up the order by `client_order_id`. Only a confirmed absence can transition the attempt for an operator-approved retry.
+The system persists the client order identifier and intent before invoking the CLI. On timeout, disconnect, or unparseable entry response, reconciliation looks up the order by `client_order_id`. Position-level exits use a durable server-side receipt before invoking `DELETE /v2/positions/{symbol}`; that internal receipt key is not sent to Alpaca. The close endpoint returns an order created to close the position, so PRISM records `submitted` until the broker response or a later position read confirms the close. Only a confirmed absence can transition an ambiguous attempt to a recorded close.
+
+The position-close behavior is documented by Alpaca's [close a position](https://docs.alpaca.markets/us/reference/deleteopenposition-1) reference, which was reviewed on 2026-09-01. Open-position reads use Alpaca's [all open positions](https://docs.alpaca.markets/us/reference/getallopenpositions) reference. Exit receipts preserve the deterministic trigger (`pnl_threshold`, `max_hold_days`, `dte_threshold`, or `hackathon_force_flatten`) while the operator API continues to omit broker/client identifiers and raw provider errors.
 
 ## Historical data caching and persistence
 

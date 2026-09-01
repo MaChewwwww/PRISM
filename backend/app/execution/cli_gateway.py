@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
@@ -14,8 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
     AuthorizationDecision,
+    ExecutionOperation,
     ExecutionReceipt,
     ExecutionStatus,
+    ExitReason,
     TradeProposal,
 )
 from app.core.config import Settings
@@ -64,13 +68,19 @@ class SqlAlchemyReceiptRepository:
 
     @staticmethod
     def _to_contract(model: ExecutionReceiptModel) -> ExecutionReceipt:
+        operation = getattr(model, "operation", None) or ExecutionOperation.ENTRY.value
+        raw_exit_reason = getattr(model, "exit_reason", None)
         return ExecutionReceipt(
             trace_id=UUID(model.trace_id),
-            proposal_id=UUID(model.proposal_id),
+            proposal_id=UUID(model.proposal_id) if model.proposal_id else None,
             client_order_id=model.client_order_id,
             broker_order_id=model.broker_order_id,
             payload_digest=model.payload_digest,
             status=ExecutionStatus(model.status),
+            operation=ExecutionOperation(operation),
+            symbol=getattr(model, "symbol", None),
+            exit_reason=ExitReason(raw_exit_reason) if isinstance(raw_exit_reason, str) else None,
+            requested_quantity=getattr(model, "requested_quantity", None),
             filled_quantity=model.filled_quantity,
             filled_average_price=model.filled_average_price,
             error_code=model.error_code,
@@ -106,11 +116,15 @@ class SqlAlchemyReceiptRepository:
         model = result.scalar_one_or_none()
         values = {
             "trace_id": str(receipt.trace_id),
-            "proposal_id": str(receipt.proposal_id),
+            "proposal_id": str(receipt.proposal_id) if receipt.proposal_id else None,
             "client_order_id": receipt.client_order_id,
             "broker_order_id": receipt.broker_order_id,
             "payload_digest": receipt.payload_digest,
             "status": receipt.status.value,
+            "operation": receipt.operation.value,
+            "symbol": receipt.symbol,
+            "exit_reason": receipt.exit_reason.value if receipt.exit_reason else None,
+            "requested_quantity": receipt.requested_quantity,
             "filled_quantity": receipt.filled_quantity,
             "filled_average_price": receipt.filled_average_price,
             "error_code": receipt.error_code,
@@ -301,6 +315,96 @@ class AlpacaCliExecutionGateway:
         await self._commit_repository(repository)
         return receipt
 
+    async def close_position_async(
+        self,
+        symbol: str,
+        *,
+        trace_id: UUID,
+        exit_reason: ExitReason | str,
+        requested_quantity: Decimal | None,
+        repository: AsyncReceiptRepository,
+    ) -> ExecutionReceipt:
+        """Submit a paper position close with the same durable receipt boundary as entries.
+
+        Alpaca's position-close endpoint creates a closing order. It does not
+        accept PRISM's internal client-order ID, so the ID below is only a
+        server-side receipt key and is never sent to the provider.
+        """
+        normalized_symbol = symbol.strip().upper()
+        if not normalized_symbol:
+            raise ValueError("Position close requires a symbol")
+        normalized_reason = ExitReason(exit_reason)
+        digest_payload = {
+            "operation": ExecutionOperation.EXIT.value,
+            "symbol": normalized_symbol,
+            "exit_reason": normalized_reason.value,
+            "requested_quantity": str(requested_quantity)
+            if requested_quantity is not None
+            else None,
+        }
+        payload_digest = hashlib.sha256(
+            json.dumps(digest_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        existing = await repository.find_by_payload_digest(payload_digest)
+        if existing is not None:
+            return existing
+
+        receipt = ExecutionReceipt(
+            trace_id=trace_id,
+            proposal_id=None,
+            client_order_id=f"exit-{uuid4()}",
+            payload_digest=payload_digest,
+            status=ExecutionStatus.PENDING,
+            operation=ExecutionOperation.EXIT,
+            symbol=normalized_symbol,
+            exit_reason=normalized_reason,
+            requested_quantity=requested_quantity,
+        )
+        await repository.save(receipt)
+        await self._commit_repository(repository)
+        try:
+            result = await asyncio.to_thread(
+                self.runner.run,
+                [
+                    self.settings.alpaca_cli_path,
+                    "api",
+                    "DELETE",
+                    f"/v2/positions/{normalized_symbol}",
+                ],
+                "",
+                self._command_environment(),
+                self.settings.alpaca_request_timeout_seconds,
+            )
+        except (subprocess.TimeoutExpired, TimeoutError):
+            receipt.status = ExecutionStatus.RECONCILING
+            receipt.error_code = "position_close_ambiguous"
+            receipt.error_message = "Paper position close is ambiguous; operator review is required"
+            await repository.save(receipt)
+            await self._commit_repository(repository)
+            return receipt
+
+        if result.returncode != 0:
+            receipt.status = ExecutionStatus.FAILED
+            receipt.error_code = f"alpaca_cli_exit_{result.returncode}"
+            receipt.error_message = "Alpaca CLI rejected the paper position close"
+            await repository.save(receipt)
+            await self._commit_repository(repository)
+            return receipt
+
+        response = self._parse_json(result.stdout)
+        if response is None:
+            receipt.status = ExecutionStatus.RECONCILING
+            receipt.error_code = "position_close_ambiguous"
+            receipt.error_message = (
+                "Paper position close response is ambiguous; reconciliation required"
+            )
+        else:
+            self._apply_broker_response(receipt, response)
+        receipt.submitted_at = datetime.now(UTC)
+        await repository.save(receipt)
+        await self._commit_repository(repository)
+        return receipt
+
     async def reconcile_async(
         self, receipt: ExecutionReceipt, repository: AsyncReceiptRepository
     ) -> ExecutionReceipt:
@@ -430,5 +534,23 @@ class AlpacaCliExecutionGateway:
             receipt.error_message = "Paper order was rejected or not accepted by the broker"
         else:
             receipt.status = ExecutionStatus.SUBMITTED
-        receipt.filled_quantity = response.get("filled_qty", "0")
-        receipt.filled_average_price = response.get("filled_avg_price")
+        try:
+            filled_quantity = Decimal(str(response.get("filled_qty") or "0"))
+        except (InvalidOperation, TypeError, ValueError):
+            filled_quantity = Decimal("0")
+        receipt.filled_quantity = (
+            filled_quantity
+            if filled_quantity.is_finite() and filled_quantity >= 0
+            else Decimal("0")
+        )
+        raw_average_price = response.get("filled_avg_price")
+        if raw_average_price is None:
+            receipt.filled_average_price = None
+        else:
+            try:
+                average_price = Decimal(str(raw_average_price))
+            except (InvalidOperation, TypeError, ValueError):
+                average_price = Decimal("NaN")
+            receipt.filled_average_price = (
+                average_price if average_price.is_finite() and average_price >= 0 else None
+            )

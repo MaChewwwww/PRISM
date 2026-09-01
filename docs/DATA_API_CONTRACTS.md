@@ -93,10 +93,22 @@ filter by symbol and authorization outcome, and executions by receipt status.
 explicit empty state before the first successful account snapshot. Its values
 are normalized decimal strings. The endpoints omit broker and client order IDs,
 account identifiers, raw provider payloads, raw broker messages, credentials,
-and hidden reasoning. Recorded ShadowFund alternatives are available through the
-documented `/presentation/alternatives` compatibility projection and the
-`/monitoring/alternatives` read model. Both retain their existing provenance
-labels and non-executable semantics.
+and hidden reasoning. Execution receipts have an `operation` of `entry` or
+`exit`; position-level exits have a normalized `symbol`, an explicit `exit_reason`
+(`pnl_threshold`, `max_hold_days`, `dte_threshold`, or
+`hackathon_force_flatten`), and may have no `proposal_id`. A close request is
+reported as `submitted` until broker response or position reconciliation proves
+the close, so the API never infers a fill from a delete request alone. Cycle
+reads expose sanitized `exit_checks` so the triggering predicate remains visible
+without exposing provider payloads. Recorded ShadowFund alternatives remain
+available through the documented `/presentation/alternatives` compatibility
+projection and the `/monitoring/alternatives` read model. Both retain their
+existing provenance labels and non-executable semantics.
+
+Deterministic P2 and P4 rule traces emit reason codes from the predicates that
+actually failed. For example, a positive EV below the authorized floor is
+`EXPECTED_VALUE_BELOW_FLOOR`, while a negative EV is
+`NEGATIVE_EXPECTED_VALUE`; the trace does not include unrelated possible causes.
 
 ## Presentation metadata and provenance
 

@@ -18,6 +18,7 @@ def test_cycle_read_projects_only_safe_operational_fields() -> None:
         outcome="NO_TRADE",
         symbols_json='["NVDA", "AMD"]',
         reason="Kill switch active",
+        exit_checks_json=json.dumps([]),
         worker_version="autonomous-v1",
     )
 
@@ -25,6 +26,33 @@ def test_cycle_read_projects_only_safe_operational_fields() -> None:
 
     assert payload["symbols"] == ["NVDA", "AMD"]
     assert payload["reason"] == "Kill switch active"
+    assert payload["exit_checks"] == []
+
+
+def test_cycle_read_preserves_pnl_threshold_exit_evidence() -> None:
+    now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
+    row = SimpleNamespace(
+        id=str(uuid4()),
+        started_at=now,
+        completed_at=now,
+        outcome="NO_TRADE",
+        symbols_json='["NVDA"]',
+        reason="Production-parity cycle completed",
+        exit_checks_json=json.dumps(
+            [{"symbol": "NVDA260909C00220000", "result": "exit", "reason": "pnl_threshold"}]
+        ),
+        worker_version="autonomous-v1",
+    )
+
+    payload = cycle_read(row).model_dump()
+
+    assert payload["exit_checks"] == [
+        {
+            "symbol": "NVDA260909C00220000",
+            "result": "exit",
+            "reason": "pnl_threshold",
+        }
+    ]
 
 
 def test_execution_read_omits_order_identifiers_and_broker_error_text() -> None:
@@ -33,6 +61,10 @@ def test_execution_read_omits_order_identifiers_and_broker_error_text() -> None:
         id=str(uuid4()),
         trace_id=str(uuid4()),
         proposal_id=str(uuid4()),
+        operation="entry",
+        symbol=None,
+        exit_reason=None,
+        requested_quantity=None,
         status="rejected",
         filled_quantity=Decimal("0"),
         filled_average_price=None,
@@ -51,6 +83,34 @@ def test_execution_read_omits_order_identifiers_and_broker_error_text() -> None:
     assert "private-broker-order-id" not in serialized
     assert "provider response" not in serialized
     assert "broker_rejected" in serialized
+
+
+def test_execution_read_projects_position_exit_receipt_without_proposal_id() -> None:
+    now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
+    row = SimpleNamespace(
+        id=str(uuid4()),
+        trace_id=str(uuid4()),
+        proposal_id=None,
+        operation="exit",
+        symbol="NVDA260909C00220000",
+        exit_reason="pnl_threshold",
+        requested_quantity=Decimal("1"),
+        status="submitted",
+        filled_quantity=Decimal("0"),
+        filled_average_price=None,
+        error_code=None,
+        created_at=now,
+        submitted_at=now,
+        reconciled_at=None,
+    )
+
+    payload = execution_read(row).model_dump()
+
+    assert payload["operation"] == "exit"
+    assert payload["proposal_id"] is None
+    assert payload["symbol"] == "NVDA260909C00220000"
+    assert payload["exit_reason"] == "pnl_threshold"
+    assert payload["requested_quantity"] == Decimal("1")
 
 
 def test_portfolio_read_selects_normalized_fields_and_omits_account_payload() -> None:

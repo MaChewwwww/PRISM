@@ -1278,6 +1278,8 @@ export interface components {
         AutonomousCycleRead: {
             /** Completed At */
             completed_at: string | null;
+            /** Exit Checks */
+            exit_checks: components["schemas"]["AutonomousExitCheck"][];
             /**
              * Id
              * Format: uuid
@@ -1372,6 +1374,8 @@ export interface components {
             created_at: string;
             /** Error Code */
             error_code?: string | null;
+            /** Exit Reason */
+            exit_reason?: ("pnl_threshold" | "max_hold_days" | "dte_threshold" | "hackathon_force_flatten") | null;
             /** Filled Average Price */
             filled_average_price?: string | null;
             /**
@@ -1385,12 +1389,16 @@ export interface components {
              */
             id: string;
             /**
-             * Proposal Id
-             * Format: uuid
+             * Operation
+             * @enum {string}
              */
-            proposal_id: string;
+            operation: "entry" | "exit";
+            /** Proposal Id */
+            proposal_id?: string | null;
             /** Reconciled At */
             reconciled_at?: string | null;
+            /** Requested Quantity */
+            requested_quantity?: string | null;
             /**
              * Status
              * @enum {string}
@@ -1398,11 +1406,31 @@ export interface components {
             status: "pending" | "submitted" | "reconciling" | "rejected" | "filled" | "failed";
             /** Submitted At */
             submitted_at?: string | null;
+            /** Symbol */
+            symbol?: string | null;
             /**
              * Trace Id
              * Format: uuid
              */
             trace_id: string;
+        };
+        /**
+         * AutonomousExitCheck
+         * @description Safe evidence for a mandatory position-exit decision.
+         */
+        AutonomousExitCheck: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "pnl_threshold" | "max_hold_days" | "dte_threshold" | "no_exit_condition";
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "exit" | "hold" | "exit_failed" | "exit_pending";
+            /** Symbol */
+            symbol: string;
         };
         /** AutonomousPortfolioLatest */
         AutonomousPortfolioLatest: {
@@ -1837,6 +1865,11 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /**
+         * ExecutionOperation
+         * @enum {string}
+         */
+        ExecutionOperation: "entry" | "exit";
         /** ExecutionReceipt */
         ExecutionReceipt: {
             /**
@@ -1861,6 +1894,8 @@ export interface components {
              * @default null
              */
             error_message: string | null;
+            /** @default null */
+            exit_reason: components["schemas"]["ExitReason"] | null;
             /**
              * Filled Average Price
              * @default null
@@ -1877,18 +1912,25 @@ export interface components {
              * Format: uuid
              */
             id?: string;
+            /** @default entry */
+            operation: components["schemas"]["ExecutionOperation"];
             /** Payload Digest */
             payload_digest: string;
             /**
              * Proposal Id
-             * Format: uuid
+             * @default null
              */
-            proposal_id: string;
+            proposal_id: string | null;
             /**
              * Reconciled At
              * @default null
              */
             reconciled_at: string | null;
+            /**
+             * Requested Quantity
+             * @default null
+             */
+            requested_quantity: (number | string) | null;
             /**
              * Schema Version
              * @default 1.0
@@ -1901,6 +1943,11 @@ export interface components {
              * @default null
              */
             submitted_at: string | null;
+            /**
+             * Symbol
+             * @default null
+             */
+            symbol: string | null;
             /**
              * Trace Id
              * Format: uuid
@@ -1937,6 +1984,11 @@ export interface components {
              */
             take_profit_pct: number | string;
         };
+        /**
+         * ExitReason
+         * @enum {string}
+         */
+        ExitReason: "pnl_threshold" | "max_hold_days" | "dte_threshold" | "hackathon_force_flatten";
         /** ExposureItem */
         ExposureItem: {
             /** Label */
@@ -3385,7 +3437,7 @@ export interface components {
          * ReasonCode
          * @enum {string}
          */
-        ReasonCode: "RULESET_NOT_CONFIGURED" | "STALE_DATA" | "OUTSIDE_TRADING_WINDOW" | "HACKATHON_ENTRY_CUTOFF" | "HACKATHON_FORCE_FLATTEN" | "HACKATHON_SCORING_WINDOW" | "EXPIRY_ASSIGNMENT_RISK" | "DRAWDOWN_CAUTION" | "DRAWDOWN_DEFENSIVE" | "DRAWDOWN_HALT" | "CASH_BUFFER_BREACH" | "TICKER_CONCENTRATION_BREACH" | "HIGH_IV_SINGLE_LEG_PROHIBITED" | "RISK_LIMIT_BREACH" | "LIQUIDITY_LIMIT_BREACH" | "NEGATIVE_EXPECTED_VALUE" | "REWARD_RISK_BELOW_FLOOR" | "PAYLOAD_MISMATCH" | "PROFILE_OUT_OF_BOUNDS" | "UNSUPPORTED_INSTRUMENT";
+        ReasonCode: "RULESET_NOT_CONFIGURED" | "STALE_DATA" | "OUTSIDE_TRADING_WINDOW" | "HACKATHON_ENTRY_CUTOFF" | "HACKATHON_FORCE_FLATTEN" | "HACKATHON_SCORING_WINDOW" | "EXPIRY_ASSIGNMENT_RISK" | "DRAWDOWN_CAUTION" | "DRAWDOWN_DEFENSIVE" | "DRAWDOWN_HALT" | "CASH_BUFFER_BREACH" | "TICKER_CONCENTRATION_BREACH" | "HIGH_IV_SINGLE_LEG_PROHIBITED" | "RISK_LIMIT_BREACH" | "RISK_ASSESSMENT_MISSING" | "RISK_ASSESSMENT_REJECTED" | "RISK_DATA_STALE" | "LIQUIDITY_LIMIT_BREACH" | "MARKET_REGIME_BLOCKED" | "IV_RANK_LIMIT_BREACH" | "INVALID_STRATEGY" | "ECONOMICS_MISMATCH" | "OPPORTUNITY_SCORE_BELOW_FLOOR" | "EXPECTED_VALUE_BELOW_FLOOR" | "NEGATIVE_EXPECTED_VALUE" | "REWARD_RISK_BELOW_FLOOR" | "PAYLOAD_MISMATCH" | "PROFILE_OUT_OF_BOUNDS" | "UNSUPPORTED_INSTRUMENT";
         /**
          * RecommendationState
          * @enum {string}

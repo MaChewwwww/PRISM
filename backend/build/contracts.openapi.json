@@ -1652,6 +1652,13 @@
             ],
             "title": "Completed At"
           },
+          "exit_checks": {
+            "items": {
+              "$ref": "#/components/schemas/AutonomousExitCheck"
+            },
+            "title": "Exit Checks",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1694,6 +1701,7 @@
           "outcome",
           "symbols",
           "reason",
+          "exit_checks",
           "worker_version"
         ],
         "title": "AutonomousCycleRead",
@@ -1859,6 +1867,23 @@
             ],
             "title": "Error Code"
           },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pnl_threshold",
+                  "max_hold_days",
+                  "dte_threshold",
+                  "hackathon_force_flatten"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Reason"
+          },
           "filled_average_price": {
             "anyOf": [
               {
@@ -1881,10 +1906,25 @@
             "title": "Id",
             "type": "string"
           },
-          "proposal_id": {
-            "format": "uuid",
-            "title": "Proposal Id",
+          "operation": {
+            "enum": [
+              "entry",
+              "exit"
+            ],
+            "title": "Operation",
             "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
           },
           "reconciled_at": {
             "anyOf": [
@@ -1897,6 +1937,18 @@
               }
             ],
             "title": "Reconciled At"
+          },
+          "requested_quantity": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Quantity"
           },
           "status": {
             "enum": [
@@ -1922,6 +1974,17 @@
             ],
             "title": "Submitted At"
           },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
           "trace_id": {
             "format": "uuid",
             "title": "Trace Id",
@@ -1931,12 +1994,49 @@
         "required": [
           "id",
           "trace_id",
-          "proposal_id",
+          "operation",
           "status",
           "filled_quantity",
           "created_at"
         ],
         "title": "AutonomousExecutionRead",
+        "type": "object"
+      },
+      "AutonomousExitCheck": {
+        "additionalProperties": false,
+        "description": "Safe evidence for a mandatory position-exit decision.",
+        "properties": {
+          "reason": {
+            "enum": [
+              "pnl_threshold",
+              "max_hold_days",
+              "dte_threshold",
+              "no_exit_condition"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "exit",
+              "hold",
+              "exit_failed",
+              "exit_pending"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "result",
+          "reason"
+        ],
+        "title": "AutonomousExitCheck",
         "type": "object"
       },
       "AutonomousPortfolioLatest": {
@@ -3157,6 +3257,14 @@
         "title": "EvidenceItem",
         "type": "object"
       },
+      "ExecutionOperation": {
+        "enum": [
+          "entry",
+          "exit"
+        ],
+        "title": "ExecutionOperation",
+        "type": "string"
+      },
       "ExecutionReceipt": {
         "additionalProperties": false,
         "properties": {
@@ -3205,6 +3313,17 @@
             "default": null,
             "title": "Error Message"
           },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExitReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "filled_average_price": {
             "anyOf": [
               {
@@ -3245,15 +3364,27 @@
             "title": "Id",
             "type": "string"
           },
+          "operation": {
+            "$ref": "#/components/schemas/ExecutionOperation",
+            "default": "entry"
+          },
           "payload_digest": {
             "pattern": "^[a-f0-9]{64}$",
             "title": "Payload Digest",
             "type": "string"
           },
           "proposal_id": {
-            "format": "uuid",
-            "title": "Proposal Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Proposal Id"
           },
           "reconciled_at": {
             "anyOf": [
@@ -3267,6 +3398,27 @@
             ],
             "default": null,
             "title": "Reconciled At"
+          },
+          "requested_quantity": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Quantity"
           },
           "schema_version": {
             "const": "1.0",
@@ -3290,6 +3442,18 @@
             "default": null,
             "title": "Submitted At"
           },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Symbol"
+          },
           "trace_id": {
             "format": "uuid",
             "title": "Trace Id",
@@ -3298,7 +3462,6 @@
         },
         "required": [
           "trace_id",
-          "proposal_id",
           "client_order_id",
           "payload_digest",
           "status"
@@ -3370,6 +3533,16 @@
         },
         "title": "ExitPolicy",
         "type": "object"
+      },
+      "ExitReason": {
+        "enum": [
+          "pnl_threshold",
+          "max_hold_days",
+          "dte_threshold",
+          "hackathon_force_flatten"
+        ],
+        "title": "ExitReason",
+        "type": "string"
       },
       "ExposureItem": {
         "additionalProperties": false,
@@ -6501,7 +6674,16 @@
           "TICKER_CONCENTRATION_BREACH",
           "HIGH_IV_SINGLE_LEG_PROHIBITED",
           "RISK_LIMIT_BREACH",
+          "RISK_ASSESSMENT_MISSING",
+          "RISK_ASSESSMENT_REJECTED",
+          "RISK_DATA_STALE",
           "LIQUIDITY_LIMIT_BREACH",
+          "MARKET_REGIME_BLOCKED",
+          "IV_RANK_LIMIT_BREACH",
+          "INVALID_STRATEGY",
+          "ECONOMICS_MISMATCH",
+          "OPPORTUNITY_SCORE_BELOW_FLOOR",
+          "EXPECTED_VALUE_BELOW_FLOOR",
           "NEGATIVE_EXPECTED_VALUE",
           "REWARD_RISK_BELOW_FLOOR",
           "PAYLOAD_MISMATCH",
