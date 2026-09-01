@@ -87,10 +87,7 @@ function AccountOverviewPanel({
         ))}
       </dl>
       <p className="overview-account-checked overview-nums">
-        Checked at (UTC):{" "}
-        {asOf
-          ? new Date(asOf).toISOString().replace("T", " ").slice(0, 19)
-          : "—"}
+        Checked at (UTC): {asOf ? new Date(asOf).toISOString().replace("T", " ").slice(0, 19) : "—"}
       </p>
     </section>
   );

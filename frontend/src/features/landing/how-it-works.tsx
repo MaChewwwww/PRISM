@@ -33,8 +33,7 @@ export function HowItWorks() {
             How it works
           </h2>
           <p className="mt-5 leading-relaxed text-[var(--color-text-muted)]">
-            Four steps, running continuously, from raw signal to a
-            perspective you can act on.
+            Four steps, running continuously, from raw signal to a perspective you can act on.
           </p>
         </Reveal>
 

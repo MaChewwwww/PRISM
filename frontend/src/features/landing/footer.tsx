@@ -17,7 +17,10 @@ export function Footer() {
           See the market in more than one dimension.
         </h2>
         <div className="mt-8 flex justify-center">
-          <Link href="/login" className={buttonClasses("glass", "min-w-[13rem] px-8 py-3.5 text-base")}>
+          <Link
+            href="/login"
+            className={buttonClasses("glass", "min-w-[13rem] px-8 py-3.5 text-base")}
+          >
             Log In
           </Link>
         </div>

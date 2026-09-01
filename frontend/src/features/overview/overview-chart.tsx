@@ -147,7 +147,14 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
             aria-hidden="true"
           >
             {[0, 25, 50, 75, 100].map((line) => (
-              <line key={line} x1={0} y1={line} x2={100} y2={line} className="overview-chart-gridline" />
+              <line
+                key={line}
+                x1={0}
+                y1={line}
+                x2={100}
+                y2={line}
+                className="overview-chart-gridline"
+              />
             ))}
             {/* Muted ghost line + soft area, animated shimmer */}
             <polygon
@@ -164,7 +171,10 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
               <TrendingUp size={13} aria-hidden="true" />
               Awaiting observations
             </span>
-            <p>No portfolio observations in this date range yet. The equity path will render here once data is recorded.</p>
+            <p>
+              No portfolio observations in this date range yet. The equity path will render here
+              once data is recorded.
+            </p>
           </div>
         </div>
       </div>

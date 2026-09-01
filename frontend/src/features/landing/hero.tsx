@@ -116,7 +116,10 @@ export function Hero() {
           >
             <Link
               href="/login"
-              className={buttonClasses("glass", "min-w-[15rem] overflow-hidden px-8 py-3.5 text-base")}
+              className={buttonClasses(
+                "glass",
+                "min-w-[15rem] overflow-hidden px-8 py-3.5 text-base",
+              )}
             >
               <span>Explore Prism</span>
               <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />

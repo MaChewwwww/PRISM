@@ -18,16 +18,14 @@ export function About() {
               Built for the moment before the market decides.
             </h2>
             <p className="mt-6 leading-relaxed text-[var(--color-text-muted)]">
-              Prism started from a simple frustration: by the time news is
-              fully priced in, the useful window has closed. We built a panel
-              of agents that read the same information analysts do, argue
-              their cases openly, and hand you the disagreement along with
-              the conclusion &mdash; so you&rsquo;re deciding with perspective, not a
-              black-box score.
+              Prism started from a simple frustration: by the time news is fully priced in, the
+              useful window has closed. We built a panel of agents that read the same information
+              analysts do, argue their cases openly, and hand you the disagreement along with the
+              conclusion &mdash; so you&rsquo;re deciding with perspective, not a black-box score.
             </p>
             <p className="mt-4 leading-relaxed text-[var(--color-text-muted)]">
-              Every output stays traceable to its source, because a signal
-              you can&rsquo;t check isn&rsquo;t one you should trade on.
+              Every output stays traceable to its source, because a signal you can&rsquo;t check
+              isn&rsquo;t one you should trade on.
             </p>
           </Reveal>
 

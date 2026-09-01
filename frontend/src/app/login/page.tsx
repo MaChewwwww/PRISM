@@ -186,9 +186,7 @@ export default function LoginPage() {
                 className="inline-block"
               />
             </h1>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Enter your details to continue
-            </p>
+            <p className="mt-3 text-xs text-muted-foreground">Enter your details to continue</p>
           </div>
 
           {error && (
@@ -274,7 +272,6 @@ export default function LoginPage() {
               </div>
             )}
 
-
             <Button
               type="submit"
               disabled={loading}
@@ -286,9 +283,7 @@ export default function LoginPage() {
                   Signing in...
                 </span>
               ) : (
-                <>
-                  Sign in
-                </>
+                <>Sign in</>
               )}
             </Button>
           </form>
