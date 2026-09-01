@@ -10,7 +10,9 @@ WORK_BRANCH = re.compile(
 
 def validate_branch_flow(head: str, base: str) -> str | None:
     if base == "main":
-        return None if head == "staging" else "Only staging may be promoted into main."
+        if head == "staging" or WORK_BRANCH.fullmatch(head):
+            return None
+        return "Main accepts staging or an allowed typed work branch."
     if base == "staging":
         if WORK_BRANCH.fullmatch(head):
             return None

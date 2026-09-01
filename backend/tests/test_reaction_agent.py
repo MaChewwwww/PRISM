@@ -231,6 +231,54 @@ def test_alpaca_gateway_get_stock_latest_trade_uses_iex_and_normalizes_values() 
     assert request.feed.value == "iex"
 
 
+def test_alpaca_gateway_get_option_chain_reads_iv_from_snapshot() -> None:
+    settings = Settings(
+        _env_file=None,
+        alpaca_api_key="key",
+        alpaca_secret_key="secret",
+    )
+    mock_options_client = MagicMock()
+    mock_snapshot = {
+        "latest_quote": {
+            "bid_price": 2.00,
+            "ask_price": 2.10,
+            "timestamp": datetime(2026, 8, 31, 13, 30, tzinfo=UTC),
+        },
+        "greeks": {
+            "delta": 0.40,
+            "gamma": 0.02,
+            "theta": -0.03,
+            "vega": 0.11,
+        },
+        "implied_volatility": 0.25,
+    }
+    mock_options_client.get_option_chain.return_value = {
+        "NVDA260904C00175000": mock_snapshot,
+    }
+
+    with patch(
+        "app.market.alpaca_gateway.OptionHistoricalDataClient",
+        return_value=mock_options_client,
+    ):
+        gateway = AlpacaPyGateway(settings)
+        chain = gateway.get_option_chain("NVDA")
+
+    assert chain["NVDA260904C00175000"] == {
+        "bid": Decimal("2.0"),
+        "ask": Decimal("2.1"),
+        "quote_timestamp": datetime(2026, 8, 31, 13, 30, tzinfo=UTC),
+        "delta": Decimal("0.4"),
+        "gamma": Decimal("0.02"),
+        "theta": Decimal("-0.03"),
+        "vega": Decimal("0.11"),
+        "iv": Decimal("0.25"),
+        "iv_rank": None,
+    }
+    request = mock_options_client.get_option_chain.call_args.args[0]
+    assert request.underlying_symbol == "NVDA"
+    assert request.feed.value == "indicative"
+
+
 @pytest.mark.asyncio
 async def test_market_reaction_agent_analysis_and_caching() -> None:
     mock_llm_gateway = AsyncMock(spec=LLMGateway)

@@ -10,9 +10,9 @@
 
 ## Automated flow
 
-1. A reviewed typed branch merges into `staging` and passes CI.
+1. A reviewed typed branch merges into `staging` and passes CI, or an urgent reviewed typed branch merges directly into `main`.
 2. Staging deploys when the repository switch is enabled, or through manual dispatch.
-3. A reviewed promotion pull request moves `staging` into `main`.
+3. A reviewed promotion pull request may move `staging` into `main`.
 4. Successful `main` CI triggers the protected production workflow automatically; manual dispatch remains a fallback.
 5. The workflow deploys the exact verified revision.
 6. Compose runs `alembic upgrade head` as a one-shot dependency.

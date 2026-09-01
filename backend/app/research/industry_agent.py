@@ -532,45 +532,64 @@ class IndustryIntelligenceAgent:
         # Cache in PostgreSQL
         if db_session is not None:
             try:
-                db_record = IndustryAnalysisModel(
-                    id=str(report_id),
-                    trace_id=str(trace_id),
-                    created_at=now_utc,
-                    schema_version="1.0",
-                    symbol=sym,
-                    sector_name=sector_name,
-                    sector_etf=sector_etf,
-                    stock_return_5d_pct=stock_5d,
-                    stock_return_20d_pct=stock_20d,
-                    sector_return_5d_pct=sector_5d,
-                    sector_return_20d_pct=sector_20d,
-                    spy_return_5d_pct=spy_5d,
-                    spy_return_20d_pct=spy_20d,
-                    relative_alpha_5d_pct=rel_alpha_5d,
-                    relative_alpha_20d_pct=rel_alpha_20d,
-                    stock_vs_spy_alpha_20d_pct=stock_vs_spy_alpha_20d,
-                    peer_dispersion_20d_pct=peer_dispersion_20d,
-                    sector_relative_performance=sector_rel_perf.value,
-                    peer_relative_performance=peer_rel_perf.value,
-                    sector_regime_confirmation=sector_regime.value,
-                    peer_reaction_dynamics=peer_reaction.value,
-                    peers_json=json.dumps([p.model_dump(mode="json") for p in peer_performances]),
-                    sector_health_score=sector_health_score,
-                    competitive_moat=analysis_output.competitive_moat.value,
-                    overall_sentiment=analysis_output.overall_sentiment.value,
-                    tailwinds_json=json.dumps(analysis_output.tailwinds),
-                    headwinds_json=json.dumps(analysis_output.headwinds),
-                    thesis=analysis_output.thesis,
-                    model_name=active_model,
-                    raw_digest=llm_response.raw_digest,
+                result = await db_session.execute(
+                    select(IndustryAnalysisModel.id).where(
+                        IndustryAnalysisModel.raw_digest == llm_response.raw_digest
+                    )
                 )
-                db_session.add(db_record)
-                await db_session.commit()
-                logger.info(f"Persisted Industry Analysis for {sym} to database")
+                if result.scalar_one_or_none() is None:
+                    db_record = IndustryAnalysisModel(
+                        id=str(report_id),
+                        trace_id=str(trace_id),
+                        created_at=now_utc,
+                        schema_version="1.0",
+                        symbol=sym,
+                        sector_name=sector_name,
+                        sector_etf=sector_etf,
+                        stock_return_5d_pct=stock_5d,
+                        stock_return_20d_pct=stock_20d,
+                        sector_return_5d_pct=sector_5d,
+                        sector_return_20d_pct=sector_20d,
+                        spy_return_5d_pct=spy_5d,
+                        spy_return_20d_pct=spy_20d,
+                        relative_alpha_5d_pct=rel_alpha_5d,
+                        relative_alpha_20d_pct=rel_alpha_20d,
+                        stock_vs_spy_alpha_20d_pct=stock_vs_spy_alpha_20d,
+                        peer_dispersion_20d_pct=peer_dispersion_20d,
+                        sector_relative_performance=sector_rel_perf.value,
+                        peer_relative_performance=peer_rel_perf.value,
+                        sector_regime_confirmation=sector_regime.value,
+                        peer_reaction_dynamics=peer_reaction.value,
+                        peers_json=json.dumps(
+                            [p.model_dump(mode="json") for p in peer_performances]
+                        ),
+                        sector_health_score=sector_health_score,
+                        competitive_moat=analysis_output.competitive_moat.value,
+                        overall_sentiment=analysis_output.overall_sentiment.value,
+                        tailwinds_json=json.dumps(analysis_output.tailwinds),
+                        headwinds_json=json.dumps(analysis_output.headwinds),
+                        thesis=analysis_output.thesis,
+                        model_name=active_model,
+                        raw_digest=llm_response.raw_digest,
+                    )
+                    db_session.add(db_record)
+                    await db_session.commit()
+                    logger.info(f"Persisted Industry Analysis for {sym} to database")
+                else:
+                    logger.info(
+                        "Industry Analysis for %s already cached with digest %s",
+                        sym,
+                        llm_response.raw_digest,
+                    )
             except Exception as exc:
                 logger.warning("Failed to cache Industry Analysis: %s", type(exc).__name__)
                 await db_session.rollback()
-                if strict:
+                check_result = await db_session.execute(
+                    select(IndustryAnalysisModel.id).where(
+                        IndustryAnalysisModel.raw_digest == llm_response.raw_digest
+                    )
+                )
+                if check_result.scalar_one_or_none() is None and strict:
                     raise RuntimeError("Industry research persistence failed") from exc
 
         return report
