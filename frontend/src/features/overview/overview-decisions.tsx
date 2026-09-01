@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, ArrowUpRight, CircleDot, Diamond } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, CircleDot, Diamond, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -97,6 +97,7 @@ function DecisionCard({ decision }: { decision: OverviewDecision }) {
   const [active, setActive] = useState(false);
   const tag = AGENT_TAGS[agentKindFor(decision.ruleResult)];
   const outcomeLabel = OUTCOME_LABEL[decision.ruleResult];
+  const decisionLabel = storyDecisionLabel(decision.symbol, decision.outcome);
 
   return (
     <Link
@@ -129,10 +130,13 @@ function DecisionCard({ decision }: { decision: OverviewDecision }) {
         </span>
       </div>
 
-      {/* Title: matches the Decision Stories card scale */}
+      {/* Title: matches the Decision Stories card scale - use decision label */}
       <h3 className="text-[22px] font-semibold leading-tight tracking-tight text-[#F8FAFC] transition-colors group-hover:text-[#B2D8DC]">
-        {decision.title}
+        {decisionLabel}
       </h3>
+
+      {/* Subtitle: the story title description */}
+      <p className="mt-1 text-[13px] leading-snug text-[#94A3B8]">{decision.title}</p>
 
       {/* Agent perspective chip */}
       <div className="flex flex-wrap gap-2">
@@ -170,11 +174,53 @@ function DecisionCard({ decision }: { decision: OverviewDecision }) {
   );
 }
 
+function storyDecisionLabel(symbol: string, outcome: string): string {
+  switch (outcome) {
+    case "pass":
+    case "modify":
+      return `Opened a position in ${symbol}`;
+    case "no_trade":
+      return `No trade — ${symbol}`;
+    case "fail":
+      return `Rejected the proposed ${symbol} trade`;
+    case "degraded":
+      return `Halted — ${symbol} (incomplete evidence)`;
+    default:
+      return symbol;
+  }
+}
+
+function SectionHeading({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof Zap;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="overview-section-header">
+      <span className="overview-section-icon" aria-hidden="true">
+        <Icon size={14} />
+      </span>
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
+}
+
 export function OverviewDecisions({ decisions }: { decisions: OverviewDecision[] }) {
   return (
     <section className="overview-panel overview-decisions-panel">
       <div className="overview-decisions-head">
-        <span className="overview-side-title">Recent decisions</span>
+        <SectionHeading
+          icon={Zap}
+          title="Recent decisions"
+          description="Latest Active Portfolio agent decision outcomes."
+        />
         <Link href="/stories" className="overview-see-all">
           See all decision stories
           <ArrowRight size={12} aria-hidden="true" />

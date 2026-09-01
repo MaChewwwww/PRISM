@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, TrendingUp } from "lucide-react";
 
 import {
   formatCurrency,
-  formatSignedCurrency,
   formatSignedPercent,
   percentChange,
   type OverviewPoint,
@@ -15,6 +13,28 @@ import {
 import type { OverviewChartProps } from "./overview-types";
 
 const PLOT_PADDING_PCT = 8;
+
+function SectionHeading({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof TrendingUp;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="overview-section-header">
+      <span className="overview-section-icon" aria-hidden="true">
+        <Icon size={14} />
+      </span>
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
+}
 
 function buildScale(points: OverviewPoint[]) {
   if (points.length === 0) {
@@ -68,22 +88,53 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
     return [...top, ...bottom].join(" ");
   }, [points, scale]);
 
+  // Build clean x-axis labels (avoid crowding) - moved before early return to follow Rules of Hooks
+  const xAxisLabels = useMemo(() => {
+    if (points.length === 0) return [];
+    const labels: Array<{ index: number; label: string }> = [];
+    const interval = Math.max(1, Math.ceil(points.length / 6));
+    let lastShownMonth = "";
+
+    for (let i = 0; i < points.length; i++) {
+      if (i === 0 || i === points.length - 1 || i % interval === 0) {
+        const [year, month] = points[i].date.split("-").slice(0, 2);
+        const monthStr = new Date(2000, parseInt(month) - 1).toLocaleDateString("en-US", {
+          month: "short",
+        });
+        const label = `${monthStr} '${year.slice(2)}`;
+        // Avoid showing the exact same month twice in a row
+        if (label !== lastShownMonth) {
+          labels.push({ index: i, label });
+          lastShownMonth = label;
+        }
+      }
+    }
+    return labels;
+  }, [points]);
+
   const activeIndex = selected ? selected.index : hoverIndex;
   const activePoint = activeIndex !== null ? points[activeIndex] : null;
 
+  // Default to last point if not selected
+  const defaultSelected =
+    selected ||
+    (points.length > 0 ? { point: points[points.length - 1], index: points.length - 1 } : null);
+
   if (points.length === 0) {
     return (
-      <section
-        className="overview-panel overview-chart-panel"
+      <div
+        className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl sm:p-6"
         aria-labelledby="overview-chart-title"
       >
         <div className="overview-chart-head">
-          <h2 id="overview-chart-title" className="overview-side-title">
-            Active Portfolio path
-          </h2>
+          <SectionHeading
+            icon={TrendingUp}
+            title="Active Portfolio path"
+            description="Equity performance vs. alternative and benchmark strategies."
+          />
         </div>
         <p className="overview-chart-detail-empty">No portfolio observations in this date range.</p>
-      </section>
+      </div>
     );
   }
 
@@ -96,43 +147,30 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
   }
 
   return (
-    <section className="overview-panel overview-chart-panel" aria-labelledby="overview-chart-title">
-      <div className="overview-chart-head">
-        <h2 id="overview-chart-title" className="overview-side-title">
-          Active Portfolio path
-        </h2>
-        <div className="overview-chart-legend">
-          <span className="overview-legend-item">
-            <span className="overview-legend-swatch overview-legend-actual" />
-            Active Portfolio
-          </span>
-          <span className="overview-legend-item">
-            <span className="overview-legend-swatch overview-legend-alt" />
-            Alternative
-          </span>
-          <span className="overview-legend-item">
-            <span className="overview-legend-swatch overview-legend-bench" />
-            Benchmark
-          </span>
-          <span className="overview-legend-item overview-legend-gap">
-            <span className="overview-legend-swatch overview-legend-gap-swatch" />
-            Gap vs. alternative
-          </span>
-        </div>
-        <span className="overview-chart-hint">
-          {selected ? "Selected point" : "Click a point for details"}
-        </span>
-      </div>
+    <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl sm:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:items-start">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="overview-chart-head">
+            <SectionHeading
+              icon={TrendingUp}
+              title="Active Portfolio path"
+              description="Equity performance vs. alternative and benchmark strategies."
+            />
+            <span className="overview-chart-hint">
+              {defaultSelected ? "Selected point" : "Click a point for details"}
+            </span>
+          </div>
 
-      <div className={`overview-chart-row ${selected ? "has-detail" : ""}`}>
-        <div className="overview-chart-body">
-          <div className="overview-chart-plot">
+          <div
+            className="overview-chart-plot mt-4 min-h-72 w-full flex-1 [&_*:focus]:outline-none sm:min-h-80"
+            role="img"
+            aria-label="Active Portfolio, alternative, and benchmark equity paths over the selected date range, with the gap between the portfolio and the best alternative shaded"
+          >
             <svg
               className="overview-chart-svg"
               viewBox="0 0 100 100"
               preserveAspectRatio="none"
-              role="img"
-              aria-label="Active Portfolio, alternative, and benchmark equity paths over the selected date range, with the gap between the portfolio and the best alternative shaded"
+              aria-hidden="true"
             >
               {[0, 25, 50, 75, 100].map((line) => (
                 <line
@@ -226,16 +264,54 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
             )}
           </div>
 
-          <div className="overview-chart-x-axis">
-            {points.map((point) => (
-              <span key={`${point.date}-${point.time}`}>{point.date}</span>
+          <div
+            className="overview-chart-x-axis mt-3 border-t border-white/8 pt-3"
+            style={{ position: "relative", height: "1.4rem" }}
+          >
+            {xAxisLabels.map(({ index, label }) => (
+              <span
+                key={`${index}`}
+                style={{
+                  position: "absolute",
+                  left: `${scale.xFor(index)}%`,
+                  transform: "translateX(-50%)",
+                }}
+              >
+                {label}
+              </span>
             ))}
+          </div>
+
+          <div className="overview-chart-legend mt-4 border-t border-white/8 pt-4">
+            <span className="overview-legend-item">
+              <span className="overview-legend-swatch overview-legend-actual" />
+              Active Portfolio
+            </span>
+            <span className="overview-legend-item">
+              <span className="overview-legend-swatch overview-legend-alt" />
+              Alternative
+            </span>
+            <span className="overview-legend-item">
+              <span className="overview-legend-swatch overview-legend-bench" />
+              Benchmark
+            </span>
+            <span className="overview-legend-item overview-legend-gap">
+              <span className="overview-legend-swatch overview-legend-gap-swatch" />
+              Gap vs. alternative
+            </span>
           </div>
         </div>
 
-        {selected && <ChartDetailPanel point={selected.point} onClose={() => onSelect(null)} />}
+        <aside
+          className="flex shrink-0 flex-col rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/8 to-white/3 p-4 shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)] lg:w-72 lg:min-h-72 sm:min-h-80"
+          aria-label="Selected point detail"
+        >
+          {defaultSelected && (
+            <ChartDetailPanel point={defaultSelected.point} onClose={() => onSelect(null)} />
+          )}
+        </aside>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -284,35 +360,6 @@ function ChartDetailPanel({ point, onClose }: { point: OverviewPoint; onClose: (
           </dd>
         </div>
       </dl>
-
-      {point.decision ? (
-        <div className="overview-chart-detail-decision">
-          <span className="overview-side-title">Decision</span>
-          <p className="overview-chart-detail-decision-title">{point.decision.title}</p>
-          <dl>
-            <div>
-              <dt>Agent perspective</dt>
-              <dd>{point.decision.perspective}</dd>
-            </div>
-            <div>
-              <dt>Outcome</dt>
-              <dd>{point.decision.outcome}</dd>
-            </div>
-            <div>
-              <dt>Active result</dt>
-              <dd className="overview-nums">{formatSignedCurrency(point.decision.active)}</dd>
-            </div>
-          </dl>
-          <Link
-            className="text-link"
-            href={point.decision.storyId ? `/stories/${point.decision.storyId}` : "/stories"}
-          >
-            View decision story
-          </Link>
-        </div>
-      ) : (
-        <p className="overview-chart-detail-empty">No decision was recorded for this session.</p>
-      )}
     </aside>
   );
 }

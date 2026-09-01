@@ -4,8 +4,9 @@ export type OverviewRange = "7d" | "1m" | "3m" | "ytd";
 
 export type OverviewDecision = {
   title: string;
+  symbol: string;
   perspective: string;
-  outcome: "Positive" | "Neutral" | "Negative";
+  outcome: "pass" | "modify" | "no_trade" | "fail" | "degraded";
   ruleResult: "PASS" | "MODIFY" | "FAIL" | "NOT_EVALUATED";
   active: number;
   alternative: number;
@@ -60,14 +61,13 @@ function numeric(value: string | null | undefined) {
 }
 
 function decisionOutcome(story: StorySummary): OverviewDecision["outcome"] {
-  if (story.outcome === "fail") return "Negative";
-  if (story.outcome === "pass") return "Positive";
-  return "Neutral";
+  return (story.outcome || "fail") as OverviewDecision["outcome"];
 }
 
 function toDecision(story: StorySummary): OverviewDecision {
   return {
     title: story.title,
+    symbol: story.symbol,
     perspective: story.category,
     outcome: decisionOutcome(story),
     ruleResult: story.ruleResult,

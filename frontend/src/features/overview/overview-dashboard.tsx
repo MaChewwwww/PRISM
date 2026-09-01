@@ -103,8 +103,11 @@ function OverviewHeader({
     <header className="overview-header">
       <div className="overview-header-left">
         <div className="overview-page-title-block">
-          <div className="overview-page-title">Overview</div>
-          <div className="overview-page-subtitle">Active Portfolio decision intelligence</div>
+          <div className="overview-eyebrow">Overview</div>
+          <div className="overview-page-title">Active Portfolio</div>
+          <div className="overview-page-subtitle">
+            Decision intelligence and capital exposure for the current period.
+          </div>
         </div>
       </div>
 
