@@ -43,3 +43,6 @@ Thumbs.db
 alpaca-profiles/
 runs/
 backtest-runs/
+
+# Local-only competitor review notes (do not publish with judge-facing artifacts)
+docs/competitors/
