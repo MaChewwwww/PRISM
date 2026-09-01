@@ -55,7 +55,7 @@ export default function LoginPage() {
           return;
         }
 
-        router.push("/");
+        router.push("/dashboard");
         router.refresh();
       } catch {
         setError("An unexpected network error occurred. Please try again.");
@@ -76,7 +76,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch {
       setError("An unexpected network error occurred. Please try again.");

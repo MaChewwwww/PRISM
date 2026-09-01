@@ -57,7 +57,7 @@ describe("Login page", () => {
     await user.type(screen.getByLabelText("Password"), "operator-password");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(pushMock).toHaveBeenCalledWith("/");
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
   it("does not auto-fill credentials in the browser", async () => {
@@ -90,6 +90,6 @@ describe("Login page", () => {
     await user.click(await screen.findByRole("button", { name: "Login as a Judge" }));
 
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/judge-login", { method: "POST" });
-    expect(pushMock).toHaveBeenCalledWith("/");
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 });

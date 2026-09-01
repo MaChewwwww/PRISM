@@ -19,7 +19,7 @@ import { useState } from "react";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const navigation = [
-  { label: "Overview", icon: LayoutDashboard, href: "/" },
+  { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Decision Stories", icon: Network, href: "/stories" },
   { label: "Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
   { label: "Shadow Portfolio", icon: GitBranch, href: "/alternatives" },
@@ -47,7 +47,7 @@ export function PrimaryNav({ open, onNavigate }: PrimaryNavProps) {
   const [expanded, setExpanded] = useState(false);
 
   function isCurrent(href: string) {
-    return href === "/" ? pathname === href : pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   function collapse() {
@@ -76,7 +76,7 @@ export function PrimaryNav({ open, onNavigate }: PrimaryNavProps) {
         }
       }}
     >
-      <Link className="wordmark" href="/" aria-label="PRISM home">
+      <Link className="wordmark" href="/dashboard" aria-label="PRISM home">
         <span aria-hidden="true">
           <Image src="/logo.png" alt="" width={32} height={32} priority />
         </span>

@@ -18,7 +18,7 @@ describe("AppShell", () => {
     );
 
     const expectedLinks = [
-      ["Overview", "/"],
+      ["Overview", "/dashboard"],
       ["Decision Stories", "/stories"],
       ["Portfolio", "/portfolio"],
       ["Shadow Portfolio", "/alternatives"],

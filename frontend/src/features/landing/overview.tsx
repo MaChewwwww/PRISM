@@ -57,7 +57,6 @@ export function Overview() {
                 as="article"
                 delay={((i % 4) + 1) as 1 | 2 | 3 | 4}
                 className="group relative overflow-hidden rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-xl transition-all duration-300 ease-[var(--ease-glass)] hover:-translate-y-1 hover:border-t-white/25"
-                style={{ "--card-accent": feature.accent } as React.CSSProperties}
               >
                 {/* Ambient accent bloom on hover */}
                 <span
