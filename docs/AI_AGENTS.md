@@ -1,3 +1,7 @@
+# Durable decision evidence
+
+After synthesis, PRISM persists a normalized monitoring snapshot for News, Quantitative, Industry, Fundamental, Macroeconomic, Market Reaction/Mispricing, and Trading Decision. The snapshot is redacted and append-only; it does not preserve prompts or hidden reasoning and has no authority over scoring, authorization, strike selection, exits, or paper execution.
+
 # PRISM AI agents
 
 Revision: `2026-08-30 / autonomous-paper-parity-v3`

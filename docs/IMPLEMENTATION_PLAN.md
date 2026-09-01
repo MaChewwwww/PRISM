@@ -1,3 +1,7 @@
+# Production monitoring status
+
+Implemented: the authenticated decision-detail projection exposes durable, redacted seven-agent perspectives. Missing evidence is explicit. Day 1 NVDA records are static retrospective reconstructions sourced from the tracked excerpt and excluded from LLM usage metrics. Production monitoring excludes historical/backtest ShadowFund sessions.
+
 # PRISM implementation plan
 
 ## Consolidated skeleton: implemented in this pass

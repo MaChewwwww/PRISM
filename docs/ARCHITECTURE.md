@@ -1,3 +1,7 @@
+# Durable agent-decision monitoring
+
+The autonomous research synthesis writes a redacted, append-only `agent_decision_records` snapshot for each of the seven specialists in the same transaction as its durable final decision. This monitoring-only record is not an execution input and contains no prompts, hidden reasoning, credentials, raw provider payloads, or broker payloads. Monitoring resolves perspectives by trace and explicitly returns unavailable states when a durable record is absent.
+
 # PRISM architecture
 
 Revision: `2026-08-31 / deterministic-historical-options-v1`

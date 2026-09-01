@@ -1,3 +1,7 @@
+# Production provenance boundary
+
+Production monitoring filters historical/backtest ShadowFund sessions. Recorded production counterfactuals remain non-trade-labelled; simulated historical sessions are available only to staging projections.
+
 # ShadowFund / Shadow Portfolio
 
 ShadowFund is PRISM's durable, non-executable counterfactual engine. It never creates, authorizes, amends, cancels, or submits an order. It writes only its own immutable evaluation records and reads timestamped market observations through market-data adapters.

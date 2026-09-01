@@ -1,3 +1,7 @@
+# Agent decision monitoring contract
+
+`StoryDetail.agentPerspectives` contains the seven canonical specialist perspectives. Each item identifies recorded, unavailable, or degraded evidence and, when recorded, contains a redacted headline, summary, evidence, limitations, UTC timestamp, provenance, and safe model metadata. `retrospective_reconstruction` rows carry source title/date/digest and a permanent reconstruction label; they are not live invocations.
+
 # Data and API contracts
 
 Revision: `2026-08-31 / deterministic-historical-options-v1`
