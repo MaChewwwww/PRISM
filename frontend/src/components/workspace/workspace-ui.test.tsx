@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ProvenanceLabel } from "./workspace-ui";
+import { ProvenanceLabel, StateBadge } from "./workspace-ui";
 
 describe("ProvenanceLabel", () => {
   it("labels recorded monitoring data", () => {
@@ -16,5 +16,11 @@ describe("ProvenanceLabel", () => {
 
     rerender(<ProvenanceLabel provenance="shadow" />);
     expect(screen.getByText("ShadowFund")).toBeInTheDocument();
+  });
+
+  it("uses the success treatment for the Day 1 decision outcome", () => {
+    render(<StateBadge state="retrospective" />);
+
+    expect(screen.getByText("Success")).toHaveAttribute("data-state", "pass");
   });
 });
