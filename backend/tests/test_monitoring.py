@@ -45,15 +45,19 @@ def test_authorization_summary_uses_recorded_shadow_symbol_when_proposal_is_miss
     assert "proposal payload unavailable" in summary.summary
 
 
-def test_monitoring_routes_require_authentication_and_presentation_routes_are_absent() -> None:
+def test_monitoring_and_presentation_alternatives_routes_require_authentication() -> None:
     settings = Settings(_env_file=None)
     app.dependency_overrides[get_settings] = lambda: settings
     with TestClient(app) as client:
         response = client.get("/api/v1/monitoring/overview", params={"from": FROM, "to": TO})
         assert response.status_code == 401
+        presentation_unauthenticated = client.get(
+            "/api/v1/presentation/alternatives", params={"from": FROM, "to": TO}
+        )
+        assert presentation_unauthenticated.status_code == 401
         _login(client, settings)
-        removed = client.get("/api/v1/presentation/overview", params={"from": FROM, "to": TO})
-        assert removed.status_code == 404
+        alternatives = client.get("/api/v1/presentation/alternatives")
+        assert alternatives.status_code == 422
     app.dependency_overrides.clear()
 
 

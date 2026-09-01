@@ -66,6 +66,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/monitoring/portfolio` | Recorded portfolio and exit-check freshness | Yes |
 | GET | `/api/v1/monitoring/alternatives` | ShadowFund alternative collection | Yes |
 | GET | `/api/v1/monitoring/alternatives/{session_id}` | ShadowFund alternative detail | Yes |
+| GET | `/api/v1/presentation/alternatives` | Documented compatibility projection of recorded ShadowFund alternatives | Yes |
 | GET | `/api/v1/monitoring/news` | Recorded news-analysis collection | Yes |
 | GET | `/api/v1/monitoring/agents` | Recorded model-usage projection | Yes |
 | GET | `/api/v1/monitoring/agents/{agent_id}` | Recorded model-operation detail | Yes |
@@ -92,8 +93,9 @@ filter by symbol and authorization outcome, and executions by receipt status.
 explicit empty state before the first successful account snapshot. Its values
 are normalized decimal strings. The endpoints omit broker and client order IDs,
 account identifiers, raw provider payloads, raw broker messages, credentials,
-and hidden reasoning. Recorded ShadowFund alternatives remain available only
-through `/presentation/alternatives` and retain their existing provenance
+and hidden reasoning. Recorded ShadowFund alternatives are available through the
+documented `/presentation/alternatives` compatibility projection and the
+`/monitoring/alternatives` read model. Both retain their existing provenance
 labels and non-executable semantics.
 
 ## Presentation metadata and provenance
