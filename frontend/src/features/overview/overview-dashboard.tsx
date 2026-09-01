@@ -63,11 +63,9 @@ export function OverviewDashboard({ overview, range }: { overview: Overview; ran
       />
 
       <section className="overview-main" aria-label="Active Portfolio overview">
-        <OverviewDecisions decisions={view.decisions} />
         <OverviewChart points={points} selected={selected} onSelect={setSelected} />
-        {view.recommendations.length > 0 && (
-          <OverviewRecommendations recommendations={view.recommendations} />
-        )}
+        <OverviewDecisions decisions={view.decisions} />
+        <OverviewRecommendations recommendations={view.recommendations} />
       </section>
 
       <OverviewSidebar
@@ -112,16 +110,26 @@ function OverviewRecommendations({ recommendations }: { recommendations: string[
           <ArrowRight size={12} aria-hidden="true" />
         </Link>
       </div>
-      <ul className="overview-recos-list">
-        {recommendations.map((item, index) => (
-          <li key={index} className="overview-recos-item">
-            <span className="overview-recos-index" aria-hidden="true">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
+      {recommendations.length === 0 ? (
+        <div className="overview-recos-empty">
+          <p>No recommendations for this period.</p>
+          <span>
+            Post-analysis surfaces bounded AI Profile suggestions after completed evaluation
+            windows. They will appear here for manual review.
+          </span>
+        </div>
+      ) : (
+        <ul className="overview-recos-list">
+          {recommendations.map((item, index) => (
+            <li key={index} className="overview-recos-item">
+              <span className="overview-recos-index" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -154,7 +162,7 @@ function OverviewHeader({
         </div>
       </div>
 
-      <div className="overview-header-center">
+      <div className="overview-header-right">
         <div className="overview-pills" role="group" aria-label="Date range">
           {(["7d", "1m", "3m", "ytd"] as OverviewRange[]).map((item) => (
             <button
@@ -168,9 +176,6 @@ function OverviewHeader({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="overview-header-right">
         <div className="overview-nums overview-clock">
           <span>
             {now

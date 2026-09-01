@@ -1134,3 +1134,139 @@
 .overview-position-pnl {
   font-weight: 650;
 }
+
+/* ---- Overview restructure additions ---- */
+
+/* Chart gets the most room; decisions compact; recommendations fill the rest. */
+.overview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.overview-main .overview-chart-panel,
+.overview-main > div:first-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.overview-recos-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Compact recent-decisions grid */
+.overview-decisions-panel {
+  flex: 0 0 auto;
+}
+
+/* Empty chart ghost */
+.overview-chart-empty {
+  position: relative;
+  border-radius: 0.75rem;
+  background: rgba(8, 11, 16, 0.18);
+  overflow: hidden;
+}
+.overview-chart-empty-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.4;
+  stroke-dasharray: 4 4;
+  animation: pulse-line 3.2s ease-in-out infinite;
+}
+.overview-chart-empty-area {
+  fill: color-mix(in srgb, var(--primary) 10%, transparent);
+  animation: pulse-line 3.2s ease-in-out infinite;
+}
+.overview-chart-empty-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 1rem;
+}
+.overview-chart-empty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border);
+  background: rgba(84, 125, 131, 0.14);
+  color: var(--accent-foreground);
+  font: 620 0.66rem/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.overview-chart-empty-overlay p {
+  margin: 0;
+  max-width: 24rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* Skeleton shimmer used by empty exposure bars */
+.overview-empty-block {
+  display: grid;
+  gap: 0.8rem;
+}
+.overview-skel-pill {
+  display: inline-block;
+  height: 0.6rem;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.overview-skel-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(84, 125, 131, 0.15) 0%,
+    rgba(84, 125, 131, 0.35) 50%,
+    rgba(84, 125, 131, 0.15) 100%
+  );
+  background-size: 200% 100%;
+  animation: drift 3s linear infinite;
+}
+.overview-empty-caption {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+/* Recommendations empty state */
+.overview-recos-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-height: 6rem;
+  padding: 1rem;
+  border-radius: 0.65rem;
+  border: 1px dashed var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+.overview-recos-empty p {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.overview-recos-empty span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* Header: keep date range pills + clock + controls grouped on the right */
+.overview-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -26,6 +26,8 @@ function searchHaystack(item: NewsRecord): string {
     .toLowerCase();
 }
 
+const PAGE_SIZE = 8;
+
 export function NewsList({
   news,
   heading,
@@ -36,6 +38,7 @@ export function NewsList({
   rangeControl?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -46,6 +49,15 @@ export function NewsList({
       return terms.every((term) => haystack.includes(term));
     });
   }, [query, news]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setPage(1);
+  }
 
   return (
     <>
@@ -61,7 +73,7 @@ export function NewsList({
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateQuery(event.target.value)}
               placeholder="Search headline, company, date, time"
               aria-label="Search news"
               className="w-full rounded-md border border-white/8 bg-white/2 py-2 pl-9 pr-9 text-[13px] text-[#F8FAFC] outline-none transition-colors placeholder:text-[#64748B] focus-visible:border-[#547D83]/50 focus-visible:ring-2 focus-visible:ring-[#547D83]/40"
@@ -69,7 +81,7 @@ export function NewsList({
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery("")}
+                onClick={() => updateQuery("")}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[#64748B] outline-none transition-colors hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83]"
               >
@@ -95,7 +107,7 @@ export function NewsList({
         </div>
       ) : (
         <ul className="space-y-4">
-          {filtered.map((item) => (
+          {pageItems.map((item) => (
             <li key={item.id} className={`${SECTION_CARD} p-5 sm:p-6`}>
               {/* Kicker: time · source · symbols · significance */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
@@ -135,6 +147,36 @@ export function NewsList({
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Pagination — only when the filtered set exceeds one page */}
+      {filtered.length > PAGE_SIZE && (
+        <nav
+          className="mt-5 flex items-center justify-between gap-3"
+          aria-label="Catalyst feed pagination"
+        >
+          <span className="font-mono text-[11px] text-[#64748B]">
+            Page {safePage} of {totalPages} · {filtered.length} items
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" /> Prev
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        </nav>
       )}
     </>
   );

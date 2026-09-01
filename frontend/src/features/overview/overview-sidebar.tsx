@@ -1,7 +1,6 @@
 "use client";
 
 import { ChartColumn, Layers3, PieChart, Wallet } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import type {
@@ -19,13 +18,6 @@ type Props = {
   asOf: string | null;
   totalDecisionStories: number;
 };
-
-/** Tone a signed money/percent string green (+), red (-), or muted. */
-function tone(value: string) {
-  if (value.startsWith("+")) return "var(--status-profit)";
-  if (value.startsWith("-")) return "var(--status-loss)";
-  return "var(--text-muted)";
-}
 
 /**
  * PRISM Alpaca Paper Account Overview.
@@ -104,42 +96,6 @@ function AccountOverviewPanel({
   );
 }
 
-/** Compact Open Positions summary. Quantity is not exposed by the contract. */
-function OpenPositionsPanel({ positions }: { positions: OverviewPosition[] }) {
-  return (
-    <section className="overview-panel overview-side-panel">
-      <div className="overview-decisions-head">
-        <SectionHeading
-          icon={Layers3}
-          title="Open Positions"
-          description="Symbol, market value, and unrealized P&L. Quantity is not exposed."
-        />
-      </div>
-      {positions.length === 0 ? (
-        <p className="overview-chart-detail-empty">No open positions recorded.</p>
-      ) : (
-        <ul className="overview-positions-list">
-          {positions.map((position) => (
-            <li key={position.symbol} className="overview-position-row">
-              <span className="overview-position-symbol">{position.symbol}</span>
-              <span className="overview-nums overview-position-value">{position.value}</span>
-              <span
-                className="overview-nums overview-position-pnl"
-                style={{ color: tone(position.pnl) }}
-              >
-                {position.pnl}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <Link href="/portfolio" className="overview-see-all">
-        Open full holdings ledger
-      </Link>
-    </section>
-  );
-}
-
 function SectionHeading({
   icon: Icon,
   title,
@@ -191,8 +147,6 @@ export function OverviewSidebar({
         asOf={asOf}
       />
 
-      <OpenPositionsPanel positions={positions} />
-
       <section className="overview-panel overview-side-panel">
         <SectionHeading
           icon={ChartColumn}
@@ -239,28 +193,56 @@ export function OverviewSidebar({
           title="Active Portfolio exposure"
           description="Allocation by risk posture and capital concentration."
         />
-        <div className="overview-exposure-list">
-          {exposures.map((exposure) => {
-            const selected = selectedExposure === exposure.label;
-            const dimmed = selectedExposure !== null && !selected;
-            return (
-              <button
-                key={exposure.label}
-                type="button"
-                className={`overview-exposure-row ${dimmed ? "dim" : ""}`}
-                onClick={() => setSelectedExposure(selected ? null : exposure.label)}
-              >
-                <span className="overview-exposure-label-row">
-                  <span>{exposure.label}</span>
-                  <span className="overview-nums">{exposure.pct}%</span>
-                </span>
-                <span className="overview-exposure-track">
-                  <span className="overview-exposure-fill" style={{ width: `${exposure.pct}%` }} />
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {exposures.length === 0 ? (
+          <div className="overview-empty-block">
+            {/* Ghost allocation bars so the shape of the panel reads while empty */}
+            <div className="overview-exposure-list" aria-hidden="true">
+              {[64, 42, 24].map((w, i) => (
+                <div key={i} className="overview-exposure-row">
+                  <span className="overview-exposure-label-row">
+                    <span className="overview-skel-pill" style={{ width: "40%" }} />
+                    <span className="overview-skel-pill" style={{ width: "2.5rem" }} />
+                  </span>
+                  <span className="overview-exposure-track">
+                    <span
+                      className="overview-exposure-fill overview-skel-shimmer"
+                      style={{ width: `${w}%` }}
+                    />
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="overview-empty-caption">
+              Allocation by risk posture will appear here once positions are recorded in this range.
+            </p>
+          </div>
+        ) : (
+          <div className="overview-exposure-list">
+            {exposures.map((exposure) => {
+              const selected = selectedExposure === exposure.label;
+              const dimmed = selectedExposure !== null && !selected;
+              return (
+                <button
+                  key={exposure.label}
+                  type="button"
+                  className={`overview-exposure-row ${dimmed ? "dim" : ""}`}
+                  onClick={() => setSelectedExposure(selected ? null : exposure.label)}
+                >
+                  <span className="overview-exposure-label-row">
+                    <span>{exposure.label}</span>
+                    <span className="overview-nums">{exposure.pct}%</span>
+                  </span>
+                  <span className="overview-exposure-track">
+                    <span
+                      className="overview-exposure-fill"
+                      style={{ width: `${exposure.pct}%` }}
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="overview-panel overview-snapshot-panel">

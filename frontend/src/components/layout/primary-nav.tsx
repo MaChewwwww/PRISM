@@ -3,12 +3,10 @@
 import {
   BookOpenCheck,
   BriefcaseBusiness,
-  CalendarCheck,
   GitBranch,
   LayoutDashboard,
   LineChart,
   Network,
-  Newspaper,
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
@@ -23,9 +21,7 @@ const navigation = [
   { label: "Decision Stories", icon: Network, href: "/stories" },
   { label: "Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
   { label: "Shadow Portfolio", icon: GitBranch, href: "/alternatives" },
-  { label: "Market Tracker", icon: LineChart, href: "/market-tracker" },
-  { label: "News & Catalysts", icon: Newspaper, href: "/news" },
-  { label: "Weekly Summary", icon: CalendarCheck, href: "/weekly-summary" },
+  { label: "Market & Catalysts", icon: LineChart, href: "/market-tracker" },
   { label: "Agents & Tools", icon: Sparkles, href: "/agents" },
   { label: "Rules", icon: BookOpenCheck, href: "/rules" },
 ];
