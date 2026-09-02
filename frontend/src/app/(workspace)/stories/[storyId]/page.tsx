@@ -138,7 +138,6 @@ export default async function StoryDetailPage({
               {story.category}
             </span>
           </h1>
-         
         </div>
 
         {/* Analytical title kept as a secondary line */}
@@ -533,7 +532,9 @@ export default async function StoryDetailPage({
               </span>
               ShadowFund Counterfactual Matrix &amp; Lessons
             </h2>
-            <p className="mt-1 text-[12px] text-[#64748B]">See what each agent branch would have done.</p>
+            <p className="mt-1 text-[12px] text-[#64748B]">
+              See what each agent branch would have done.
+            </p>
           </div>
 
           <StoryBranchChart data={story.marketPath} />
@@ -617,7 +618,11 @@ const CANONICAL_STAGES = [
   { key: "research", title: "Research", detail: "7 specialist agents evaluated independently." },
   { key: "proposal", title: "Proposal", detail: "Perspectives combined into a bounded strategy." },
   { key: "risk", title: "Risk", detail: "Risk AI challenge raised and logged." },
-  { key: "rules", title: "Rules", detail: "Deterministic governance rules enforced the final boundary." },
+  {
+    key: "rules",
+    title: "Rules",
+    detail: "Deterministic governance rules enforced the final boundary.",
+  },
 ] as const;
 
 // Raw node ids the API emits, grouped to each canonical stage.

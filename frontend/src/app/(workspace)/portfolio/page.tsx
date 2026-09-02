@@ -108,7 +108,7 @@ export default async function PortfolioPage({
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-           Profit and loss this period
+            Profit and loss this period
           </dt>
           <dd
             className={`mt-2 font-mono text-2xl font-semibold tabular-nums ${
@@ -122,7 +122,7 @@ export default async function PortfolioPage({
             {periodPnl === null ? "—" : `${periodPnl >= 0 ? "+" : ""}$${periodPnl.toFixed(2)}`}
           </dd>
           <p className="mt-1 text-[11px] text-[#64748B]">
-            {range.from}  to  {range.to}
+            {range.from} to {range.to}
           </p>
         </div>
       </dl>

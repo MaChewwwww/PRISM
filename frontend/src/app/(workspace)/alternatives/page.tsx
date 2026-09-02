@@ -19,8 +19,7 @@ export default async function AlternativesPage({
       <PageHeader
         eyebrow="ShadowFund Multiverse"
         title="Shadow Portfolios"
-        description={"Alternative decisions simulated without placing trades."
-        }
+        description={"Alternative decisions simulated without placing trades."}
       />
 
       {/* ShadowFund sessions */}

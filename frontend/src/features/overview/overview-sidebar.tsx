@@ -268,9 +268,7 @@ export function OverviewSidebar({
           </div>
         </div>
         <div className="overview-snapshot-spark-wrap">
-          <div className="overview-snapshot-spark-label">
-            Active Portfolio observations
-          </div>
+          <div className="overview-snapshot-spark-label">Active Portfolio observations</div>
           <PortfolioSparkline points={points} />
         </div>
       </section>

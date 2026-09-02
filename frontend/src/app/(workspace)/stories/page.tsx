@@ -40,9 +40,7 @@ export default async function StoriesPage({
                 </span>
                 Decision Feed
               </h2>
-              <p className="mt-1 text-[12px] text-[#64748B]">
-               Recent autonomous trade activity
-              </p>
+              <p className="mt-1 text-[12px] text-[#64748B]">Recent autonomous trade activity</p>
             </div>
           }
         />
