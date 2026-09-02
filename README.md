@@ -16,7 +16,7 @@
 ---
 
 > [!IMPORTANT]
-> **Paper Trading Invariant & Governed Execution:** PRISM operates exclusively against Alpaca paper endpoints (`paper-api.alpaca.markets/v2`). AI models formulate research, debate theses, and structure proposals; mathematical deterministic rules alone authorize execution. Every decision is concurrently evaluated by **ShadowFund**, our counterfactual simulation engine tracking alternative strategies (Cash / No Action, Half Size, Contrarian / Inverse, and Specialist Alternatives) across identical market timelines to drive continuous learning without capital risk.
+> **Paper Trading Invariant & Governed Execution:** PRISM operates exclusively against Alpaca paper endpoints (`paper-api.alpaca.markets/v2`). AI models formulate research, debate theses, and structure proposals; mathematical deterministic rules alone authorize execution. Every decision is concurrently evaluated by **ShadowFund**, our counterfactual simulation engine tracking alternative scenarios including cash preservation, half sizing, contrarian stances, and specialist variants across identical market timelines to drive continuous learning without capital risk.
 
 ---
 
