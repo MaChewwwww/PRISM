@@ -84,13 +84,14 @@ flowchart LR
 - **Deterministic Rules Engine (P0–P5):** Evaluates mathematical constraints (`PASS`, `MODIFY`, `FAIL`) and returns aggregate `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
 - **Alpaca Paper Execution Gate:** Re-validates paper mode, kill switch, fresh quotes (<= 30s), and payload digests before dispatching orders via the Alpaca API & CLI.
 - **ShadowFund Counterfactual Simulator:** Continuously simulates alternative paths including cash preservation, half sizing, contrarian positions, and specialist variants on the exact same price timeline.
-- **Post-Analysis Learning Engine:** Evaluates closed trades and ShadowFund outcomes post-close to recommend strictly bounded AI Profile adjustments (`target_position_size_pct`, `opportunity_score_threshold`).
+- **Post-Analysis Learning Engine:** Evaluates closed trades and ShadowFund outcomes post-close to recommend strictly bounded AI Profile adjustments for target position size and opportunity score threshold.
 
 <p align="center">
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/01-News_Agent-38BDF8?style=flat-square" alt="News Agent" /></a>
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/02-Quantitative_Agent-00D084?style=flat-square" alt="Quantitative Agent" /></a>
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/03-Industry_Agent-818CF8?style=flat-square" alt="Industry Agent" /></a>
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/04-Fundamental_Agent-6366F1?style=flat-square" alt="Fundamental Agent" /></a>
+  <br/>
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/05-Macro_Agent-EC4899?style=flat-square" alt="Macro Agent" /></a>
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/06-Market_Reaction-F59E0B?style=flat-square" alt="Market Reaction" /></a>
   <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/07-Trading_Decision-10B981?style=flat-square" alt="Trading Decision" /></a>
