@@ -22,7 +22,7 @@ export default async function MarketTrackerPage({
       <PageHeader
         eyebrow="Market surface"
         title="Market Tracker"
-        description="Price, decisions, verified paper activity, and the catalyst feed that drives them."
+        description="Track prices, decisions, trades, and market catalysts."
       />
 
       <MarketTrackerShell nowUtc={nowUtc} />

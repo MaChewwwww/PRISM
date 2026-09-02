@@ -211,8 +211,7 @@ export function ProfileEditor({
             Configure AI Profile
           </h2>
           <p className="mt-1 max-w-3xl text-[12px] text-[#64748B]">
-            Edit the operator-tunable fields within their authorized bounds. Stop-loss is fixed.
-            Changes are validated client-side and require manual review before activation.
+            Adjust AI settings within approved limits.
           </p>
         </div>
         <button

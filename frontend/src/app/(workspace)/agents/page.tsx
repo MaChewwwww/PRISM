@@ -71,7 +71,7 @@ export default async function AgentsPage({
       tone: "text-[#F8FAFC]",
     },
     {
-      label: "Visible tokens",
+      label: "Visible Tokens",
       value: formatTokens(totalTokens),
       detail: "Input + output + cached",
       tone: "text-[#F8FAFC]",
@@ -87,9 +87,9 @@ export default async function AgentsPage({
   return (
     <>
       <PageHeader
-        eyebrow="Agents and tools"
-        title="Know what contributed to every decision"
-        description="Inspect responsibilities, run cadence, models, prompt versions, token usage, read-only tools, and planned MCP surfaces."
+        eyebrow="Decision Transparency"
+        title="Agents and Tools"
+        description="Explore the models, tools, prompts, and processes behind each decision."
       />
 
       {/* Metric cards */}
@@ -120,8 +120,7 @@ export default async function AgentsPage({
             Token Usage by Agent
           </h2>
           <p className="mt-1 text-[12px] text-[#64748B]">
-            Which roles consumed the recorded model budget in this period? Adjust the range to
-            refilter just this chart.
+            See how model usage is distributed across agents.
           </p>
         </div>
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
@@ -140,10 +139,10 @@ export default async function AgentsPage({
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/40 bg-[#547D83]/20 text-[#B2D8DC]">
                 <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               </span>
-              Specialists, Risk, and Post-Analysis
+              AI Roles & Analysis
             </h2>
             <p className="mt-1 text-[12px] text-[#64748B]">
-              Each AI role has bounded research, proposal, risk, or recommendation authority.
+              See how each AI role contributes to decisions.
             </p>
           </div>
           <TryAgentButton label="Try Agent" />
@@ -209,7 +208,7 @@ export default async function AgentsPage({
           id="authority-pipeline"
           icon={GitBranch}
           title="Authority Pipeline"
-          subtitle="AI contributions stop before deterministic authorization; execution remains paper-only and disabled by default."
+          subtitle="Checks decisions against predefined rules."
         />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
           {observability.components.map((component, index) => {
@@ -259,7 +258,7 @@ export default async function AgentsPage({
           id="tool-inventory"
           icon={Wrench}
           title="Tools, MCP, and Model Surfaces"
-          subtitle="Used and planned dependencies are separated so a future integration is never mistaken for a recorded invocation."
+          subtitle="See available tools, models, and integrations."
         />
         <div className={`${SECTION_CARD} overflow-x-auto`}>
           <table className="w-full min-w-[48rem] table-fixed border-collapse text-left">

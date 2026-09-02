@@ -157,8 +157,8 @@ export default async function AgentDetailPage({
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <StoryColumnChart
-            title="Visible token consumption"
-            description="Input, output, and cached tokens from recorded runs. No provider billing claim is made."
+            title="Visible Token Consumption"
+            description="Recorded input, output, and cached tokens."
             summary={`${formatTokens(tokens)} visible tokens`}
             data={tokenBreakdown}
             barName="Tokens"

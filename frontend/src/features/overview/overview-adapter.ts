@@ -108,14 +108,16 @@ function toPoint(point: ChartPoint, byDate: Map<string, OverviewDecision>): Over
 }
 
 export function adaptOverview(overview: Overview): OverviewViewModel {
-  const byDate = decisionByDate(overview.stories);
+  // Hide retrospective "Day 1 decision" reconstructions from the decision feed.
+  const stories = overview.stories.filter((story) => story.outcome !== "retrospective");
+  const byDate = decisionByDate(stories);
   const points = overview.portfolio.points
     .map((point) => toPoint(point, byDate))
     .filter((point): point is OverviewPoint => point !== null);
 
   return {
     points,
-    decisions: overview.stories.map(toDecision),
+    decisions: stories.map(toDecision),
     outcomes: overview.outcomes.map((outcome) => ({
       label: outcome.label.replaceAll("_", " "),
       count: Number(outcome.value) || 0,

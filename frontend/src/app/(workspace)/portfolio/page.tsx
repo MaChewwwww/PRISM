@@ -74,7 +74,7 @@ export default async function PortfolioPage({
       <PageHeader
         eyebrow="Active Portfolio"
         title="Portfolio"
-        description="Recorded allocation, risk exposure, and ledger of active portfolio positions and capital marks."
+        description="Track active positions, allocation, and risk exposure."
       >
         <RangePresets range={range} />
       </PageHeader>
@@ -88,27 +88,27 @@ export default async function PortfolioPage({
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
             {grossExposure.toFixed(2)}%
           </dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Invested notional / equity</p>
+          <p className="mt-1 text-[11px] text-[#64748B]"> Overall Market Exposure</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Net Exposure
           </dt>
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">—</dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Not recorded in this projection</p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Overall Directional Exposure</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            Active Portfolio Equity
+            Portfolio Equity
           </dt>
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {last ? `$${last.chosenPath}` : "No data"}
           </dd>
-          <p className="mt-1 text-[11px] text-[#64748B]">Mark-to-market valuation</p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Current Portfolio Value</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            Active Portfolio Period P&amp;L
+            Profit and loss this period
           </dt>
           <dd
             className={`mt-2 font-mono text-2xl font-semibold tabular-nums ${
@@ -131,8 +131,8 @@ export default async function PortfolioPage({
         <SectionHeading
           id="operational-evidence"
           icon={Activity}
-          title="Operational Evidence"
-          subtitle="Recorded freshness and exit-check state. Unavailable evidence is explicit."
+          title="Evidence & Checks"
+          subtitle="Latest data and exit-check status."
         />
         <div className={`${SECTION_CARD} divide-y divide-white/8`}>
           {(portfolio.operationalEvidence ?? []).map((item) => (
@@ -155,8 +155,8 @@ export default async function PortfolioPage({
         <SectionHeading
           id="allocation"
           icon={PieChart}
-          title="Capital Allocation & Exposure"
-          subtitle="Risk distribution across active positions, option spreads, and cash reserves."
+          title="Portfolio Allocation & Exposure"
+          subtitle="Current exposure across positions, spreads, and cash."
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <ul className="space-y-5">
@@ -189,7 +189,7 @@ export default async function PortfolioPage({
           id="holdings"
           icon={Wallet}
           title="Current Holdings"
-          subtitle="All figures in USD."
+          subtitle="Active positions and current market values."
         />
         <div className={SECTION_CARD}>
           <HoldingsTable positions={portfolio.positions} />
@@ -201,8 +201,8 @@ export default async function PortfolioPage({
         <SectionHeading
           id="activity"
           icon={Activity}
-          title="Active Portfolio Decision Activity"
-          subtitle="Chronological ledger of the latest capital-mark events."
+          title="Recent Activity"
+          subtitle="Latest portfolio decisions and capital movements."
         />
         <div className={SECTION_CARD}>
           {portfolio.activities.length === 0 ? (
