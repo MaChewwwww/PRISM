@@ -22,7 +22,7 @@
 
 <table>
 <tr>
-<td width="48%" valign="top">
+<td width="38%" valign="top">
 
 ### 📑 Table of Contents
 
@@ -35,24 +35,29 @@
 - [⚡ **Quickstart**](#-quickstart)
 
 </td>
-<td width="52%" align="center" valign="middle">
+<td width="31%" valign="top">
 
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/01-News_Agent-38BDF8?style=flat-square" alt="News Agent" /></a>
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/02-Quantitative_Agent-00D084?style=flat-square" alt="Quantitative Agent" /></a>
-<br/>
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/03-Industry_Agent-818CF8?style=flat-square" alt="Industry Agent" /></a>
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/04-Fundamental_Agent-6366F1?style=flat-square" alt="Fundamental Agent" /></a>
-<br/>
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/05-Macro_Agent-EC4899?style=flat-square" alt="Macro Agent" /></a>
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/06-Market_Reaction-F59E0B?style=flat-square" alt="Market Reaction" /></a>
-<br/>
+### 🧠 Specialist Matrix
+
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/01-News_Agent-38BDF8?style=flat-square" alt="News Agent" /></a><br/>
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/02-Quantitative_Agent-00D084?style=flat-square" alt="Quantitative Agent" /></a><br/>
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/03-Industry_Agent-818CF8?style=flat-square" alt="Industry Agent" /></a><br/>
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/04-Fundamental_Agent-6366F1?style=flat-square" alt="Fundamental Agent" /></a><br/>
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/05-Macro_Agent-EC4899?style=flat-square" alt="Macro Agent" /></a><br/>
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/06-Market_Reaction-F59E0B?style=flat-square" alt="Market Reaction" /></a><br/>
 <a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/07-Trading_Decision-10B981?style=flat-square" alt="Trading Decision" /></a>
-<br/><br/>
-<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/Adversarial_Risk-F59E0B?style=flat-square" alt="Adversarial Risk" /></a>
-<a href="docs/BUSINESS_RULES.md"><img src="https://img.shields.io/badge/Deterministic_Rules-547D83?style=flat-square" alt="Deterministic Rules" /></a>
-<br/>
-<a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/Alpaca-Paper_Gate-0F172A?style=flat-square" alt="Alpaca Paper Gate" /></a>
-<a href="docs/SHADOWFUND.md"><img src="https://img.shields.io/badge/ShadowFund-Counterfactuals-818CF8?style=flat-square" alt="ShadowFund Counterfactuals" /></a>
+
+</td>
+<td width="31%" valign="top">
+
+### 🛡️ Governed Execution
+
+<a href="docs/AI_AGENTS.md"><img src="https://img.shields.io/badge/Adversarial_Risk-F59E0B?style=flat-square" alt="Adversarial Risk" /></a><br/>
+<a href="docs/BUSINESS_RULES.md"><img src="https://img.shields.io/badge/Deterministic_Rules-547D83?style=flat-square" alt="Deterministic Rules" /></a><br/>
+<a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/Alpaca-Paper_Gate-0F172A?style=flat-square" alt="Alpaca Paper Gate" /></a><br/>
+<a href="docs/SHADOWFUND.md"><img src="https://img.shields.io/badge/ShadowFund-Counterfactuals-818CF8?style=flat-square" alt="ShadowFund Counterfactuals" /></a><br/>
+<a href="docs/SHADOWFUND.md"><img src="https://img.shields.io/badge/Post--Analysis-Learning-10B981?style=flat-square" alt="Post-Analysis Learning" /></a><br/>
+<a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/Fail--Closed-Paper_Only-DC2626?style=flat-square" alt="Fail-Closed Paper Only" /></a>
 
 </td>
 </tr>
