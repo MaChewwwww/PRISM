@@ -1,6 +1,8 @@
 <div align="center">
-  <img src="frontend/public/logo.png" alt="PRISM Logo" width="108" /><br/>
-  <h1>PRISM</h1>
+  <h1 align="center">
+    <img src="frontend/public/logo.png" alt="PRISM Logo" width="136" /><br/>
+    PRISM
+  </h1>
   <p><strong>One signal. Multiple perspectives. Better decisions.</strong></p>
 
 [![Live Platform](https://img.shields.io/badge/Live%20Platform-Azure%20Cloud-547D83?style=for-the-badge&logo=azure&logoColor=white)](https://prism-ai.japanwest.cloudapp.azure.com)
