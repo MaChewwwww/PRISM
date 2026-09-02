@@ -6,6 +6,7 @@ The governed integration path is:
 
 ```text
 feature/* (or fix/*, chore/*, docs/*, refactor/*, test/*, ci/*)
+copilot/feature-* (or copilot/fix-*, copilot/chore-*, copilot/docs-*, copilot/refactor-*, copilot/test-*, copilot/ci-*)
   -> staging or main
 staging -> main
 ```

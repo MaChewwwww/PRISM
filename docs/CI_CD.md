@@ -9,7 +9,7 @@ staging -> reviewed promotion pull request -> main
 main CI success -> protected production deployment
 ```
 
-Direct changes to `staging` and `main` are prohibited outside the documented repository bootstrap. Branch policy validates typed branches into `staging` and permits either `staging` or a typed `feature/*`, `fix/*`, `chore/*`, `docs/*`, `refactor/*`, `test/*`, or `ci/*` branch into `main`. Direct-main pull requests retain the same required CI, security, container, and review controls; they are for urgent releases and do not authorize a direct push or bypass.
+Direct changes to `staging` and `main` are prohibited outside the documented repository bootstrap. Branch policy validates typed branches into `staging` and permits either `staging`, a typed `feature/*`, `fix/*`, `chore/*`, `docs/*`, `refactor/*`, `test/*`, or `ci/*` branch, or a Copilot-managed typed branch (`copilot/feature-*`, `copilot/fix-*`, `copilot/chore-*`, `copilot/docs-*`, `copilot/refactor-*`, `copilot/test-*`, `copilot/ci-*`) into `main`. Direct-main pull requests retain the same required CI, security, container, and review controls; they are for urgent releases and do not authorize a direct push or bypass.
 
 ## Continuous integration
 

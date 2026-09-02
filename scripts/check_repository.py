@@ -219,12 +219,15 @@ def main() -> None:
     branch_cases = {
         ("feature/status-ui", "staging"): True,
         ("fix/order-gate", "staging"): True,
+        ("copilot/fix-ci-verify-job", "staging"): True,
         ("staging", "main"): True,
         ("main", "staging"): False,
         ("feature/status-ui", "main"): True,
         ("fix/order-gate", "main"): True,
+        ("copilot/fix-ci-verify-job", "main"): True,
         ("docs/runbook", "main"): True,
         ("untyped-branch", "main"): False,
+        ("copilot/untyped-branch", "main"): False,
         ("feature/UPPERCASE", "staging"): False,
     }
     for (head, base), allowed in branch_cases.items():
