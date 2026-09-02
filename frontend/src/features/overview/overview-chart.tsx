@@ -130,7 +130,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
           <SectionHeading
             icon={TrendingUp}
             title="Active Portfolio path"
-            description="Equity performance vs. alternative and benchmark strategies."
+            description="Equity Performance vs. Alternative and Benchmark Strategies."
           />
         </div>
 

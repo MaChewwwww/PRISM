@@ -63,7 +63,7 @@ function AccountOverviewPanel({
       <SectionHeading
         icon={Wallet}
         title="PRISM Alpaca Paper Account Overview"
-        description="Paper account snapshot. Fields marked Not exposed are withheld by the security boundary."
+        description="Paper account snapshot."
       />
       <dl className="overview-account-list">
         {rows.map((row) => (
@@ -148,7 +148,7 @@ export function OverviewSidebar({
         <SectionHeading
           icon={ChartColumn}
           title="Decision outcomes"
-          description="Latest decision mix across the active portfolio period."
+          description="Latest decision across the active portfolio."
         />
         {outcomes.length === 0 ? (
           <p className="overview-chart-detail-empty">No outcomes in this period.</p>
@@ -269,7 +269,7 @@ export function OverviewSidebar({
         </div>
         <div className="overview-snapshot-spark-wrap">
           <div className="overview-snapshot-spark-label">
-            Active Portfolio observations · backend range
+            Active Portfolio observations
           </div>
           <PortfolioSparkline points={points} />
         </div>

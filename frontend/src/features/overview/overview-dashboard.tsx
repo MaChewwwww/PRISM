@@ -36,21 +36,10 @@ export function OverviewDashboard({ overview, range }: { overview: Overview; ran
     };
   }, []);
 
-  const latest = points.at(-1);
-  const first = points[0];
-  const periodChange = useMemo(
-    () => (first && latest ? latest.actual - first.actual : 0),
-    [first, latest],
-  );
-  const periodPercentage = useMemo(() => {
-    if (!first || !latest || first.actual === 0) return 0;
-    return ((latest.actual - first.actual) / first.actual) * 100;
-  }, [first, latest]);
-
   function changeRange(nextRange: OverviewRange) {
     setSelected(null);
     const next = rangeForPreset(nextRange, range.to);
-    router.push(`/?${rangeQuery(next)}`);
+    router.push(`/dashboard?${rangeQuery(next)}`);
   }
 
   return (
@@ -77,12 +66,7 @@ export function OverviewDashboard({ overview, range }: { overview: Overview; ran
         totalDecisionStories={view.decisions.length}
       />
 
-      <OverviewTicker
-        latest={latest?.actual ?? 0}
-        periodChange={periodChange}
-        periodPercentage={periodPercentage}
-        totalDecisionStories={view.decisions.length}
-      />
+      <OverviewTicker />
     </div>
   );
 }
@@ -154,7 +138,7 @@ function OverviewHeader({
     <header className="overview-header">
       <div className="overview-header-left">
         <div className="overview-page-title-block">
-          <div className="overview-eyebrow">Overview</div>
+          <div className="overview-eyebrow"></div>
           <div className="overview-page-title">Active Portfolio</div>
           <div className="overview-page-subtitle">
             Decision intelligence and capital exposure for the current period.
@@ -273,31 +257,17 @@ function ActiveProfileControl() {
   );
 }
 
-function OverviewTicker({
-  latest,
-  periodChange,
-  periodPercentage,
-  totalDecisionStories,
-}: {
-  latest: number;
-  periodChange: number;
-  periodPercentage: number;
-  totalDecisionStories: number;
-}) {
+function OverviewTicker() {
   return (
     <footer className="overview-ticker overview-nums">
       <span className="overview-ticker-value">
-        Active Portfolio equity ${latest.toLocaleString()}
+        Paper-only. Illustrative figures with explicit backend provenance — not a broker receipt or
+        an authorization to trade.
       </span>
       <span className="overview-ticker-separator">·</span>
       <span className="overview-ticker-value">
-        Period change {periodChange >= 0 ? "+" : "-"}${Math.abs(periodChange).toLocaleString()} (
-        {periodPercentage.toFixed(1)}%)
+        © {new Date().getFullYear()} PRISM. All rights reserved.
       </span>
-      <span className="overview-ticker-separator">·</span>
-      <span className="overview-ticker-value">{totalDecisionStories} decision stories</span>
-      <span className="overview-ticker-separator">·</span>
-      <span className="overview-ticker-value">Illustrative · paper-only</span>
     </footer>
   );
 }

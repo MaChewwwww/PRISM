@@ -251,8 +251,7 @@ export function MarketTrackerShell({ nowUtc }: { nowUtc: string }) {
               </span>
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-[#64748B]">
-              Future timeline filters. Verified fills are kept distinct from proposals and
-              simulations.
+             Timeline Filters
             </p>
 
             <div className="mt-3 flex items-center gap-2">

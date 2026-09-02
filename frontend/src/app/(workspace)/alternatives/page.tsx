@@ -20,10 +20,7 @@ export default async function AlternativesPage({
       <PageHeader
         eyebrow="ShadowFund Multiverse"
         title="Shadow Portfolios"
-        description={
-          isProduction
-            ? "Recorded non-trade counterfactuals for autonomous decisions. These branches never submit or change an order."
-            : "For every decision, PRISM asks &ldquo;what if it had chosen differently?&rdquo; and replays the alternatives, not trading, trading smaller, going unhedged, on the same market conditions. None of these are real orders."
+        description={"Alternative decisions simulated without placing trades."
         }
       />
 
@@ -45,9 +42,7 @@ export default async function AlternativesPage({
                 ShadowFund Sessions
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                {isProduction
-                  ? "Recorded non-trade counterfactuals from autonomous decisions."
-                  : "Simulated multiverse comparisons for each recorded decision."}
+                {"Recorded alternative decisions from each simulation."}
               </p>
             </div>
           }
