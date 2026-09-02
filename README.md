@@ -5,12 +5,12 @@
   </h1>
   <p><strong>One signal. Multiple perspectives. Better decisions.</strong></p>
 
-[![Live Platform](https://img.shields.io/badge/Live%20Platform-Azure%20Cloud-547D83?style=for-the-badge&logo=azure&logoColor=white)](https://prism-ai.japanwest.cloudapp.azure.com)
-[![Hackathon](https://img.shields.io/badge/Alpaca%20Hackathon-lablab.ai-111827?style=for-the-badge)](https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon)
+[![Live Platform](https://img.shields.io/badge/Live%20Platform-Azure%20Cloud-0078D4?style=for-the-badge&logo=azure&logoColor=white)](https://prism-ai.japanwest.cloudapp.azure.com)
+[![Hackathon](https://img.shields.io/badge/Alpaca%20Hackathon-lablab.ai-F59E0B?style=for-the-badge)](https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon)
 [![Automated Tests](https://img.shields.io/badge/Tests-232%20Passing%20(204%20Pytest%20%7C%2028%20Vitest)-00D084?style=for-the-badge&logo=pytest&logoColor=white)](docs/CI_CD.md)
-[![Trading Environment](https://img.shields.io/badge/Trading-Alpaca%20Paper%20Only-547D83?style=for-the-badge&logo=alpaca&logoColor=white)](docs/SECURITY.md)
-[![Governance](https://img.shields.io/badge/Governance-Baseline%20v2.0.0%20Deterministic-0F172A?style=for-the-badge)](docs/BUSINESS_RULES.md)
-[![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-6B8E93?style=for-the-badge)](docs/DESIGN.md)
+[![Trading Environment](https://img.shields.io/badge/Trading-Alpaca%20Paper%20Only-06B6D4?style=for-the-badge&logo=alpaca&logoColor=white)](docs/SECURITY.md)
+[![Governance](https://img.shields.io/badge/Governance-Baseline%20v2.0.0%20Deterministic-6366F1?style=for-the-badge)](docs/BUSINESS_RULES.md)
+[![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-EC4899?style=for-the-badge)](docs/DESIGN.md)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/MaChewwwww/PRISM/ci.yml?branch=main&label=CI%2FCD&style=for-the-badge)](https://github.com/MaChewwwww/PRISM/actions/workflows/ci.yml)
 
 </div>
