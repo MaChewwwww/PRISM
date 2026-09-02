@@ -1,5 +1,4 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
 import { buttonClasses } from "@/features/landing/button-classes";
@@ -24,15 +23,6 @@ const STARS = [
   { top: "18%", left: "6%", s: 2, d: "1.7s" },
 ];
 
-// Refraction beams fanning out from the crystal.
-const FAN_BEAMS = [
-  { rot: "18deg", w: "3px", h: "150%", delay: "0s", opacity: 0.5 },
-  { rot: "34deg", w: "2px", h: "135%", delay: "1.1s", opacity: 0.4 },
-  { rot: "6deg", w: "4px", h: "160%", delay: "0.5s", opacity: 0.55 },
-  { rot: "50deg", w: "2px", h: "120%", delay: "1.8s", opacity: 0.35 },
-  { rot: "-8deg", w: "2px", h: "130%", delay: "0.9s", opacity: 0.4 },
-];
-
 export function Hero() {
   return (
     <section
@@ -41,21 +31,6 @@ export function Hero() {
     >
       {/* ---- Animated ambient background ---- */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Aurora blobs */}
-        <div className="absolute right-[6%] top-[14%] h-[600px] w-[600px] animate-aurora-a rounded-full bg-[var(--color-ice)]/[0.20] blur-[130px]" />
-        <div className="absolute left-[2%] top-[40%] h-[440px] w-[440px] animate-aurora-b rounded-full bg-[#818CF8]/[0.12] blur-[140px]" />
-        <div className="absolute bottom-[6%] left-[38%] h-[380px] w-[380px] animate-aurora-a rounded-full bg-[#38BDF8]/[0.10] blur-[140px]" />
-
-        {/* Big moving beams of light sweeping across the whole background */}
-        <div
-          className="absolute -top-[20%] left-0 h-[160%] w-[26%] animate-beam-sweep bg-linear-to-b from-transparent via-white/[0.12] to-transparent blur-2xl"
-          style={{ "--sweep-rot": "-24deg" } as React.CSSProperties}
-        />
-        <div
-          className="absolute -top-[20%] left-0 h-[160%] w-[18%] animate-beam-sweep bg-linear-to-b from-transparent via-[var(--color-ice)]/[0.14] to-transparent blur-2xl"
-          style={{ "--sweep-rot": "-24deg", animationDelay: "5.5s" } as React.CSSProperties}
-        />
-
         {/* Perspective grid floor — visible teal */}
         <div className="absolute inset-x-0 bottom-0 h-[62%] [perspective:640px]">
           <div
@@ -131,72 +106,24 @@ export function Hero() {
           </div>
         </div>
 
-        {/* ---- BIG animated PRISM logo with refraction beams ---- */}
+        {/* ---- Animated PRISM logo (GIF) ---- */}
         <div
-          className="relative mx-auto aspect-square w-full max-w-[42rem] animate-rise-slow lg:w-[108%] lg:-translate-x-[4%] [perspective:1200px]"
+          className="relative mx-auto aspect-square w-full max-w-[28rem] animate-rise-slow"
           style={{ animationDelay: "0.2s" }}
         >
-          {/* Core breathing glow */}
+          {/* Static glow behind the GIF — painted once, so the animated frames
+              don't re-run an expensive drop-shadow filter (which caused flicker). */}
           <div
             aria-hidden="true"
-            className="absolute inset-[26%] animate-glow-breathe rounded-full bg-[var(--color-ice)]/50 blur-[100px]"
+            className="absolute inset-[22%] rounded-full bg-[var(--color-ice)]/25 blur-[80px]"
           />
-
-          {/* Refraction beams fanning out from the crystal center */}
-          <div aria-hidden="true" className="absolute inset-0 grid place-items-center">
-            {FAN_BEAMS.map((b, i) => (
-              <span
-                key={i}
-                className="absolute origin-bottom animate-beam-fan bg-linear-to-t from-white/60 via-white/10 to-transparent blur-md"
-                style={
-                  {
-                    width: b.w,
-                    height: b.h,
-                    bottom: "50%",
-                    opacity: b.opacity,
-                    "--beam-rot": b.rot,
-                    animationDelay: b.delay,
-                  } as React.CSSProperties
-                }
-              />
-            ))}
-          </div>
-
-          {/* Conic shimmer ring — tighter around the crystal */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-[20%] animate-shimmer-conic rounded-full opacity-70"
-            style={{
-              background:
-                "conic-gradient(from 0deg, transparent 0deg, rgba(143,179,184,0.4) 40deg, transparent 120deg, transparent 240deg, rgba(84,125,131,0.35) 300deg, transparent 360deg)",
-              maskImage:
-                "radial-gradient(circle, transparent 60%, black 62%, black 80%, transparent 82%)",
-              WebkitMaskImage:
-                "radial-gradient(circle, transparent 60%, black 62%, black 80%, transparent 82%)",
-            }}
+          {/* GIFs loop natively; a plain <img> preserves animation. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logi-animated.gif"
+            alt="PRISM crystal"
+            className="relative h-full w-full transform-gpu object-contain [will-change:transform] [backface-visibility:hidden]"
           />
-
-          {/* Rotating halo rings — smaller */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-[18%] animate-spin-slow rounded-full border border-dashed border-[var(--color-ice)]/30"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-[28%] animate-spin-rev rounded-full border border-[var(--color-ice)]/20"
-          />
-
-          {/* The logo: floats + gently tilts, big teal drop-glow */}
-          <div className="relative z-10 flex h-full w-full animate-float-y items-center justify-center [transform-style:preserve-3d]">
-            <Image
-              src="/logo.png"
-              alt="PRISM crystal"
-              width={720}
-              height={720}
-              priority
-              className="h-full w-full animate-facet object-contain drop-shadow-[0_40px_100px_rgba(84,125,131,0.6)]"
-            />
-          </div>
         </div>
       </div>
     </section>
