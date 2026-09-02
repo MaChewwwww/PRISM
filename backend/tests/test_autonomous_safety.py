@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -10,7 +11,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.autonomous.audit import build_evaluation_root
-from app.autonomous.models import AutonomousCycleModel, OptionIvObservationModel
+from app.autonomous.models import (
+    AutonomousCycleModel,
+    OptionIvObservationModel,
+    PortfolioSnapshotModel,
+)
 from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
 from app.contracts.models import (
     ExecutionStatus,
@@ -214,13 +219,84 @@ async def test_position_metadata_accepts_quote_newer_than_cycle_start() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_forever_skips_pre_market_cycle_records(monkeypatch: pytest.MonkeyPatch) -> None:
-    real_datetime = datetime
+async def test_persist_portfolio_snapshot_serializes_datetime_values_cleanly() -> None:
+    worker = AutonomousWorker(Settings(_env_file=None))
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    portfolio = {
+        "observed_at": now.isoformat(),
+        "account_verified": True,
+        "supported_options_level": 3,
+        "positions": [
+            {
+                "symbol": "NVDA260909C00220000",
+                "underlying": "NVDA",
+                "asset_class": "us_option",
+                "qty": "1",
+                "market_value": "410",
+                "avg_entry_price": "4.10",
+                "position_values_complete": True,
+                "provider_quote_timestamp": now + timedelta(milliseconds=500),
+                "quote_timestamp": (now + timedelta(milliseconds=500)).isoformat(),
+            }
+        ],
+    }
+    session = AsyncMock()
+    persisted_snapshots: list[PortfolioSnapshotModel] = []
+    session.add = MagicMock(side_effect=lambda model: persisted_snapshots.append(model))
+    session.flush = AsyncMock()
 
+    digest = await worker._persist_portfolio_snapshot(session, portfolio)
+
+    assert digest
+    assert len(persisted_snapshots) == 1
+    snapshot = persisted_snapshots[0]
+    assert isinstance(snapshot, PortfolioSnapshotModel)
+    assert snapshot.snapshot_digest == digest
+    parsed_payload = json.loads(snapshot.payload_json)
+    assert parsed_payload["account_verified"] is True
+    assert len(parsed_payload["positions"]) == 1
+    assert parsed_payload["positions"][0]["symbol"] == "NVDA260909C00220000"
+    assert "provider_quote_timestamp" in parsed_payload["positions"][0]
+
+
+def test_position_quotes_extracts_from_datetime_and_iso_string() -> None:
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    positions = [
+        {
+            "symbol": "NVDA260909C00220000",
+            "bid": "4.00",
+            "ask": "4.20",
+            "price_increment": "0.01",
+            "provider_quote_timestamp": now,
+        },
+        {
+            "symbol": "NVDA260909C00225000",
+            "bid": "2.00",
+            "ask": "2.10",
+            "price_increment": "0.01",
+            "quote_timestamp": now.isoformat(),
+        },
+        {
+            "symbol": "INVALID",
+            "bid": "1.00",
+            "ask": "1.10",
+            "quote_timestamp": "not-a-timestamp",
+        },
+    ]
+    quotes = AutonomousWorker._position_quotes(positions)
+    assert "NVDA260909C00220000" in quotes
+    assert quotes["NVDA260909C00220000"]["quote_timestamp"] == now
+    assert "NVDA260909C00225000" in quotes
+    assert quotes["NVDA260909C00225000"]["quote_timestamp"] == now
+    assert "INVALID" not in quotes
+
+
+@pytest.mark.asyncio
+async def test_run_forever_skips_pre_market_cycle_records(monkeypatch: pytest.MonkeyPatch) -> None:
     class FixedDatetime(datetime):
         @classmethod
-        def now(cls, tz: Any = None) -> datetime:
-            return real_datetime(2026, 9, 1, 13, 0, tzinfo=UTC)
+        def now(cls, tz: Any = None) -> FixedDatetime:
+            return cls(2026, 9, 1, 13, 0, tzinfo=UTC)
 
     settings = Settings(
         _env_file=None,
@@ -241,8 +317,8 @@ async def test_run_forever_skips_pre_market_cycle_records(monkeypatch: pytest.Mo
     worker.run_cycle = AsyncMock()
     worker._market_is_open = MagicMock(return_value=False)
 
-    async def stop_after_wait(event: Any, _: int) -> None:
-        event.set()
+    async def stop_after_wait(stop_event: asyncio.Event, seconds: int) -> None:
+        stop_event.set()
 
     worker._wait = stop_after_wait
     monkeypatch.setattr("app.autonomous.worker.datetime", FixedDatetime)
@@ -282,6 +358,40 @@ async def test_reconciliation_includes_submitted_receipts(monkeypatch: pytest.Mo
 
     await AutonomousWorker(Settings(_env_file=None))._reconcile_unfinished(session)
 
+    assert session.add.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_reconcile_exit_receipts_marks_absent_positions_filled() -> None:
+    worker = AutonomousWorker(Settings(_env_file=None))
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    exit_receipt = ExecutionReceiptModel(
+        id=str(uuid4()),
+        trace_id=str(uuid4()),
+        proposal_id=str(uuid4()),
+        symbol="NVDA260909C00220000",
+        operation="exit",
+        status="submitted",
+        requested_quantity=Decimal("1"),
+        exit_reason="dte_threshold",
+        client_order_id="sf-exit-test",
+        payload_digest="a" * 64,
+        created_at=now - timedelta(minutes=10),
+    )
+    result = MagicMock()
+    result.scalars.return_value = [exit_receipt]
+    session = AsyncMock()
+    session.execute.return_value = result
+    session.get = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    positions = [{"symbol": "NVDA260909C00225000"}]
+    await worker._reconcile_exit_receipts(session, positions, now)
+
+    assert exit_receipt.status == "filled"
+    assert exit_receipt.filled_quantity == Decimal("1")
+    assert exit_receipt.reconciled_at == now
     assert session.add.call_count == 1
 
 
@@ -404,7 +514,7 @@ def test_evaluation_root_is_immutable_and_lineage_bound() -> None:
         outcome="NO_TRADE",
         evidence={"analog_count": 1},
     )
-    assert first.is_immutable is True
+    assert first.is_immutable
     assert first.root_digest != second.root_digest
 
 
