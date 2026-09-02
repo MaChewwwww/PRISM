@@ -18,13 +18,11 @@ describe("AppShell", () => {
     );
 
     const expectedLinks = [
-      ["Overview", "/"],
+      ["Overview", "/dashboard"],
       ["Decision Stories", "/stories"],
       ["Portfolio", "/portfolio"],
       ["Shadow Portfolio", "/alternatives"],
-      ["Market Tracker", "/market-tracker"],
-      ["News & Catalysts", "/news"],
-      ["Weekly Summary", "/weekly-summary"],
+      ["Market & Catalysts", "/market-tracker"],
       ["Agents & Tools", "/agents"],
       ["Rules", "/rules"],
     ];
