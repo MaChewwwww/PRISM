@@ -6,8 +6,6 @@
 
 ### One signal. Multiple perspectives. Better decisions.
 
-**Autonomous Multi-Agent Market Intelligence · Deterministic Risk Governance · Alpaca Paper Execution**
-
 [![Live Platform](https://img.shields.io/badge/Live%20Platform-Azure%20Cloud-547D83?style=for-the-badge&logo=azure&logoColor=white)](https://prism-ai.japanwest.cloudapp.azure.com)
 [![Hackathon](https://img.shields.io/badge/Alpaca%20Hackathon-lablab.ai-111827?style=for-the-badge)](https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon)
 [![Automated Tests](https://img.shields.io/badge/Tests-232%20Passing%20(204%20Pytest%20%7C%2028%20Vitest)-00D084?style=for-the-badge&logo=pytest&logoColor=white)](docs/CI_CD.md)
@@ -16,21 +14,23 @@
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-6B8E93?style=for-the-badge)](docs/DESIGN.md)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/MaChewwwww/PRISM/ci.yml?branch=main&label=CI%2FCD&style=for-the-badge)](https://github.com/MaChewwwww/PRISM/actions/workflows/ci.yml)
 
-<p align="center">
-  <a href="https://prism-ai.japanwest.cloudapp.azure.com"><strong>🚀 Explore Live Platform</strong></a> ·
-  <a href="#-seven-specialist-perspectives-one-governed-outcome"><strong>AI Specialist Matrix</strong></a> ·
-  <a href="#-live-hackathon-paper-trading-scorecard"><strong>Trading Scorecard</strong></a> ·
-  <a href="#-alpaca-ecosystem-integration"><strong>Alpaca Integration</strong></a> ·
-  <a href="#-professional-engineering--multidisciplinary-team"><strong>Team & Engineering</strong></a> ·
-  <a href="#-quickstart"><strong>Quickstart</strong></a>
-</p>
-
 </div>
 
 ---
 
 > [!IMPORTANT]
 > **Paper Trading Invariant & Fail-Closed Safety:** PRISM operates exclusively against Alpaca paper endpoints (`paper-api.alpaca.markets/v2`). AI models formulate research, debate theses, and structure proposals; mathematical deterministic rules alone authorize execution. Live trading is structurally prohibited, credentials never touch the browser, and all ambiguous or stale conditions fail closed.
+
+---
+
+## 📑 Table of Contents
+
+- [🚀 **Explore Live Platform**](https://prism-ai.japanwest.cloudapp.azure.com)
+- [🧠 **AI Specialist Matrix**](#-seven-specialist-perspectives-one-governed-outcome)
+- [🏆 **Trading Scorecard**](#-live-hackathon-paper-trading-scorecard)
+- [🦙 **Alpaca Integration**](#-alpaca-ecosystem-integration)
+- [👥 **Team & Engineering**](#-professional-engineering--multidisciplinary-team)
+- [⚡ **Quickstart**](#-quickstart)
 
 ---
 
