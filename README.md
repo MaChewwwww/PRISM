@@ -231,6 +231,28 @@ PRISM incorporates resilient market data adapters and dynamic trade lifecycle go
 
 ---
 
+## 💻 Technology Stack
+
+```mermaid
+flowchart TD
+    Browser["Operator Browser (Desktop / Tablet / Mobile)"] -->|HTTPS / WSS| Nginx["Nginx Reverse Proxy (SSL/TLS 1.3)"]
+    Nginx -->|SSR & UI Routes| Next["Next.js 16 Web App (React 19, TypeScript, Tailwind 4)"]
+    Nginx -->|API Routing| Fast["FastAPI Modular Monolith (Python 3.12, AsyncPG)"]
+    
+    Fast --> PG[("PostgreSQL 17 (Alembic Migrations)")]
+    Fast --> Redis[("Redis Coordination Cache")]
+    Fast --> AI["Provider-Neutral LLM Gateway (DeepSeek, Claude, Gemini, Featherless)"]
+    Fast --> Alpaca["Alpaca Paper Trading Gateway & CLI (alpaca-py 0.44.0)"]
+```
+
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, Radix UI primitives, Lucide Icons, WCAG 2.2 AA Dark Cyber-Crystalline theme.
+- **Backend:** FastAPI, Python 3.12, Pydantic 2, SQLAlchemy 2 (asyncpg), Alembic migrations, PostgreSQL 17, Redis.
+- **Alpaca Platform:** `alpaca-py` 0.44.0 (Market Data & Paper Trading APIs), Alpaca CLI v0.0.13, Alpaca MCP server.
+- **AI Gateway:** Provider-neutral adapter supporting DeepSeek-V3, Anthropic Claude 3.5, Google Gemini, OpenAI GPT-4o, and Featherless AI.
+- **DevOps & Infrastructure:** Docker Compose, Nginx reverse proxy, Azure VM host, GitHub Actions CI/CD with Actionlint, Gitleaks, pnpm-audit, and pip-audit.
+
+---
+
 ## 👥 Professional Engineering & Multidisciplinary Team
 
 PRISM was engineered from day one like an institutional fintech platform, delivered by a specialized team with distinct roles:
@@ -270,28 +292,6 @@ Explore the production deployment at **[https://prism-ai.japanwest.cloudapp.azur
 - 🧪 **[ShadowFund Alternatives](https://prism-ai.japanwest.cloudapp.azure.com/alternatives)** — Interactive counterfactual trees comparing PRISM's executed positions against Cash, Half-Size, Contrarian, and Specialist alternatives on identical market quotes.
 - 🛡️ **[Rules & Governance](https://prism-ai.japanwest.cloudapp.azure.com/rules)** — Interactive inspector for the active baseline ruleset (`2.0.0`), P0-P5 rule matrices, and AI Profile configurations (Conservative, Balanced, Aggressive).
 - 📊 **[Weekly Learning Summary](https://prism-ai.japanwest.cloudapp.azure.com/weekly-summary)** — Post-Analysis performance attribution and bounded AI profile parameter recommendations for human operator review.
-
----
-
-## 💻 Technology Stack
-
-```mermaid
-flowchart TD
-    Browser["Operator Browser (Desktop / Tablet / Mobile)"] -->|HTTPS / WSS| Nginx["Nginx Reverse Proxy (SSL/TLS 1.3)"]
-    Nginx -->|SSR & UI Routes| Next["Next.js 16 Web App (React 19, TypeScript, Tailwind 4)"]
-    Nginx -->|API Routing| Fast["FastAPI Modular Monolith (Python 3.12, AsyncPG)"]
-    
-    Fast --> PG[("PostgreSQL 17 (Alembic Migrations)")]
-    Fast --> Redis[("Redis Coordination Cache")]
-    Fast --> AI["Provider-Neutral LLM Gateway (DeepSeek, Claude, Gemini, Featherless)"]
-    Fast --> Alpaca["Alpaca Paper Trading Gateway & CLI (alpaca-py 0.44.0)"]
-```
-
-- **Frontend:** Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, Radix UI primitives, Lucide Icons, WCAG 2.2 AA Dark Cyber-Crystalline theme.
-- **Backend:** FastAPI, Python 3.12, Pydantic 2, SQLAlchemy 2 (asyncpg), Alembic migrations, PostgreSQL 17, Redis.
-- **Alpaca Platform:** `alpaca-py` 0.44.0 (Market Data & Paper Trading APIs), Alpaca CLI v0.0.13, Alpaca MCP server.
-- **AI Gateway:** Provider-neutral adapter supporting DeepSeek-V3, Anthropic Claude 3.5, Google Gemini, OpenAI GPT-4o, and Featherless AI.
-- **DevOps & Infrastructure:** Docker Compose, Nginx reverse proxy, Azure VM host, GitHub Actions CI/CD with Actionlint, Gitleaks, pnpm-audit, and pip-audit.
 
 ---
 
