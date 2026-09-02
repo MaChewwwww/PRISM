@@ -1185,8 +1185,16 @@ async def _replay_agents(
                                 "within_entry_window": REPLAY_WINDOW.is_entry_allowed(checkpoint),
                                 "before_force_flatten": checkpoint < REPLAY_WINDOW.force_flatten_at,
                                 "opportunity_score": decision.composite_opportunity_score,
-                                "net_ev_r": decision.net_ev_r,
-                                "reward_risk_ratio": decision.reward_risk_ratio,
+                                "net_ev_r": (
+                                    proposal.option_economics.net_ev_r
+                                    if proposal.option_economics is not None
+                                    else Decimal("-999")
+                                ),
+                                "reward_risk_ratio": (
+                                    proposal.option_economics.reward_risk_ratio
+                                    if proposal.option_economics is not None
+                                    else Decimal("0")
+                                ),
                             },
                         )
                         report.update(

@@ -181,12 +181,6 @@ async def test_post_analysis_with_evidence_and_mock_llm() -> None:
                 rationale="Filters marginal setups based on weekly execution observations.",
                 confidence="high",
             ),
-            ProfileRecommendationLLMItem(
-                parameter_id="take_profit_pct",
-                suggested_value="85.00",
-                rationale="Wider profit target captured upside continuation.",
-                confidence="medium",
-            ),
         ],
     )
 
@@ -215,11 +209,9 @@ async def test_post_analysis_with_evidence_and_mock_llm() -> None:
     )
 
     assert summary["outcome"] == "RECOMMENDED"
-    assert len(recommendations) == 2
+    assert len(recommendations) == 1
     assert recommendations[0]["parameter_id"] == "opportunity_score_threshold"
     assert recommendations[0]["suggested_value"] == "88"
-    assert recommendations[1]["parameter_id"] == "take_profit_pct"
-    assert recommendations[1]["suggested_value"] == "85.00"
     assert len(summary["key_findings"]) == 2
 
 
@@ -249,8 +241,8 @@ async def test_shadowfund_service_persist_post_analysis_batch_bounds_validation(
                 "confidence": "high",
             },
             {
-                "parameter_id": "take_profit_pct",
-                "suggested_value": "120.00",  # Outside max 100.00%
+                "parameter_id": "target_position_size_pct",
+                "suggested_value": "3.00",  # Outside max 2.50%
                 "rationale": "Too high",
                 "confidence": "low",
             },
@@ -303,8 +295,6 @@ async def test_weekly_post_analysis_trigger_and_idempotency() -> None:
         parameters=ProfileParameters(
             target_position_size_pct=Decimal("2.00"),
             opportunity_score_threshold=Decimal("78"),
-            take_profit_pct=Decimal("75.00"),
-            stop_loss_pct=Decimal("50.00"),
         ),
         activation_mode="manual",
     )

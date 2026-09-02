@@ -366,10 +366,13 @@ def authorize_proposal(
     )
     exit_policy = proposal.exit_policy
     exit_valid = (
-        exit_policy.take_profit_pct == profile.take_profit_pct
-        and exit_policy.stop_loss_pct == profile.stop_loss_pct
-        and params.take_profit_min_pct <= exit_policy.take_profit_pct <= params.take_profit_max_pct
-        and exit_policy.stop_loss_pct == params.stop_loss_pct
+        exit_policy.profit_arm_pct == params.profit_arm_pct
+        and exit_policy.profit_trailing_giveback_points == params.profit_trailing_giveback_points
+        and exit_policy.hard_take_profit_pct == params.hard_take_profit_pct
+        and exit_policy.hard_stop_loss_pct == params.hard_stop_loss_pct
+        and exit_policy.thesis_failure_cycles == params.thesis_failure_cycles
+        and exit_policy.time_stop_trading_minutes == params.time_stop_trading_minutes
+        and exit_policy.minimum_mfe_pct == params.minimum_mfe_pct
         and params.dte_threshold_min_days
         <= exit_policy.dte_threshold
         <= params.dte_threshold_max_days
@@ -390,7 +393,7 @@ def authorize_proposal(
             []
             if strategy_valid and exit_valid and settings.active_ruleset_version == ruleset.version
             else [ReasonCode.PAYLOAD_MISMATCH],
-            "Profile-bound exit policy, active ruleset, and option payload must validate exactly.",
+            "Ruleset-bound adaptive exit policy and option payload must validate exactly.",
             snapshot,
         )
     )

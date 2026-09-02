@@ -25,6 +25,8 @@ class ExecutionReceiptModel(Base):
     symbol: Mapped[str | None] = mapped_column(String(64), nullable=True)
     exit_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     requested_quantity: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    strategy_position_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    legs_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     filled_quantity: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=0)
     filled_average_price: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)

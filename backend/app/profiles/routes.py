@@ -44,12 +44,10 @@ async def profile_governance_status(
     try:
         preference = await service.get_preference(session, current_user)
         active = await service.get_active(session)
-        await session.commit()
     except ProfileGovernanceError as exc:
         await session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except Exception as exc:
-        await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Profile governance state is unavailable",

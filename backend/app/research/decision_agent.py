@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 from datetime import UTC, datetime
@@ -35,7 +36,7 @@ from app.research.fundamental_engine import compute_fundamental_analysis
 from app.research.industry_agent import IndustryIntelligenceAgent
 from app.research.macro_agent import MacroeconomicAgent
 from app.research.models import TradeDecisionModel
-from app.research.news_agent import NewsIntelligenceAgent
+from app.research.news_agent import NewsIntelligenceAgent, normalize_event_timestamp
 from app.research.quant_engine import compute_quantitative_analysis
 from app.research.reaction_agent import MarketReactionAgent
 from app.rules.registry import get_authorized_ruleset
@@ -53,8 +54,8 @@ SYSTEM_PROMPT = (
     "6. Market Reaction & Mispricing (Reaction Gap, IV/HV, Implied Move, Decay, Analogs)\n\n"
     "MANDATORY GOVERNANCE & OPTIONS-ONLY INVARIANTS:\n"
     "- PRISM is strictly a paper options trading system (no spot equity purchase).\n"
-    "- If Composite Score < 75.0, Altman Z-Score < 1.8 (distressed), Net EV < +0.15R, or "
-    "Reward/Risk < 1.50:1, output verdict 'no_trade' and recommended_structure 'no_trade'.\n"
+    "- If the supplied deterministic directional score is below 75.0 or Altman Z-Score "
+    "is distressed, output verdict 'no_trade' and recommended_structure 'no_trade'.\n"
     "- If research indicates strong multi-agent alignment and positive expectation, output verdict "
     "'proceed_to_options_proposal'.\n"
     "- In HIGH STRESS or high volatility regimes, select defined-risk spreads "
@@ -83,13 +84,6 @@ class TradeProposalLLMOutput(BaseModel):
         ...,
         description="Supported option structure: 'long_call', 'long_put', 'bull_call_spread', "
         "'bear_put_spread', or 'no_trade'",
-    )
-    net_ev_r: Decimal = Field(
-        ...,
-        description="Net expected value in R-multiples (minimum +0.15R for affirmative proposal)",
-    )
-    reward_risk_ratio: Decimal = Field(
-        ..., description="Realistic reward-to-risk ratio (minimum 1.50:1)"
     )
     confidence_score: Decimal = Field(
         ..., ge=0, le=100, description="Overall synthesis confidence score (0-100)"
@@ -162,6 +156,45 @@ def compute_composite_opportunity_score(
         + (news_sentiment_score * Decimal("0.10"))
     )
     return min(Decimal("100.0"), max(Decimal("0.0"), round(score, 1)))
+
+
+def compute_directional_opportunity_scores(
+    *,
+    reaction_score: Decimal,
+    expected_reaction_pct: Decimal,
+    quant_momentum_score: Decimal,
+    fundamental_quality_score: Decimal,
+    sector_health_score: Decimal,
+    macro_climate_score: Decimal,
+    news_sentiment_score: Decimal,
+) -> tuple[Decimal, Decimal]:
+    """Calculate independent bullish and bearish scores with authorized weights."""
+
+    if expected_reaction_pct > 0:
+        bullish_reaction = reaction_score
+        bearish_reaction = Decimal("100") - reaction_score
+    elif expected_reaction_pct < 0:
+        bullish_reaction = Decimal("100") - reaction_score
+        bearish_reaction = reaction_score
+    else:
+        bullish_reaction = bearish_reaction = Decimal("50")
+    bullish = compute_composite_opportunity_score(
+        bullish_reaction,
+        quant_momentum_score,
+        fundamental_quality_score,
+        sector_health_score,
+        macro_climate_score,
+        news_sentiment_score,
+    )
+    bearish = compute_composite_opportunity_score(
+        bearish_reaction,
+        Decimal("100") - quant_momentum_score,
+        fundamental_quality_score,
+        Decimal("100") - sector_health_score,
+        Decimal("100") - macro_climate_score,
+        Decimal("100") - news_sentiment_score,
+    )
+    return bullish, bearish
 
 
 def calculate_news_sentiment_score(news_events: list[LLMEventAnalysis]) -> Decimal:
@@ -280,8 +313,12 @@ class TradingDecisionAgent:
                         composite_opportunity_score=Decimal(
                             str(cached.composite_opportunity_score)
                         ),
-                        net_ev_r=Decimal(str(cached.net_ev_r)),
-                        reward_risk_ratio=Decimal(str(cached.reward_risk_ratio)),
+                        bullish_opportunity_score=Decimal(
+                            str(getattr(cached, "bullish_opportunity_score", 0))
+                        ),
+                        bearish_opportunity_score=Decimal(
+                            str(getattr(cached, "bearish_opportunity_score", 0))
+                        ),
                         confidence_score=Decimal(str(cached.confidence_score)),
                         current_price=Decimal(str(cached.current_price)),
                         target_price=(
@@ -303,6 +340,11 @@ class TradingDecisionAgent:
                         provenance="illustrative_fixture"
                         if allow_illustrative
                         else "live_research",
+                        catalyst_digest=getattr(cached, "catalyst_digest", None),
+                        scoring_methodology_version=(
+                            getattr(cached, "scoring_methodology_version", None)
+                            or "directional_composite_v2"
+                        ),
                     )
 
             except Exception as exc:
@@ -413,6 +455,11 @@ class TradingDecisionAgent:
                 strict=True,
                 evaluation_at=now_utc,
                 market_observed_at=market_observed_at,
+                event_published_at=(news_report[0].published_at if news_report else None),
+                current_market_price=current_price,
+                provider_observed_at=(
+                    news_report[0].provider_observed_at if news_report else now_utc
+                ),
             )
         else:
             catalyst = (
@@ -455,6 +502,13 @@ class TradingDecisionAgent:
                 event_category=NewsEventCategory.OTHER,
                 strict=False,
                 market_observed_at=market_observed_at,
+                event_published_at=(
+                    normalize_event_timestamp(news_articles[0].get("created_at"))
+                    if news_articles
+                    else None
+                ),
+                current_market_price=current_price,
+                provider_observed_at=now_utc,
             )
             news_report, industry_report, macro_report, reaction_report = await asyncio.gather(
                 news_coro, industry_coro, macro_coro, reaction_coro
@@ -494,14 +548,24 @@ class TradingDecisionAgent:
                 raise ValueError(f"Market reaction opportunity score is unavailable for {sym}")
             reaction_opp_score = Decimal("0.0")
 
-        composite_score = compute_composite_opportunity_score(
+        bullish_score, bearish_score = compute_directional_opportunity_scores(
             reaction_score=reaction_opp_score,
+            expected_reaction_pct=(reaction_report.expected_reaction_pct or Decimal("0")),
             quant_momentum_score=quant_report.momentum_score,
             fundamental_quality_score=fundamental_report.composite_quality_score,
             sector_health_score=industry_report.sector_health_score,
             macro_climate_score=macro_report.macro_climate_score,
             news_sentiment_score=news_score,
         )
+        if bullish_score == bearish_score:
+            deterministic_direction = TradeDirection.NEUTRAL
+            composite_score = bullish_score
+        elif bullish_score > bearish_score:
+            deterministic_direction = TradeDirection.BULLISH
+            composite_score = bullish_score
+        else:
+            deterministic_direction = TradeDirection.BEARISH
+            composite_score = bearish_score
 
         specialist_scores = SpecialistScores(
             reaction_opportunity_score=reaction_opp_score,
@@ -532,7 +596,9 @@ class TradingDecisionAgent:
             else "FAIR_REACTION"
         )
         prompt = (
-            f"CIO synthesis for {sym}. Price=${current_price}. Composite={composite_score}/100.\n"
+            f"CIO synthesis for {sym}. Price=${current_price}. "
+            f"Bullish={bullish_score}/100 Bearish={bearish_score}/100 "
+            f"Selected={deterministic_direction.value}:{composite_score}/100.\n"
             f"NEWS: n={len(news_report)} score={news_score}/100 headline='{catalyst}'{news_meta}\n"
             f"QUANT: trend={quant_report.trend.value} mom={quant_report.momentum_score}/100 "
             f"rsi={quant_report.rsi_14}({quant_report.rsi_condition.value}) "
@@ -558,7 +624,7 @@ class TradingDecisionAgent:
             "Output JSON: verdict(proceed_to_options_proposal|no_trade), "
             "direction(bullish|bearish|neutral), "
             "structure(long_call|long_put|bull_call_spread|bear_put_spread|no_trade), "
-            "net_ev_r(>=0.15), reward_risk_ratio(>=1.5), confidence_score(0-100), "
+            "confidence_score(0-100), "
             "target_price, evidence_summary(3-5 items), contradictions, "
             "contradiction_analysis, portfolio_fit, "
             "options_only_constraint_acknowledged(true), synthesis_rationale, key_risks."
@@ -600,24 +666,41 @@ class TradingDecisionAgent:
         # Enforce Hard Governance Gates
         verdict = output.verdict
         structure = output.recommended_structure
-        net_ev = output.net_ev_r
-        rr_ratio = output.reward_risk_ratio
 
         if (
             composite_score < Decimal("75.0")
             or fundamental_report.fundamental_health == FundamentalHealth.DISTRESSED
+            or deterministic_direction is TradeDirection.NEUTRAL
         ):
             verdict = TradeVerdict.NO_TRADE
             structure = OptionStructure.NO_TRADE
 
-        if net_ev < Decimal("0.15") or rr_ratio < Decimal("1.50"):
-            verdict = TradeVerdict.NO_TRADE
-            structure = OptionStructure.NO_TRADE
+        if verdict is not TradeVerdict.NO_TRADE:
+            if deterministic_direction is TradeDirection.BULLISH:
+                structure = (
+                    OptionStructure.BULL_CALL_SPREAD
+                    if output.recommended_structure
+                    in {OptionStructure.BULL_CALL_SPREAD, OptionStructure.BEAR_PUT_SPREAD}
+                    else OptionStructure.LONG_CALL
+                )
+            else:
+                structure = (
+                    OptionStructure.BEAR_PUT_SPREAD
+                    if output.recommended_structure
+                    in {OptionStructure.BULL_CALL_SPREAD, OptionStructure.BEAR_PUT_SPREAD}
+                    else OptionStructure.LONG_PUT
+                )
 
         # BA-Authorized Exit Policy
+        rules = get_authorized_ruleset().parameters
         exit_policy = ExitPolicy(
-            take_profit_pct=Decimal("75.0"),
-            stop_loss_pct=Decimal("50.0"),
+            profit_arm_pct=rules.profit_arm_pct,
+            profit_trailing_giveback_points=rules.profit_trailing_giveback_points,
+            hard_take_profit_pct=rules.hard_take_profit_pct,
+            hard_stop_loss_pct=rules.hard_stop_loss_pct,
+            thesis_failure_cycles=rules.thesis_failure_cycles,
+            time_stop_trading_minutes=rules.time_stop_trading_minutes,
+            minimum_mfe_pct=rules.minimum_mfe_pct,
             dte_threshold=7,
             # Autonomous/hackathon execution uses the BA four-trading-day
             # override; the longer reusable baseline remains presentation-only.
@@ -625,6 +708,22 @@ class TradingDecisionAgent:
         )
 
         decision_id = uuid4()
+        top_event = news_report[0] if news_report else None
+        catalyst_payload = {
+            "article_id": top_event.article_id if top_event else None,
+            "headline": top_event.headline if top_event else catalyst,
+            "event_category": (
+                top_event.event_category.value if top_event else NewsEventCategory.OTHER.value
+            ),
+            "published_at": (
+                top_event.published_at.isoformat()
+                if top_event is not None and top_event.published_at is not None
+                else None
+            ),
+        }
+        catalyst_digest = hashlib.sha256(
+            json.dumps(catalyst_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
 
         decision = TradeDecisionReport(
             id=decision_id,
@@ -632,11 +731,11 @@ class TradingDecisionAgent:
             created_at=now_utc,
             symbol=sym,
             verdict=verdict,
-            direction=output.direction,
+            direction=deterministic_direction,
             recommended_structure=structure,
             composite_opportunity_score=composite_score,
-            net_ev_r=net_ev,
-            reward_risk_ratio=rr_ratio,
+            bullish_opportunity_score=bullish_score,
+            bearish_opportunity_score=bearish_score,
             confidence_score=output.confidence_score,
             current_price=current_price,
             target_price=output.target_price,
@@ -655,6 +754,8 @@ class TradingDecisionAgent:
             ),
             evidence_freshness_seconds=data_freshness_seconds,
             analog_count=reaction_report.analog_count,
+            catalyst_digest=catalyst_digest,
+            scoring_methodology_version="directional_composite_v2",
         )
 
         # Cache in PostgreSQL
@@ -667,11 +768,13 @@ class TradingDecisionAgent:
                     schema_version="1.0",
                     symbol=sym,
                     verdict=verdict.value,
-                    direction=output.direction.value,
+                    direction=deterministic_direction.value,
                     recommended_structure=structure.value,
                     composite_opportunity_score=composite_score,
-                    net_ev_r=net_ev,
-                    reward_risk_ratio=rr_ratio,
+                    bullish_opportunity_score=bullish_score,
+                    bearish_opportunity_score=bearish_score,
+                    net_ev_r=Decimal("0"),
+                    reward_risk_ratio=Decimal("0"),
                     confidence_score=output.confidence_score,
                     current_price=current_price,
                     target_price=output.target_price,
@@ -684,6 +787,8 @@ class TradingDecisionAgent:
                     options_only_constraint=output.options_only_constraint_acknowledged,
                     synthesis_rationale=output.synthesis_rationale,
                     key_risks_json=json.dumps(output.key_risks),
+                    catalyst_digest=catalyst_digest,
+                    scoring_methodology_version="directional_composite_v2",
                     model_name=active_model,
                     raw_digest=llm_response.raw_digest,
                 )

@@ -302,7 +302,7 @@ def _transcript(raw: dict[str, Any]) -> list[TranscriptStep]:
                         "creates no executable authorization record."
                     ),
                     latency_ms=18,
-                    evidence_refs=["prism-authorized-baseline@1.0.0"],
+                    evidence_refs=["prism-authorized-baseline@2.0.0"],
                 ),
             ]
         )
@@ -942,7 +942,8 @@ def _hard_rules(ruleset: AuthorizedRuleset) -> list[HardRule]:
             priority="P3",
             name="Exit integrity",
             active_value=(
-                f"TP {p.take_profit_default_pct}% / SL {p.stop_loss_pct}% / "
+                f"Arm +{p.profit_arm_pct}% / trail {p.profit_trailing_giveback_points}pt / "
+                f"TP +{p.hard_take_profit_pct}% / SL -{p.hard_stop_loss_pct}% / "
                 f"DTE <= {p.dte_threshold_default_days}"
             ),
             explanation=(
@@ -988,12 +989,6 @@ def get_governance() -> PresentationEnvelope[Governance]:
             "score",
             "Minimum score before proposal generation.",
         ),
-        "take_profit_pct": (
-            "Take-profit target",
-            "% initial debit",
-            "Must also satisfy realistic reward/risk.",
-        ),
-        "stop_loss_pct": ("Stop-loss limit", "% initial debit", "Fixed hard stop; not tunable."),
     }
     balanced = ruleset.profiles["balanced"]
     profile_parameters = [
@@ -1087,23 +1082,6 @@ def get_weekly_summary() -> PresentationEnvelope[WeeklySummary]:
                         "A more selective Balanced draft would have filtered "
                         "marginal fixture candidates. This remains a "
                         "recommendation, not an activation."
-                    ),
-                    week_of="2026-08-25",
-                    validation_state="within_authorized_bounds",
-                ),
-                ProfileSuggestion(
-                    id="profile-suggestion-take-profit",
-                    parameter_id="take_profit_pct",
-                    parameter_name="Take-profit target",
-                    current_value="75.00",
-                    suggested_value="85.00",
-                    allowed_minimum="75.00",
-                    allowed_maximum="100.00",
-                    confidence="low",
-                    rationale=(
-                        "Some bounded fixture branches benefited from a wider "
-                        "profit target; evidence remains limited and requires "
-                        "manual review."
                     ),
                     week_of="2026-08-25",
                     validation_state="within_authorized_bounds",

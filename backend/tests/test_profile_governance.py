@@ -12,8 +12,6 @@ def test_frs_017_profile_validator_rejects_values_outside_authorized_bounds() ->
     invalid = ProfileParameters(
         target_position_size_pct=Decimal("2.51"),
         opportunity_score_threshold=Decimal("84"),
-        take_profit_pct=Decimal("75"),
-        stop_loss_pct=Decimal("50"),
     )
 
     with pytest.raises(ProfileGovernanceError, match="outside BA-authorized bounds"):

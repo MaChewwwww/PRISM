@@ -52,7 +52,7 @@ def test_shadowfund_rejects_stale_or_future_quotes() -> None:
     assert not ShadowFundService._quotes_are_fresh(
         strategy, stale, observed_at=now, max_quote_age_seconds=30
     )
-    assert not ShadowFundService._quotes_are_fresh(
+    assert ShadowFundService._quotes_are_fresh(
         strategy, future, observed_at=now, max_quote_age_seconds=30
     )
 

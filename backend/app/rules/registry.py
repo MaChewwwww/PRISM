@@ -34,10 +34,13 @@ class RuleParameters(BaseModel):
     balanced_opportunity_score: DecimalString
     minimum_net_ev_r: DecimalString
     minimum_reward_risk_ratio: DecimalString
-    take_profit_default_pct: DecimalString
-    take_profit_min_pct: DecimalString
-    take_profit_max_pct: DecimalString
-    stop_loss_pct: DecimalString
+    profit_arm_pct: DecimalString
+    profit_trailing_giveback_points: DecimalString
+    hard_take_profit_pct: DecimalString
+    hard_stop_loss_pct: DecimalString
+    thesis_failure_cycles: int = Field(ge=1)
+    time_stop_trading_minutes: int = Field(ge=1)
+    minimum_mfe_pct: DecimalString
     dte_threshold_default_days: int
     dte_threshold_min_days: int
     dte_threshold_max_days: int
@@ -91,15 +94,11 @@ class ProfileParameters(BaseModel):
 
     target_position_size_pct: DecimalString
     opportunity_score_threshold: DecimalString
-    take_profit_pct: DecimalString
-    stop_loss_pct: DecimalString
 
 
 ProfileField = Literal[
     "target_position_size_pct",
     "opportunity_score_threshold",
-    "take_profit_pct",
-    "stop_loss_pct",
 ]
 
 

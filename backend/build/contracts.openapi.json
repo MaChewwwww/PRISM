@@ -117,36 +117,6 @@
             "format": "decimal-string",
             "title": "Opportunity Score Threshold"
           },
-          "stop_loss_pct": {
-            "anyOf": [
-              {
-                "maximum": 50.0,
-                "minimum": 50.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Stop Loss Pct"
-          },
-          "take_profit_pct": {
-            "anyOf": [
-              {
-                "maximum": 100.0,
-                "minimum": 75.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Take Profit Pct"
-          },
           "target_position_size_pct": {
             "anyOf": [
               {
@@ -165,9 +135,7 @@
         },
         "required": [
           "target_position_size_pct",
-          "opportunity_score_threshold",
-          "take_profit_pct",
-          "stop_loss_pct"
+          "opportunity_score_threshold"
         ],
         "title": "AIProfileParameters",
         "type": "object"
@@ -3257,6 +3225,41 @@
         "title": "EvidenceItem",
         "type": "object"
       },
+      "ExecutionLegState": {
+        "additionalProperties": false,
+        "properties": {
+          "position_intent": {
+            "enum": [
+              "buy_to_open",
+              "buy_to_close",
+              "sell_to_open",
+              "sell_to_close"
+            ],
+            "title": "Position Intent",
+            "type": "string"
+          },
+          "ratio_qty": {
+            "minimum": 1,
+            "title": "Ratio Qty",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionStatus"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "ratio_qty",
+          "position_intent",
+          "status"
+        ],
+        "title": "ExecutionLegState",
+        "type": "object"
+      },
       "ExecutionOperation": {
         "enum": [
           "entry",
@@ -3364,6 +3367,13 @@
             "title": "Id",
             "type": "string"
           },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionLegState"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
           "operation": {
             "$ref": "#/components/schemas/ExecutionOperation",
             "default": "entry"
@@ -3429,6 +3439,19 @@
           "status": {
             "$ref": "#/components/schemas/ExecutionStatus"
           },
+          "strategy_position_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Strategy Position Id"
+          },
           "submitted_at": {
             "anyOf": [
               {
@@ -3491,14 +3514,7 @@
             "title": "Dte Threshold",
             "type": "integer"
           },
-          "max_hold_days": {
-            "default": 14,
-            "maximum": 45,
-            "minimum": 3,
-            "title": "Max Hold Days",
-            "type": "integer"
-          },
-          "stop_loss_pct": {
+          "hard_stop_loss_pct": {
             "anyOf": [
               {
                 "maximum": 50.0,
@@ -3512,13 +3528,12 @@
             ],
             "default": "50.0",
             "format": "decimal-string",
-            "title": "Stop Loss Pct"
+            "title": "Hard Stop Loss Pct"
           },
-          "take_profit_pct": {
+          "hard_take_profit_pct": {
             "anyOf": [
               {
-                "maximum": 100.0,
-                "minimum": 75.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -3526,9 +3541,73 @@
                 "type": "string"
               }
             ],
-            "default": "75.0",
+            "default": "40.0",
             "format": "decimal-string",
-            "title": "Take Profit Pct"
+            "title": "Hard Take Profit Pct"
+          },
+          "max_hold_days": {
+            "default": 14,
+            "maximum": 45,
+            "minimum": 3,
+            "title": "Max Hold Days",
+            "type": "integer"
+          },
+          "minimum_mfe_pct": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "10.0",
+            "format": "decimal-string",
+            "title": "Minimum Mfe Pct"
+          },
+          "profit_arm_pct": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "20.0",
+            "format": "decimal-string",
+            "title": "Profit Arm Pct"
+          },
+          "profit_trailing_giveback_points": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "10.0",
+            "format": "decimal-string",
+            "title": "Profit Trailing Giveback Points"
+          },
+          "thesis_failure_cycles": {
+            "default": 2,
+            "minimum": 1,
+            "title": "Thesis Failure Cycles",
+            "type": "integer"
+          },
+          "time_stop_trading_minutes": {
+            "default": 390,
+            "minimum": 1,
+            "title": "Time Stop Trading Minutes",
+            "type": "integer"
           }
         },
         "title": "ExitPolicy",
@@ -3537,6 +3616,12 @@
       "ExitReason": {
         "enum": [
           "pnl_threshold",
+          "hard_stop_loss",
+          "opposite_direction",
+          "thesis_invalidated",
+          "trailing_profit",
+          "hard_take_profit",
+          "stagnation_time_stop",
           "max_hold_days",
           "dte_threshold",
           "hackathon_force_flatten"
@@ -4536,6 +4621,32 @@
           "prompt_version": {
             "title": "Prompt Version",
             "type": "string"
+          },
+          "provider_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider Observed At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Published At"
           },
           "rationale": {
             "title": "Rationale",
@@ -6264,16 +6375,6 @@
             "title": "Opportunity Score Threshold",
             "type": "string"
           },
-          "stop_loss_pct": {
-            "format": "decimal-string",
-            "title": "Stop Loss Pct",
-            "type": "string"
-          },
-          "take_profit_pct": {
-            "format": "decimal-string",
-            "title": "Take Profit Pct",
-            "type": "string"
-          },
           "target_position_size_pct": {
             "format": "decimal-string",
             "title": "Target Position Size Pct",
@@ -6282,9 +6383,7 @@
         },
         "required": [
           "target_position_size_pct",
-          "opportunity_score_threshold",
-          "take_profit_pct",
-          "stop_loss_pct"
+          "opportunity_score_threshold"
         ],
         "title": "ProfileParameters",
         "type": "object"
@@ -6758,6 +6857,32 @@
             "format": "decimal-string",
             "title": "Analog Similarity Score"
           },
+          "calculation_window_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Calculation Window End"
+          },
+          "calculation_window_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Calculation Window Start"
+          },
           "catalyst_decay_factor": {
             "anyOf": [
               {
@@ -6841,6 +6966,19 @@
             "default": "0.0",
             "format": "decimal-string",
             "title": "Event Age Hours"
+          },
+          "event_published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Event Published At"
           },
           "evidence": {
             "items": {
@@ -6992,6 +7130,11 @@
             "title": "Limitations",
             "type": "array"
           },
+          "methodology_version": {
+            "default": "reaction_event_aligned_v2",
+            "title": "Methodology Version",
+            "type": "string"
+          },
           "opportunity_score": {
             "anyOf": [
               {
@@ -7035,6 +7178,19 @@
             ],
             "default": null,
             "title": "Options Implied Move Pct"
+          },
+          "provider_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider Observed At"
           },
           "reaction_gap_pct": {
             "anyOf": [
@@ -8106,6 +8262,49 @@
             "title": "Analog Count",
             "type": "integer"
           },
+          "bearish_opportunity_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Bearish Opportunity Score"
+          },
+          "bullish_opportunity_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Bullish Opportunity Score"
+          },
+          "catalyst_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Catalyst Digest"
+          },
           "composite_opportunity_score": {
             "anyOf": [
               {
@@ -8204,19 +8403,6 @@
             "title": "Key Risks",
             "type": "array"
           },
-          "net_ev_r": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Net Ev R"
-          },
           "options_only_constraint_acknowledged": {
             "default": true,
             "title": "Options Only Constraint Acknowledged",
@@ -8240,23 +8426,15 @@
           "recommended_structure": {
             "$ref": "#/components/schemas/OptionStructure"
           },
-          "reward_risk_ratio": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Reward Risk Ratio"
-          },
           "schema_version": {
             "const": "1.0",
             "default": "1.0",
             "title": "Schema Version",
+            "type": "string"
+          },
+          "scoring_methodology_version": {
+            "default": "directional_composite_v2",
+            "title": "Scoring Methodology Version",
             "type": "string"
           },
           "shadow_alternative_intent": {
@@ -8319,8 +8497,8 @@
           "direction",
           "recommended_structure",
           "composite_opportunity_score",
-          "net_ev_r",
-          "reward_risk_ratio",
+          "bullish_opportunity_score",
+          "bearish_opportunity_score",
           "confidence_score",
           "current_price",
           "exit_policy",
@@ -8343,6 +8521,19 @@
       "TradeProposal": {
         "additionalProperties": false,
         "properties": {
+          "catalyst_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Catalyst Digest"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -8424,6 +8615,19 @@
           "symbol": {
             "title": "Symbol",
             "type": "string"
+          },
+          "thesis_key": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Thesis Key"
           },
           "trace_id": {
             "format": "uuid",

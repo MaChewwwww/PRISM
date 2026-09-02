@@ -42,8 +42,7 @@ class ProfileRecommendationLLMItem(BaseModel):
     parameter_id: ProfileField = Field(
         description=(
             "The BA-authorized profile parameter to adjust. Must be one of: "
-            "'target_position_size_pct', 'opportunity_score_threshold', "
-            "'take_profit_pct', 'stop_loss_pct'."
+            "'target_position_size_pct' or 'opportunity_score_threshold'."
         )
     )
     suggested_value: str = Field(description="Decimal value as string within authorized bounds.")
@@ -294,7 +293,7 @@ class PostAnalysisAgent:
             "strategy performance, and how counterfactual branches compared.\n"
             "2. Suggest parameter adjustments ONLY if justified by evidence, "
             "strictly within authorized min/max bounds.\n"
-            "3. Note that 'stop_loss_pct' is fixed at 50.00% and cannot be tuned.\n"
+            "3. Exit-policy parameters are deterministic ruleset values and cannot be tuned.\n"
             "4. Return strictly valid JSON matching the requested schema."
         )
 

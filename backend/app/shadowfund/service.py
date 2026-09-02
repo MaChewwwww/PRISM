@@ -251,6 +251,11 @@ class ShadowFundService:
             low, high = prior.one()
             mae = min(Decimal(str(low)) if low is not None else gross, gross)
             mfe = max(Decimal(str(high)) if high is not None else gross, gross)
+            prior_mfe_pct = (
+                mfe / (branch.entry_cost * branch.allocation_multiplier)
+                if branch.entry_cost > 0 and branch.allocation_multiplier > 0
+                else Decimal("0")
+            )
             exit_reason = self._exit_reason(
                 shadow_session.exit_policy_json,
                 strategy,
@@ -258,6 +263,8 @@ class ShadowFundService:
                 mark=mark,
                 observed_at=observed_at,
                 horizon_at=shadow_session.horizon_at,
+                prior_mfe_pct=prior_mfe_pct,
+                entry_at=branch.entry_at,
             )
             await self.record_valuation(
                 session,
@@ -291,7 +298,9 @@ class ShadowFundService:
             if not isinstance(timestamp, datetime) or timestamp.tzinfo is None:
                 return False
             age = (observed_at.astimezone(UTC) - timestamp.astimezone(UTC)).total_seconds()
-            if age < 0 or age > max_quote_age_seconds:
+            # The cycle timestamp is captured before the provider request, so
+            # a valid quote can be fractionally newer than the observation.
+            if age < -300 or age > max_quote_age_seconds:
                 return False
         return True
 
@@ -304,6 +313,8 @@ class ShadowFundService:
         mark: Decimal,
         observed_at: datetime,
         horizon_at: datetime | None,
+        prior_mfe_pct: Decimal = Decimal("0"),
+        entry_at: datetime | None = None,
     ) -> str | None:
         if horizon_at is not None and observed_at >= horizon_at:
             return "HORIZON_CLOSE"
@@ -312,10 +323,33 @@ class ShadowFundService:
         try:
             policy = json.loads(exit_policy_json or "{}")
             pct = (mark - entry_cost) / entry_cost * Decimal("100")
-            if pct >= Decimal(str(policy.get("take_profit_pct", "75"))):
-                return "TAKE_PROFIT"
-            if pct <= -Decimal(str(policy.get("stop_loss_pct", "50"))):
-                return "STOP_LOSS"
+            if "hard_take_profit_pct" in policy:
+                mfe_pct = max(prior_mfe_pct, pct)
+                if pct <= -Decimal(str(policy.get("hard_stop_loss_pct", "50"))):
+                    return "HARD_STOP_LOSS"
+                if mfe_pct >= Decimal(
+                    str(policy.get("profit_arm_pct", "20"))
+                ) and pct <= mfe_pct - Decimal(
+                    str(policy.get("profit_trailing_giveback_points", "10"))
+                ):
+                    return "TRAILING_PROFIT"
+                if pct >= Decimal(str(policy.get("hard_take_profit_pct", "40"))):
+                    return "HARD_TAKE_PROFIT"
+                if entry_at is not None:
+                    elapsed = (
+                        observed_at.astimezone(UTC) - entry_at.astimezone(UTC)
+                    ).total_seconds()
+                    if elapsed >= int(
+                        policy.get("time_stop_trading_minutes", 390)
+                    ) * 60 and mfe_pct < Decimal(str(policy.get("minimum_mfe_pct", "10"))):
+                        return "STAGNATION_TIME_STOP"
+            else:
+                # Legacy branches remain comparable under their historical
+                # policy and must not be silently relabelled as V2.
+                if pct >= Decimal(str(policy.get("take_profit_pct", "75"))):
+                    return "TAKE_PROFIT"
+                if pct <= -Decimal(str(policy.get("stop_loss_pct", "50"))):
+                    return "STOP_LOSS"
             expiry = min(datetime.fromisoformat(leg.expiration).date() for leg in strategy.legs)
             threshold = int(policy.get("dte_threshold", 7))
             if (expiry - observed_at.date()).days <= threshold:

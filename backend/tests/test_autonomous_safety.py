@@ -27,7 +27,7 @@ from app.contracts.models import (
 )
 from app.core.config import Settings
 from app.execution.models import ExecutionReceiptModel
-from app.market.option_selection import select_option_strategy
+from app.market.option_selection import OptionSelectionError, select_option_strategy
 from app.rules.evaluator import authorize_proposal
 from app.rules.registry import ProfileParameters
 
@@ -133,7 +133,7 @@ def test_option_selection_accepts_quotes_during_cycle() -> None:
     assert strategy.legs[0].symbol == "NVDA270910C00100000"
 
 
-def test_option_selection_debit_spread_fallback_to_long_leg() -> None:
+def test_option_selection_debit_spread_rejects_when_no_valid_short_leg() -> None:
     now = datetime(2026, 8, 30, 13, 30, tzinfo=UTC)
     contracts = [
         {
@@ -153,19 +153,15 @@ def test_option_selection_debit_spread_fallback_to_long_leg() -> None:
             "quote_timestamp": now + timedelta(seconds=5),
         }
     }
-    # When debit_spread is requested but only 1 strike is available,
-    # it gracefully falls back to long single leg.
-    strategy = select_option_strategy(
-        contracts,
-        quotes,
-        underlying_price=Decimal("500"),
-        direction="bullish",
-        structure="debit_spread",
-        now=now,
-    )
-    assert strategy.kind == StrategyKind.LONG_CALL
-    assert len(strategy.legs) == 1
-    assert strategy.legs[0].symbol == "MSFT270910C00500000"
+    with pytest.raises(OptionSelectionError):
+        select_option_strategy(
+            contracts,
+            quotes,
+            underlying_price=Decimal("500"),
+            direction="bullish",
+            structure="debit_spread",
+            now=now,
+        )
 
 
 def test_cash_reserve_uses_five_percent_of_current_equity() -> None:
@@ -231,7 +227,7 @@ async def test_run_forever_skips_pre_market_cycle_records(monkeypatch: pytest.Mo
         environment="production",
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
         autonomous_trading_enabled=True,
         autonomous_trading_start_at="2026-08-31T13:30:00Z",
         autonomous_trading_end_at="2026-09-03T20:00:00Z",
@@ -272,6 +268,7 @@ async def test_reconciliation_includes_submitted_receipts(monkeypatch: pytest.Mo
     result.scalars.return_value = [receipt]
     session = AsyncMock()
     session.execute.return_value = result
+    session.scalar = AsyncMock(return_value=None)
     session.add = MagicMock()
     session.flush = AsyncMock()
 
@@ -302,7 +299,7 @@ def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> No
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     decision = authorize_proposal(proposal, risk, settings, inputs={})
     assert decision.outcome == "REJECT"
@@ -316,7 +313,7 @@ def test_p2_reason_codes_identify_only_the_failed_risk_predicate() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     decision = authorize_proposal(
         proposal,
@@ -348,7 +345,7 @@ def test_p4_reason_codes_identify_each_failed_edge_predicate() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     decision = authorize_proposal(
         proposal,
@@ -425,7 +422,7 @@ def test_balanced_profile_threshold_is_78() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
@@ -476,7 +473,7 @@ def test_persisted_profile_parameters_remain_bounded_by_the_same_rule_engine() -
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
@@ -511,8 +508,6 @@ def test_persisted_profile_parameters_remain_bounded_by_the_same_rule_engine() -
     conservative = ProfileParameters(
         target_position_size_pct=Decimal("1.50"),
         opportunity_score_threshold=Decimal("85"),
-        take_profit_pct=Decimal("75"),
-        stop_loss_pct=Decimal("50"),
     )
     decision = authorize_proposal(
         proposal,
@@ -543,7 +538,7 @@ def test_missing_operational_controls_fail_closed_even_at_threshold() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     decision = authorize_proposal(
         proposal,
@@ -593,7 +588,7 @@ def test_high_iv_rank_requires_a_debit_spread() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
@@ -639,7 +634,7 @@ async def test_record_captures_structured_candidate_rejections() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
         shadowfund_enabled=False,
     )
     worker = AutonomousWorker(settings)
@@ -772,8 +767,6 @@ def test_authorization_uses_fresh_timestamp_to_prevent_expiry() -> None:
         limit_price=Decimal("4.00"),
     )
     proposal.exit_policy = ExitPolicy(
-        take_profit_pct=Decimal("75.0"),
-        stop_loss_pct=Decimal("50.0"),
         dte_threshold=7,
         max_hold_days=4,
     )
@@ -789,7 +782,7 @@ def test_authorization_uses_fresh_timestamp_to_prevent_expiry() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
