@@ -46,8 +46,8 @@ def test_initial_migration_is_an_empty_database_baseline(
     assert initial is not None
     assert initial.down_revision is None
     assert head is not None
-    assert head.revision == "20260901_0015"
-    assert head.down_revision == "20260901_0014"
+    assert head.revision == "20260902_0016"
+    assert head.down_revision == "20260901_0015"
 
     with redirect_stdout(output):
         command.upgrade(config, "head", sql=True)

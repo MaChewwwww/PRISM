@@ -229,15 +229,22 @@ def evaluate_virtual_authorization(
             "P5-EXIT-AND-PAYLOAD-INTEGRITY",
             bool(
                 strategy_valid
-                and proposal.exit_policy.take_profit_pct == profile.take_profit_pct
-                and proposal.exit_policy.stop_loss_pct == profile.stop_loss_pct
+                and proposal.exit_policy.profit_arm_pct == params.profit_arm_pct
+                and proposal.exit_policy.profit_trailing_giveback_points
+                == params.profit_trailing_giveback_points
+                and proposal.exit_policy.hard_take_profit_pct == params.hard_take_profit_pct
+                and proposal.exit_policy.hard_stop_loss_pct == params.hard_stop_loss_pct
+                and proposal.exit_policy.thesis_failure_cycles == params.thesis_failure_cycles
+                and proposal.exit_policy.time_stop_trading_minutes
+                == params.time_stop_trading_minutes
+                and proposal.exit_policy.minimum_mfe_pct == params.minimum_mfe_pct
                 and proposal.exit_policy.max_hold_days <= params.hackathon_max_hold_trading_days
                 and params.dte_threshold_min_days
                 <= proposal.exit_policy.dte_threshold
                 <= params.dte_threshold_max_days
             ),
             "PAYLOAD_MISMATCH",
-            "Profile-bound exit policy and supported virtual payload.",
+            "Ruleset-bound adaptive exit policy and supported virtual payload.",
         ),
     ]
     return VirtualAuthorizationResult(

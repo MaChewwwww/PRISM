@@ -1,6 +1,6 @@
 {
   "ruleset_id": "prism-authorized-baseline",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "status": "active",
   "effective_from": "2026-08-29T00:00:00Z",
   "effective_to": null,
@@ -26,10 +26,13 @@
     "balanced_opportunity_score": "78",
     "minimum_net_ev_r": "0.15",
     "minimum_reward_risk_ratio": "1.50",
-    "take_profit_default_pct": "75.00",
-    "take_profit_min_pct": "75.00",
-    "take_profit_max_pct": "100.00",
-    "stop_loss_pct": "50.00",
+    "profit_arm_pct": "20.00",
+    "profit_trailing_giveback_points": "10.00",
+    "hard_take_profit_pct": "40.00",
+    "hard_stop_loss_pct": "50.00",
+    "thesis_failure_cycles": 2,
+    "time_stop_trading_minutes": 390,
+    "minimum_mfe_pct": "10.00",
     "dte_threshold_default_days": 7,
     "dte_threshold_min_days": 2,
     "dte_threshold_max_days": 14,
@@ -49,27 +52,19 @@
   "profiles": {
     "conservative": {
       "target_position_size_pct": "1.50",
-      "opportunity_score_threshold": "85",
-      "take_profit_pct": "75.00",
-      "stop_loss_pct": "50.00"
+      "opportunity_score_threshold": "85"
     },
     "balanced": {
       "target_position_size_pct": "2.00",
-      "opportunity_score_threshold": "78",
-      "take_profit_pct": "75.00",
-      "stop_loss_pct": "50.00"
+      "opportunity_score_threshold": "78"
     },
     "aggressive": {
       "target_position_size_pct": "2.50",
-      "opportunity_score_threshold": "75",
-      "take_profit_pct": "100.00",
-      "stop_loss_pct": "50.00"
+      "opportunity_score_threshold": "75"
     }
   },
   "profile_bounds": {
     "target_position_size_pct": {"minimum": "1.50", "maximum": "2.50"},
-    "opportunity_score_threshold": {"minimum": "75", "maximum": "95"},
-    "take_profit_pct": {"minimum": "75.00", "maximum": "100.00"},
-    "stop_loss_pct": {"minimum": "50.00", "maximum": "50.00"}
+    "opportunity_score_threshold": {"minimum": "75", "maximum": "95"}
   }
 }

@@ -71,9 +71,17 @@ def test_compute_reaction_metrics_underreaction() -> None:
     # Pre-price: 100.0, Current-price: 101.0 -> actual: +1.0%
     # Expected: +4.0% -> gap: +3.0% (Underreaction)
     bars = [
-        {"close": Decimal("100.0"), "volume": 1000},
-        {"close": Decimal("100.5"), "volume": 1200},
-        {"close": Decimal("101.0"), "volume": 2500},
+        {"close": Decimal("100.0"), "volume": 1000, "timestamp": datetime(2026, 9, 1, tzinfo=UTC)},
+        {
+            "close": Decimal("100.5"),
+            "volume": 1200,
+            "timestamp": datetime(2026, 9, 1, 1, tzinfo=UTC),
+        },
+        {
+            "close": Decimal("101.0"),
+            "volume": 2500,
+            "timestamp": datetime(2026, 9, 1, 2, tzinfo=UTC),
+        },
     ]
     metrics = compute_reaction_metrics(
         bars,
@@ -97,8 +105,12 @@ def test_compute_reaction_metrics_underreaction() -> None:
 def test_compute_reaction_metrics_bearish_underreaction() -> None:
     # Expected: -5.0% (Bearish catalyst), Actual: -1.0% -> underreaction to downside
     bars = [
-        {"close": Decimal("100.0"), "volume": 1000},
-        {"close": Decimal("99.0"), "volume": 2000},
+        {"close": Decimal("100.0"), "volume": 1000, "timestamp": datetime(2026, 9, 1, tzinfo=UTC)},
+        {
+            "close": Decimal("99.0"),
+            "volume": 2000,
+            "timestamp": datetime(2026, 9, 1, 1, tzinfo=UTC),
+        },
     ]
     metrics = compute_reaction_metrics(
         bars,
@@ -115,8 +127,12 @@ def test_compute_reaction_metrics_bearish_underreaction() -> None:
 def test_compute_reaction_metrics_counter_reaction_gap() -> None:
     # Expected: -4.0% (Bearish catalyst), Actual: +1.0% (Rallied on bad news) -> 5.0% mispricing gap
     bars = [
-        {"close": Decimal("100.0"), "volume": 1000},
-        {"close": Decimal("101.0"), "volume": 2000},
+        {"close": Decimal("100.0"), "volume": 1000, "timestamp": datetime(2026, 9, 1, tzinfo=UTC)},
+        {
+            "close": Decimal("101.0"),
+            "volume": 2000,
+            "timestamp": datetime(2026, 9, 1, 1, tzinfo=UTC),
+        },
     ]
     metrics = compute_reaction_metrics(
         bars,
@@ -132,8 +148,12 @@ def test_compute_reaction_metrics_counter_reaction_gap() -> None:
 
 def test_compute_reaction_metrics_overreaction() -> None:
     bars = [
-        {"close": Decimal("100.0"), "volume": 1000},
-        {"close": Decimal("106.0"), "volume": 2000},
+        {"close": Decimal("100.0"), "volume": 1000, "timestamp": datetime(2026, 9, 1, tzinfo=UTC)},
+        {
+            "close": Decimal("106.0"),
+            "volume": 2000,
+            "timestamp": datetime(2026, 9, 1, 1, tzinfo=UTC),
+        },
     ]
     metrics = compute_reaction_metrics(bars, expected_reaction_pct=Decimal("1.0"))
 
@@ -145,8 +165,12 @@ def test_compute_reaction_metrics_overreaction() -> None:
 
 def test_compute_reaction_metrics_fair_reaction() -> None:
     bars = [
-        {"close": Decimal("100.0"), "volume": 1000},
-        {"close": Decimal("102.0"), "volume": 1000},
+        {"close": Decimal("100.0"), "volume": 1000, "timestamp": datetime(2026, 9, 1, tzinfo=UTC)},
+        {
+            "close": Decimal("102.0"),
+            "volume": 1000,
+            "timestamp": datetime(2026, 9, 1, 1, tzinfo=UTC),
+        },
     ]
     metrics = compute_reaction_metrics(bars, expected_reaction_pct=Decimal("2.2"))
 
@@ -322,8 +346,16 @@ async def test_market_reaction_agent_analysis_and_caching() -> None:
     agent = MarketReactionAgent(mock_llm_gateway)
 
     bars = [
-        {"close": Decimal("100.0"), "volume": 1000},
-        {"close": Decimal("101.0"), "volume": 2000},
+        {
+            "close": Decimal("100.0"),
+            "volume": 1000,
+            "timestamp": datetime(2026, 8, 31, 13, 20, tzinfo=UTC),
+        },
+        {
+            "close": Decimal("101.0"),
+            "volume": 2000,
+            "timestamp": datetime(2026, 8, 31, 13, 29, tzinfo=UTC),
+        },
     ]
     trace_id = uuid4()
 
@@ -461,8 +493,16 @@ async def test_market_reaction_agent_retries_structured_llm_validation_failure()
         report = await agent.analyze_reaction(
             symbol="AAPL",
             bars=[
-                {"close": Decimal("100.0"), "volume": 1000},
-                {"close": Decimal("101.0"), "volume": 2000},
+                {
+                    "close": Decimal("100.0"),
+                    "volume": 1000,
+                    "timestamp": datetime(2026, 8, 31, 13, 20, tzinfo=UTC),
+                },
+                {
+                    "close": Decimal("101.0"),
+                    "volume": 2000,
+                    "timestamp": datetime(2026, 8, 31, 13, 29, tzinfo=UTC),
+                },
             ],
             catalyst_summary="Apple reports in-line results.",
             expected_reaction_pct=Decimal("1.0"),

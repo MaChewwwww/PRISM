@@ -37,6 +37,10 @@ class LLMEventAnalysisModel(Base):
         Numeric, nullable=False, default=Decimal("50.0")
     )
     event_age_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    provider_observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     event_category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
     event_type: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
     catalyst_materiality: Mapped[str] = mapped_column(String(50), nullable=False, default="medium")
@@ -98,6 +102,21 @@ class ResearchReportModel(Base):
     )
     catalyst_decay_status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="fresh_catalyst"
+    )
+    event_published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    provider_observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    calculation_window_start: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    calculation_window_end: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    methodology_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="reaction_event_aligned_v2"
     )
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -208,6 +227,12 @@ class TradeDecisionModel(Base):
     direction: Mapped[str] = mapped_column(String(50), nullable=False)
     recommended_structure: Mapped[str] = mapped_column(String(50), nullable=False)
     composite_opportunity_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    bullish_opportunity_score: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0")
+    )
+    bearish_opportunity_score: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=Decimal("0")
+    )
     net_ev_r: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     reward_risk_ratio: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     confidence_score: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
@@ -223,6 +248,10 @@ class TradeDecisionModel(Base):
     options_only_constraint: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     synthesis_rationale: Mapped[str] = mapped_column(Text, nullable=False)
     key_risks_json: Mapped[str] = mapped_column(Text, nullable=False)
+    catalyst_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    scoring_methodology_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="directional_composite_v2"
+    )
 
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

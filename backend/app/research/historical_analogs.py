@@ -1,9 +1,4 @@
-"""Deterministic historical analog calculations over provider bars.
-
-An analog is a same-direction five-session event in the trailing five years.
-The engine never pads, samples, or invents bars.  Fewer than thirty observed
-events is an explicit insufficiency and must result in ``NO_TRADE``.
-"""
+"""Point-in-time historical analog and conservative option-payoff economics."""
 
 from __future__ import annotations
 
@@ -37,6 +32,33 @@ class HistoricalAnalogSummary:
     slippage_per_contract: Decimal | None = None
     fill_probability: Decimal | None = None
     reward_risk_ratio: Decimal | None = None
+    horizon_bars: int = 5
+    methodology_version: str = "nearest_non_overlapping_point_in_time_v2"
+
+
+def _median(values: list[Decimal]) -> Decimal:
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / Decimal("2")
+
+
+def _features(prices: list[Decimal], volumes: list[Decimal], index: int) -> tuple[Decimal, ...]:
+    one_day = (prices[index] - prices[index - 1]) / prices[index - 1] * Decimal("100")
+    five_day = (prices[index] - prices[index - 5]) / prices[index - 5] * Decimal("100")
+    twenty_day = (prices[index] - prices[index - 20]) / prices[index - 20] * Decimal("100")
+    daily_returns = [
+        (prices[pos] - prices[pos - 1]) / prices[pos - 1] * Decimal("100")
+        for pos in range(index - 19, index + 1)
+    ]
+    mean = sum(daily_returns, Decimal("0")) / Decimal(len(daily_returns))
+    variance = sum((value - mean) ** 2 for value in daily_returns) / Decimal(len(daily_returns))
+    volatility = variance.sqrt()
+    prior_volume = volumes[index - 20 : index]
+    average_volume = sum(prior_volume, Decimal("0")) / Decimal(len(prior_volume))
+    volume_ratio = volumes[index] / average_volume if average_volume > 0 else Decimal("1")
+    return one_day, five_day, twenty_day, volatility, volume_ratio
 
 
 def compute_historical_analogs(
@@ -50,10 +72,11 @@ def compute_historical_analogs(
     underlying_price: Decimal | None = None,
     quotes: dict[str, dict[str, Any]] | None = None,
     max_spread_pct: Decimal = Decimal("10"),
+    event_category: str = "other",
 ) -> HistoricalAnalogSummary:
     if now.tzinfo is None or horizon_bars <= 0 or minimum_events <= 0:
         raise HistoricalAnalogUnavailable("Analog inputs are invalid")
-    normalized: list[tuple[datetime, Decimal]] = []
+    normalized: list[tuple[datetime, Decimal, Decimal]] = []
     for bar in bars:
         try:
             timestamp = bar["timestamp"]
@@ -62,37 +85,82 @@ def compute_historical_analogs(
             close = Decimal(str(bar["close"]))
             if close <= 0:
                 continue
-            normalized.append((timestamp.astimezone(UTC), close))
+            volume = Decimal(str(bar.get("volume", "0")))
+            normalized.append((timestamp.astimezone(UTC), close, max(Decimal("0"), volume)))
         except (KeyError, TypeError, ValueError):
             continue
     normalized.sort(key=lambda item: item[0])
     cutoff = now.astimezone(UTC) - timedelta(days=365 * 5)
-    normalized = [(timestamp, close) for timestamp, close in normalized if timestamp >= cutoff]
-    if len(normalized) < horizon_bars + 1:
+    normalized = [
+        (timestamp, close, volume)
+        for timestamp, close, volume in normalized
+        if cutoff <= timestamp <= now.astimezone(UTC)
+    ]
+    if len(normalized) < 21 + horizon_bars:
         raise HistoricalAnalogUnavailable("Five-year historical coverage is insufficient")
 
-    realized: list[Decimal] = []
-    for index in range(horizon_bars, len(normalized) - horizon_bars):
-        setup_start = normalized[index - horizon_bars][1]
-        setup_end = normalized[index][1]
-        setup_move = (setup_end - setup_start) / setup_start * Decimal("100")
+    prices = [item[1] for item in normalized]
+    volumes = [item[2] for item in normalized]
+    current_features = _features(prices, volumes, len(normalized) - 1)
+    candidate_rows: list[tuple[int, tuple[Decimal, ...]]] = []
+    for index in range(20, len(normalized) - horizon_bars):
+        features = _features(prices, volumes, index)
+        setup_move = features[1]
         setup_matches = (direction == "bullish" and setup_move > 0) or (
             direction == "bearish" and setup_move < 0
         )
         if not setup_matches:
             continue
-        outcome_start = normalized[index][1]
-        outcome_end = normalized[index + horizon_bars][1]
+        candidate_rows.append((index, features))
+    if len(candidate_rows) < minimum_events:
+        raise HistoricalAnalogUnavailable(
+            f"Only {len(candidate_rows)} comparable events observed; {minimum_events} required"
+        )
+
+    feature_columns = list(zip(*(features for _, features in candidate_rows), strict=True))
+    medians = [_median(list(column)) for column in feature_columns]
+    scales = []
+    for column, median in zip(feature_columns, medians, strict=True):
+        mad = _median([abs(value - median) for value in column])
+        scales.append(mad if mad > 0 else Decimal("1"))
+    ranked = sorted(
+        candidate_rows,
+        key=lambda row: sum(
+            (
+                abs(feature - current) / scale
+                for feature, current, scale in zip(row[1], current_features, scales, strict=True)
+            ),
+            Decimal("0"),
+        ),
+    )
+    selected: list[int] = []
+    for index, _features_row in ranked:
+        candidate_start = index - 20
+        candidate_end = index + horizon_bars
+        if any(
+            not (candidate_end < chosen - 20 or candidate_start > chosen + horizon_bars)
+            for chosen in selected
+        ):
+            continue
+        selected.append(index)
+        if len(selected) == minimum_events:
+            break
+    if len(selected) < minimum_events:
+        raise HistoricalAnalogUnavailable(
+            f"Only {len(selected)} non-overlapping comparable events observed; "
+            f"{minimum_events} required"
+        )
+
+    realized: list[Decimal] = []
+    for index in selected:
+        outcome_start = prices[index]
+        outcome_end = prices[index + horizon_bars]
         outcome_move = (outcome_end - outcome_start) / outcome_start * Decimal("100")
         # Store the return in the chosen direction so a positive value is
         # always a favorable historical outcome, while retaining losses for a
         # genuine risk/EV calculation.
         realized.append(outcome_move if direction == "bullish" else -outcome_move)
 
-    if len(realized) < minimum_events:
-        raise HistoricalAnalogUnavailable(
-            f"Only {len(realized)} comparable events observed; {minimum_events} required"
-        )
     expected = sum(realized, Decimal("0")) / Decimal(str(len(realized)))
     wins = sum(1 for value in realized if value > 0)
     win_rate = Decimal(str(wins)) / Decimal(str(len(realized))) * Decimal("100")
@@ -109,9 +177,13 @@ def compute_historical_analogs(
         expected_return_pct=round(expected, 4),
         win_rate_pct=round(win_rate, 4),
         net_ev_r=round(net_ev_r, 4),
-        observed_from=normalized[0][0],
-        observed_to=normalized[-1][0],
+        observed_from=min(normalized[index][0] for index in selected),
+        observed_to=max(normalized[index + horizon_bars][0] for index in selected),
         outcome_returns_pct=tuple(realized),
+        horizon_bars=horizon_bars,
+        methodology_version=(
+            f"nearest_non_overlapping_point_in_time_v2:event_category={event_category}"
+        ),
     )
     if strategy is not None:
         if underlying_price is None or quotes is None:
@@ -142,8 +214,9 @@ def compute_option_payoff_ev(
     observed spread relative to the authorized maximum.  A non-fill is a zero
     P/L outcome.  Payoff is marked at expiration using intrinsic value, so both
     single-leg and debit-spread premium, slippage, and fill probability are
-    represented in the resulting EV.  This is intentionally conservative and
-    deterministic; it is not a claim of an executable option-price forecast.
+    represented in the resulting EV. The observed entry slippage is charged a
+    second time as a conservative liquidation-cost estimate at the actual
+    holding horizon. This remains a model, not historical option-price proof.
     """
 
     if not summary.outcome_returns_pct or underlying_price <= 0:
@@ -206,7 +279,7 @@ def compute_option_payoff_ev(
             )
             signed_payoff = intrinsic * contract_multiplier
             payoff += signed_payoff if leg.side.value == "buy" else -signed_payoff
-        profits.append(payoff)
+        profits.append(payoff - slippage)
 
     if not profits:
         raise HistoricalAnalogUnavailable("Option payoff outcomes are unavailable")
@@ -241,7 +314,7 @@ def compute_option_payoff_ev(
         observed_from=summary.observed_from,
         observed_to=summary.observed_to,
         outcome_returns_pct=summary.outcome_returns_pct,
-        ev_method="option_payoff_intrinsic_with_nbbo_slippage_and_fill_probability_v1",
+        ev_method="option_payoff_intrinsic_actual_horizon_round_trip_slippage_v2",
         expected_profit_per_contract=round(expected_profit, 4),
         expected_loss_per_contract=round(expected_loss, 4),
         max_loss_per_contract=round(max_loss, 4),
@@ -249,4 +322,6 @@ def compute_option_payoff_ev(
         slippage_per_contract=round(slippage, 4),
         fill_probability=round(fill_probability, 6),
         reward_risk_ratio=round(reward_risk, 4),
+        horizon_bars=summary.horizon_bars,
+        methodology_version=summary.methodology_version,
     )

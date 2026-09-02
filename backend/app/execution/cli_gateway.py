@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contracts.models import (
     AuthorizationDecision,
+    ExecutionLegState,
     ExecutionOperation,
     ExecutionReceipt,
     ExecutionStatus,
@@ -70,6 +71,7 @@ class SqlAlchemyReceiptRepository:
     def _to_contract(model: ExecutionReceiptModel) -> ExecutionReceipt:
         operation = getattr(model, "operation", None) or ExecutionOperation.ENTRY.value
         raw_exit_reason = getattr(model, "exit_reason", None)
+        raw_legs = json.loads(model.legs_json) if model.legs_json is not None else []
         return ExecutionReceipt(
             trace_id=UUID(model.trace_id),
             proposal_id=UUID(model.proposal_id) if model.proposal_id else None,
@@ -81,6 +83,10 @@ class SqlAlchemyReceiptRepository:
             symbol=getattr(model, "symbol", None),
             exit_reason=ExitReason(raw_exit_reason) if isinstance(raw_exit_reason, str) else None,
             requested_quantity=getattr(model, "requested_quantity", None),
+            strategy_position_id=(
+                UUID(model.strategy_position_id) if model.strategy_position_id else None
+            ),
+            legs=[ExecutionLegState.model_validate(item) for item in raw_legs],
             filled_quantity=model.filled_quantity,
             filled_average_price=model.filled_average_price,
             error_code=model.error_code,
@@ -125,6 +131,14 @@ class SqlAlchemyReceiptRepository:
             "symbol": receipt.symbol,
             "exit_reason": receipt.exit_reason.value if receipt.exit_reason else None,
             "requested_quantity": receipt.requested_quantity,
+            "strategy_position_id": (
+                str(receipt.strategy_position_id) if receipt.strategy_position_id else None
+            ),
+            "legs_json": json.dumps(
+                [leg.model_dump(mode="json") for leg in receipt.legs], sort_keys=True
+            )
+            if receipt.legs
+            else None,
             "filled_quantity": receipt.filled_quantity,
             "filled_average_price": receipt.filled_average_price,
             "error_code": receipt.error_code,
@@ -405,6 +419,113 @@ class AlpacaCliExecutionGateway:
         await self._commit_repository(repository)
         return receipt
 
+    async def close_strategy_async(
+        self,
+        strategy: Any,
+        *,
+        strategy_position_id: UUID,
+        trace_id: UUID,
+        exit_reason: ExitReason | str,
+        requested_quantity: Decimal,
+        limit_price: Decimal,
+        repository: AsyncReceiptRepository,
+    ) -> ExecutionReceipt:
+        """Close a persisted option strategy with one paper MLeg limit order."""
+
+        if len(strategy.legs) != 2 or requested_quantity <= 0 or limit_price <= 0:
+            raise ValueError("Atomic strategy close requires a positive two-leg spread")
+        normalized_reason = ExitReason(exit_reason)
+        closing_legs = [
+            ExecutionLegState(
+                symbol=leg.symbol,
+                ratio_qty=leg.ratio_qty,
+                position_intent=("sell_to_close" if leg.side.value == "buy" else "buy_to_close"),
+                status=ExecutionStatus.PENDING,
+            )
+            for leg in strategy.legs
+        ]
+        digest_payload = {
+            "operation": ExecutionOperation.EXIT.value,
+            "strategy_position_id": str(strategy_position_id),
+            "exit_reason": normalized_reason.value,
+            "requested_quantity": str(requested_quantity),
+            "limit_price": str(limit_price),
+            "legs": [leg.model_dump(mode="json") for leg in closing_legs],
+        }
+        payload_digest = hashlib.sha256(
+            json.dumps(digest_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        existing = await repository.find_by_payload_digest(payload_digest)
+        if existing is not None:
+            return existing
+
+        client_order_id = f"exit-{uuid4()}"
+        receipt = ExecutionReceipt(
+            trace_id=trace_id,
+            proposal_id=None,
+            client_order_id=client_order_id,
+            payload_digest=payload_digest,
+            status=ExecutionStatus.PENDING,
+            operation=ExecutionOperation.EXIT,
+            symbol=strategy.legs[0].underlying,
+            exit_reason=normalized_reason,
+            requested_quantity=requested_quantity,
+            strategy_position_id=strategy_position_id,
+            legs=closing_legs,
+        )
+        await repository.save(receipt)
+        await self._commit_repository(repository)
+        payload = {
+            "qty": str(requested_quantity),
+            "type": "limit",
+            "limit_price": str(limit_price),
+            "time_in_force": "day",
+            "client_order_id": client_order_id,
+            "extended_hours": False,
+            "order_class": "mleg",
+            "legs": [
+                {
+                    "symbol": leg.symbol,
+                    "side": "sell" if leg.position_intent == "sell_to_close" else "buy",
+                    "ratio_qty": str(leg.ratio_qty),
+                    "position_intent": leg.position_intent,
+                }
+                for leg in closing_legs
+            ],
+        }
+        try:
+            result = await asyncio.to_thread(
+                self.runner.run,
+                [self.settings.alpaca_cli_path, "api", "POST", "/v2/orders", "--quiet"],
+                json.dumps(payload, separators=(",", ":")),
+                self._command_environment(),
+                self.settings.alpaca_request_timeout_seconds,
+            )
+        except (subprocess.TimeoutExpired, TimeoutError):
+            receipt.status = ExecutionStatus.RECONCILING
+            receipt.error_code = "strategy_close_ambiguous"
+            receipt.error_message = "Paper strategy close is ambiguous; reconciliation required"
+        else:
+            if result.returncode != 0:
+                receipt.status = ExecutionStatus.FAILED
+                receipt.error_code = f"alpaca_cli_exit_{result.returncode}"
+                receipt.error_message = "Alpaca CLI rejected the paper strategy close"
+            else:
+                response = self._parse_json(result.stdout)
+                if response is None:
+                    receipt.status = ExecutionStatus.RECONCILING
+                    receipt.error_code = "strategy_close_ambiguous"
+                    receipt.error_message = (
+                        "Paper strategy close response is ambiguous; reconciliation required"
+                    )
+                else:
+                    self._apply_broker_response(receipt, response)
+        receipt.submitted_at = datetime.now(UTC)
+        receipt.legs = [leg.model_copy(update={"status": receipt.status}) for leg in receipt.legs]
+        await repository.save(receipt)
+        await self._commit_repository(repository)
+        return receipt
+
     async def reconcile_async(
         self, receipt: ExecutionReceipt, repository: AsyncReceiptRepository
     ) -> ExecutionReceipt:
@@ -434,6 +555,10 @@ class AlpacaCliExecutionGateway:
             receipt.error_message = "Paper submission is ambiguous; operator review is required"
         else:
             self._apply_broker_response(receipt, response)
+        if receipt.legs:
+            receipt.legs = [
+                leg.model_copy(update={"status": receipt.status}) for leg in receipt.legs
+            ]
         receipt.reconciled_at = datetime.now(UTC)
         await repository.save(receipt)
         await self._commit_repository(repository)
@@ -467,6 +592,10 @@ class AlpacaCliExecutionGateway:
             receipt.error_message = "Paper submission is ambiguous; operator review is required"
         else:
             self._apply_broker_response(receipt, response)
+        if receipt.legs:
+            receipt.legs = [
+                leg.model_copy(update={"status": receipt.status}) for leg in receipt.legs
+            ]
         receipt.reconciled_at = datetime.now(UTC)
         self.repository.save(receipt)
         return receipt

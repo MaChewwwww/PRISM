@@ -1096,8 +1096,6 @@ class MonitoringReadService:
         names = {
             "target_position_size_pct": ("Target position size", "% equity"),
             "opportunity_score_threshold": ("Opportunity score threshold", "score"),
-            "take_profit_pct": ("Take-profit target", "% initial debit"),
-            "stop_loss_pct": ("Stop-loss limit", "% initial debit"),
         }
         parameters = [
             ProfileParameter(
