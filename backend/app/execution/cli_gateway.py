@@ -361,19 +361,32 @@ class AlpacaCliExecutionGateway:
         ).hexdigest()
         existing = await repository.find_by_payload_digest(payload_digest)
         if existing is not None:
-            return existing
-
-        receipt = ExecutionReceipt(
-            trace_id=trace_id,
-            proposal_id=None,
-            client_order_id=f"exit-{uuid4()}",
-            payload_digest=payload_digest,
-            status=ExecutionStatus.PENDING,
-            operation=ExecutionOperation.EXIT,
-            symbol=normalized_symbol,
-            exit_reason=normalized_reason,
-            requested_quantity=requested_quantity,
-        )
+            if existing.status in {ExecutionStatus.PENDING, ExecutionStatus.RECONCILING}:
+                return await self.reconcile_async(existing, repository)
+            if existing.status in {ExecutionStatus.SUBMITTED, ExecutionStatus.FILLED}:
+                return existing
+            receipt = existing.model_copy(
+                update={
+                    "trace_id": trace_id,
+                    "status": ExecutionStatus.PENDING,
+                    "error_code": None,
+                    "error_message": None,
+                    "submitted_at": None,
+                    "reconciled_at": None,
+                }
+            )
+        else:
+            receipt = ExecutionReceipt(
+                trace_id=trace_id,
+                proposal_id=None,
+                client_order_id=f"exit-{uuid4()}",
+                payload_digest=payload_digest,
+                status=ExecutionStatus.PENDING,
+                operation=ExecutionOperation.EXIT,
+                symbol=normalized_symbol,
+                exit_reason=normalized_reason,
+                requested_quantity=requested_quantity,
+            )
         await repository.save(receipt)
         await self._commit_repository(repository)
         try:
@@ -457,22 +470,36 @@ class AlpacaCliExecutionGateway:
         ).hexdigest()
         existing = await repository.find_by_payload_digest(payload_digest)
         if existing is not None:
-            return existing
-
-        client_order_id = f"exit-{uuid4()}"
-        receipt = ExecutionReceipt(
-            trace_id=trace_id,
-            proposal_id=None,
-            client_order_id=client_order_id,
-            payload_digest=payload_digest,
-            status=ExecutionStatus.PENDING,
-            operation=ExecutionOperation.EXIT,
-            symbol=strategy.legs[0].underlying,
-            exit_reason=normalized_reason,
-            requested_quantity=requested_quantity,
-            strategy_position_id=strategy_position_id,
-            legs=closing_legs,
-        )
+            if existing.status in {ExecutionStatus.PENDING, ExecutionStatus.RECONCILING}:
+                return await self.reconcile_async(existing, repository)
+            if existing.status in {ExecutionStatus.SUBMITTED, ExecutionStatus.FILLED}:
+                return existing
+            receipt = existing.model_copy(
+                update={
+                    "trace_id": trace_id,
+                    "status": ExecutionStatus.PENDING,
+                    "error_code": None,
+                    "error_message": None,
+                    "submitted_at": None,
+                    "reconciled_at": None,
+                }
+            )
+            client_order_id = receipt.client_order_id
+        else:
+            client_order_id = f"exit-{uuid4()}"
+            receipt = ExecutionReceipt(
+                trace_id=trace_id,
+                proposal_id=None,
+                client_order_id=client_order_id,
+                payload_digest=payload_digest,
+                status=ExecutionStatus.PENDING,
+                operation=ExecutionOperation.EXIT,
+                symbol=strategy.legs[0].underlying,
+                exit_reason=normalized_reason,
+                requested_quantity=requested_quantity,
+                strategy_position_id=strategy_position_id,
+                legs=closing_legs,
+            )
         await repository.save(receipt)
         await self._commit_repository(repository)
         payload = {

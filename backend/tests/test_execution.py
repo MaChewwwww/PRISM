@@ -326,6 +326,43 @@ def test_position_close_persists_an_exit_receipt_without_sending_internal_client
     assert len(runner.calls) == 1
 
 
+def test_close_position_async_retries_after_failure() -> None:
+    runner = RecordingRunner(
+        [
+            CommandResult(1, "", "transient error"),
+            CommandResult(0, '{"id":"close-2","status":"accepted"}', ""),
+        ]
+    )
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    repository = AsyncInMemoryReceiptRepository()
+
+    first = asyncio.run(
+        gateway.close_position_async(
+            "NVDA260909C00225000",
+            trace_id=uuid4(),
+            exit_reason="dte_threshold",
+            requested_quantity=Decimal("4"),
+            repository=repository,
+        )
+    )
+    assert first.status.value == "failed"
+    assert first.error_code == "alpaca_cli_exit_1"
+    assert len(runner.calls) == 1
+
+    second = asyncio.run(
+        gateway.close_position_async(
+            "NVDA260909C00225000",
+            trace_id=uuid4(),
+            exit_reason="dte_threshold",
+            requested_quantity=Decimal("4"),
+            repository=repository,
+        )
+    )
+    assert second.status.value == "submitted"
+    assert second.broker_order_id == "close-2"
+    assert len(runner.calls) == 2
+
+
 def test_frs_009_autonomous_trading_window_blocks_out_of_window_authorization() -> None:
     proposal = build_proposal()
     window_now = datetime(2026, 8, 31, 13, 30, tzinfo=UTC)
