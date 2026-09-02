@@ -91,7 +91,7 @@ from app.research.post_analysis import (
 )
 from app.research.risk_agent import RiskManagementAgent
 from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
-from app.rules.evaluator import authorize_proposal, input_digest
+from app.rules.evaluator import _json_value, authorize_proposal, input_digest
 from app.rules.registry import get_authorized_ruleset
 from app.shadowfund.models import ShadowPostAnalysisBatchModel, ShadowSessionModel
 from app.shadowfund.service import ShadowFundService
@@ -1548,7 +1548,7 @@ class AutonomousWorker:
                 account_verified=bool(portfolio["account_verified"]),
                 supported_options_level=portfolio["supported_options_level"],
                 snapshot_digest=digest,
-                payload_json=json.dumps(portfolio, sort_keys=True),
+                payload_json=json.dumps(_json_value(portfolio), default=str, sort_keys=True),
             )
         )
         await session.flush()
@@ -1787,7 +1787,7 @@ class AutonomousWorker:
             Decimal("0"),
         )
         greek_budget = equity * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100")
-        greeks_risk_ok = bool(
+        greeks_risk_ok = (
             portfolio_controls_complete
             and all(
                 value.is_finite()
@@ -2343,6 +2343,13 @@ class AutonomousWorker:
         for position in positions:
             symbol = str(_field(position, "symbol", default="")).upper()
             timestamp = _field(position, "provider_quote_timestamp", default=None)
+            if not isinstance(timestamp, datetime):
+                iso_timestamp = _field(position, "quote_timestamp", default=None)
+                if isinstance(iso_timestamp, str):
+                    try:
+                        timestamp = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
+                    except ValueError:
+                        timestamp = None
             if not symbol or not isinstance(timestamp, datetime):
                 continue
             quotes[symbol] = {
@@ -2667,7 +2674,7 @@ class AutonomousWorker:
             session.add(
                 ReconciliationEventModel(
                     id=str(uuid4()),
-                    receipt_id=str(row.id),
+                    receipt_id=row.id,
                     transition=f"{previous_status}->filled",
                     observed_at=now,
                     payload_json=json.dumps(
@@ -2677,6 +2684,7 @@ class AutonomousWorker:
                             "exit_reason": row.exit_reason,
                             "confirmation": "position_absent",
                         },
+                        default=str,
                         sort_keys=True,
                     ),
                 )
@@ -2739,7 +2747,7 @@ class AutonomousWorker:
                 session.add(
                     ReconciliationEventModel(
                         id=str(uuid4()),
-                        receipt_id=str(row.id),
+                        receipt_id=row.id,
                         transition=f"{previous_status}->{receipt.status.value}",
                         observed_at=datetime.now(UTC),
                         payload_json=json.dumps(
@@ -2748,6 +2756,7 @@ class AutonomousWorker:
                                 "broker_order_id": receipt.broker_order_id,
                                 "error_code": receipt.error_code,
                             },
+                            default=str,
                             sort_keys=True,
                         ),
                     )
@@ -2802,7 +2811,7 @@ class AutonomousWorker:
                 outcome=outcome,
                 symbols_json=json.dumps(AUTONOMOUS_SYMBOLS),
                 reason=reason,
-                exit_checks_json=json.dumps(safe_exit_checks, sort_keys=True),
+                exit_checks_json=json.dumps(safe_exit_checks, default=str, sort_keys=True),
                 worker_version=WORKER_VERSION,
             )
         )
