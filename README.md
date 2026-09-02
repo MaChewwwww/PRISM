@@ -261,11 +261,11 @@ PRISM was engineered from day one like an institutional fintech platform, delive
 
 | Team Member | Role | Key Contributions & Ownership |
 | :--- | :--- | :--- |
+| **Bernadette** | **Project Manager** | Hackathon milestone roadmap, cross-functional delivery cadence, FRS/NFRS governance compliance, Day 1-2 operations reports, authority chain enforcement. |
+| **Kyle** | **Business Analyst** | Mathematical business rules registry (`authorized_baseline.v1.json`), risk & concentration parameters, P0-P5 priority matrices, Day 1-2 performance calibration review addendum. |
 | **Mathew** | **DevOps Engineer** | Docker Compose orchestration, Azure VM cloud host, Nginx SSL/TLS 1.3 reverse proxy, GitHub Actions CI/CD pipelines, automated dependency & secret scanning, VPS deployment runbooks. |
 | **Shelley** | **AI Engineer** | Multi-agent prompt architecture, structured JSON schemas, provider-neutral LLM gateway (DeepSeek, Claude, Gemini, Featherless), historical analog payoff models, `PostAnalysisAgent`. |
-| **Bernadette** | **Project Manager** | Hackathon milestone roadmap, cross-functional delivery cadence, FRS/NFRS governance compliance, Day 1-2 operations reports, authority chain enforcement. |
-| **Reymie** | **Front-end Engineer** | Next.js 16 App Router interface, interactive Decision Stories view, Market Tracker shell, synchronized UTC time-range state, real-time agent observability inspector. |
-| **Kyle** | **Business Analyst** | Mathematical business rules registry (`authorized_baseline.v1.json`), risk & concentration parameters, P0-P5 priority matrices, Day 1-2 performance calibration review addendum. |
+| **Reymie** | **Front-end Developer** | Next.js 16 App Router interface, interactive Decision Stories view, Market Tracker shell, synchronized UTC time-range state, real-time agent observability inspector. |
 | **Jasmine** | **UI/UX Designer** | Dark Cyber-Crystalline visual identity, specular frosted glass token hierarchy, 3D crystal prism branding, Plus Jakarta Sans typography, WCAG 2.2 AA accessibility design. |
 
 </div>
