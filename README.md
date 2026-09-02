@@ -31,16 +31,22 @@
 
 ---
 
-## Executive Overview: Why PRISM?
+## What is PRISM?
 
-Single-agent trading bots are inherently brittle. They hallucinate trade edge, conflate breaking noise with genuine catalysts, ignore adverse options economics, and blow up accounts during volatility.
+A breaking headline or market spike is never a complete trade thesis. Before taking capital risk, an intelligent trading system must answer seven crucial questions:
 
-**PRISM** reimagines autonomous algorithmic trading through an **institutional council of specialized AI perspectives**, an **adversarial risk management agent**, and a **hard mathematical deterministic rules gate (P0–P5)**:
+- [![News Intelligence](https://img.shields.io/badge/News%20Intelligence-38BDF8?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Is the catalyst genuine or noise, and what is the source credibility?*
+- [![Quantitative Engine](https://img.shields.io/badge/Quantitative%20Engine-00D084?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Do quantitative momentum, volume surges, and volatility regimes confirm the move?*
+- [![Market Reaction](https://img.shields.io/badge/Market%20Reaction-F59E0B?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Has the market already priced it in, or does a defensible Opportunity Score exist?*
+- [![Industry Dynamics](https://img.shields.io/badge/Industry%20Dynamics-818CF8?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *How do sector peers, competitor sympathy moves, and supply chain catalysts align?*
+- [![SEC Fundamentals](https://img.shields.io/badge/SEC%20Fundamentals-6366F1?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *What do live SEC EDGAR companyfacts show for balance sheet health and cash flows?*
+- [![Macro Climate](https://img.shields.io/badge/Macro%20Regime-EC4899?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *How do interest rates, monetary policy expectations, and VIX impact systemic risk?*
+- [![Trading Decision](https://img.shields.io/badge/Trading%20Decision-10B981?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Are options economics favorable with positive net EV (`>= +0.15R`) after spreads and friction?*
+- [![Deterministic Rules](https://img.shields.io/badge/Deterministic%20Rules%20Gate-547D83?style=flat-square)](docs/BUSINESS_RULES.md) &nbsp; *Does the trade comply with hard portfolio risk, concentration (5% ticker, 10% sector), and drawdown limits?*
 
-1. **Diverse Specialist Council:** Rather than relying on a single monolithic prompt, seven dedicated agents independently dissect catalysts across News Credibility, Quantitative Technicals, Industry Dynamics, SEC Fundamental Health, Macro Regimes, and Market Reaction Discrepancies.
-2. **Adversarial Risk Management:** An independent AI risk agent acts as chief skeptic—stress-testing proposals against current portfolio drawdown, liquidity bottlenecks, and conflicting signals.
-3. **Deterministic Mathematical Gate:** AI recommends; **zero-trust code authorizes**. Hard rules evaluate concentration limits, bid/ask spreads, Greeks, expected value (EV), and account buying power before a single contract is ordered.
-4. **Adaptive Strategy Lifecycle:** Trades are managed end-to-end as unified multi-leg strategies under calibrated trailing take-profits and hard stops, backed by counterfactual **ShadowFund** simulation for continuous learning.
+**PRISM** connects this entire analytical and operational chain into an autonomous, institutional-grade decision platform. **Seven specialized AI agents** analyze market catalysts from independent perspectives, an **adversarial Risk Management agent** stress-tests the trade, and a **deterministic Rules Engine** enforces hard mathematical guardrails before submitting paper orders to **Alpaca**.
+
+Every trade, modification, rejection, or `NO_TRADE` decision is permanently recorded as an auditable **Decision Story**—linking raw evidence, multi-agent debate, risk critique, mathematical rule traces, paper execution receipts, and **ShadowFund** counterfactual simulation in one unified interface.
 
 ---
 
