@@ -31,18 +31,16 @@
 
 ---
 
-## What is PRISM?
+## 💎 What is PRISM?
 
-A breaking headline or market spike is never a complete trade thesis. Before taking capital risk, an intelligent trading system must answer seven crucial questions:
+A breaking headline or market spike is never a complete trade thesis. Before taking capital risk, an intelligent trading system must answer crucial questions:
 
-- [![News Intelligence](https://img.shields.io/badge/News%20Intelligence-38BDF8?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Is the catalyst genuine or noise, and what is the source credibility?*
-- [![Quantitative Engine](https://img.shields.io/badge/Quantitative%20Engine-00D084?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Do quantitative momentum, volume surges, and volatility regimes confirm the move?*
-- [![Market Reaction](https://img.shields.io/badge/Market%20Reaction-F59E0B?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Has the market already priced it in, or does a defensible Opportunity Score exist?*
-- [![Industry Dynamics](https://img.shields.io/badge/Industry%20Dynamics-818CF8?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *How do sector peers, competitor sympathy moves, and supply chain catalysts align?*
-- [![SEC Fundamentals](https://img.shields.io/badge/SEC%20Fundamentals-6366F1?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *What do live SEC EDGAR companyfacts show for balance sheet health and cash flows?*
-- [![Macro Climate](https://img.shields.io/badge/Macro%20Regime-EC4899?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *How do interest rates, monetary policy expectations, and VIX impact systemic risk?*
-- [![Trading Decision](https://img.shields.io/badge/Trading%20Decision-10B981?style=flat-square)](docs/AI_AGENTS.md) &nbsp; *Are options economics favorable with positive net EV (`>= +0.15R`) after spreads and friction?*
-- [![Deterministic Rules](https://img.shields.io/badge/Deterministic%20Rules%20Gate-547D83?style=flat-square)](docs/BUSINESS_RULES.md) &nbsp; *Does the trade comply with hard portfolio risk, concentration (5% ticker, 10% sector), and drawdown limits?*
+- *Is the breaking catalyst genuine or noise, and what is its source credibility?*
+- *Has the market already priced it in, or does an exploitable reaction gap exist?*
+- *Do quantitative momentum, volume surges, and volatility regimes validate the move?*
+- *How do SEC EDGAR fundamentals, peer dynamics, and the macro regime impact the thesis?*
+- *Are options economics favorable with positive net EV after spreads and execution friction?*
+- *Does the trade comply with hard portfolio risk, concentration, and drawdown limits?*
 
 **PRISM** connects this entire analytical and operational chain into an autonomous, institutional-grade decision platform. **Seven specialized AI agents** analyze market catalysts from independent perspectives, an **adversarial Risk Management agent** stress-tests the trade, and a **deterministic Rules Engine** enforces hard mathematical guardrails before submitting paper orders to **Alpaca**.
 
