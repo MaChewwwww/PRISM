@@ -24,8 +24,8 @@
 
 - [🚀 **Explore Live Platform**](https://prism-ai.japanwest.cloudapp.azure.com)
 - [🧠 **AI Specialist Matrix**](#-seven-specialist-perspectives-one-governed-outcome)
-- [🏆 **Trading Scorecard**](#-live-hackathon-paper-trading-scorecard)
 - [🦙 **Alpaca Integration**](#-alpaca-ecosystem-integration)
+- [🏆 **Trading Scorecard**](#-live-hackathon-paper-trading-scorecard)
 - [👥 **Team & Engineering**](#-professional-engineering--multidisciplinary-team)
 - [⚡ **Quickstart**](#-quickstart)
 
@@ -104,31 +104,6 @@ flowchart LR
 
 ---
 
-## 🏆 Live Hackathon Paper Trading Scorecard
-
-During the official hackathon evaluation window (Aug 31 – Sep 3, 2026), PRISM operated autonomously on its production cloud environment, executing 5-minute evaluation cycles across its allowlisted universe (`NVDA`, `AAPL`, `MSFT`, `GOOGL`, `AMZN`, `TSLA`, `AMD`).
-
-Ahead of the authorized **Wednesday Sep 2, 16:00 ET new-entry cutoff**, PRISM's autonomous lifecycle engine safely harvested profitable positions, liquidated open risk into cash, and protected capital ahead of the final scoring freeze:
-
-| Metric | Verified Live Result | Operational Standard |
-| :--- | :---: | :--- |
-| **Starting Capital Baseline** | **$100,000.00 USD** | Institutional sizing reference baseline |
-| **Current Portfolio Equity** | **$100,151.71 USD** | **Net positive return (+0.15% overall)** across hackathon volatility |
-| **Final Session (Day 3) P&L** | **+$964.67 (+0.97%)** | Profit harvested via adaptive exits and automated flatting |
-| **Peak Portfolio Drawdown** | **< 1.00%** | Zero margin calls; flawless capital preservation priority |
-| **Open Risk at Entry Freeze** | **$0.00 (100% Cash)** | Zero unhedged overnight risk; 100% liquid cash ($100,151.71) |
-| **Autonomous Scan Uptime** | **100% Continuity** | Continuous 5-minute (300s) autonomous evaluation cycles |
-| **Deterministic Governance** | **100% Compliance** | 0 rule bypasses, 0 unauthorized orders, 0 credential leaks |
-
-### Resilient Market Architecture & Adaptive Mechanics
-
-PRISM incorporates resilient market data adapters and dynamic trade lifecycle governance:
-- **Indicative Option Feed Resilience:** Automatically queries Alpaca indicative option chains and historical bars with contract-level quote caching across market data tiers.
-- **Strike EV Selection Optimization:** Computes candidate option expected value by deriving implied volatility distributions from underlying market observations, factoring in observed NBBO slippage and spread-derived fill probabilities.
-- **Adaptive Strategy Lifecycle Management:** Tracks multi-leg option positions as unified strategies under dynamic trailing profit rules (arms at `+20.00%`, trails by `10.00` percentage points giveback from strategy MFE, hard take-profit at `+40.00%`, and fixed `-50.00%` stop-loss).
-
----
-
 ## 🦙 Alpaca Ecosystem Integration
 
 PRISM deeply embeds the Alpaca developer ecosystem across the entire trading lifecycle:
@@ -187,6 +162,31 @@ All trading decisions are evaluated against the versioned, machine-readable para
 | **Stagnation Time-Stop** | `390 regular trading mins` | Closes position if MFE remains below +10.00% after a full session |
 | **DTE Exit Threshold** | `7 days` default | Prevents holding through extreme terminal gamma risk |
 | **Hackathon Max Hold** | `4 trading days` | Tightened holding cap tailored to hackathon settlement |
+
+---
+
+## 🏆 Live Hackathon Paper Trading Scorecard
+
+During the official hackathon evaluation window (Aug 31 – Sep 3, 2026), PRISM operated autonomously on its production cloud environment, executing 5-minute evaluation cycles across its allowlisted universe (`NVDA`, `AAPL`, `MSFT`, `GOOGL`, `AMZN`, `TSLA`, `AMD`).
+
+Ahead of the authorized **Wednesday Sep 2, 16:00 ET new-entry cutoff**, PRISM's autonomous lifecycle engine safely harvested profitable positions, liquidated open risk into cash, and protected capital ahead of the final scoring freeze:
+
+| Metric | Verified Live Result | Operational Standard |
+| :--- | :---: | :--- |
+| **Starting Capital Baseline** | **$100,000.00 USD** | Institutional sizing reference baseline |
+| **Current Portfolio Equity** | **$100,151.71 USD** | **Net positive return (+0.15% overall)** across hackathon volatility |
+| **Final Session (Day 3) P&L** | **+$964.67 (+0.97%)** | Profit harvested via adaptive exits and automated flatting |
+| **Peak Portfolio Drawdown** | **< 1.00%** | Zero margin calls; flawless capital preservation priority |
+| **Open Risk at Entry Freeze** | **$0.00 (100% Cash)** | Zero unhedged overnight risk; 100% liquid cash ($100,151.71) |
+| **Autonomous Scan Uptime** | **100% Continuity** | Continuous 5-minute (300s) autonomous evaluation cycles |
+| **Deterministic Governance** | **100% Compliance** | 0 rule bypasses, 0 unauthorized orders, 0 credential leaks |
+
+### Resilient Market Architecture & Adaptive Mechanics
+
+PRISM incorporates resilient market data adapters and dynamic trade lifecycle governance:
+- **Indicative Option Feed Resilience:** Automatically queries Alpaca indicative option chains and historical bars with contract-level quote caching across market data tiers.
+- **Strike EV Selection Optimization:** Computes candidate option expected value by deriving implied volatility distributions from underlying market observations, factoring in observed NBBO slippage and spread-derived fill probabilities.
+- **Adaptive Strategy Lifecycle Management:** Tracks multi-leg option positions as unified strategies under dynamic trailing profit rules (arms at `+20.00%`, trails by `10.00` percentage points giveback from strategy MFE, hard take-profit at `+40.00%`, and fixed `-50.00%` stop-loss).
 
 ---
 
