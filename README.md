@@ -28,6 +28,7 @@
 
 - [🚀 **Explore Live Platform**](https://prism-ai.japanwest.cloudapp.azure.com)
 - [🧠 **AI Specialist Matrix**](#-seven-specialist-perspectives-one-governed-outcome)
+- [🔮 **ShadowFund Engine**](#-shadowfund-counterfactual-simulation-engine)
 - [🦙 **Alpaca Integration**](#-alpaca-ecosystem-integration)
 - [🏆 **Trading Scorecard**](#-live-hackathon-paper-trading-scorecard)
 - [👥 **Team & Engineering**](#-professional-engineering--multidisciplinary-team)
@@ -111,9 +112,29 @@ flowchart LR
 - **Adversarial Risk Management Agent:** Scrutinizes proposal viability against current market volatility, correlated positions, and contradictory evidence.
 - **Deterministic Rules Engine (P0–P5):** Evaluates mathematical constraints (`PASS`, `MODIFY`, `FAIL`) and returns aggregate `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`.
 - **Alpaca Paper Execution Gate:** Re-validates paper mode, kill switch, fresh quotes (<= 30s), and payload digests before dispatching orders via the Alpaca API & CLI.
-- **ShadowFund Counterfactual Simulator:** Continuously simulates alternative paths including cash preservation, half sizing, contrarian positions, and specialist variants on the exact same price timeline.
-- **Post-Analysis Learning Engine:** Evaluates closed trades and ShadowFund outcomes post-close to recommend strictly bounded AI Profile adjustments for target position size and opportunity score threshold.
 
+---
+
+## 🔮 ShadowFund: Counterfactual Simulation Engine
+
+Autonomous trading models cannot learn effectively from executed trades alone—survivorship bias hides whether a rejected thesis would have made money, or whether a winning trade was sub-optimally sized.
+
+**ShadowFund** is PRISM's durable, non-executable counterfactual evaluation engine. For every terminal autonomous cycle (`APPROVE`, `REJECT`, `MODIFIED_PENDING_ACCEPTANCE`, or `NO_TRADE`), ShadowFund binds an immutable session record under a unique SHA-256 evaluation digest and simultaneously models parallel counterfactual branches on the exact same live market timeline:
+
+| Counterfactual Branch | Simulation Semantics | Analytical Purpose |
+| :--- | :--- | :--- |
+| **Chosen Path** | Confirmed paper fill when authorized; otherwise liquid cash. | Tracks actual execution baseline and real portfolio attribution. |
+| **Cash / No Action** | 100% risk-free control baseline. | Benchmarks whether taking capital risk outperformed capital preservation. |
+| **Half-Size** | Primary candidate strategy modeled at exactly `0.5x` virtual exposure. | Measures sizing sensitivity, capital efficiency, and tail-risk impact. |
+| **Contrarian** | Inverse directional posture selected via the deterministic eligibility gate. | Detects thesis inversion opportunities and market consensus traps. |
+| **Specialist Alternative** | Autonomous candidate structure proposed by alternative agent perspectives. | Compares specialist disagreement payoffs against the accepted proposal. |
+
+### Continuous Post-Analysis Learning (`PostAnalysisAgent`)
+
+ShadowFund does not risk capital; it builds institutional memory:
+- **Observation Cadence:** Branches are marked at entry, every 5-minute autonomous cycle, at virtual exits, and at the horizon close using live timestamped bid/ask observations.
+- **Fail-Closed Market Pricing:** Missing or illiquid option observations are recorded as `DATA_UNAVAILABLE`—ShadowFund never invents artificial midpoints or favorable synthetic fills.
+- **Evidence-Driven Profile Calibration:** Weekly post-analysis batches synthesize paper trading receipts and counterfactual branch performance to formulate bounded recommendations for AI Profiles (`target_position_size_pct` and `opportunity_score_threshold`) without mutating immutable rulesets.
 
 ---
 
