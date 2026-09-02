@@ -13,7 +13,6 @@ export default async function AlternativesPage({
 }) {
   const range = readDateRange(await searchParams);
   const alternatives = await listAlternativeSessions(range);
-  const isProduction = alternatives.dataMode === "recorded";
 
   return (
     <>
