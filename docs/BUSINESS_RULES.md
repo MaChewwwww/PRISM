@@ -122,7 +122,7 @@ Only long calls, long puts, and two-leg 1:1 long call/put debit spreads are in t
 
 ## Exit behavior
 
-Every position requires deterministic profit, loss, DTE, time, and thesis-invalidation exits. Balanced take-profit is 75%; the fixed stop-loss is 50%. The rules engine validates the policy before authorization, and future monitoring must apply mandatory exits independently of AI availability.
+Every position requires deterministic profit, loss, DTE, time, and thesis-invalidation exits under ExitPolicyV2. The calibrated adaptive profit policy arms at +20.00% return, trails by 10.00 percentage points of giveback from strategy MFE, and takes hard profit at +40.00%; the fixed stop-loss is -50.00% of initial strategy debit. Exits also trigger upon 2 completed thesis-invalidation cycles, stagnation time-stop (390 regular-session minutes if MFE < +10.00%), DTE threshold (7 days default), or hackathon max hold (4 trading days). The rules engine validates the policy before authorization, and autonomous monitoring applies mandatory exits independently of AI availability.
 
 ## Deliberately unresolved
 

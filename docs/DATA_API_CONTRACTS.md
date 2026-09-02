@@ -22,7 +22,7 @@ Runtime models live in `backend/app/contracts` and `backend/app/presentation`. `
 
 The BA registry is `backend/app/rules/authorized_baseline.v1.json`. Typed contracts cover ruleset identity, lifecycle, effective period, parameters, profile identity and compatibility, authorized profile ranges, rule priority, typed reason codes, rule traces, market regime, portfolio risk, and authorization bindings.
 
-`ExitPolicy` requires a take-profit from 75% through 100%, a fixed 50% stop-loss, a DTE threshold from 2 through 14 days, and a holding limit from 3 through 45 days. The active Balanced defaults are 75% take-profit, 50% stop-loss, 7 DTE, and 14 days. The four-trading-day hackathon override is a separate active operating constraint.
+`ExitPolicy` specifies adaptive strategy profit arming (`profit_arm_pct`, default 20.0%), trailing giveback points (`profit_trailing_giveback_points`, default 10.0), hard take-profit (`hard_take_profit_pct`, default 40.0%), fixed stop-loss (`hard_stop_loss_pct`, 50.0%), thesis failure cycles (`thesis_failure_cycles`, default 2), stagnation time-stop (`time_stop_trading_minutes`, default 390 regular-session minutes with `minimum_mfe_pct` 10.0%), DTE threshold (`dte_threshold`, 2 through 14 days, default 7), and maximum hold days (`max_hold_days`, 3 through 45 days, default 14). The four-trading-day hackathon override is a separate active operating constraint.
 
 The governance read model also exposes the registry-backed hackathon window as UTC timestamps: trading start, new-entry cutoff, official scoring point, force-flatten deadline, and outer boundary. `scoring_basis` is the closed value `total_account_equity`; the effective maximum hold is four trading days bounded by the scoring point.
 
