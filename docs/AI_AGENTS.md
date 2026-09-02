@@ -38,7 +38,7 @@ Agent 7's optional ShadowFund intent is strict structured research evidence: dir
 
 Each AI output includes schema version, trace ID, source record IDs, observed/generated times, agent/model/prompt versions, evidence references, confidence, uncertainty, limitations, and terminal state. The system records concise rationale, not hidden chain-of-thought.
 
-The Trading Decision Agent's `TradeProposal` binds the research record and market snapshot, selects only supported paper option structures, declares realistic expected value and reward/risk, and includes an `ExitPolicy`. The active Balanced exit defaults are 75% take-profit, fixed 50% stop-loss, 7 DTE, and a 14-day baseline holding limit; the hackathon operating override is four trading days.
+The Trading Decision Agent's `TradeProposal` binds the research record and market snapshot, selects only supported paper option structures, declares realistic expected value and reward/risk, and includes an `ExitPolicy`. Active Balanced exits follow calibrated ExitPolicyV2: +20% profit arm, 10 percentage point trailing giveback, +40% hard take-profit, fixed -50% stop-loss, 2-cycle thesis invalidation, 390-minute stagnation stop, 7 DTE, and a 14-day baseline holding limit; the hackathon operating override is four trading days.
 
 During the BA-authorized hackathon window, Trading Decision must not propose a new entry after Wednesday Sep 2, 2026 16:00 ET. The effective hold ends at the EOD Thursday Sep 3 total-equity scoring point, when all positions are force-flattened; Friday Sep 4 09:30 ET is only the outer window boundary. Sep-3-expiring contracts cannot be carried into settlement.
 
