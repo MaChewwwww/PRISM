@@ -1,10 +1,7 @@
 <div align="center">
-
-<img src="frontend/public/logo.png" alt="PRISM Logo" width="136" />
-
-# PRISM
-
-### One signal. Multiple perspectives. Better decisions.
+  <img src="frontend/public/logo.png" alt="PRISM Logo" width="108" /><br/>
+  <h1>PRISM</h1>
+  <p><strong>One signal. Multiple perspectives. Better decisions.</strong></p>
 
 [![Live Platform](https://img.shields.io/badge/Live%20Platform-Azure%20Cloud-547D83?style=for-the-badge&logo=azure&logoColor=white)](https://prism-ai.japanwest.cloudapp.azure.com)
 [![Hackathon](https://img.shields.io/badge/Alpaca%20Hackathon-lablab.ai-111827?style=for-the-badge)](https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon)
@@ -19,7 +16,7 @@
 ---
 
 > [!IMPORTANT]
-> **Paper Trading Invariant & Fail-Closed Safety:** PRISM operates exclusively against Alpaca paper endpoints (`paper-api.alpaca.markets/v2`). AI models formulate research, debate theses, and structure proposals; mathematical deterministic rules alone authorize execution. Live trading is structurally prohibited, credentials never touch the browser, and all ambiguous or stale conditions fail closed.
+> **Paper Trading Invariant & Governed Execution:** PRISM operates exclusively against Alpaca paper endpoints (`paper-api.alpaca.markets/v2`). AI models formulate research, debate theses, and structure proposals; mathematical deterministic rules alone authorize execution. Every decision is concurrently evaluated by **ShadowFund**, our counterfactual simulation engine tracking alternative strategies (Cash / No Action, Half Size, Contrarian / Inverse, and Specialist Alternatives) across identical market timelines to drive continuous learning without capital risk.
 
 ---
 
