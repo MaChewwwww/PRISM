@@ -1,11 +1,12 @@
-﻿"use client";
+"use client";
 
 import { GitCompareArrows, TrendingDown, TrendingUp, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -102,6 +103,11 @@ function toNumber(value: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function smoothInterp(a: number, b: number, t: number): number {
+  const smooth = t * t * (3 - 2 * t);
+  return Number((a + (b - a) * smooth).toFixed(2));
+}
+
 function buildMultiverseRows(
   aggregatePath: ChartPoint[] | undefined,
   sessions: AlternativeSession[],
@@ -132,14 +138,24 @@ function buildMultiverseRows(
   let cumContrarian = 0;
   let cumAgentAlt = 0;
 
-  const rows: MultiverseRow[] = [];
+  interface Milestone {
+    time: number;
+    iso: string;
+    active: number;
+    cash: number;
+    halfSize: number;
+    contrarian: number;
+    agentAlternative: number;
+  }
 
-  // Start with a zero baseline point right before the first session
+  const milestones: Milestone[] = [];
+
+  // Start with a zero baseline point before the first session
   const firstTime = new Date(sorted[0].occurredAt).getTime();
-  const baselineTime = new Date(firstTime - 30 * 60 * 1000).toISOString();
-  rows.push({
-    date: formatChartTime(baselineTime),
-    rawDate: baselineTime,
+  const baselineTime = firstTime - 45 * 60 * 1000;
+  milestones.push({
+    time: baselineTime,
+    iso: new Date(baselineTime).toISOString(),
     active: 0,
     cash: 0,
     halfSize: 0,
@@ -166,14 +182,50 @@ function buildMultiverseRows(
       }
     }
 
-    rows.push({
-      date: formatChartTime(session.occurredAt),
-      rawDate: session.occurredAt,
+    const t = new Date(session.occurredAt).getTime();
+    milestones.push({
+      time: t,
+      iso: session.occurredAt,
       active: Number(cumActive.toFixed(2)),
       cash: Number(cumCash.toFixed(2)),
       halfSize: Number(cumHalfSize.toFixed(2)),
       contrarian: Number(cumContrarian.toFixed(2)),
       agentAlternative: Number(cumAgentAlt.toFixed(2)),
+    });
+  }
+
+  // Generate smooth curve points between milestones so the chart curves fluidly
+  const rows: MultiverseRow[] = [];
+
+  for (let i = 0; i < milestones.length; i++) {
+    const curr = milestones[i];
+
+    if (i > 0) {
+      const prev = milestones[i - 1];
+      const subPoints = [0.33, 0.67];
+      for (const frac of subPoints) {
+        const subTime = prev.time + (curr.time - prev.time) * frac;
+        const subIso = new Date(subTime).toISOString();
+        rows.push({
+          date: formatChartTime(subIso),
+          rawDate: subIso,
+          active: smoothInterp(prev.active, curr.active, frac),
+          cash: smoothInterp(prev.cash, curr.cash, frac),
+          halfSize: smoothInterp(prev.halfSize, curr.halfSize, frac),
+          contrarian: smoothInterp(prev.contrarian, curr.contrarian, frac),
+          agentAlternative: smoothInterp(prev.agentAlternative, curr.agentAlternative, frac),
+        });
+      }
+    }
+
+    rows.push({
+      date: formatChartTime(curr.iso),
+      rawDate: curr.iso,
+      active: curr.active,
+      cash: curr.cash,
+      halfSize: curr.halfSize,
+      contrarian: curr.contrarian,
+      agentAlternative: curr.agentAlternative,
     });
   }
 
@@ -389,7 +441,18 @@ export function ShadowMultiverseChart({
         aria-label="Multiverse Portfolio Comparison Line Chart"
       >
         <ResponsiveContainer width="100%" height={340}>
-          <LineChart data={rows} margin={{ top: 16, right: 24, bottom: 8, left: 0 }}>
+          <ComposedChart data={rows} margin={{ top: 16, right: 24, bottom: 8, left: 0 }}>
+            <defs>
+              <linearGradient id="multiverseActiveAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#00D084" stopOpacity="0.28" />
+                <stop offset="50%" stopColor="#547D83" stopOpacity="0.10" />
+                <stop offset="95%" stopColor="#0B0F17" stopOpacity="0.0" />
+              </linearGradient>
+              <linearGradient id="multiverseActiveLineGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#38BDF8" />
+                <stop offset="100%" stopColor="#00D084" />
+              </linearGradient>
+            </defs>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="date"
@@ -405,21 +468,40 @@ export function ShadowMultiverseChart({
               tickFormatter={(v: number) => `$${v.toFixed(0)}`}
             />
             <Tooltip content={<CustomTooltip />} />
-            {visibleBranches.map((b) => (
-              <Line
-                key={b.key}
+
+            {/* Active Portfolio curved area with fluid gradient */}
+            {visibleBranches.some((b) => b.key === "active") && (
+              <Area
                 type="monotone"
-                dataKey={b.key}
-                name={b.label}
-                stroke={b.color}
-                strokeWidth={b.key === "active" ? 2.5 : 1.75}
-                strokeDasharray={b.dashed ? "5 5" : undefined}
-                dot={{ r: 2.5, fill: b.color }}
+                dataKey="active"
+                name="Active Portfolio"
+                stroke="url(#multiverseActiveLineGrad)"
+                strokeWidth={2.5}
+                fill="url(#multiverseActiveAreaGrad)"
+                dot={{ r: 2.5, fill: "#00D084" }}
                 activeDot={{ r: 5, strokeWidth: 2, stroke: "#0B0F17" }}
                 connectNulls
               />
-            ))}
-          </LineChart>
+            )}
+
+            {/* Counterfactual shadow branches with fluid curves */}
+            {visibleBranches
+              .filter((b) => b.key !== "active")
+              .map((b) => (
+                <Line
+                  key={b.key}
+                  type="monotone"
+                  dataKey={b.key}
+                  name={b.label}
+                  stroke={b.color}
+                  strokeWidth={1.75}
+                  strokeDasharray="5 5"
+                  dot={{ r: 2, fill: b.color }}
+                  activeDot={{ r: 4.5, strokeWidth: 2, stroke: "#0B0F17" }}
+                  connectNulls
+                />
+              ))}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
