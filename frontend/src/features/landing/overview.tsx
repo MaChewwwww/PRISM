@@ -8,26 +8,26 @@ const FEATURES = [
   {
     icon: Radar,
     accent: "#38BDF8",
-    title: "Reads the market as it moves",
-    body: "Prism ingests filings, headlines, and price reactions the moment they happen, so a shift in sentiment never sits in a queue.",
+    title: "Seven Specialist AI Perspectives",
+    body: "News, Quantitative, Industry, SEC Fundamental, Macro, Reaction, and Decision agents independently analyze every market event with strict provenance.",
+  },
+  {
+    icon: ShieldCheck,
+    accent: "#547D83",
+    title: "Adversarial Risk & Deterministic Gate",
+    body: "AI produces proposals; deterministic P0–P5 code authorizes execution. Concentration limits, positive EV checks, and stop-losses fail closed.",
   },
   {
     icon: GitBranch,
     accent: "#818CF8",
-    title: "Holds more than one view",
-    body: "Instead of collapsing news into a single score, Prism keeps the bull, bear, and neutral reads visible side by side.",
-  },
-  {
-    icon: ShieldCheck,
-    accent: "#10B981",
-    title: "Shows its reasoning",
-    body: "Every read links back to the source evidence it was built from, so you can check the reasoning, not just the output.",
+    title: "ShadowFund Counterfactual Engine",
+    body: "Simulates Cash, 0.5x Sizing, Contrarian, and Specialist alternatives concurrently on identical live market data without risking capital.",
   },
   {
     icon: Layers,
-    accent: "#F59E0B",
-    title: "Weighs risk, not just direction",
-    body: "Confidence, volatility, and conflicting signals are surfaced together, so conviction and uncertainty are never confused.",
+    accent: "#10B981",
+    title: "Deep Alpaca Ecosystem Integration",
+    body: "Powered by alpaca-py for live option chains and isolated Alpaca CLI order mutation over JSON stdin with durable cryptographic receipts.",
   },
 ];
 
@@ -41,12 +41,15 @@ export function Overview() {
             <p className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--color-ice)]">
               What PRISM does
             </p>
-            <h2 className="mt-3 font-display text-4xl leading-[1.05] tracking-tight text-[var(--color-text)] md:text-5xl">
-              Market noise, sorted into perspective.
+            <h2 className="mt-3 font-display text-4xl leading-[1.12] tracking-tight text-[var(--color-text)] md:text-5xl">
+              <span className="block">One Signal.</span>
+              <span className="block">Multiple Perspectives.</span>
+              <span className="block">Better Decisions.</span>
             </h2>
             <p className="mt-5 max-w-sm text-balance leading-relaxed text-[var(--color-text-muted)]">
-              Prism watches the same information every trading desk sees, and turns it into a
-              structured, evidence-backed read before the story finishes developing.
+              A breaking headline is never a complete trade thesis. PRISM connects real-time
+              catalyst ingestion, multi-agent debate, adversarial risk critique, and mathematical
+              code authorization into an autonomous paper trading platform.
             </p>
           </Reveal>
 

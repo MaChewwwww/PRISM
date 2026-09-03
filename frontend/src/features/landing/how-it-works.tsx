@@ -3,20 +3,20 @@ import { SectionBackground } from "@/features/landing/section-background";
 
 const STEPS = [
   {
-    title: "Prism listens",
-    body: "Filings, wire headlines, transcripts, and live price action are pulled in continuously across the names you track.",
+    title: "Real-Time Catalyst Ingestion",
+    body: "Alpaca News and market quote feeds are ingested with SHA-256 deduplication and evaluated for source credibility, decay, and price impact.",
   },
   {
-    title: "Agents draft a read",
-    body: "A panel of specialised agents each build an independent case — bullish, bearish, and neutral — grounded in the same source evidence.",
+    title: "Multi-Perspective AI Debate",
+    body: "Seven specialist AI agents independently analyze the catalyst across quantitative momentum, SEC balance sheets, supply chains, and macro regimes.",
   },
   {
-    title: "The panel is weighed",
-    body: "Prism scores each read for confidence and conflict, so agreement and disagreement across the panel are both visible.",
+    title: "Adversarial Risk & Code Gate",
+    body: "An adversarial Risk Critic stress-tests the trade before deterministic P0–P5 code verifies position sizing, positive EV, and liquidity boundaries.",
   },
   {
-    title: "You get the perspective, not just the answer",
-    body: "The final view ships with its sources attached, ready to check, challenge, or act on in seconds.",
+    title: "Execution & ShadowFund Audit",
+    body: "Approved orders are submitted via isolated Alpaca CLI paper gateways, while ShadowFund concurrently evaluates rejected alternatives.",
   },
 ];
 
@@ -28,12 +28,13 @@ export function HowItWorks() {
     >
       <SectionBackground variant="b" />
       <div className="relative mx-auto max-w-[1500px] px-6 sm:px-10 lg:px-14">
-        <Reveal as="div" className="max-w-lg">
+        <Reveal as="div" className="max-w-xl">
           <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-[var(--color-text)] md:text-5xl">
             How it works
           </h2>
           <p className="mt-5 leading-relaxed text-[var(--color-text-muted)]">
-            Four steps, running continuously, from raw signal to a perspective you can act on.
+            Four governed stages, running continuously, from raw market signal to disciplined
+            execution and counterfactual learning.
           </p>
         </Reveal>
 

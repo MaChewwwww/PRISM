@@ -2,9 +2,10 @@ import { Reveal } from "@/features/landing/reveal";
 import { SectionBackground } from "@/features/landing/section-background";
 
 const STATS = [
-  { value: "24/7", label: "Continuous coverage across sessions and time zones" },
-  { value: "3", label: "Independent reads weighed for every signal" },
-  { value: "<60s", label: "From raw event to a sourced perspective" },
+  { value: "7", label: "Specialist AI perspectives evaluating every market catalyst" },
+  { value: "100%", label: "Deterministic code authorization across P0–P5 rules" },
+  { value: "232", label: "Continuous autonomous cycles recorded in production" },
+  { value: "+$151.71", label: "Net realized return finishing in 100% cash defense" },
 ];
 
 export function About() {
@@ -15,21 +16,22 @@ export function About() {
         <div className="grid grid-cols-1 gap-16 md:grid-cols-2 md:items-center">
           <Reveal as="div">
             <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-[var(--color-text)] md:text-5xl">
-              Built for the moment before the market decides.
+              Engineered for institutional-grade autonomy.
             </h2>
             <p className="mt-6 leading-relaxed text-[var(--color-text-muted)]">
-              Prism started from a simple frustration: by the time news is fully priced in, the
-              useful window has closed. We built a panel of agents that read the same information
-              analysts do, argue their cases openly, and hand you the disagreement along with the
-              conclusion &mdash; so you&rsquo;re deciding with perspective, not a black-box score.
+              PRISM was designed for the Alpaca AI Trading Agents Hackathon to solve a critical flaw
+              in modern algorithmic trading: trusting unconstrained black-box models with capital
+              risk.
             </p>
             <p className="mt-4 leading-relaxed text-[var(--color-text-muted)]">
-              Every output stays traceable to its source, because a signal you can&rsquo;t check
-              isn&rsquo;t one you should trade on.
+              Instead of giving an LLM execution keys, PRISM enforces strict separation between AI
+              research and deterministic broker mutation. Every cycle produces an immutable Decision
+              Story with cryptographic SHA-256 digests, mathematical rule traces, and verified paper
+              execution receipts.
             </p>
           </Reveal>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-4">
             {STATS.map((stat, i) => (
               <Reveal
                 key={stat.label}
@@ -37,7 +39,7 @@ export function About() {
                 delay={((i % 4) + 1) as 1 | 2 | 3 | 4}
                 className="group rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-xl transition-all duration-300 ease-[var(--ease-glass)] hover:-translate-y-1 hover:shadow-[0_0_28px_-6px_var(--color-ice)] sm:col-span-1"
               >
-                <p className="font-display text-4xl tabular-nums text-[var(--color-ice)] transition-colors duration-500 group-hover:text-[var(--color-ice-soft)]">
+                <p className="font-display text-3xl font-semibold tabular-nums text-[var(--color-ice)] transition-colors duration-500 group-hover:text-[var(--color-ice-soft)]">
                   {stat.value}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
