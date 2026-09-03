@@ -33,8 +33,7 @@ export default async function RulesPage() {
         eyebrow="Active governance"
         title="Rules & AI Profile"
         description="See the rules and profile guiding decisions."
-      >
-      </PageHeader>
+      ></PageHeader>
 
       {/* Ruleset identity cards */}
       <section aria-label="Active ruleset identity" className="mt-6">

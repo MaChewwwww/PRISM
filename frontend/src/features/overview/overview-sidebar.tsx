@@ -114,13 +114,7 @@ function SectionHeading({
   );
 }
 
-export function OverviewSidebar({
-  points,
-  outcomes,
-  exposures,
-  positions,
-  asOf,
-}: Props) {
+export function OverviewSidebar({ points, outcomes, exposures, positions, asOf }: Props) {
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null);
   const [selectedExposure, setSelectedExposure] = useState<string | null>(null);
   const latest = points.at(-1);
