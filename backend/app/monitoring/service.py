@@ -159,10 +159,13 @@ def _outcome(value: str) -> StoryOutcome:
     }.get(value, StoryOutcome.DEGRADED)
 
 
-def _rule_result(value: str) -> str:
-    return {"APPROVE": "PASS", "MODIFIED_PENDING_ACCEPTANCE": "MODIFY", "REJECT": "FAIL"}.get(
-        value, "NOT_EVALUATED"
-    )
+def _rule_result(value: str) -> Literal["PASS", "MODIFY", "FAIL", "NOT_EVALUATED"]:
+    mapping: dict[str, Literal["PASS", "MODIFY", "FAIL", "NOT_EVALUATED"]] = {
+        "APPROVE": "PASS",
+        "MODIFIED_PENDING_ACCEPTANCE": "MODIFY",
+        "REJECT": "FAIL",
+    }
+    return mapping.get(value, "NOT_EVALUATED")
 
 
 def _build_option_structure(
@@ -1438,7 +1441,7 @@ class MonitoringReadService:
 
         for item in CANONICAL_AGENTS:
             agent_runs: list[AgentRun] = []
-            matched_model = str(item["model"])
+            matched_model = item["model"]
             for alias in item["aliases"]:
                 if alias in by_operation:
                     handled_ops.add(alias)
