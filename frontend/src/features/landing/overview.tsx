@@ -45,7 +45,9 @@ export function Overview() {
               One signal. Multiple perspectives. Governed execution.
             </h2>
             <p className="mt-5 max-w-sm text-balance leading-relaxed text-[var(--color-text-muted)]">
-              A breaking headline is never a complete trade thesis. PRISM connects real-time catalyst ingestion, multi-agent debate, adversarial risk critique, and mathematical code authorization into an autonomous paper trading platform.
+              A breaking headline is never a complete trade thesis. PRISM connects real-time
+              catalyst ingestion, multi-agent debate, adversarial risk critique, and mathematical
+              code authorization into an autonomous paper trading platform.
             </p>
           </Reveal>
 

@@ -82,7 +82,9 @@ export function Hero() {
             className="mt-6 max-w-xl animate-rise-slow text-balance text-base leading-relaxed text-[var(--color-text-muted)] sm:text-lg"
             style={{ animationDelay: "0.18s" }}
           >
-            Autonomous multi-agent options trading platform. Seven AI perspectives debate market catalysts, an adversarial risk critic stress-tests each trade, and deterministic mathematical rules authorize paper execution on Alpaca.
+            Autonomous multi-agent options trading platform. Seven AI perspectives debate market
+            catalysts, an adversarial risk critic stress-tests each trade, and deterministic
+            mathematical rules authorize paper execution on Alpaca.
           </p>
 
           <div

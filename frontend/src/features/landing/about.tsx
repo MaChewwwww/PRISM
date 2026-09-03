@@ -19,10 +19,15 @@ export function About() {
               Engineered for institutional-grade autonomy.
             </h2>
             <p className="mt-6 leading-relaxed text-[var(--color-text-muted)]">
-              PRISM was designed for the Alpaca AI Trading Agents Hackathon to solve a critical flaw in modern algorithmic trading: trusting unconstrained black-box models with capital risk.
+              PRISM was designed for the Alpaca AI Trading Agents Hackathon to solve a critical flaw
+              in modern algorithmic trading: trusting unconstrained black-box models with capital
+              risk.
             </p>
             <p className="mt-4 leading-relaxed text-[var(--color-text-muted)]">
-              Instead of giving an LLM execution keys, PRISM enforces strict separation between AI research and deterministic broker mutation. Every cycle produces an immutable Decision Story with cryptographic SHA-256 digests, mathematical rule traces, and verified paper execution receipts.
+              Instead of giving an LLM execution keys, PRISM enforces strict separation between AI
+              research and deterministic broker mutation. Every cycle produces an immutable Decision
+              Story with cryptographic SHA-256 digests, mathematical rule traces, and verified paper
+              execution receipts.
             </p>
           </Reveal>
 

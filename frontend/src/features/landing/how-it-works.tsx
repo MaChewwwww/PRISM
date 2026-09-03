@@ -33,7 +33,8 @@ export function HowItWorks() {
             How it works
           </h2>
           <p className="mt-5 leading-relaxed text-[var(--color-text-muted)]">
-            Four governed stages, running continuously, from raw market signal to disciplined execution and counterfactual learning.
+            Four governed stages, running continuously, from raw market signal to disciplined
+            execution and counterfactual learning.
           </p>
         </Reveal>
 
