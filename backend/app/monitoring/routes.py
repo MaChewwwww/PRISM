@@ -19,6 +19,7 @@ from app.presentation.models import (
     AlternativeSession,
     DecisionCollection,
     Governance,
+    MarketBarsData,
     NewsCollection,
     Overview,
     Portfolio,
@@ -142,12 +143,44 @@ async def agent(
 ):
     first, last = _range(start, end)
     observed = await MonitoringReadService().agents(session, first, last)
-    record = next((item for item in observed.data.agents if item.id == agent_id), None)
+    alias_map = {
+        "trading-decision": "decision",
+        "trading_decision": "decision",
+        "quant-indicators": "quant",
+        "quantitative": "quant",
+        "macroeconomic-analysis": "macro",
+        "macroeconomic": "macro",
+        "market-reaction-mispricing": "reaction",
+        "market_reaction": "reaction",
+        "sec-fundamental": "fundamental",
+        "industry-analysis": "industry",
+        "news-catalyst": "news",
+    }
+    normalized_id = alias_map.get(agent_id.lower(), agent_id.lower())
+    record = next(
+        (
+            item
+            for item in observed.data.agents
+            if item.id.lower() in (agent_id.lower(), normalized_id)
+        ),
+        None,
+    )
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Recorded agent not found"
         )
     return PresentationEnvelope(meta=observed.meta, data=record)
+
+
+@router.get("/market-bars", response_model=PresentationEnvelope[MarketBarsData])
+async def market_bars(
+    symbol: str = Query(default="NVDA", min_length=1, max_length=10),
+    timeframe: str = Query(default="1Day"),
+    limit: int = Query(default=30, ge=5, le=100),
+):
+    return await MonitoringReadService().market_bars(
+        symbol=symbol, timeframe=timeframe, limit=limit
+    )
 
 
 @router.get("/governance", response_model=PresentationEnvelope[Governance])

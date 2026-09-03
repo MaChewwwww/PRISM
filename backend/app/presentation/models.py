@@ -398,6 +398,29 @@ class NewsCollection(PresentationModel):
     symbols: list[str]
 
 
+class MarketBar(PresentationModel):
+    timestamp: datetime
+    open: str
+    high: str
+    low: str
+    close: str
+    volume: int
+    vwap: str | None = None
+
+
+class MarketBarsData(PresentationModel):
+    symbol: str
+    timeframe: str
+    bars: list[MarketBar]
+    latest_price: str
+    change_pct: str
+    high: str
+    low: str
+    volume: int
+    as_of: datetime
+    provenance: Provenance = Provenance.ALPACA_PAPER
+
+
 class HardRule(PresentationModel):
     rule_id: str
     priority: Literal["P0", "P1", "P2", "P3", "P4", "P5"]
