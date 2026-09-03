@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { buttonClasses } from "@/features/landing/button-classes";
@@ -31,13 +32,13 @@ export function Hero() {
     >
       {/* ---- Animated ambient background ---- */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Perspective grid floor — visible teal */}
+        {/* Perspective grid floor — visible teal with GPU-accelerated transform */}
         <div className="absolute inset-x-0 bottom-0 h-[62%] [perspective:640px]">
           <div
-            className="absolute inset-0 origin-bottom animate-drift [transform:rotateX(60deg)]"
+            className="absolute inset-0 origin-bottom animate-drift will-change-transform"
             style={{
               backgroundImage:
-                "linear-gradient(to right, rgba(84,125,131,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(84,125,131,0.5) 1px, transparent 1px)",
+                "linear-gradient(to right, rgba(84,125,131,0.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(84,125,131,0.45) 1px, transparent 1px)",
               backgroundSize: "64px 64px",
               maskImage: "linear-gradient(to top, black 10%, transparent 85%)",
               WebkitMaskImage: "linear-gradient(to top, black 10%, transparent 85%)",
@@ -49,7 +50,7 @@ export function Hero() {
         {STARS.map((s, i) => (
           <span
             key={i}
-            className="absolute animate-twinkle rounded-full bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.85)]"
+            className="absolute animate-twinkle rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,0.75)]"
             style={{
               top: s.top,
               left: s.left,
@@ -74,15 +75,16 @@ export function Hero() {
             className="mt-5 w-fit animate-rise-slow rounded-full border border-white/10 border-t-white/20 bg-white/[0.05] px-5 py-2 text-sm text-[var(--color-text)] backdrop-blur-xl"
             style={{ animationDelay: "0.1s" }}
           >
-            One signal. Multiple perspectives. Clearer decisions.
+            One signal. Multiple perspectives. Governed execution.
           </p>
 
           <p
-            className="mt-6 max-w-lg animate-rise-slow text-balance text-lg leading-relaxed text-[var(--color-text-muted)]"
+            className="mt-6 max-w-xl animate-rise-slow text-balance text-base leading-relaxed text-[var(--color-text-muted)] sm:text-lg"
             style={{ animationDelay: "0.18s" }}
           >
-            Autonomous market intelligence that turns news and market reactions into
-            evidence-driven, risk-aware perspective.
+            Autonomous multi-agent options trading platform. Seven AI perspectives debate market
+            catalysts, an adversarial risk critic stress-tests each trade, and deterministic
+            mathematical rules authorize paper execution on Alpaca.
           </p>
 
           <div
@@ -93,37 +95,55 @@ export function Hero() {
               href="/login"
               className={buttonClasses(
                 "glass",
-                "min-w-[15rem] overflow-hidden px-8 py-3.5 text-base",
+                "min-w-[13rem] overflow-hidden px-8 py-3.5 text-base",
               )}
             >
-              <span>Explore Prism</span>
+              <span>Explore Platform</span>
               <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
               <span
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-sheen bg-white/40 blur-md"
               />
             </Link>
+            <a
+              href="#overview"
+              className="rounded-full border border-white/10 bg-white/[0.03] px-7 py-3 text-sm font-medium text-[var(--color-text-muted)] backdrop-blur-md transition-all duration-200 hover:border-white/20 hover:text-[var(--color-text)]"
+            >
+              How It Works
+            </a>
           </div>
         </div>
 
-        {/* ---- Animated PRISM logo (GIF) ---- */}
+        {/* ---- Hardware-accelerated 3D PRISM crystal ---- */}
         <div
           className="relative mx-auto aspect-square w-full max-w-[28rem] animate-rise-slow"
           style={{ animationDelay: "0.2s" }}
         >
-          {/* Static glow behind the GIF — painted once, so the animated frames
-              don't re-run an expensive drop-shadow filter (which caused flicker). */}
+          {/* Static glow behind the crystal */}
           <div
             aria-hidden="true"
-            className="absolute inset-[22%] rounded-full bg-[var(--color-ice)]/25 blur-[80px]"
+            className="absolute inset-[20%] rounded-full bg-[var(--color-ice)]/25 blur-[60px]"
           />
-          {/* GIFs loop natively; a plain <img> preserves animation. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logi-animated.gif"
-            alt="PRISM crystal"
-            className="relative h-full w-full transform-gpu object-contain [will-change:transform] [backface-visibility:hidden]"
-          />
+          {/* Video with GPU hardware decode delivers 60fps with zero frame drops or lag */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            poster="/logo.png"
+            className="relative h-full w-full transform-gpu object-contain"
+          >
+            <source src="/logi-animated.mp4" type="video/mp4" />
+            <Image
+              src="/logo.png"
+              alt="PRISM crystal"
+              width={448}
+              height={448}
+              priority
+              className="relative h-full w-full object-contain"
+            />
+          </video>
         </div>
       </div>
     </section>
