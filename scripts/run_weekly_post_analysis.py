@@ -1,4 +1,3 @@
-﻿#!/usr/bin/env python3
 """Run PRISM's evidence-qualified PostAnalysisAgent for the trading week on demand.
 
 Gathers weekly proposals, authorizations, receipts, and ShadowFund counterfactuals,
@@ -22,17 +21,21 @@ BACKEND_ROOT = REPOSITORY_ROOT / "backend"
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.llm.gateway import LLMGateway  # noqa: E402
+from app.autonomous.worker import (
+    POST_ANALYSIS_AGENT_VERSION,
+    WORKER_VERSION,
+)
+from app.core.config import get_settings
+from app.core.database import create_database
+from app.llm.gateway import LLMGateway
+from app.profiles.service import ProfileGovernanceService
+from app.research.post_analysis import PostAnalysisAgent
+from app.rules.registry import get_authorized_ruleset
+from app.shadowfund.service import ShadowFundService
 
-from app.autonomous.worker import POST_ANALYSIS_AGENT_VERSION, WORKER_VERSION  # noqa: E402
-from app.core.config import get_settings  # noqa: E402
-from app.core.database import create_database  # noqa: E402
-from app.profiles.service import ProfileGovernanceService  # noqa: E402
-from app.research.post_analysis import PostAnalysisAgent  # noqa: E402
-from app.rules.registry import get_authorized_ruleset  # noqa: E402
-from app.shadowfund.service import ShadowFundService  # noqa: E402
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger("weekly_post_analysis")
 
 
@@ -96,7 +99,9 @@ async def run_post_analysis(
                 recommendations=recommendations,
             )
             await session.commit()
-            logger.info("Successfully persisted batch: id=%s state=%s", batch.id, batch.state)
+            logger.info(
+                "Successfully persisted batch: id=%s state=%s", batch.id, batch.state
+            )
 
             await ProfileGovernanceService().apply_automatic_if_enabled(
                 session,
@@ -111,7 +116,9 @@ async def run_post_analysis(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run PRISM on-demand weekly post-analysis.")
+    parser = argparse.ArgumentParser(
+        description="Run PRISM on-demand weekly post-analysis."
+    )
     parser.add_argument(
         "--source-mode",
         choices=["production", "staging"],
@@ -132,8 +139,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    start = datetime.fromisoformat(args.window_start).astimezone(UTC) if args.window_start else None
-    end = datetime.fromisoformat(args.window_end).astimezone(UTC) if args.window_end else None
+    start = (
+        datetime.fromisoformat(args.window_start).astimezone(UTC)
+        if args.window_start
+        else None
+    )
+    end = (
+        datetime.fromisoformat(args.window_end).astimezone(UTC)
+        if args.window_end
+        else None
+    )
 
     asyncio.run(
         run_post_analysis(
