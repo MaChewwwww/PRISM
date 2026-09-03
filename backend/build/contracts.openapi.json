@@ -11140,6 +11140,71 @@
         ]
       }
     },
+    "/api/v1/monitoring/weekly-summary/trigger": {
+      "post": {
+        "operationId": "trigger_weekly_summary_api_v1_monitoring_weekly_summary_trigger_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_WeeklySummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trigger Weekly Summary",
+        "tags": [
+          "monitoring"
+        ]
+      }
+    },
     "/api/v1/presentation/alternatives": {
       "get": {
         "description": "Project recorded ShadowFund sessions through the documented read model.",

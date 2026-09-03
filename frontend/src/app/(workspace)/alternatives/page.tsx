@@ -3,6 +3,7 @@ import { GitCompareArrows } from "lucide-react";
 import { PageHeader } from "@/components/workspace/workspace-ui";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { AlternativesList } from "@/features/story/alternatives-list";
+import { ShadowMultiverseChart } from "@/features/story/shadow-multiverse-chart";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { listAlternativeSessions } from "@/features/story/monitoring-api";
 
@@ -21,6 +22,14 @@ export default async function AlternativesPage({
         title="Shadow Portfolios"
         description={"Alternative decisions simulated without placing trades."}
       />
+
+      {/* Multiverse Trajectory Chart */}
+      <div className="mt-6">
+        <ShadowMultiverseChart
+          aggregatePath={alternatives.aggregatePath}
+          sessions={alternatives.sessions}
+        />
+      </div>
 
       {/* ShadowFund sessions */}
       <section aria-labelledby="sessions" className="mt-6">

@@ -412,6 +412,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/monitoring/weekly-summary/trigger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Weekly Summary */
+        post: operations["trigger_weekly_summary_api_v1_monitoring_weekly_summary_trigger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/presentation/alternatives": {
         parameters: {
             query?: never;
@@ -5290,6 +5307,39 @@ export interface operations {
         };
     };
     weekly_summary_api_v1_monitoring_weekly_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_weekly_summary_api_v1_monitoring_weekly_summary_trigger_post: {
         parameters: {
             query?: never;
             header?: {
