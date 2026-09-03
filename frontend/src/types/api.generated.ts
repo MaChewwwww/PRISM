@@ -3084,6 +3084,21 @@ export interface components {
          * @enum {string}
          */
         OptionStructure: "long_call" | "long_put" | "bull_call_spread" | "bear_put_spread" | "no_trade";
+        /** OptionStructureLeg */
+        OptionStructureLeg: {
+            /**
+             * Optiontype
+             * @enum {string}
+             */
+            optionType: "call" | "put";
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "buy" | "sell";
+            /** Strike */
+            strike: string;
+        };
         /**
          * OptionType
          * @enum {string}
@@ -4012,6 +4027,7 @@ export interface components {
             occurredAt: string;
             /** Operationalevidence */
             operationalEvidence?: components["schemas"]["OperationalEvidence"][];
+            optionStructure?: components["schemas"]["app__presentation__models__OptionStructure"] | null;
             outcome: components["schemas"]["StoryOutcome"];
             /** Rulechecks */
             ruleChecks: components["schemas"]["RuleCheck"][];
@@ -4051,6 +4067,7 @@ export interface components {
              * Format: date-time
              */
             occurredAt: string;
+            optionStructure?: components["schemas"]["app__presentation__models__OptionStructure"] | null;
             outcome: components["schemas"]["StoryOutcome"];
             /**
              * Ruleresult
@@ -4414,6 +4431,52 @@ export interface components {
             suggestions: components["schemas"]["ProfileSuggestion"][];
             /** Weekof */
             weekOf: string;
+        };
+        /**
+         * OptionStructure
+         * @enum {string}
+         */
+        app__contracts__models__OptionStructure: "long_call" | "long_put" | "bull_call_spread" | "bear_put_spread" | "no_trade";
+        /** OptionStructure */
+        app__presentation__models__OptionStructure: {
+            /** Breakeven */
+            breakEven: string;
+            /** Contracts */
+            contracts: number;
+            /** Currentspot */
+            currentSpot: number;
+            /** Dte */
+            dte: string;
+            /** Expiration */
+            expiration: string;
+            /** Legs */
+            legs: components["schemas"]["OptionStructureLeg"][];
+            /** Maxloss */
+            maxLoss: string;
+            /** Maxprofit */
+            maxProfit: string;
+            /** Premiumcollected */
+            premiumCollected: string;
+            /** Roomtostrikeamount */
+            roomToStrikeAmount: string;
+            /** Roomtostrikepct */
+            roomToStrikePct: string;
+            /** Spotprice */
+            spotPrice: string;
+            /** Stoploss */
+            stopLoss: string;
+            /** Strategyname */
+            strategyName: string;
+            /** Strikehigh */
+            strikeHigh: number;
+            /** Strikelow */
+            strikeLow: number;
+            /** Takeprofit */
+            takeProfit: string;
+            /** Unrealizedpct */
+            unrealizedPct: string;
+            /** Unrealizedpnl */
+            unrealizedPnl: string;
         };
     };
     responses: never;
