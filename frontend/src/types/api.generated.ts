@@ -327,6 +327,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/monitoring/market-bars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Market Bars */
+        get: operations["market_bars_api_v1_monitoring_market_bars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/monitoring/news": {
         parameters: {
             query?: never;
@@ -2726,6 +2743,52 @@ export interface components {
          * @enum {string}
          */
         MacroRegime: "risk_on" | "risk_off" | "expansionary" | "contractionary" | "stagflationary" | "transitional";
+        /** MarketBar */
+        MarketBar: {
+            /** Close */
+            close: string;
+            /** High */
+            high: string;
+            /** Low */
+            low: string;
+            /** Open */
+            open: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /** Volume */
+            volume: number;
+            /** Vwap */
+            vwap?: string | null;
+        };
+        /** MarketBarsData */
+        MarketBarsData: {
+            /**
+             * Asof
+             * Format: date-time
+             */
+            asOf: string;
+            /** Bars */
+            bars: components["schemas"]["MarketBar"][];
+            /** Changepct */
+            changePct: string;
+            /** High */
+            high: string;
+            /** Latestprice */
+            latestPrice: string;
+            /** Low */
+            low: string;
+            /** @default alpaca_paper */
+            provenance: components["schemas"]["Provenance"];
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Volume */
+            volume: number;
+        };
         /**
          * MarketDataType
          * @enum {string}
@@ -3121,6 +3184,11 @@ export interface components {
         /** PresentationEnvelope[Governance] */
         PresentationEnvelope_Governance_: {
             data: components["schemas"]["Governance"];
+            meta: components["schemas"]["PresentationMeta"];
+        };
+        /** PresentationEnvelope[MarketBarsData] */
+        PresentationEnvelope_MarketBarsData_: {
+            data: components["schemas"]["MarketBarsData"];
             meta: components["schemas"]["PresentationMeta"];
         };
         /** PresentationEnvelope[NewsCollection] */
@@ -4973,6 +5041,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_Governance_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_bars_api_v1_monitoring_market_bars_get: {
+        parameters: {
+            query?: {
+                symbol?: string;
+                timeframe?: string;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationEnvelope_MarketBarsData_"];
                 };
             };
             /** @description Validation Error */

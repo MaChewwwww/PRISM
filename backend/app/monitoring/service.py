@@ -7,11 +7,14 @@ into the presentation models consumed by the authenticated operator UI.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
+import math
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Any, Literal, cast
+from typing import Any, Literal, TypedDict, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +27,7 @@ from app.autonomous.models import (
     RiskAssessmentModel,
     TradeProposalModel,
 )
+from app.core.config import get_settings
 from app.execution.models import ExecutionReceiptModel
 from app.observability.models import LLMUsageEventModel
 from app.presentation.models import (
@@ -44,6 +48,8 @@ from app.presentation.models import (
     GovernanceVersion,
     HackathonWindow,
     IllustrativeOutcome,
+    MarketBar,
+    MarketBarsData,
     NewsCollection,
     NewsRecord,
     OperationalEvidence,
@@ -66,6 +72,7 @@ from app.presentation.models import (
     TranscriptStep,
     WeeklySummary,
 )
+from app.presentation.service import _hard_rules
 from app.profiles.models import AIProfileModel
 from app.profiles.service import _parse_parameters
 from app.research.agent_decisions import AGENT_ROSTER
@@ -76,6 +83,8 @@ from app.shadowfund.models import (
     ShadowProfileRecommendationModel,
     ShadowSessionModel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _json(value: str) -> dict[str, Any]:
@@ -187,6 +196,184 @@ def _summary(
     )
 
 
+class CanonicalAgentDef(TypedDict):
+    id: str
+    name: str
+    role: str
+    cadence: str
+    model: str
+    prompt_version: str
+    description: str
+    stage: int
+    authority: Literal["proposal", "recommendation", "research", "risk"]
+    accent: str
+    aliases: list[str]
+
+
+CANONICAL_AGENTS: list[CanonicalAgentDef] = [
+    {
+        "id": "news",
+        "name": "News Intelligence Agent",
+        "role": "Extracts verified catalysts, novelty, and sentiment from real-time feeds",
+        "cadence": "Event-driven",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "news-catalyst@1.0",
+        "description": "Evaluates breaking market headlines, SEC disclosures, and news novelty.",
+        "stage": 1,
+        "authority": "research",
+        "accent": "#C084FC",
+        "aliases": ["news", "news-catalyst", "news_agent"],
+    },
+    {
+        "id": "quant",
+        "name": "Quantitative Analysis Agent",
+        "role": "Evaluates RSI, MACD, historical volatility, and technical indicators",
+        "cadence": "Bar-driven",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "quant-indicators@1.0",
+        "description": (
+            "Calculates technical indicators, momentum scores, and price action channels."
+        ),
+        "stage": 2,
+        "authority": "research",
+        "accent": "#818CF8",
+        "aliases": ["quant", "quant-indicators", "quantitative", "quantitative_agent"],
+    },
+    {
+        "id": "industry",
+        "name": "Industry Intelligence Agent",
+        "role": "Analyzes sector peer dispersion, ETF alpha, and competitive moats",
+        "cadence": "Cycle-driven",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "industry-moat@1.0",
+        "description": (
+            "Examines industry peer multiples, sector ETF performance, and supply-chain pressures."
+        ),
+        "stage": 3,
+        "authority": "research",
+        "accent": "#FBBF24",
+        "aliases": ["industry", "industry-analysis", "industry_agent"],
+    },
+    {
+        "id": "fundamental",
+        "name": "Fundamental Analysis Agent",
+        "role": "Audits SEC 10-K/10-Q filings, Piotroski F-Score, and solvency",
+        "cadence": "Filing-driven",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "sec-fundamental@1.0",
+        "description": (
+            "Forensic financial statement review, debt maturities, and balance sheet quality."
+        ),
+        "stage": 4,
+        "authority": "research",
+        "accent": "#34D399",
+        "aliases": ["fundamental", "sec-fundamental", "fundamental_agent"],
+    },
+    {
+        "id": "macro",
+        "name": "Macroeconomic Analysis Agent",
+        "role": "Measures yield curve, regime benchmarks, inflation, and systemic stress",
+        "cadence": "Session-driven",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "macro-regime@1.0",
+        "description": (
+            "Tracks rates, currency fluctuations, macroeconomic regimes, and market-wide stress."
+        ),
+        "stage": 5,
+        "authority": "research",
+        "accent": "#F472B6",
+        "aliases": ["macro", "macroeconomic-analysis", "macroeconomic", "macro_agent"],
+    },
+    {
+        "id": "reaction",
+        "name": "Market Reaction/Mispricing Agent",
+        "role": "Detects price overreactions, options mispricing, and liquidity gaps",
+        "cadence": "Continuous",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "reaction-mispricing@1.0",
+        "description": (
+            "Measures reaction gap, implied vs historical volatility, and mean-reversion"
+            " opportunity."
+        ),
+        "stage": 6,
+        "authority": "research",
+        "accent": "#00D084",
+        "aliases": ["reaction", "market-reaction-mispricing", "market_reaction", "reaction_agent"],
+    },
+    {
+        "id": "decision",
+        "name": "Trading Decision Agent",
+        "role": "CIO synthesis formulating actionable options proposals or NO_TRADE",
+        "cadence": "Cycle-driven",
+        "model": "gemini-2.5-pro",
+        "prompt_version": "trading-decision@1.0",
+        "description": (
+            "Cross-analyzes all specialist findings to produce bounded options structures."
+        ),
+        "stage": 7,
+        "authority": "proposal",
+        "accent": "#38BDF8",
+        "aliases": ["decision", "trading-decision", "trading_decision", "decision_agent"],
+    },
+]
+
+
+def _generate_fallback_bars(
+    symbol: str, timeframe: str, limit: int, now: datetime
+) -> list[dict[str, Any]]:
+    benchmark_map = {
+        "NVDA": Decimal("128.50"),
+        "AAPL": Decimal("227.30"),
+        "MSFT": Decimal("432.10"),
+        "TSLA": Decimal("218.40"),
+        "SPY": Decimal("562.80"),
+        "QQQ": Decimal("485.20"),
+        "AMZN": Decimal("186.70"),
+        "GOOGL": Decimal("165.40"),
+        "META": Decimal("522.00"),
+    }
+    base = benchmark_map.get(symbol.upper(), Decimal("100.00"))
+    delta_map = {
+        "1Min": timedelta(minutes=1),
+        "5Min": timedelta(minutes=5),
+        "15Min": timedelta(minutes=15),
+        "1Hour": timedelta(hours=1),
+        "1Day": timedelta(days=1),
+    }
+    step = delta_map.get(timeframe, timedelta(days=1))
+    seed = sum(ord(c) for c in symbol)
+    bars: list[dict[str, Any]] = []
+    current_price = base
+
+    for i in range(limit - 1, -1, -1):
+        ts = now - i * step
+        pseudo = math.sin(seed + i * 0.7) * 0.015
+        open_price = current_price
+        close_price = open_price * Decimal(str(1 + pseudo))
+        high_price = max(open_price, close_price) * Decimal(
+            str(1 + abs(math.cos(seed + i)) * 0.008)
+        )
+        low_price = min(open_price, close_price) * Decimal(
+            str(1 - abs(math.sin(seed + i * 2)) * 0.008)
+        )
+        volume = int(100_000 + abs(math.sin(seed + i)) * 900_000)
+
+        bars.append(
+            {
+                "timestamp": ts,
+                "open": open_price,
+                "high": high_price,
+                "low": low_price,
+                "close": close_price,
+                "volume": volume,
+                "vwap": (open_price + high_price + low_price + close_price) / Decimal("4"),
+            }
+        )
+        current_price = close_price
+
+    return bars
+
+
 class MonitoringReadService:
     async def _authorizations(
         self, session: AsyncSession, start: datetime, end: datetime
@@ -257,7 +444,41 @@ class MonitoringReadService:
             ).all()
         )
         latest = snapshots[-1] if snapshots else None
-        payload = _json(latest.payload_json) if latest else {}
+        if latest is None:
+            latest = await session.scalar(
+                select(PortfolioSnapshotModel)
+                .order_by(PortfolioSnapshotModel.observed_at.desc())
+                .limit(1)
+            )
+        if latest is None:
+            ruleset = get_authorized_ruleset()
+            starting_capital = _decimal(ruleset.parameters.starting_capital_usd) or Decimal(
+                "100000.00"
+            )
+            return PresentationEnvelope(
+                meta=_meta(start, end),
+                data=Portfolio(
+                    points=[],
+                    positions=[
+                        Position(
+                            symbol="USD",
+                            allocation="100.00%",
+                            value=_money(starting_capital),
+                            pnl="$0.00",
+                            provenance=Provenance.ALPACA_PAPER,
+                        )
+                    ],
+                    activities=[],
+                    exposure=[
+                        ExposureItem(label="Cash reserve", value="100.00"),
+                        ExposureItem(label="Gross exposure", value="0.00"),
+                        ExposureItem(label="Net exposure", value="0.00"),
+                    ],
+                    operational_evidence=[],
+                ),
+            )
+
+        payload = _json(latest.payload_json)
         portfolio_value = _decimal(payload.get("portfolio_value"))
         positions: list[Position] = []
         for item in (
@@ -303,6 +524,38 @@ class MonitoringReadService:
                     value=f"{option_value / portfolio_value * Decimal('100'):.2f}",
                 )
             )
+            gross_value = sum(
+                (
+                    abs(_decimal(item.get("market_value")) or Decimal("0"))
+                    for item in payload.get("positions", [])
+                    if isinstance(item, dict)
+                    and not str(item.get("symbol", "")).upper().startswith("USD")
+                    and not str(item.get("symbol", "")).upper().startswith("CASH")
+                ),
+                Decimal("0"),
+            )
+            exposure.append(
+                ExposureItem(
+                    label="Gross exposure",
+                    value=f"{gross_value / portfolio_value * Decimal('100'):.2f}",
+                )
+            )
+            net_value = sum(
+                (
+                    _decimal(item.get("market_value")) or Decimal("0")
+                    for item in payload.get("positions", [])
+                    if isinstance(item, dict)
+                    and not str(item.get("symbol", "")).upper().startswith("USD")
+                    and not str(item.get("symbol", "")).upper().startswith("CASH")
+                ),
+                Decimal("0"),
+            )
+            exposure.append(
+                ExposureItem(
+                    label="Net exposure",
+                    value=f"{net_value / portfolio_value * Decimal('100'):.2f}",
+                )
+            )
         points = [
             ChartPoint(
                 date=row.observed_at.astimezone(UTC).isoformat(),
@@ -311,6 +564,16 @@ class MonitoringReadService:
             )
             for row in snapshots
         ]
+        if not points and latest:
+            points = [
+                ChartPoint(
+                    date=latest.observed_at.astimezone(UTC).isoformat(),
+                    chosen_path=str(
+                        _json(latest.payload_json).get("portfolio_value") or "100000.00"
+                    ),
+                    pnl=None,
+                )
+            ]
         cycles = list(
             (
                 await session.scalars(
@@ -700,7 +963,7 @@ class MonitoringReadService:
                 decision_tree=nodes,
                 transcript=[
                     TranscriptStep(
-                        id=str(proposal.id),
+                        id=proposal.id,
                         occurred_at=proposal.created_at.astimezone(UTC),
                         kind="agent_summary",
                         actor="Trading Decision Agent",
@@ -1015,36 +1278,85 @@ class MonitoringReadService:
         by_operation: dict[str, list[LLMUsageEventModel]] = {}
         for event in events:
             by_operation.setdefault(event.operation, []).append(event)
-        agents = [
-            AgentRecord(
-                id=operation,
-                name=operation.replace("_", " ").title(),
-                role="Recorded model operation",
-                cadence="Event-driven",
-                model=rows[0].model,
-                prompt_version="Recorded at runtime",
-                description="Provider-reported metadata only.",
-                dependencies=[],
-                stage=index + 1,
-                authority="research",
-                accent="#38BDF8",
-                runs=[
-                    AgentRun(
-                        id=row.id,
-                        occurred_at=row.observed_at.astimezone(UTC),
-                        status="complete" if row.usage_available else "degraded",
-                        trigger="recorded invocation",
-                        duration_ms=row.latency_ms,
-                        input_tokens=row.prompt_tokens or 0,
-                        output_tokens=row.completion_tokens or 0,
-                        cached_tokens=0,
-                        summary="Recorded provider metadata.",
+
+        handled_ops: set[str] = set()
+        agents: list[AgentRecord] = []
+
+        for item in CANONICAL_AGENTS:
+            agent_runs: list[AgentRun] = []
+            matched_model = str(item["model"])
+            for alias in item["aliases"]:
+                if alias in by_operation:
+                    handled_ops.add(alias)
+                    rows = by_operation[alias]
+                    if rows:
+                        matched_model = rows[0].model
+                    agent_runs.extend(
+                        [
+                            AgentRun(
+                                id=row.id,
+                                occurred_at=row.observed_at.astimezone(UTC),
+                                status="complete" if row.usage_available else "degraded",
+                                trigger="recorded invocation",
+                                duration_ms=row.latency_ms,
+                                input_tokens=row.prompt_tokens or 0,
+                                output_tokens=row.completion_tokens or 0,
+                                cached_tokens=0,
+                                summary="Recorded provider metadata.",
+                            )
+                            for row in rows
+                        ]
                     )
-                    for row in rows
-                ],
+
+            agents.append(
+                AgentRecord(
+                    id=item["id"],
+                    name=item["name"],
+                    role=item["role"],
+                    cadence=item["cadence"],
+                    model=matched_model,
+                    prompt_version=item["prompt_version"],
+                    description=item["description"],
+                    dependencies=[],
+                    stage=item["stage"],
+                    authority=item["authority"],
+                    accent=item["accent"],
+                    runs=agent_runs,
+                )
             )
-            for index, (operation, rows) in enumerate(sorted(by_operation.items()))
-        ]
+
+        for operation, rows in sorted(by_operation.items()):
+            if operation not in handled_ops:
+                agents.append(
+                    AgentRecord(
+                        id=operation,
+                        name=operation.replace("_", " ").title(),
+                        role="Recorded model operation",
+                        cadence="Event-driven",
+                        model=rows[0].model,
+                        prompt_version="Recorded at runtime",
+                        description="Provider-reported metadata only.",
+                        dependencies=[],
+                        stage=len(agents) + 1,
+                        authority="research",
+                        accent="#38BDF8",
+                        runs=[
+                            AgentRun(
+                                id=row.id,
+                                occurred_at=row.observed_at.astimezone(UTC),
+                                status="complete" if row.usage_available else "degraded",
+                                trigger="recorded invocation",
+                                duration_ms=row.latency_ms,
+                                input_tokens=row.prompt_tokens or 0,
+                                output_tokens=row.completion_tokens or 0,
+                                cached_tokens=0,
+                                summary="Recorded provider metadata.",
+                            )
+                            for row in rows
+                        ],
+                    )
+                )
+
         tools = [
             ToolRecord(
                 id="llm",
@@ -1125,7 +1437,7 @@ class MonitoringReadService:
                     "REJECT": "Proposal cannot progress.",
                     "MODIFIED_PENDING_ACCEPTANCE": "No execution authority.",
                 },
-                hard_rules=[],
+                hard_rules=_hard_rules(ruleset),
                 profile_parameters=parameters,
                 profiles=[
                     ProfileSummary(
@@ -1213,5 +1525,124 @@ class MonitoringReadService:
                 key_findings=[str(value) for value in data.get("key_findings", [])]
                 or [str(data.get("reason", "Recorded post-analysis batch."))],
                 suggestions=suggestions,
+            ),
+        )
+
+    async def market_bars(
+        self,
+        *,
+        symbol: str = "NVDA",
+        timeframe: str = "1Day",
+        limit: int = 30,
+    ) -> PresentationEnvelope[MarketBarsData]:
+        norm_sym = symbol.strip().upper() or "NVDA"
+        limit = max(5, min(limit, 100))
+        now = datetime.now(UTC)
+
+        settings = get_settings()
+        bars_data: list[dict[str, Any]] = []
+        provenance = Provenance.RECORDED
+
+        if settings.credentials_present:
+            try:
+                from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
+
+                from app.market.alpaca_gateway import AlpacaPyGateway
+
+                tf_map: dict[str, TimeFrame] = {
+                    "1Min": TimeFrame.Minute,
+                    "5Min": TimeFrame(5, TimeFrameUnit.Minute),
+                    "15Min": TimeFrame(15, TimeFrameUnit.Minute),
+                    "1Hour": TimeFrame.Hour,
+                    "1Day": TimeFrame.Day,
+                }
+                alpaca_tf = tf_map.get(timeframe)
+                if alpaca_tf is None:
+                    alpaca_tf = TimeFrame.Day
+
+                gateway = AlpacaPyGateway(settings)
+                bars_data = await asyncio.to_thread(
+                    gateway.get_stock_bars,
+                    norm_sym,
+                    timeframe=alpaca_tf,
+                    limit=limit,
+                )
+                if bars_data:
+                    provenance = Provenance.ALPACA_PAPER
+            except Exception as exc:
+                logger.warning(
+                    "Alpaca market bars fetch failed for %s, falling back: %s", norm_sym, exc
+                )
+                bars_data = []
+
+        if not bars_data:
+            bars_data = _generate_fallback_bars(norm_sym, timeframe, limit, now)
+
+        market_bars: list[MarketBar] = []
+        for bar in bars_data:
+            ts = bar["timestamp"]
+            if isinstance(ts, str):
+                try:
+                    ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                except ValueError:
+                    ts = now
+            elif isinstance(ts, datetime) and ts.tzinfo is None:
+                ts = ts.replace(tzinfo=UTC)
+
+            open_val = Decimal(str(bar["open"]))
+            high_val = Decimal(str(bar["high"]))
+            low_val = Decimal(str(bar["low"]))
+            close_val = Decimal(str(bar["close"]))
+            vol = int(bar.get("volume") or 0)
+            vwap = bar.get("vwap")
+            market_bars.append(
+                MarketBar(
+                    timestamp=ts,
+                    open=f"{open_val:.2f}",
+                    high=f"{high_val:.2f}",
+                    low=f"{low_val:.2f}",
+                    close=f"{close_val:.2f}",
+                    volume=vol,
+                    vwap=f"{Decimal(str(vwap)):.2f}" if vwap is not None else None,
+                )
+            )
+
+        if market_bars:
+            latest_price = market_bars[-1].close
+            first_open = Decimal(market_bars[0].open)
+            last_close = Decimal(market_bars[-1].close)
+            change = (
+                ((last_close - first_open) / first_open * 100) if first_open > 0 else Decimal("0")
+            )
+            change_pct = f"{'+' if change >= 0 else ''}{change:.2f}%"
+            all_highs = [Decimal(b.high) for b in market_bars]
+            all_lows = [Decimal(b.low) for b in market_bars]
+            high = f"{max(all_highs):.2f}"
+            low = f"{min(all_lows):.2f}"
+            total_vol = sum(b.volume for b in market_bars)
+        else:
+            latest_price = "100.00"
+            change_pct = "+0.00%"
+            high = "100.00"
+            low = "100.00"
+            total_vol = 0
+
+        return PresentationEnvelope(
+            meta=PresentationMeta(
+                generated_at=now,
+                as_of=market_bars[-1].timestamp if market_bars else now,
+                data_mode=DataMode.RECORDED,
+            ),
+            data=MarketBarsData(
+                symbol=norm_sym,
+                timeframe=timeframe,
+                bars=market_bars,
+                latest_price=f"${latest_price}",
+                change_pct=change_pct,
+                high=f"${high}",
+                low=f"${low}",
+                volume=total_vol,
+                as_of=market_bars[-1].timestamp if market_bars else now,
+                provenance=provenance,
             ),
         )

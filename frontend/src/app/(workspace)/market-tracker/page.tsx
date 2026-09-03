@@ -5,7 +5,7 @@ import { RangePresets } from "@/components/workspace/range-presets";
 import { MarketTrackerShell } from "@/features/market/market-tracker-shell";
 import { NewsList } from "@/features/story/news-list";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
-import { listNews } from "@/features/story/monitoring-api";
+import { listNews, loadMarketBars } from "@/features/story/monitoring-api";
 
 export default async function MarketTrackerPage({
   searchParams,
@@ -16,6 +16,7 @@ export default async function MarketTrackerPage({
   const collection = await listNews(range);
   const news = collection.items;
   const nowUtc = new Date().toISOString().replace("T", " ").slice(0, 19);
+  const initialMarketData = await loadMarketBars("NVDA", "1Day", 30).catch(() => null);
 
   return (
     <>
@@ -25,7 +26,7 @@ export default async function MarketTrackerPage({
         description="Track prices, decisions, trades, and market catalysts."
       />
 
-      <MarketTrackerShell nowUtc={nowUtc} />
+      <MarketTrackerShell nowUtc={nowUtc} initialData={initialMarketData} />
 
       {/* Catalyst feed — merged from the former News page, below the graph. */}
       <section aria-labelledby="catalyst-feed" className="mt-8">
