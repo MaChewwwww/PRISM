@@ -1,5 +1,4 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
 import { buttonClasses } from "@/features/landing/button-classes";
@@ -124,26 +123,18 @@ export function Hero() {
             aria-hidden="true"
             className="absolute inset-[20%] rounded-full bg-[var(--color-ice)]/25 blur-[60px]"
           />
-          {/* Video with GPU hardware decode delivers 60fps with zero frame drops or lag */}
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            poster="/logo.png"
-            className="relative h-full w-full transform-gpu object-contain"
-          >
-            <source src="/logi-animated.mp4" type="video/mp4" />
-            <Image
-              src="/logo.png"
+          {/* Animated WebP (2.1MB) with true alpha transparency and 60fps hardware acceleration */}
+          <picture>
+            <source srcSet="/logi-animated.webp" type="image/webp" />
+            <source srcSet="/logi-animated.gif" type="image/gif" />
+            <img
+              src="/logi-animated.webp"
               alt="PRISM crystal"
               width={448}
               height={448}
-              priority
-              className="relative h-full w-full object-contain"
+              className="relative h-full w-full transform-gpu object-contain [will-change:transform]"
             />
-          </video>
+          </picture>
         </div>
       </div>
     </section>
