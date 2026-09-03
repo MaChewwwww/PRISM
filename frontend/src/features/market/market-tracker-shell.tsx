@@ -251,8 +251,8 @@ export function MarketTrackerShell({
             ) : (
               <>
                 <p className="mt-3 text-[14px] leading-relaxed text-[#CBD5E1]">
-                  Market data integration is deferred. This surface is ready for the future market-data
-                  feed.
+                  Market data integration is deferred. This surface is ready for the future
+                  market-data feed.
                 </p>
                 <ul className="mt-3 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
                   {CONNECT_ITEMS.map(({ icon: Icon, text }) => (
@@ -315,7 +315,10 @@ export function MarketTrackerShell({
           </div>
         </fieldset>
         <p className="font-mono text-[11px] text-[#64748B]">
-          Default: {timeframe}. {isConnected ? "Streaming live paper bars" : "Timeframe selector reserved; queries real data once the feed is connected."}
+          Default: {timeframe}.{" "}
+          {isConnected
+            ? "Streaming live paper bars"
+            : "Timeframe selector reserved; queries real data once the feed is connected."}
         </p>
       </div>
 
@@ -333,11 +336,13 @@ export function MarketTrackerShell({
           <span className="inline-flex items-center gap-1.5 rounded-md border border-white/8 bg-white/5 px-2.5 py-1.5 font-mono text-[11px] text-[#94A3B8]">
             {isConnected ? (
               <>
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#00D084]" aria-hidden="true" /> Feed active ({data.symbol})
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#00D084]" aria-hidden="true" /> Feed
+                active ({data.symbol})
               </>
             ) : (
               <>
-                <XCircle className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" /> Feed disconnected
+                <XCircle className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" /> Feed
+                disconnected
               </>
             )}
           </span>
@@ -347,7 +352,9 @@ export function MarketTrackerShell({
           {/* Main Chart Area */}
           <div
             className="relative min-h-[380px] border-b border-white/8 p-4 lg:border-b-0 lg:border-r"
-            aria-label={isConnected ? `Market chart for ${data.symbol}` : "Market chart awaiting integration"}
+            aria-label={
+              isConnected ? `Market chart for ${data.symbol}` : "Market chart awaiting integration"
+            }
           >
             {isConnected ? (
               <div className="flex flex-col h-full justify-between">
@@ -365,11 +372,24 @@ export function MarketTrackerShell({
                       UTC
                     </span>
                     <div className="flex flex-wrap gap-3">
-                      <span>O: <strong className="text-white">${hoveredBar.open}</strong></span>
-                      <span>H: <strong className="text-emerald-400">${hoveredBar.high}</strong></span>
-                      <span>L: <strong className="text-rose-400">${hoveredBar.low}</strong></span>
-                      <span>C: <strong className="text-cyan-300">${hoveredBar.close}</strong></span>
-                      <span>V: <strong className="text-slate-300">{hoveredBar.volume.toLocaleString()}</strong></span>
+                      <span>
+                        O: <strong className="text-white">${hoveredBar.open}</strong>
+                      </span>
+                      <span>
+                        H: <strong className="text-emerald-400">${hoveredBar.high}</strong>
+                      </span>
+                      <span>
+                        L: <strong className="text-rose-400">${hoveredBar.low}</strong>
+                      </span>
+                      <span>
+                        C: <strong className="text-cyan-300">${hoveredBar.close}</strong>
+                      </span>
+                      <span>
+                        V:{" "}
+                        <strong className="text-slate-300">
+                          {hoveredBar.volume.toLocaleString()}
+                        </strong>
+                      </span>
                     </div>
                   </div>
                 )}
@@ -389,10 +409,36 @@ export function MarketTrackerShell({
                     </defs>
 
                     {/* Grid lines */}
-                    <line x1="0" y1={priceTop} x2={svgWidth} y2={priceTop} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
-                    <line x1="0" y1={(priceTop + priceBottom) / 2} x2={svgWidth} y2={(priceTop + priceBottom) / 2} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
-                    <line x1="0" y1={priceBottom} x2={svgWidth} y2={priceBottom} stroke="rgba(255,255,255,0.1)" />
-                    <line x1="0" y1={volBottom} x2={svgWidth} y2={volBottom} stroke="rgba(255,255,255,0.1)" />
+                    <line
+                      x1="0"
+                      y1={priceTop}
+                      x2={svgWidth}
+                      y2={priceTop}
+                      stroke="rgba(255,255,255,0.05)"
+                      strokeDasharray="3 3"
+                    />
+                    <line
+                      x1="0"
+                      y1={(priceTop + priceBottom) / 2}
+                      x2={svgWidth}
+                      y2={(priceTop + priceBottom) / 2}
+                      stroke="rgba(255,255,255,0.05)"
+                      strokeDasharray="3 3"
+                    />
+                    <line
+                      x1="0"
+                      y1={priceBottom}
+                      x2={svgWidth}
+                      y2={priceBottom}
+                      stroke="rgba(255,255,255,0.1)"
+                    />
+                    <line
+                      x1="0"
+                      y1={volBottom}
+                      x2={svgWidth}
+                      y2={volBottom}
+                      stroke="rgba(255,255,255,0.1)"
+                    />
 
                     {/* Candlesticks & Volume Bars */}
                     {bars.map((bar, i) => {
@@ -403,7 +449,10 @@ export function MarketTrackerShell({
                       const yLow = priceToY(Number(bar.low));
                       const isUp = Number(bar.close) >= Number(bar.open);
                       const candleColor = isUp ? "#00D084" : "#FF6B6B";
-                      const candleWidth = Math.max(3, Math.min(14, (svgWidth - 60) / bars.length - 4));
+                      const candleWidth = Math.max(
+                        3,
+                        Math.min(14, (svgWidth - 60) / bars.length - 4),
+                      );
                       const bodyTop = Math.min(yOpen, yClose);
                       const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
                       const isHovered = hoveredIndex === i;
@@ -469,7 +518,9 @@ export function MarketTrackerShell({
 
                 {/* Subtitle notes */}
                 <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-[#64748B]">
-                  <span>Showing {bars.length} {timeframe} candles · Alpaca Paper Feed</span>
+                  <span>
+                    Showing {bars.length} {timeframe} candles · Alpaca Paper Feed
+                  </span>
                   <span>Volume scaled to maximum {maxVolume.toLocaleString()} units</span>
                 </div>
               </div>
@@ -505,7 +556,10 @@ export function MarketTrackerShell({
                           className="w-full rounded-[1px]"
                           style={{ height: candle.body, background: tone }}
                         />
-                        <span className="w-px" style={{ height: candle.bottom, background: tone }} />
+                        <span
+                          className="w-px"
+                          style={{ height: candle.bottom, background: tone }}
+                        />
                       </span>
                     );
                   })}

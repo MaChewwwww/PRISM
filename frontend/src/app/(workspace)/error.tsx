@@ -22,7 +22,9 @@ export default function WorkspaceError({
   return (
     <div className="flex flex-col items-center justify-center space-y-4 py-8">
       <EmptyState
-        title={isAuthError ? "Session expired or sign-in required" : "Workspace temporarily unavailable"}
+        title={
+          isAuthError ? "Session expired or sign-in required" : "Workspace temporarily unavailable"
+        }
         detail={
           isAuthError
             ? "Your operator session is expired or unauthenticated. Please sign in to access workspace telemetry and decision pipelines."

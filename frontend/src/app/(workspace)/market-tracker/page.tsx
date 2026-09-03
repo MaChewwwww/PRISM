@@ -28,7 +28,6 @@ export default async function MarketTrackerPage({
 
       <MarketTrackerShell nowUtc={nowUtc} initialData={initialMarketData} />
 
-
       {/* Catalyst feed — merged from the former News page, below the graph. */}
       <section aria-labelledby="catalyst-feed" className="mt-8">
         <NewsList

@@ -68,7 +68,8 @@ export default async function PortfolioPage({
 
   // Directional net exposure and gross exposure from server-calculated portfolio metrics.
   const nonCash = portfolio.exposure.filter(
-    (item) => !item.label.toLowerCase().includes("cash") && !item.label.toLowerCase().includes("net"),
+    (item) =>
+      !item.label.toLowerCase().includes("cash") && !item.label.toLowerCase().includes("net"),
   );
   const grossExposure = nonCash.reduce((total, item) => total + toPercent(item.value), 0);
   const netExposureItem = portfolio.exposure.find((item) =>
