@@ -8,6 +8,7 @@ import {
   LineChart,
   Network,
   Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,11 +20,12 @@ import { SignOutButton } from "@/components/layout/sign-out-button";
 const navigation = [
   { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Decision Stories", icon: Network, href: "/stories" },
-  { label: "Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
+  { label: "Active Portfolio", icon: BriefcaseBusiness, href: "/portfolio" },
   { label: "Shadow Portfolio", icon: GitBranch, href: "/alternatives" },
-  { label: "Market & Catalysts", icon: LineChart, href: "/market-tracker" },
-  { label: "Agents & Tools", icon: Sparkles, href: "/agents" },
-  { label: "Rules", icon: BookOpenCheck, href: "/rules" },
+  { label: "Market & Catalyst", icon: LineChart, href: "/market-tracker" },
+  { label: "Weekly Analysis", icon: TrendingUp, href: "/weekly-summary" },
+  { label: "Agent & Tools", icon: Sparkles, href: "/agents" },
+  { label: "Business Rules", icon: BookOpenCheck, href: "/rules" },
 ];
 
 export type PrimaryNavProps = {

@@ -64,22 +64,29 @@ export default async function RulesPage() {
           subtitle="Rules that remain enforced across all AI profiles."
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
-          <ul className="space-y-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {governance.hardRules.map((rule) => (
-              <li key={rule.ruleId} className="rounded-xl border border-white/8 bg-white/2 p-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-semibold text-[#F8FAFC]">{rule.name}</span>
-                  <span className="inline-flex shrink-0 items-center gap-1.5">
-                    <StateBadge state="enforced" />
-                    <LockKeyhole className="h-4 w-4 text-[#547D83]" aria-hidden="true" />
-                  </span>
+              <li
+                key={rule.ruleId}
+                className="flex flex-col justify-between rounded-xl border border-white/8 bg-white/2 p-3.5 transition-all duration-200 hover:border-[#547D83]/40"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[14px] font-semibold text-[#F8FAFC]">{rule.name}</span>
+                    <span className="inline-flex shrink-0 items-center gap-1.5">
+                      <StateBadge state="enforced" />
+                      <LockKeyhole className="h-4 w-4 text-[#547D83]" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[#94A3B8]">
+                    {rule.explanation}
+                  </p>
                 </div>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-[#94A3B8]">
-                  {rule.explanation}
-                </p>
-                <code className="mt-2 inline-block rounded border border-white/8 bg-white/5 px-2 py-0.5 font-mono text-[12px] text-[#CBD5E1]">
-                  {rule.activeValue}
-                </code>
+                <div className="mt-3">
+                  <code className="inline-block rounded border border-white/8 bg-white/5 px-2 py-0.5 font-mono text-[12px] text-[#CBD5E1]">
+                    {rule.activeValue}
+                  </code>
+                </div>
               </li>
             ))}
           </ul>
