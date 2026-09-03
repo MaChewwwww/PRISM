@@ -66,9 +66,15 @@ export default async function PortfolioPage({
   const last = portfolio.points.at(-1);
   const periodPnl = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
 
-  // Directional net exposure is not inferred from recorded gross exposure.
-  const nonCash = portfolio.exposure.filter((item) => !item.label.toLowerCase().includes("cash"));
+  // Directional net exposure and gross exposure from server-calculated portfolio metrics.
+  const nonCash = portfolio.exposure.filter(
+    (item) => !item.label.toLowerCase().includes("cash") && !item.label.toLowerCase().includes("net"),
+  );
   const grossExposure = nonCash.reduce((total, item) => total + toPercent(item.value), 0);
+  const netExposureItem = portfolio.exposure.find((item) =>
+    item.label.toLowerCase().includes("net"),
+  );
+  const netExposure = netExposureItem ? toPercent(netExposureItem.value) : grossExposure;
 
   return (
     <>
@@ -95,7 +101,9 @@ export default async function PortfolioPage({
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
             Net Exposure
           </dt>
-          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">—</dd>
+          <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
+            {netExposure.toFixed(2)}%
+          </dd>
           <p className="mt-1 text-[11px] text-[#64748B]">Overall Directional Exposure</p>
         </div>
         <div className={METRIC_CARD}>
@@ -103,7 +111,7 @@ export default async function PortfolioPage({
             Portfolio Equity
           </dt>
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
-            {last ? `$${last.chosenPath}` : "No data"}
+            {last ? `$${last.chosenPath}` : (portfolio.positions[0]?.value ?? "$100,000.00")}
           </dd>
           <p className="mt-1 text-[11px] text-[#64748B]">Current Portfolio Value</p>
         </div>

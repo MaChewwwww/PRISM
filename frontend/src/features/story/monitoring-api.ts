@@ -145,3 +145,20 @@ export async function getGovernance() {
 export async function getWeeklySummary() {
   return (await apiGet<WeeklySummaryEnvelope>("/monitoring/weekly-summary")).data;
 }
+
+export type MarketBar = components["schemas"]["MarketBar"];
+export type MarketBarsData = components["schemas"]["MarketBarsData"];
+type MarketBarsEnvelope = components["schemas"]["PresentationEnvelope_MarketBarsData_"];
+
+export async function loadMarketBars(
+  symbol = "NVDA",
+  timeframe = "1Day",
+  limit = 30,
+): Promise<MarketBarsData> {
+  const envelope = await apiGet<MarketBarsEnvelope>("/monitoring/market-bars", {
+    symbol,
+    timeframe,
+    limit: String(limit),
+  });
+  return envelope.data;
+}

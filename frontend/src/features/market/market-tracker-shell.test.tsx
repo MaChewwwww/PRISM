@@ -54,4 +54,38 @@ describe("MarketTrackerShell", () => {
     expect(tradedOnly).toBeChecked();
     expect(screen.getByText(/Verified fills only/)).toBeInTheDocument();
   });
+
+  it("renders live market data and candlestick chart when connected", () => {
+    const mockData = {
+      symbol: "NVDA",
+      timeframe: "1Day",
+      bars: [
+        {
+          timestamp: "2026-08-30T00:00:00Z",
+          open: "128.00",
+          high: "132.00",
+          low: "127.50",
+          close: "131.00",
+          volume: 500000,
+          vwap: "130.00",
+        },
+      ],
+      latestPrice: "$131.00",
+      changePct: "+2.34%",
+      high: "$132.00",
+      low: "$127.50",
+      volume: 500000,
+      asOf: "2026-08-30T00:00:00Z",
+      provenance: "alpaca_paper" as const,
+    };
+
+    render(<MarketTrackerShell nowUtc="2026-08-30 12:00:00" initialData={mockData} />);
+
+    expect(screen.getByText("Alpaca Paper Feed Connected")).toBeInTheDocument();
+    expect(screen.getAllByText("NVDA").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("$131.00").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("+2.34%")).toBeInTheDocument();
+    expect(screen.getByText(/Vol: 500,000/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Market chart for NVDA")).toBeInTheDocument();
+  });
 });
