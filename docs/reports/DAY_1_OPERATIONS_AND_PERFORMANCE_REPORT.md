@@ -6,6 +6,9 @@
 **Active Baseline Ruleset**: `prism-authorized-baseline@1.0.0` (Profile: `balanced`)
 **Report Generated**: 2026-09-01 (Post-Market Close Analysis)
 
+> [!NOTE]
+> **Calibration Review Reference**: See [Day 1-3 Performance Calibration Review Addendum](DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md) for audited in-market cycle counts (30 in-market / 54 total database cycles) and cross-day reconciliation.
+
 ---
 
 ## Executive Summary & Scorecard
