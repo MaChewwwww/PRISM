@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 
-const DOT_COUNT = 16;
+const DOT_COUNT = 10;
 
 /**
  * Blueish comet-tail that follows the cursor. A chain of dots each ease toward
  * the position of the one ahead, producing a soft trailing beam. Pointer-events
  * are disabled so it never blocks clicks. Skips touch devices and respects
- * prefers-reduced-motion.
+ * prefers-reduced-motion. Automatically sleeps the RAF loop when cursor is idle.
  */
 export function CursorTrail() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -32,37 +32,51 @@ export function CursorTrail() {
       dots.push(dot);
     }
 
-    // Each dot tracks an x/y that chases the point ahead of it.
     const points = dots.map(() => ({ x: 0, y: 0 }));
     const target = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    let active = false;
+    let isRunning = false;
     let raf = 0;
-
-    function onMove(event: MouseEvent) {
-      target.x = event.clientX;
-      target.y = event.clientY;
-      active = true;
-    }
 
     function tick() {
       let leadX = target.x;
       let leadY = target.y;
+      let totalDelta = 0;
+
       for (let i = 0; i < points.length; i += 1) {
         const p = points[i];
-        p.x += (leadX - p.x) * 0.35;
-        p.y += (leadY - p.y) * 0.35;
+        const dx = leadX - p.x;
+        const dy = leadY - p.y;
+        p.x += dx * 0.35;
+        p.y += dy * 0.35;
+        totalDelta += Math.abs(dx) + Math.abs(dy);
+
         const dot = dots[i];
         const scale = Number(dot.dataset.scale);
-        dot.style.transform = `translate(${p.x - 5}px, ${p.y - 5}px) scale(${scale})`;
-        dot.style.opacity = active ? String(0.85 * scale) : "0";
+        dot.style.transform = `translate3d(${p.x - 4}px, ${p.y - 4}px, 0) scale(${scale})`;
+        dot.style.opacity = String(0.8 * scale);
         leadX = p.x;
         leadY = p.y;
       }
+
+      // If all dots have settled within sub-pixel distance, sleep the loop.
+      if (totalDelta < 0.2) {
+        isRunning = false;
+        return;
+      }
+
       raf = window.requestAnimationFrame(tick);
     }
 
+    function onMove(event: MouseEvent) {
+      target.x = event.clientX;
+      target.y = event.clientY;
+      if (!isRunning) {
+        isRunning = true;
+        raf = window.requestAnimationFrame(tick);
+      }
+    }
+
     window.addEventListener("mousemove", onMove, { passive: true });
-    raf = window.requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener("mousemove", onMove);
