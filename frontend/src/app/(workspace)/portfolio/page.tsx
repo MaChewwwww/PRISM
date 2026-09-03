@@ -200,7 +200,7 @@ export default async function PortfolioPage({
             title="Orders"
             subtitle="Paper execution receipts submitted to Alpaca."
           />
-          <div className={`${SECTION_CARD} flex-1 overflow-y-auto`} style={{ maxHeight: "460px" }}>
+          <div className={`${SECTION_CARD} flex flex-1 flex-col overflow-hidden`}>
             <PortfolioOrdersList orders={orders} />
           </div>
         </section>

@@ -3,12 +3,12 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-const PAGE_SIZE = 8;
+const DEFAULT_PAGE_SIZE = 8;
 
 /**
- * Client-side paginated list. Renders up to 8 items per page and, on page
- * change, smoothly scrolls the window to the top so the new items are visible.
- * Used for the portfolio activity ledger and ShadowFund session lists.
+ * Client-side paginated list. Renders items per page and supports optional
+ * smooth scrolling to top on page change.
+ * Used for the portfolio activity ledger, orders receipts panel, and ShadowFund session lists.
  */
 export function PaginatedList<T>({
   items,
@@ -16,24 +16,34 @@ export function PaginatedList<T>({
   getKey,
   className,
   itemLabel = "items",
+  pageSize = DEFAULT_PAGE_SIZE,
+  scrollToTop = true,
+  navClassName,
 }: {
   items: T[];
   renderItem: (item: T) => ReactNode;
-  getKey: (item: T) => string;
+  getKey: (item: T, index: number) => string;
   /** Applied to the <ul> wrapping the page's items. */
   className?: string;
   /** Plural noun used in the pagination summary (e.g. "sessions"). */
   itemLabel?: string;
+  /** Number of items per page. Defaults to 8. */
+  pageSize?: number;
+  /** Whether to scroll to top of window on page change. Defaults to true. */
+  scrollToTop?: boolean;
+  /** Optional custom styling for the <nav> element. */
+  navClassName?: string;
 }) {
   const [page, setPage] = useState(1);
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const effectivePageSize = Math.max(1, pageSize);
+  const totalPages = Math.max(1, Math.ceil(items.length / effectivePageSize));
   const safePage = Math.min(page, totalPages);
-  const pageItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageItems = items.slice((safePage - 1) * effectivePageSize, safePage * effectivePageSize);
 
   function goToPage(next: number) {
     setPage(next);
-    if (typeof window !== "undefined") {
+    if (scrollToTop && typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
@@ -41,13 +51,16 @@ export function PaginatedList<T>({
   return (
     <>
       <ul className={className}>
-        {pageItems.map((item) => (
-          <li key={getKey(item)}>{renderItem(item)}</li>
+        {pageItems.map((item, index) => (
+          <li key={getKey(item, (safePage - 1) * effectivePageSize + index)}>{renderItem(item)}</li>
         ))}
       </ul>
 
-      {items.length > PAGE_SIZE && (
-        <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Pagination">
+      {items.length > effectivePageSize && (
+        <nav
+          className={navClassName ?? "mt-5 flex items-center justify-between gap-3"}
+          aria-label="Pagination"
+        >
           <span className="font-mono text-[11px] text-[#64748B]">
             Page {safePage} of {totalPages} · {items.length} {itemLabel}
           </span>

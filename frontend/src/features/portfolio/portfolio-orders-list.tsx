@@ -2,6 +2,7 @@
 
 import { ArrowDownLeft, ArrowUpRight, ClipboardList } from "lucide-react";
 
+import { PaginatedList } from "@/components/workspace/paginated-list";
 import type { OrderReceipt } from "@/features/story/monitoring-api";
 
 function formatOrderTime(iso: string): string {
@@ -55,10 +56,48 @@ function SideBadge({ side }: { side: string }) {
   );
 }
 
+function OrderRow({ order }: { order: OrderReceipt }) {
+  const hasFillPrice =
+    order.fillPrice &&
+    order.fillPrice !== "—" &&
+    order.fillPrice !== "\u2014" &&
+    order.fillPrice !== "-";
+
+  return (
+    <div className="px-4 py-3 transition-colors hover:bg-white/[0.02]">
+      {/* Top row: time + symbol + side badge */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <time dateTime={order.occurredAt} className="font-mono text-[10px] text-[#64748B]">
+          {formatOrderTime(order.occurredAt)}
+        </time>
+        <span aria-hidden="true" className="text-[10px] text-white/20">
+          |
+        </span>
+        <span className="font-mono text-[11px] font-bold text-[#F8FAFC]">{order.symbol}</span>
+        <SideBadge side={order.side} />
+      </div>
+
+      {/* Middle row: strategy name */}
+      <p className="mt-1 text-[12px] font-medium text-[#CBD5E1]">{order.strategy}</p>
+
+      {/* Bottom row: qty · fill price · status */}
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-mono text-[11px] text-[#94A3B8]">{order.quantity}</span>
+        {hasFillPrice && (
+          <span className="font-mono text-[11px] font-semibold text-[#00D084]">
+            {order.fillPrice} avg
+          </span>
+        )}
+        <StatusBadge status={order.status} />
+      </div>
+    </div>
+  );
+}
+
 export function PortfolioOrdersList({ orders }: { orders: OrderReceipt[] }) {
   if (!orders || orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-14 text-center">
         <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/8 bg-white/4">
           <ClipboardList className="h-5 w-5 text-[#547D83]" aria-hidden="true" />
         </span>
@@ -68,36 +107,17 @@ export function PortfolioOrdersList({ orders }: { orders: OrderReceipt[] }) {
   }
 
   return (
-    <ul className="divide-y divide-white/6" role="list">
-      {orders.map((order, i) => (
-        <li key={`${order.occurredAt}-${i}`} className="px-4 py-3">
-          {/* Top row: time + symbol + side badge */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <time dateTime={order.occurredAt} className="font-mono text-[10px] text-[#64748B]">
-              {formatOrderTime(order.occurredAt)}
-            </time>
-            <span aria-hidden="true" className="text-[10px] text-white/20">
-              |
-            </span>
-            <span className="font-mono text-[11px] font-bold text-[#F8FAFC]">{order.symbol}</span>
-            <SideBadge side={order.side} />
-          </div>
-
-          {/* Middle row: strategy name */}
-          <p className="mt-1 text-[12px] font-medium text-[#CBD5E1]">{order.strategy}</p>
-
-          {/* Bottom row: qty · fill price · status */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-mono text-[11px] text-[#94A3B8]">{order.quantity}</span>
-            {order.fillPrice !== "—" && (
-              <span className="font-mono text-[11px] font-semibold text-[#00D084]">
-                {order.fillPrice} avg
-              </span>
-            )}
-            <StatusBadge status={order.status} />
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-1 flex-col justify-between">
+      <PaginatedList
+        items={orders}
+        pageSize={5}
+        scrollToTop={false}
+        getKey={(order, i) => `${order.occurredAt}-${order.symbol}-${order.side}-${i}`}
+        renderItem={(order) => <OrderRow order={order} />}
+        className="divide-y divide-white/6"
+        navClassName="border-t border-white/8 px-4 py-3 flex items-center justify-between gap-3 bg-white/[0.02]"
+        itemLabel="orders"
+      />
+    </div>
   );
 }
