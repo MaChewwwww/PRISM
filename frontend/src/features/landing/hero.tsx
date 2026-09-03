@@ -74,7 +74,7 @@ export function Hero() {
             className="mt-5 w-fit animate-rise-slow rounded-full border border-white/10 border-t-white/20 bg-white/[0.05] px-5 py-2 text-sm text-[var(--color-text)] backdrop-blur-xl"
             style={{ animationDelay: "0.1s" }}
           >
-            One signal. Multiple perspectives. Governed execution.
+            One Signal. Multiple Perspectives. Better Decisions.
           </p>
 
           <p
