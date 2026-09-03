@@ -191,3 +191,8 @@ async def governance(session: Annotated[AsyncSession, Depends(get_db_session)]):
 @router.get("/weekly-summary", response_model=PresentationEnvelope[WeeklySummary])
 async def weekly_summary(session: Annotated[AsyncSession, Depends(get_db_session)]):
     return await MonitoringReadService().weekly_summary(session)
+
+
+@router.post("/weekly-summary/trigger", response_model=PresentationEnvelope[WeeklySummary])
+async def trigger_weekly_summary(session: Annotated[AsyncSession, Depends(get_db_session)]):
+    return await MonitoringReadService().trigger_weekly_summary(session)
