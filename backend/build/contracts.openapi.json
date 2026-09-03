@@ -5851,6 +5851,38 @@
         "title": "OptionStructure",
         "type": "string"
       },
+      "OptionStructureLeg": {
+        "additionalProperties": false,
+        "properties": {
+          "optionType": {
+            "enum": [
+              "call",
+              "put"
+            ],
+            "title": "Optiontype",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "strike": {
+            "title": "Strike",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "strike",
+          "optionType"
+        ],
+        "title": "OptionStructureLeg",
+        "type": "object"
+      },
       "OptionType": {
         "enum": [
           "call",
@@ -8034,6 +8066,16 @@
             "title": "Operationalevidence",
             "type": "array"
           },
+          "optionStructure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/app__presentation__models__OptionStructure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "outcome": {
             "$ref": "#/components/schemas/StoryOutcome"
           },
@@ -8138,6 +8180,16 @@
             "format": "date-time",
             "title": "Occurredat",
             "type": "string"
+          },
+          "optionStructure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/app__presentation__models__OptionStructure"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "outcome": {
             "$ref": "#/components/schemas/StoryOutcome"
@@ -9072,6 +9124,124 @@
           "suggestions"
         ],
         "title": "WeeklySummary",
+        "type": "object"
+      },
+      "app__contracts__models__OptionStructure": {
+        "enum": [
+          "long_call",
+          "long_put",
+          "bull_call_spread",
+          "bear_put_spread",
+          "no_trade"
+        ],
+        "title": "OptionStructure",
+        "type": "string"
+      },
+      "app__presentation__models__OptionStructure": {
+        "additionalProperties": false,
+        "properties": {
+          "breakEven": {
+            "title": "Breakeven",
+            "type": "string"
+          },
+          "contracts": {
+            "title": "Contracts",
+            "type": "integer"
+          },
+          "currentSpot": {
+            "title": "Currentspot",
+            "type": "number"
+          },
+          "dte": {
+            "title": "Dte",
+            "type": "string"
+          },
+          "expiration": {
+            "title": "Expiration",
+            "type": "string"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/OptionStructureLeg"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
+          "maxLoss": {
+            "title": "Maxloss",
+            "type": "string"
+          },
+          "maxProfit": {
+            "title": "Maxprofit",
+            "type": "string"
+          },
+          "premiumCollected": {
+            "title": "Premiumcollected",
+            "type": "string"
+          },
+          "roomToStrikeAmount": {
+            "title": "Roomtostrikeamount",
+            "type": "string"
+          },
+          "roomToStrikePct": {
+            "title": "Roomtostrikepct",
+            "type": "string"
+          },
+          "spotPrice": {
+            "title": "Spotprice",
+            "type": "string"
+          },
+          "stopLoss": {
+            "title": "Stoploss",
+            "type": "string"
+          },
+          "strategyName": {
+            "title": "Strategyname",
+            "type": "string"
+          },
+          "strikeHigh": {
+            "title": "Strikehigh",
+            "type": "number"
+          },
+          "strikeLow": {
+            "title": "Strikelow",
+            "type": "number"
+          },
+          "takeProfit": {
+            "title": "Takeprofit",
+            "type": "string"
+          },
+          "unrealizedPct": {
+            "title": "Unrealizedpct",
+            "type": "string"
+          },
+          "unrealizedPnl": {
+            "title": "Unrealizedpnl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategyName",
+          "contracts",
+          "legs",
+          "spotPrice",
+          "roomToStrikePct",
+          "roomToStrikeAmount",
+          "dte",
+          "expiration",
+          "premiumCollected",
+          "takeProfit",
+          "maxLoss",
+          "stopLoss",
+          "unrealizedPnl",
+          "unrealizedPct",
+          "breakEven",
+          "maxProfit",
+          "currentSpot",
+          "strikeLow",
+          "strikeHigh"
+        ],
+        "title": "OptionStructure",
         "type": "object"
       }
     }

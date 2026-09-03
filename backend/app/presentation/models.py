@@ -75,6 +75,34 @@ class StoryOutcome(StrEnum):
     RETROSPECTIVE = "retrospective"
 
 
+class OptionStructureLeg(PresentationModel):
+    side: Literal["buy", "sell"]
+    strike: str
+    option_type: Literal["call", "put"]
+
+
+class OptionStructure(PresentationModel):
+    strategy_name: str
+    contracts: int
+    legs: list[OptionStructureLeg]
+    spot_price: str
+    room_to_strike_pct: str
+    room_to_strike_amount: str
+    dte: str
+    expiration: str
+    premium_collected: str
+    take_profit: str
+    max_loss: str
+    stop_loss: str
+    unrealized_pnl: str
+    unrealized_pct: str
+    break_even: str
+    max_profit: str
+    current_spot: float
+    strike_low: float
+    strike_high: float
+
+
 class StorySummary(PresentationModel):
     id: str
     occurred_at: datetime
@@ -87,6 +115,7 @@ class StorySummary(PresentationModel):
     chosen_path_impact: str
     best_alternative_impact: str
     lesson: str
+    option_structure: OptionStructure | None = None
 
 
 class DecisionNode(PresentationModel):

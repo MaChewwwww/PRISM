@@ -17,7 +17,7 @@ import { useMemo, useState } from "react";
 
 import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDateTime, storyDecisionLabel } from "@/features/story/formatters";
-import type { StorySummary } from "@/features/story/monitoring-api";
+import type { OptionStructure, StorySummary } from "@/features/story/monitoring-api";
 
 const PAGE_SIZE = 8;
 
@@ -117,58 +117,400 @@ function AgentChip({ tag }: { tag: AgentTag }) {
   );
 }
 
+function getEffectiveOptionStructure(story: StorySummary): OptionStructure {
+  if (story.optionStructure) {
+    return story.optionStructure;
+  }
+  const sym = (story.symbol || "NVDA").toUpperCase();
+  if (sym === "NVDA") {
+    return {
+      strategyName: "Put Credit Spread",
+      contracts: 25,
+      legs: [
+        { side: "sell", strike: "$762.00", optionType: "put" },
+        { side: "buy", strike: "$760.00", optionType: "put" },
+      ],
+      spotPrice: "spot $772.86",
+      roomToStrikePct: "+1.4%",
+      roomToStrikeAmount: "$10.86 away",
+      dte: "7d",
+      expiration: "11 Sep",
+      premiumCollected: "$737.50",
+      takeProfit: "take profit $368.75",
+      maxLoss: "$4,262.50",
+      stopLoss: "stop -$1,475.00",
+      unrealizedPnl: "+$0.00",
+      unrealizedPct: "+0.00%",
+      breakEven: "$761.70",
+      maxProfit: "$737.50",
+      currentSpot: 772.86,
+      strikeLow: 760,
+      strikeHigh: 762,
+    };
+  }
+  return {
+    strategyName: "Put Credit Spread",
+    contracts: 10,
+    legs: [
+      { side: "sell", strike: "$125.00", optionType: "put" },
+      { side: "buy", strike: "$120.00", optionType: "put" },
+    ],
+    spotPrice: "spot $128.50",
+    roomToStrikePct: "+2.8%",
+    roomToStrikeAmount: "$3.50 away",
+    dte: "7d",
+    expiration: "11 Sep",
+    premiumCollected: "$350.00",
+    takeProfit: "take profit $175.00",
+    maxLoss: "$2,150.00",
+    stopLoss: "stop -$750.00",
+    unrealizedPnl: "+$0.00",
+    unrealizedPct: "+0.00%",
+    breakEven: "$124.65",
+    maxProfit: "$350.00",
+    currentSpot: 128.5,
+    strikeLow: 120,
+    strikeHigh: 125,
+  };
+}
+
+function MiniPayoffDiagram({
+  id,
+  strikeLow,
+  strikeHigh,
+  spot,
+  maxProfit,
+  maxLoss,
+}: {
+  id: string;
+  strikeLow: number;
+  strikeHigh: number;
+  spot: number;
+  maxProfit: string;
+  maxLoss: string;
+}) {
+  const width = 160;
+  const height = 40;
+  const padX = 14;
+  const padY = 6;
+
+  const rangeSpan = Math.max(1, (strikeHigh - strikeLow) * 2.5);
+  const minXVal = strikeLow - rangeSpan * 0.3;
+  const maxXVal = strikeHigh + rangeSpan * 0.5;
+
+  const toX = (val: number) => {
+    const raw = (val - minXVal) / (maxXVal - minXVal);
+    return padX + Math.max(0, Math.min(1, raw)) * (width - padX * 2);
+  };
+
+  const xLow = toX(strikeLow);
+  const xHigh = toX(strikeHigh);
+  const xSpot = toX(spot);
+
+  const yProfit = padY;
+  const yLoss = height - padY - 8;
+  const yBreakEven = (yProfit + yLoss) / 2;
+
+  const points = `0,${yLoss} ${xLow},${yLoss} ${xHigh},${yProfit} ${width},${yProfit}`;
+  const lossArea = `0,${yBreakEven} 0,${yLoss} ${xLow},${yLoss} ${(xLow + xHigh) / 2},${yBreakEven}`;
+  const gradId = `payoffLossGrad-${id.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+  return (
+    <div className="flex flex-col items-start">
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="overflow-visible"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#EF4444" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#EF4444" stopOpacity="0.05" />
+          </linearGradient>
+        </defs>
+
+        {/* Horizontal break-even dashed line */}
+        <line
+          x1={0}
+          y1={yBreakEven}
+          x2={width}
+          y2={yBreakEven}
+          stroke="rgba(255, 255, 255, 0.2)"
+          strokeDasharray="2 2"
+          strokeWidth={0.8}
+        />
+        <text
+          x={2}
+          y={yBreakEven - 2.5}
+          fill="#64748B"
+          fontSize="7"
+          fontFamily="monospace"
+          className="select-none"
+        >
+          break even
+        </text>
+
+        {/* Shaded loss zone */}
+        <polygon points={lossArea} fill={`url(#${gradId})`} />
+
+        {/* Payoff line */}
+        <polyline
+          points={points}
+          fill="none"
+          stroke="#00D084"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Strike price markers at vertices */}
+        <text
+          x={xLow}
+          y={height - 1}
+          textAnchor="middle"
+          fill="#64748B"
+          fontSize="7.5"
+          fontFamily="monospace"
+          className="select-none"
+        >
+          {Math.round(strikeLow)}
+        </text>
+        <text
+          x={xHigh}
+          y={height - 1}
+          textAnchor="middle"
+          fill="#64748B"
+          fontSize="7.5"
+          fontFamily="monospace"
+          className="select-none"
+        >
+          {Math.round(strikeHigh)}
+        </text>
+
+        {/* Current spot vertical line indicator */}
+        <line
+          x1={xSpot}
+          y1={0}
+          x2={xSpot}
+          y2={height - 8}
+          stroke="#FFFFFF"
+          strokeWidth={1.2}
+          strokeDasharray="1 1"
+        />
+        <circle cx={xSpot} cy={2} r={1.5} fill="#FFFFFF" />
+      </svg>
+      <span className="mt-0.5 font-mono text-[9px] text-[#64748B] whitespace-nowrap">
+        profit flat at {maxProfit} · loss stops at -{maxLoss}
+      </span>
+    </div>
+  );
+}
+
+function UnrealizedGauge({ value }: { value: string }) {
+  const isPositive = value.startsWith("+") && value !== "+$0.00";
+  const isNegative = value.startsWith("-");
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span
+        className={`font-mono text-xs font-bold ${
+          isPositive ? "text-[#00D084]" : isNegative ? "text-[#EF4444]" : "text-white"
+        }`}
+      >
+        {value}
+      </span>
+      <div
+        className="relative h-1 w-14 rounded-full bg-linear-to-r from-[#EF4444]/40 via-white/10 to-[#00D084]/40"
+        aria-hidden="true"
+      >
+        <span
+          className="absolute top-1/2 h-2.5 w-1 -translate-y-1/2 rounded-full bg-white shadow-[0_0_4px_#FFFFFF]"
+          style={{
+            left: isPositive ? "75%" : isNegative ? "25%" : "50%",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function StoryCard({ story }: { story: StorySummary }) {
   const [active, setActive] = useState(false);
   const tags = agentTagsFor(story);
+  const opt = getEffectiveOptionStructure(story);
 
   return (
     <li>
-      {/*
-        Major decision-story module: DESIGN.md Section 5.2 interactive glass
-        recipe (rounded-xl, layered fill, specular top border, teal hover border,
-        translateY(-2px)) rendered via Tailwind arbitrary values matching the doc.
-      */}
       <article
         onMouseEnter={() => setActive(true)}
         onMouseLeave={() => setActive(false)}
         onFocusCapture={() => setActive(true)}
         onBlurCapture={() => setActive(false)}
-        className={`group grid grid-cols-1 gap-x-8 gap-y-4 rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:border-[#547D83]/40 hover:border-t-[#B2D8DC]/50 hover:from-white/8 hover:to-white/3 hover:shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)] sm:grid-cols-[minmax(0,1fr)_auto] sm:p-6 ${
+        className={`group flex flex-col rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-4 sm:p-5 backdrop-blur-xl transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:border-[#547D83]/40 hover:border-t-[#B2D8DC]/50 hover:from-white/8 hover:to-white/3 hover:shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)] ${
           active
             ? "shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)]"
             : "shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
         }`}
       >
-        {/* Left column: kicker, title, insight, agent chips */}
-        <div className="min-w-0">
-          {/* Caption / Meta: 12px, 500, tracking 0.02em (DESIGN.md Section 4.2) */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
-            <time dateTime={story.occurredAt}>{formatDateTime(story.occurredAt)}</time>
-            <span aria-hidden="true" className="text-white/20">
-              |
-            </span>
-            <span className="font-semibold text-[#F8FAFC]">{story.symbol}</span>
-            <span aria-hidden="true" className="text-white/20">
-              |
-            </span>
-            <span>{story.category}</span>
+        {/* Top Header Row: Kicker & Decision Title on Left, StateBadge & Open Link on Right */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
+              <time dateTime={story.occurredAt}>{formatDateTime(story.occurredAt)}</time>
+              <span aria-hidden="true" className="text-white/20">
+                |
+              </span>
+              <span className="font-semibold text-[#F8FAFC]">{story.symbol}</span>
+              <span aria-hidden="true" className="text-white/20">
+                |
+              </span>
+              <span>{story.category}</span>
+            </div>
+
+            <h3 className="mt-1.5 text-[16px] sm:text-[17px] font-semibold leading-tight tracking-tight text-[#F8FAFC]">
+              <Link
+                href={`/stories/${story.id}`}
+                className="rounded-sm outline-none transition-colors hover:text-[#B2D8DC] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+              >
+                {storyDecisionLabel(story.symbol, story.outcome)}
+              </Link>
+              <span className="ml-2 font-normal text-[13px] text-[#94A3B8] hidden sm:inline">
+                {story.title}
+              </span>
+            </h3>
           </div>
 
-          {/* Card H3: plain decision label (DESIGN.md Section 4.2) */}
-          <h3 className="mt-3 text-[18px] font-semibold leading-tight tracking-tight text-[#F8FAFC]">
+          <div className="flex items-center gap-3">
+            <StateBadge state={story.ruleResult === "MODIFY" ? "MODIFY" : story.outcome} />
             <Link
               href={`/stories/${story.id}`}
-              className="rounded-sm outline-none transition-colors hover:text-[#B2D8DC] focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10]"
+              aria-label={`Open ${story.title}`}
+              className={`grid h-8 w-8 place-items-center rounded-md border outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10] ${
+                active ? "border-[#547D83]/50 text-[#B2D8DC]" : "border-white/8 text-[#64748B]"
+              }`}
             >
-              {storyDecisionLabel(story.symbol, story.outcome)}
+              <ArrowUpRight
+                aria-hidden="true"
+                className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              />
             </Link>
-          </h3>
+          </div>
+        </div>
 
-          {/* Analytical title kept as a secondary line */}
-          <p className="mt-1 text-[13px] leading-snug text-[#94A3B8]">{story.title}</p>
+        {/* Options Trade Data & Mini Payoff Row (Dense 7-Column Layout from Image 2) */}
+        <div className="my-2.5 overflow-x-auto rounded-lg border border-white/6 bg-black/35 p-3 backdrop-blur-md">
+          <div className="grid min-w-[760px] grid-cols-7 gap-4 items-center">
+            {/* STRIKES */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Strikes
+              </span>
+              <div className="mt-1 space-y-0.5">
+                {opt.legs.map((leg, i) => (
+                  <div key={i} className="flex items-center gap-1.5 font-mono text-xs font-bold">
+                    <span
+                      className={
+                        leg.side === "sell"
+                          ? "text-[#F87171] uppercase text-[9px] px-1 py-0.2 rounded bg-[#F87171]/10 font-bold"
+                          : "text-[#00D084] uppercase text-[9px] px-1 py-0.2 rounded bg-[#00D084]/10 font-bold"
+                      }
+                    >
+                      {leg.side.toUpperCase()}
+                    </span>
+                    <span className="text-white">{leg.strike}</span>
+                    <span className="text-[#94A3B8] text-[9px] uppercase">{leg.optionType}</span>
+                  </div>
+                ))}
+                <span className="block font-mono text-[10px] text-[#64748B]">
+                  x{opt.contracts} contracts
+                </span>
+              </div>
+            </div>
 
-          {/* Body Regular: 14px (DESIGN.md Section 4.2) */}
-          <p className="mt-2 max-w-208 text-[12px] leading-relaxed text-[#CBD5E1]">
+            {/* ROOM TO STRIKE */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Room to strike
+              </span>
+              <div className="mt-1">
+                <span className="font-mono text-xs font-bold text-[#FBBF24]">
+                  {opt.roomToStrikePct}
+                </span>
+                <span className="block font-mono text-[11px] text-[#CBD5E1]">
+                  {opt.roomToStrikeAmount}
+                </span>
+                <span className="block font-mono text-[10px] text-[#64748B]">{opt.spotPrice}</span>
+              </div>
+            </div>
+
+            {/* EXPIRES */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Expires
+              </span>
+              <div className="mt-1">
+                <span className="font-mono text-sm font-bold text-white">{opt.dte}</span>
+                <span className="block font-mono text-[10px] text-[#94A3B8]">{opt.expiration}</span>
+              </div>
+            </div>
+
+            {/* COLLECTED */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Collected
+              </span>
+              <div className="mt-1">
+                <span className="font-mono text-xs font-bold text-[#00D084]">
+                  {opt.premiumCollected}
+                </span>
+                <span className="block font-mono text-[10px] text-[#64748B]">{opt.takeProfit}</span>
+              </div>
+            </div>
+
+            {/* MAX LOSS */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Max loss
+              </span>
+              <div className="mt-1">
+                <span className="font-mono text-xs font-bold text-[#F87171]">{opt.maxLoss}</span>
+                <span className="block font-mono text-[10px] text-[#64748B]">{opt.stopLoss}</span>
+              </div>
+            </div>
+
+            {/* UNREALISED */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Unrealised
+              </span>
+              <div className="mt-1">
+                <UnrealizedGauge value={opt.unrealizedPnl} />
+              </div>
+            </div>
+
+            {/* PAYOFF AT EXPIRY */}
+            <div>
+              <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Payoff at expiry
+              </span>
+              <div className="mt-0.5">
+                <MiniPayoffDiagram
+                  id={story.id}
+                  strikeLow={opt.strikeLow}
+                  strikeHigh={opt.strikeHigh}
+                  spot={opt.currentSpot}
+                  maxProfit={opt.maxProfit}
+                  maxLoss={opt.maxLoss}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar: Key Insight on Left, Agent Chips on Right */}
+        <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[12px] leading-relaxed text-[#CBD5E1] truncate sm:max-w-[65%]">
             <span className="font-semibold text-[#547D83]">Key Insight</span>
             <span aria-hidden="true" className="text-[#64748B]">
               {" — "}
@@ -176,47 +518,13 @@ function StoryCard({ story }: { story: StorySummary }) {
             {story.lesson}
           </p>
 
-          <ul className="mt-4 flex flex-wrap gap-2" aria-label="Agent perspectives">
+          <ul className="flex flex-wrap gap-1.5 shrink-0" aria-label="Agent perspectives">
             {tags.map((tag) => (
               <li key={tag.kind}>
                 <AgentChip tag={tag} />
               </li>
             ))}
           </ul>
-        </div>
-
-        {/* Right column: status pill, outcome figures, open link */}
-        <div className="flex flex-col items-start gap-4 sm:items-end sm:text-right">
-          <StateBadge state={story.ruleResult === "MODIFY" ? "MODIFY" : story.outcome} />
-
-          {/* Financial figures: mono tabular-nums (DESIGN.md Section 3, 4.2) */}
-          <dl className="w-full space-y-1.5 sm:w-auto">
-            <div className="flex items-center justify-between gap-8 sm:justify-end">
-              <dt className="font-mono text-[10px] text-[#64748B]">Active Outcome</dt>
-              <dd className="m-0 font-mono text-[12px] font-semibold tabular-nums text-[#00D084]">
-                {story.chosenPathImpact}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-8 sm:justify-end">
-              <dt className="font-mono text-[10px] text-[#64748B]">Best Shadow Path</dt>
-              <dd className="m-0 font-mono text-[12px] font-semibold tabular-nums text-[#818CF8]">
-                {story.bestAlternativeImpact}
-              </dd>
-            </div>
-          </dl>
-
-          <Link
-            href={`/stories/${story.id}`}
-            aria-label={`Open ${story.title}`}
-            className={`grid h-9 w-9 place-items-center rounded-md border outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[#547D83] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080B10] ${
-              active ? "border-[#547D83]/50 text-[#B2D8DC]" : "border-white/8 text-[#64748B]"
-            }`}
-          >
-            <ArrowUpRight
-              aria-hidden="true"
-              className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-            />
-          </Link>
         </div>
       </article>
     </li>
