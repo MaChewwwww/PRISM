@@ -85,7 +85,7 @@ function OverviewRecommendations({ recommendations }: { recommendations: string[
             <ShieldCheck size={14} />
           </span>
           <div>
-            <h3>This period&rsquo;s recommendations</h3>
+            <h3>This Period&rsquo;s Recommendations</h3>
             <p>Bounded post-analysis suggestions awaiting manual review.</p>
           </div>
         </div>

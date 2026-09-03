@@ -2,6 +2,7 @@ import { Activity, PieChart, Wallet } from "lucide-react";
 
 import { HoldingsTable } from "@/features/portfolio/holdings-table";
 import { PageHeader } from "@/components/workspace/workspace-ui";
+import { PaginatedList } from "@/components/workspace/paginated-list";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
 import { formatDateTime } from "@/features/story/formatters";
@@ -204,33 +205,34 @@ export default async function PortfolioPage({
           title="Recent Activity"
           subtitle="Latest portfolio decisions and capital movements."
         />
-        <div className={SECTION_CARD}>
-          {portfolio.activities.length === 0 ? (
+        {portfolio.activities.length === 0 ? (
+          <div className={SECTION_CARD}>
             <p className="inline-empty m-5 sm:m-6">No decision activity falls inside this range.</p>
-          ) : (
-            <ul>
-              {portfolio.activities.map((activity) => (
-                <li
-                  key={`${activity.occurredAt}-${activity.label}`}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-4 px-5 py-3.5 not-last:border-b not-last:border-white/8 sm:px-6"
+          </div>
+        ) : (
+          <PaginatedList
+            items={portfolio.activities}
+            itemLabel="events"
+            getKey={(activity) => `${activity.occurredAt}-${activity.label}`}
+            className={`${SECTION_CARD} overflow-hidden`}
+            renderItem={(activity) => (
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-4 px-5 py-3.5 not-last:border-b not-last:border-white/8 sm:px-6">
+                <time
+                  dateTime={activity.occurredAt}
+                  className="font-mono text-[13px] tabular-nums text-[#64748B]"
                 >
-                  <time
-                    dateTime={activity.occurredAt}
-                    className="font-mono text-[13px] tabular-nums text-[#64748B]"
-                  >
-                    {formatDateTime(activity.occurredAt)}
-                  </time>
-                  <span className="text-[14px] text-[#CBD5E1]">{activity.label}</span>
-                  <span
-                    className={`text-right text-[14px] font-semibold tabular-nums ${amountTone(activity.amount)}`}
-                  >
-                    {activity.amount}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  {formatDateTime(activity.occurredAt)}
+                </time>
+                <span className="text-[14px] text-[#CBD5E1]">{activity.label}</span>
+                <span
+                  className={`text-right text-[14px] font-semibold tabular-nums ${amountTone(activity.amount)}`}
+                >
+                  {activity.amount}
+                </span>
+              </div>
+            )}
+          />
+        )}
       </section>
     </>
   );

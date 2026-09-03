@@ -129,7 +129,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
         <div className="overview-chart-head">
           <SectionHeading
             icon={TrendingUp}
-            title="Active Portfolio path"
+            title="Active Portfolio Path"
             description="Equity Performance vs. Alternative and Benchmark Strategies."
           />
         </div>
@@ -191,7 +191,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
 
   return (
     <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl sm:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:items-start">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="overview-chart-head">
             <SectionHeading
@@ -346,7 +346,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
         </div>
 
         <aside
-          className="flex shrink-0 flex-col rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/8 to-white/3 p-4 shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)] lg:w-72 lg:min-h-72 sm:min-h-80"
+          className="flex shrink-0 flex-col rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/8 to-white/3 p-4 shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)] lg:w-72"
           aria-label="Selected point detail"
         >
           {defaultSelected && (

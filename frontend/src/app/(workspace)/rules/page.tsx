@@ -34,9 +34,6 @@ export default async function RulesPage() {
         title="Rules & AI Profile"
         description="See the rules and profile guiding decisions."
       >
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#00D084]/30 bg-[#00D084]/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#00D084]">
-          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Fails closed
-        </div>
       </PageHeader>
 
       {/* Ruleset identity cards */}

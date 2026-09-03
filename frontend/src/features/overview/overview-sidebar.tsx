@@ -147,7 +147,7 @@ export function OverviewSidebar({
       <section className="overview-panel overview-side-panel">
         <SectionHeading
           icon={ChartColumn}
-          title="Decision outcomes"
+          title="Decision Outcomes"
           description="Latest decision across the active portfolio."
         />
         {outcomes.length === 0 ? (
@@ -187,8 +187,8 @@ export function OverviewSidebar({
       <section className="overview-panel overview-side-panel">
         <SectionHeading
           icon={PieChart}
-          title="Active Portfolio exposure"
-          description="Allocation by risk posture and capital concentration."
+          title="Active Portfolio Exposure"
+          description="Allocation by Risk Posture and Capital Concentration."
         />
         {exposures.length === 0 ? (
           <div className="overview-empty-block">
