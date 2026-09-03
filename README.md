@@ -261,8 +261,8 @@ PRISM was engineered from day one like an institutional fintech platform, delive
 
 | Team Member | Role | Key Contributions & Ownership |
 | :--- | :--- | :--- |
-| **Bernadette** | **Project Manager** | Hackathon milestone roadmap, cross-functional delivery cadence, FRS/NFRS governance compliance, Day 1-2 operations reports, authority chain enforcement. |
-| **Kyle** | **Business Analyst** | Mathematical business rules registry (`authorized_baseline.v1.json`), risk & concentration parameters, P0-P5 priority matrices, Day 1-2 performance calibration review addendum. |
+| **Bernadette** | **Project Manager** | Hackathon milestone roadmap, cross-functional delivery cadence, FRS/NFRS governance compliance, production operations and audit reports, authority chain enforcement. |
+| **Kyle** | **Business Analyst** | Mathematical business rules registry (`authorized_baseline.v1.json`), risk & concentration parameters, P0-P5 priority matrices, live performance calibration review addendum. |
 | **Mathew** | **DevOps Engineer** | Docker Compose orchestration, Azure VM cloud host, Nginx SSL/TLS 1.3 reverse proxy, GitHub Actions CI/CD pipelines, automated dependency & secret scanning, VPS deployment runbooks. |
 | **Shelley** | **AI Engineer** | Multi-agent prompt architecture, structured JSON schemas, provider-neutral LLM gateway (DeepSeek, Claude, Gemini, Featherless), historical analog payoff models, `PostAnalysisAgent`. |
 | **Reymie** | **Front-end Developer** | Next.js 16 App Router interface, interactive Decision Stories view, Market Tracker shell, synchronized UTC time-range state, real-time agent observability inspector. |
@@ -327,7 +327,7 @@ For in-depth architectural specifications and governance registers, explore the 
 - 🔒 **[Security & Safety Controls](docs/SECURITY.md)** — Paper-only invariants, credential boundaries, and fail-closed gates.
 - 🎨 **[Design System](docs/DESIGN.md)** — Dark Cyber-Crystalline tokens, specular glass hierarchy, and accessibility standards.
 - 🔄 **[CI/CD & Promotion Runbook](docs/CI_CD.md)** — Governed Git branching flow, branch policy, and deployment automation.
-- 📈 **[Day 1-2 Performance Calibration Addendum](docs/reports/DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md)** — Real-world calibration evidence and ExitPolicyV2 derivation.
+- 📈 **[Performance Calibration Review Addendum](docs/reports/DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md)** — Real-world calibration evidence and ExitPolicyV2 derivation.
 
 ---
 

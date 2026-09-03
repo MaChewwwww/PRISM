@@ -25,11 +25,14 @@ Do not silently reconcile a conflict. Update every affected downstream artifact 
 3. [Business Rules](BUSINESS_RULES.md)
 4. [AI Agents](AI_AGENTS.md) and [AI Profiles](AI_PROFILES.md)
 5. [Day 1 Retrospective Evidence Excerpt](DAY_1_RETROSPECTIVE_EVIDENCE.md)
-6. [Day 1-2 Performance Calibration Review Addendum](reports/DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md)
-5. [Architecture](ARCHITECTURE.md)
-6. [Data and API Contracts](DATA_API_CONTRACTS.md)
-7. [Security](SECURITY.md)
-8. [Implementation Plan](IMPLEMENTATION_PLAN.md)
+6. [Day 1-3 Performance Calibration Review Addendum](reports/DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md)
+7. [Day 1 Operations & Performance Report](reports/DAY_1_OPERATIONS_AND_PERFORMANCE_REPORT.md)
+8. [Day 2 Operations & Performance Report](reports/DAY_2_OPERATIONS_AND_PERFORMANCE_REPORT.md)
+9. [Day 3 Operations & Performance Report](reports/DAY_3_OPERATIONS_AND_PERFORMANCE_REPORT.md)
+10. [Architecture](ARCHITECTURE.md)
+11. [Data and API Contracts](DATA_API_CONTRACTS.md)
+12. [Security](SECURITY.md)
+13. [Implementation Plan](IMPLEMENTATION_PLAN.md)
 
 ## Domain and AI
 
