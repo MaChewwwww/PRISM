@@ -1,22 +1,15 @@
 import { Activity, PieChart, Wallet } from "lucide-react";
 
 import { HoldingsTable } from "@/features/portfolio/holdings-table";
+import { PortfolioActivityList } from "@/features/portfolio/portfolio-activity-list";
 import { PageHeader } from "@/components/workspace/workspace-ui";
-import { PaginatedList } from "@/components/workspace/paginated-list";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
-import { formatDateTime } from "@/features/story/formatters";
 import { loadPortfolio } from "@/features/story/monitoring-api";
 
 function toPercent(value: string) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function amountTone(amount: string) {
-  if (amount.startsWith("+")) return "text-[#00D084]";
-  if (amount.startsWith("-")) return "text-[#FF6B6B]";
-  return "text-[#94A3B8]";
 }
 
 const METRIC_CARD =
@@ -62,17 +55,20 @@ export default async function PortfolioPage({
   const range = readDateRange(await searchParams);
   const portfolio = await loadPortfolio(range);
 
-  const first = portfolio.points[0];
-  const last = portfolio.points.at(-1);
-  const periodPnl = first && last ? Number(last.chosenPath) - Number(first.chosenPath) : null;
+  const first = portfolio.points?.[0];
+  const last = portfolio.points?.at(-1);
+  const firstPath = Number(first?.chosenPath);
+  const lastPath = Number(last?.chosenPath);
+  const periodPnl =
+    first && last && !isNaN(firstPath) && !isNaN(lastPath) ? lastPath - firstPath : null;
 
   // Directional net exposure and gross exposure from server-calculated portfolio metrics.
-  const nonCash = portfolio.exposure.filter(
+  const nonCash = (portfolio.exposure ?? []).filter(
     (item) =>
       !item.label.toLowerCase().includes("cash") && !item.label.toLowerCase().includes("net"),
   );
   const grossExposure = nonCash.reduce((total, item) => total + toPercent(item.value), 0);
-  const netExposureItem = portfolio.exposure.find((item) =>
+  const netExposureItem = (portfolio.exposure ?? []).find((item) =>
     item.label.toLowerCase().includes("net"),
   );
   const netExposure = netExposureItem ? toPercent(netExposureItem.value) : grossExposure;
@@ -214,34 +210,7 @@ export default async function PortfolioPage({
           title="Recent Activity"
           subtitle="Latest portfolio decisions and capital movements."
         />
-        {portfolio.activities.length === 0 ? (
-          <div className={SECTION_CARD}>
-            <p className="inline-empty m-5 sm:m-6">No decision activity falls inside this range.</p>
-          </div>
-        ) : (
-          <PaginatedList
-            items={portfolio.activities}
-            itemLabel="events"
-            getKey={(activity) => `${activity.occurredAt}-${activity.label}`}
-            className={`${SECTION_CARD} overflow-hidden`}
-            renderItem={(activity) => (
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-4 px-5 py-3.5 not-last:border-b not-last:border-white/8 sm:px-6">
-                <time
-                  dateTime={activity.occurredAt}
-                  className="font-mono text-[13px] tabular-nums text-[#64748B]"
-                >
-                  {formatDateTime(activity.occurredAt)}
-                </time>
-                <span className="text-[14px] text-[#CBD5E1]">{activity.label}</span>
-                <span
-                  className={`text-right text-[14px] font-semibold tabular-nums ${amountTone(activity.amount)}`}
-                >
-                  {activity.amount}
-                </span>
-              </div>
-            )}
-          />
-        )}
+        <PortfolioActivityList activities={portfolio.activities ?? []} />
       </section>
     </>
   );

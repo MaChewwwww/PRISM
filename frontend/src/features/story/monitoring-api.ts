@@ -19,6 +19,8 @@ export type Governance = components["schemas"]["Governance"];
 export type WeeklySummary = components["schemas"]["WeeklySummary"];
 export type OptionStructure = components["schemas"]["app__presentation__models__OptionStructure"];
 export type OptionStructureLeg = components["schemas"]["OptionStructureLeg"];
+export type Activity = components["schemas"]["Activity"];
+export type Position = components["schemas"]["Position"];
 
 type OverviewEnvelope = components["schemas"]["PresentationEnvelope_Overview_"];
 type DecisionsEnvelope = components["schemas"]["PresentationEnvelope_DecisionCollection_"];
