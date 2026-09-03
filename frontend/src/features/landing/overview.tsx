@@ -41,8 +41,10 @@ export function Overview() {
             <p className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--color-ice)]">
               What PRISM does
             </p>
-            <h2 className="mt-3 font-display text-4xl leading-[1.05] tracking-tight text-[var(--color-text)] md:text-5xl">
-              One signal. Multiple perspectives. Governed execution.
+            <h2 className="mt-3 font-display text-4xl leading-[1.12] tracking-tight text-[var(--color-text)] md:text-5xl">
+              <span className="block">One Signal.</span>
+              <span className="block">Multiple Perspectives.</span>
+              <span className="block">Better Decisions.</span>
             </h2>
             <p className="mt-5 max-w-sm text-balance leading-relaxed text-[var(--color-text-muted)]">
               A breaking headline is never a complete trade thesis. PRISM connects real-time
