@@ -48,7 +48,7 @@ function AccountOverviewPanel({
     },
     { label: "Equity", value: equity === null ? "—" : `$${equity.toLocaleString()}` },
     {
-      label: "Today's P&L (selected range)",
+      label: "Total P&L",
       value: todaysPnl
         ? `${todaysPnl.change >= 0 ? "+" : "-"}$${Math.abs(todaysPnl.change).toLocaleString()} (${todaysPnl.pct.toFixed(2)}%)`
         : "—",
@@ -61,7 +61,7 @@ function AccountOverviewPanel({
     <section className="overview-panel overview-side-panel">
       <SectionHeading
         icon={Wallet}
-        title="PRISM Alpaca Paper Account Overview"
+        title="PRISM Alpaca Paper Account"
         description="Paper account snapshot."
       />
       <dl className="overview-account-list">
