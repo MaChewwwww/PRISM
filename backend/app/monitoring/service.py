@@ -1765,13 +1765,65 @@ class MonitoringReadService:
             data=WeeklySummary(
                 week_of=batch.window_start.date().isoformat(),
                 stories_analyzed=int(data.get("stories_analyzed", 0)),
-                illustrative_net_pnl="—",
+                illustrative_net_pnl=str(data.get("illustrative_net_pnl", "—")),
                 shadow_beat_chosen=int(data.get("shadow_beat_chosen", 0)),
                 key_findings=[str(value) for value in data.get("key_findings", [])]
                 or [str(data.get("reason", "Recorded post-analysis batch."))],
                 suggestions=suggestions,
             ),
         )
+
+    async def trigger_weekly_summary(
+        self, session: AsyncSession
+    ) -> PresentationEnvelope[WeeklySummary]:
+        from app.autonomous.worker import POST_ANALYSIS_AGENT_VERSION, WORKER_VERSION
+        from app.core.config import get_settings
+        from app.core.llm_gateway import LLMGateway
+        from app.profiles.service import ProfileGovernanceService
+        from app.research.post_analysis import PostAnalysisAgent
+        from app.rules.registry import get_authorized_ruleset
+        from app.shadowfund.service import ShadowFundService
+
+        ruleset = get_authorized_ruleset()
+        window = ruleset.parameters.hackathon_window
+        now = datetime.now(UTC)
+        window_start = window.trading_start_at
+        window_end = min(now, window.official_scoring_at)
+
+        settings = get_settings()
+        agent = PostAnalysisAgent(LLMGateway(settings))
+        active_profile = await ProfileGovernanceService().get_active(session)
+        summary, recommendations = await agent.analyze_week(
+            session,
+            window_start=window_start,
+            window_end=window_end,
+            source_mode="production",
+            active_profile=active_profile,
+        )
+
+        shadow_service = ShadowFundService()
+        batch = await shadow_service.persist_post_analysis_batch(
+            session,
+            source_mode="production",
+            window_start=window_start,
+            window_end=window_end,
+            model_metadata={
+                "trigger": "on_demand_weekly_post_analysis",
+                "agent": POST_ANALYSIS_AGENT_VERSION,
+                "worker": WORKER_VERSION,
+                "timestamp": now.isoformat(),
+            },
+            summary=summary,
+            recommendations=recommendations,
+        )
+        await session.flush()
+        await ProfileGovernanceService().apply_automatic_if_enabled(
+            session,
+            batch_id=batch.id,
+            operator_id=settings.auth_email,
+        )
+        await session.commit()
+        return await self.weekly_summary(session)
 
     async def market_bars(
         self,
