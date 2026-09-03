@@ -56,6 +56,7 @@ from app.presentation.models import (
     OperationalEvidence,
     OptionStructure,
     OptionStructureLeg,
+    OrderReceipt,
     OutcomeCount,
     Overview,
     Portfolio,
@@ -750,21 +751,22 @@ class MonitoringReadService:
             for row in cycles
         ]
         latest_cycle = cycles[0] if cycles else None
+
+        def _fmt_dt(dt: datetime) -> str:
+            """Format a UTC datetime to human-readable form, e.g. 'Sep 3, 2026 · 17:32 UTC'."""
+            return dt.astimezone(UTC).strftime("%b %-d, %Y · %H:%M UTC")
+
         portfolio_evidence = [
             OperationalEvidence(
                 label="Portfolio snapshot freshness",
-                value=(
-                    latest.observed_at.astimezone(UTC).isoformat()
-                    if latest is not None
-                    else "No recorded snapshot"
-                ),
+                value=_fmt_dt(latest.observed_at) if latest is not None else "No recorded snapshot",
                 status="recorded" if latest is not None else "unavailable",
                 observed_at=latest.observed_at if latest is not None else None,
             ),
             OperationalEvidence(
                 label="Five-minute exit checks",
                 value=(
-                    "Recorded in the latest autonomous cycle"
+                    f"Recorded — latest cycle at {_fmt_dt(latest_cycle.started_at)}"
                     if latest_cycle is not None
                     else "No recorded autonomous cycle"
                 ),
@@ -772,6 +774,91 @@ class MonitoringReadService:
                 observed_at=latest_cycle.started_at if latest_cycle is not None else None,
             ),
         ]
+
+        # --- Orders from execution_receipts ---
+        receipt_rows = list(
+            (
+                await session.scalars(
+                    select(ExecutionReceiptModel)
+                    .where(
+                        ExecutionReceiptModel.created_at >= start,
+                        ExecutionReceiptModel.created_at <= end,
+                    )
+                    .order_by(ExecutionReceiptModel.created_at.desc())
+                    .limit(100)
+                )
+            ).all()
+        )
+
+        def _strategy_from_legs(legs_json: str | None) -> str:
+            """Derive a human-readable strategy name from the serialised legs payload."""
+            if not legs_json:
+                return "Single Leg"
+            try:
+                legs = json.loads(legs_json)
+            except (TypeError, json.JSONDecodeError):
+                return "Multi-Leg"
+            if not isinstance(legs, list) or not legs:
+                return "Single Leg"
+            types = [str(leg.get("option_type", "")).lower() for leg in legs]
+            sides = [str(leg.get("side", "")).lower() for leg in legs]
+            put_count = types.count("put")
+            call_count = types.count("call")
+            sell_count = sides.count("sell")
+            n = len(legs)
+            if n == 1:
+                side_label = "Short" if sell_count else "Long"
+                kind = "Put" if put_count else "Call"
+                return f"{side_label} {kind}"
+            if n == 2:
+                if put_count == 2:
+                    return "Put Credit Spread" if sell_count == 1 else "Put Debit Spread"
+                if call_count == 2:
+                    return "Call Credit Spread" if sell_count == 1 else "Call Debit Spread"
+                if put_count == 1 and call_count == 1:
+                    return "Short Strangle" if sell_count == 2 else "Long Strangle"
+            if n == 4:
+                if put_count == 2 and call_count == 2:
+                    return "Iron Condor"
+                if put_count == 4:
+                    return "Iron Butterfly (Puts)"
+            return f"{n}-Leg Strategy"
+
+        orders: list[OrderReceipt] = [
+            OrderReceipt(
+                occurred_at=row.created_at.astimezone(UTC),
+                symbol=row.symbol or "—",
+                side=row.operation or "entry",
+                quantity=(
+                    f"{int(row.filled_quantity)} contracts"
+                    if row.filled_quantity and row.filled_quantity > 0
+                    else (
+                        f"{int(row.requested_quantity)} contracts"
+                        if row.requested_quantity
+                        else "—"
+                    )
+                ),
+                fill_price=(
+                    f"${row.filled_average_price:.2f}"
+                    if row.filled_average_price is not None
+                    else "—"
+                ),
+                status=(
+                    "filled"
+                    if row.status in ("filled", "accepted", "done_for_day")
+                    else "partial"
+                    if row.status == "partially_filled"
+                    else "rejected"
+                    if row.status in ("rejected", "canceled", "cancelled", "expired")
+                    else "error"
+                    if row.error_code is not None
+                    else "pending"
+                ),
+                strategy=_strategy_from_legs(row.legs_json),
+            )
+            for row in receipt_rows
+        ]
+
         return PresentationEnvelope(
             meta=_meta(start, end, as_of=latest.observed_at if latest else None),
             data=Portfolio(
@@ -780,6 +867,7 @@ class MonitoringReadService:
                 activities=activities,
                 exposure=exposure,
                 operational_evidence=portfolio_evidence,
+                orders=orders,
             ),
         )
 

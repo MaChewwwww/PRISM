@@ -21,6 +21,7 @@ export type OptionStructure = components["schemas"]["app__presentation__models__
 export type OptionStructureLeg = components["schemas"]["OptionStructureLeg"];
 export type Activity = components["schemas"]["Activity"];
 export type Position = components["schemas"]["Position"];
+export type OrderReceipt = components["schemas"]["OrderReceipt"];
 
 type OverviewEnvelope = components["schemas"]["PresentationEnvelope_Overview_"];
 type DecisionsEnvelope = components["schemas"]["PresentationEnvelope_DecisionCollection_"];

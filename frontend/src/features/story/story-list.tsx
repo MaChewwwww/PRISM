@@ -398,11 +398,12 @@ function StoryCard({ story }: { story: StorySummary }) {
           </div>
         </div>
 
-        {/* Options Trade Data & Mini Payoff Row (Dense 7-Column Layout from Image 2) */}
-        <div className="my-2.5 overflow-x-auto rounded-lg border border-white/6 bg-black/35 p-3 backdrop-blur-md">
-          <div className="grid min-w-[760px] grid-cols-7 gap-4 items-center">
+        {/* Options Trade Data Grid — responsive two-row layout, no horizontal scroll */}
+        <div className="my-2.5 rounded-lg border border-white/6 bg-black/35 p-3 backdrop-blur-md space-y-3">
+          {/* Row 1: 5 metric columns — wrap evenly across available width */}
+          <div className="flex flex-wrap gap-x-4 gap-y-3">
             {/* STRIKES */}
-            <div>
+            <div className="flex-1 min-w-[100px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
                 Strikes
               </span>
@@ -412,8 +413,8 @@ function StoryCard({ story }: { story: StorySummary }) {
                     <span
                       className={
                         leg.side === "sell"
-                          ? "text-[#F87171] uppercase text-[9px] px-1 py-0.2 rounded bg-[#F87171]/10 font-bold"
-                          : "text-[#00D084] uppercase text-[9px] px-1 py-0.2 rounded bg-[#00D084]/10 font-bold"
+                          ? "text-[#F87171] uppercase text-[9px] px-1 rounded bg-[#F87171]/10 font-bold"
+                          : "text-[#00D084] uppercase text-[9px] px-1 rounded bg-[#00D084]/10 font-bold"
                       }
                     >
                       {leg.side.toUpperCase()}
@@ -429,9 +430,9 @@ function StoryCard({ story }: { story: StorySummary }) {
             </div>
 
             {/* ROOM TO STRIKE */}
-            <div>
+            <div className="flex-1 min-w-[90px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
-                Room to strike
+                Room to Strike
               </span>
               <div className="mt-1">
                 <span className="font-mono text-xs font-bold text-[#FBBF24]">
@@ -445,7 +446,7 @@ function StoryCard({ story }: { story: StorySummary }) {
             </div>
 
             {/* EXPIRES */}
-            <div>
+            <div className="flex-1 min-w-[70px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
                 Expires
               </span>
@@ -456,7 +457,7 @@ function StoryCard({ story }: { story: StorySummary }) {
             </div>
 
             {/* COLLECTED */}
-            <div>
+            <div className="flex-1 min-w-[90px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
                 Collected
               </span>
@@ -469,18 +470,21 @@ function StoryCard({ story }: { story: StorySummary }) {
             </div>
 
             {/* MAX LOSS */}
-            <div>
+            <div className="flex-1 min-w-[90px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
-                Max loss
+                Max Loss
               </span>
               <div className="mt-1">
                 <span className="font-mono text-xs font-bold text-[#F87171]">{opt.maxLoss}</span>
                 <span className="block font-mono text-[10px] text-[#64748B]">{opt.stopLoss}</span>
               </div>
             </div>
+          </div>
 
+          {/* Row 2: Unrealised gauge + Payoff chart — side by side, full width */}
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-2 border-t border-white/6 pt-3">
             {/* UNREALISED */}
-            <div>
+            <div className="min-w-[120px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
                 Unrealised
               </span>
@@ -490,9 +494,9 @@ function StoryCard({ story }: { story: StorySummary }) {
             </div>
 
             {/* PAYOFF AT EXPIRY */}
-            <div>
+            <div className="flex-1 min-w-[160px]">
               <span className="block font-mono text-[9px] font-semibold uppercase tracking-wider text-[#64748B]">
-                Payoff at expiry
+                Payoff at Expiry
               </span>
               <div className="mt-0.5">
                 <MiniPayoffDiagram

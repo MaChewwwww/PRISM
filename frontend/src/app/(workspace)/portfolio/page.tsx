@@ -1,7 +1,8 @@
-import { Activity, PieChart, Wallet } from "lucide-react";
+import { Activity, ClipboardList, PieChart, Wallet } from "lucide-react";
 
 import { HoldingsTable } from "@/features/portfolio/holdings-table";
 import { PortfolioActivityList } from "@/features/portfolio/portfolio-activity-list";
+import { PortfolioOrdersList } from "@/features/portfolio/portfolio-orders-list";
 import { PageHeader } from "@/components/workspace/workspace-ui";
 import { RangePresets } from "@/components/workspace/range-presets";
 import { readDateRange, type SearchValues } from "@/features/story/date-range";
@@ -15,11 +16,9 @@ function toPercent(value: string) {
 const METRIC_CARD =
   "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]";
 
-// Section container card matching the Gross Exposure metric card (glass, no hover glow).
 const SECTION_CARD =
   "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 backdrop-blur-xl";
 
-/** Section heading rendered above the card: icon + title + subtitle, left aligned. */
 function SectionHeading({
   id,
   icon: Icon,
@@ -62,7 +61,6 @@ export default async function PortfolioPage({
   const periodPnl =
     first && last && !isNaN(firstPath) && !isNaN(lastPath) ? lastPath - firstPath : null;
 
-  // Directional net exposure and gross exposure from server-calculated portfolio metrics.
   const nonCash = (portfolio.exposure ?? []).filter(
     (item) =>
       !item.label.toLowerCase().includes("cash") && !item.label.toLowerCase().includes("net"),
@@ -72,6 +70,7 @@ export default async function PortfolioPage({
     item.label.toLowerCase().includes("net"),
   );
   const netExposure = netExposureItem ? toPercent(netExposureItem.value) : grossExposure;
+  const orders = portfolio.orders ?? [];
 
   return (
     <>
@@ -83,7 +82,7 @@ export default async function PortfolioPage({
         <RangePresets range={range} />
       </PageHeader>
 
-      {/* Metric cards — individual glass cards (DESIGN.md Section 5.2 glass) */}
+      {/* Metric cards */}
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -92,7 +91,7 @@ export default async function PortfolioPage({
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#F8FAFC]">
             {grossExposure.toFixed(2)}%
           </dd>
-          <p className="mt-1 text-[11px] text-[#64748B]"> Overall Market Exposure</p>
+          <p className="mt-1 text-[11px] text-[#64748B]">Overall Market Exposure</p>
         </div>
         <div className={METRIC_CARD}>
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
@@ -125,7 +124,7 @@ export default async function PortfolioPage({
                   : "text-[#FF6B6B]"
             }`}
           >
-            {periodPnl === null ? "—" : `${periodPnl >= 0 ? "+" : ""}$${periodPnl.toFixed(2)}`}
+            {periodPnl === null ? "�" : `${periodPnl >= 0 ? "+" : ""}$${periodPnl.toFixed(2)}`}
           </dd>
           <p className="mt-1 text-[11px] text-[#64748B]">
             {range.from} to {range.to}
@@ -133,61 +132,79 @@ export default async function PortfolioPage({
         </div>
       </dl>
 
-      <section aria-labelledby="operational-evidence" className="mt-6">
-        <SectionHeading
-          id="operational-evidence"
-          icon={Activity}
-          title="Evidence & Checks"
-          subtitle="Latest data and exit-check status."
-        />
-        <div className={`${SECTION_CARD} divide-y divide-white/8`}>
-          {(portfolio.operationalEvidence ?? []).map((item) => (
-            <div
-              key={item.label}
-              className="flex flex-wrap items-baseline justify-between gap-3 p-4"
-            >
-              <span className="text-sm text-[#CBD5E1]">{item.label}</span>
-              <span className="font-mono text-xs text-[#94A3B8]">{item.value}</span>
-              <span className="state-badge" data-state={item.status}>
-                {item.status}
-              </span>
+      {/* 2-column: Evidence + Allocation on left, Orders on right */}
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* LEFT: Evidence & Checks + Portfolio Allocation (stacked) */}
+        <div className="flex flex-col gap-6 lg:col-span-7">
+          <section aria-labelledby="operational-evidence">
+            <SectionHeading
+              id="operational-evidence"
+              icon={Activity}
+              title="Evidence & Checks"
+              subtitle="Latest data and exit-check status."
+            />
+            <div className={`${SECTION_CARD} divide-y divide-white/8`}>
+              {(portfolio.operationalEvidence ?? []).map((item) => (
+                <div
+                  key={item.label}
+                  className="flex flex-wrap items-baseline justify-between gap-3 p-4"
+                >
+                  <span className="text-sm text-[#CBD5E1]">{item.label}</span>
+                  <span className="font-mono text-xs text-[#94A3B8]">{item.value}</span>
+                  <span className="state-badge" data-state={item.status}>
+                    {item.status}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
 
-      {/* Capital Allocation & Exposure */}
-      <section aria-labelledby="allocation" className="mt-6">
-        <SectionHeading
-          id="allocation"
-          icon={PieChart}
-          title="Portfolio Allocation & Exposure"
-          subtitle="Current exposure across positions, spreads, and cash."
-        />
-        <div className={`${SECTION_CARD} p-5 sm:p-6`}>
-          <ul className="space-y-5">
-            {portfolio.exposure.map((item) => {
-              const pct = toPercent(item.value);
-              return (
-                <li key={item.label}>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-[14px] text-[#CBD5E1]">{item.label}</span>
-                    <span className="text-[14px] font-semibold tabular-nums text-[#CBD5E1]">
-                      {item.value}%
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
-                    <div
-                      className="h-full rounded-full bg-[#547D83] transition-all duration-500"
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <section aria-labelledby="allocation">
+            <SectionHeading
+              id="allocation"
+              icon={PieChart}
+              title="Portfolio Allocation & Exposure"
+              subtitle="Current exposure across positions, spreads, and cash."
+            />
+            <div className={`${SECTION_CARD} p-5 sm:p-6`}>
+              <ul className="space-y-5">
+                {portfolio.exposure.map((item) => {
+                  const pct = toPercent(item.value);
+                  return (
+                    <li key={item.label}>
+                      <div className="flex items-baseline justify-between gap-4">
+                        <span className="text-[14px] text-[#CBD5E1]">{item.label}</span>
+                        <span className="text-[14px] font-semibold tabular-nums text-[#CBD5E1]">
+                          {item.value}%
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+                        <div
+                          className="h-full rounded-full bg-[#547D83] transition-all duration-500"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
         </div>
-      </section>
+
+        {/* RIGHT: Orders panel � spans full height of left column */}
+        <section aria-labelledby="orders-panel" className="flex flex-col lg:col-span-5">
+          <SectionHeading
+            id="orders-panel"
+            icon={ClipboardList}
+            title="Orders"
+            subtitle="Paper execution receipts submitted to Alpaca."
+          />
+          <div className={`${SECTION_CARD} flex-1 overflow-y-auto`} style={{ maxHeight: "460px" }}>
+            <PortfolioOrdersList orders={orders} />
+          </div>
+        </section>
+      </div>
 
       {/* Current Holdings */}
       <section aria-labelledby="holdings" className="mt-6">
@@ -202,7 +219,7 @@ export default async function PortfolioPage({
         </div>
       </section>
 
-      {/* Active Portfolio Decision Activity */}
+      {/* Recent Activity */}
       <section aria-labelledby="activity" className="mt-6">
         <SectionHeading
           id="activity"

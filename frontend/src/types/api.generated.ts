@@ -3104,6 +3104,29 @@ export interface components {
          * @enum {string}
          */
         OptionType: "call" | "put";
+        /**
+         * OrderReceipt
+         * @description Sanitised paper-order receipt surfaced on the portfolio page.
+         */
+        OrderReceipt: {
+            /** Fillprice */
+            fillPrice: string;
+            /**
+             * Occurredat
+             * Format: date-time
+             */
+            occurredAt: string;
+            /** Quantity */
+            quantity: string;
+            /** Side */
+            side: string;
+            /** Status */
+            status: string;
+            /** Strategy */
+            strategy: string;
+            /** Symbol */
+            symbol: string;
+        };
         /** OutcomeCount */
         OutcomeCount: {
             /** Label */
@@ -3149,6 +3172,8 @@ export interface components {
             exposure: components["schemas"]["ExposureItem"][];
             /** Operationalevidence */
             operationalEvidence?: components["schemas"]["OperationalEvidence"][];
+            /** Orders */
+            orders?: components["schemas"]["OrderReceipt"][];
             /** Points */
             points: components["schemas"]["ChartPoint"][];
             /** Positions */
