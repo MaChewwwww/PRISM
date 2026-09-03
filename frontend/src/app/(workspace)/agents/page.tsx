@@ -24,6 +24,28 @@ import { TryAgentButton } from "@/features/agents/agent-playground-modal";
 const METRIC_CARD =
   "rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]";
 
+/** Words that should stay fully uppercase in a formatted agent name. */
+const NAME_ACRONYMS = new Set(["llm", "ai", "api", "id"]);
+
+/**
+ * Format a raw agent name (slug, snake_case, kebab-case, or camelCase) into
+ * spaced Title Case, e.g. "industry_analysis_llm_output" -> "Industry Analysis
+ * LLM Output". Acronyms like LLM stay uppercase.
+ */
+function formatAgentName(raw: string): string {
+  return raw
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map((word) => {
+      const lower = word.toLowerCase();
+      if (NAME_ACRONYMS.has(lower)) return word.toUpperCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
 /** Icon per authority-pipeline component kind. */
 const COMPONENT_ICON: Record<string, LucideIcon> = {
   risk_ai: ShieldAlert,
@@ -169,7 +191,7 @@ export default async function AgentsPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-[16px] font-semibold text-[#F8FAFC] transition-colors group-hover:text-[#B2D8DC]">
-                        {agent.name}
+                        {formatAgentName(agent.name)}
                       </h3>
                       <p className="mt-0.5 text-[12px] capitalize text-[#94A3B8]">
                         {agent.authority} agent

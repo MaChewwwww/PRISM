@@ -104,12 +104,6 @@ export function Hero() {
                 className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-sheen bg-white/40 blur-md"
               />
             </Link>
-            <a
-              href="#overview"
-              className="rounded-full border border-white/10 bg-white/[0.03] px-7 py-3 text-sm font-medium text-[var(--color-text-muted)] backdrop-blur-md transition-all duration-200 hover:border-white/20 hover:text-[var(--color-text)]"
-            >
-              How It Works
-            </a>
           </div>
         </div>
 

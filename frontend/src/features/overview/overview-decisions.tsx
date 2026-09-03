@@ -142,7 +142,7 @@ export function OverviewDecisions({ decisions }: { decisions: OverviewDecision[]
       <div className="overview-decisions-head">
         <SectionHeading
           icon={Zap}
-          title="Recent decisions"
+          title="Recent Decisions"
           description="Latest Active Portfolio agent decision outcomes."
         />
         <Link href="/stories" className="overview-see-all">

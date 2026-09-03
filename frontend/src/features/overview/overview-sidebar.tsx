@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartColumn, Layers3, PieChart, Wallet } from "lucide-react";
+import { ChartColumn, PieChart, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import type {
@@ -16,7 +16,6 @@ type Props = {
   exposures: OverviewExposure[];
   positions: OverviewPosition[];
   asOf: string | null;
-  totalDecisionStories: number;
 };
 
 /**
@@ -115,14 +114,7 @@ function SectionHeading({
   );
 }
 
-export function OverviewSidebar({
-  points,
-  outcomes,
-  exposures,
-  positions,
-  asOf,
-  totalDecisionStories,
-}: Props) {
+export function OverviewSidebar({ points, outcomes, exposures, positions, asOf }: Props) {
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null);
   const [selectedExposure, setSelectedExposure] = useState<string | null>(null);
   const latest = points.at(-1);
@@ -147,7 +139,7 @@ export function OverviewSidebar({
       <section className="overview-panel overview-side-panel">
         <SectionHeading
           icon={ChartColumn}
-          title="Decision outcomes"
+          title="Decision Outcomes"
           description="Latest decision across the active portfolio."
         />
         {outcomes.length === 0 ? (
@@ -187,8 +179,8 @@ export function OverviewSidebar({
       <section className="overview-panel overview-side-panel">
         <SectionHeading
           icon={PieChart}
-          title="Active Portfolio exposure"
-          description="Allocation by risk posture and capital concentration."
+          title="Active Portfolio Exposure"
+          description="Allocation by Risk Posture and Capital Concentration."
         />
         {exposures.length === 0 ? (
           <div className="overview-empty-block">
@@ -241,65 +233,6 @@ export function OverviewSidebar({
           </div>
         )}
       </section>
-
-      <section className="overview-panel overview-snapshot-panel">
-        <SectionHeading
-          icon={Layers3}
-          title="Snapshot"
-          description="Most recent portfolio measurements for this period."
-        />
-        <div className="overview-stats-grid overview-nums">
-          <div>
-            <div className="overview-stat-val">${latest?.actual.toLocaleString() ?? "—"}</div>
-            <div className="overview-stat-lbl">Active Portfolio equity</div>
-          </div>
-          <div>
-            <div
-              className={`overview-stat-val ${periodChange >= 0 ? "overview-pos" : "overview-neg"}`}
-            >
-              {periodChange >= 0 ? "+" : ""}
-              {periodChange.toFixed(1)}%
-            </div>
-            <div className="overview-stat-lbl">Period change</div>
-          </div>
-          <div>
-            <div className="overview-stat-val">{totalDecisionStories}</div>
-            <div className="overview-stat-lbl">Decision stories</div>
-          </div>
-        </div>
-        <div className="overview-snapshot-spark-wrap">
-          <div className="overview-snapshot-spark-label">Active Portfolio observations</div>
-          <PortfolioSparkline points={points} />
-        </div>
-      </section>
     </aside>
-  );
-}
-
-function PortfolioSparkline({ points }: { points: OverviewPoint[] }) {
-  if (points.length === 0) return <p className="overview-chart-detail-empty">No observations.</p>;
-  const min = Math.min(...points.map((point) => point.actual));
-  const max = Math.max(...points.map((point) => point.actual));
-  const span = max - min || 1;
-  return (
-    <div className="overview-spark">
-      {points.map((point) => {
-        const height = Math.max(8, ((point.actual - min) / span) * 48);
-        return (
-          <button
-            type="button"
-            key={`${point.date}-${point.time}`}
-            className="overview-spark-bar-wrap"
-            title={`${point.date} · ${point.actual.toLocaleString()}`}
-          >
-            <span
-              className={`overview-spark-bar ${point.decision ? "decision-day" : ""}`}
-              style={{ height: `${height}px` }}
-            />
-            <span className="overview-spark-label">{point.date.slice(5)}</span>
-          </button>
-        );
-      })}
-    </div>
   );
 }
