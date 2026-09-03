@@ -759,11 +759,7 @@ class MonitoringReadService:
         portfolio_evidence = [
             OperationalEvidence(
                 label="Portfolio snapshot freshness",
-                value=(
-                    _fmt_dt(latest.observed_at)
-                    if latest is not None
-                    else "No recorded snapshot"
-                ),
+                value=_fmt_dt(latest.observed_at) if latest is not None else "No recorded snapshot",
                 status="recorded" if latest is not None else "unavailable",
                 observed_at=latest.observed_at if latest is not None else None,
             ),
