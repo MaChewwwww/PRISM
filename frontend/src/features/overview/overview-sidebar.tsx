@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartColumn, Layers3, PieChart, Wallet } from "lucide-react";
+import { ChartColumn, PieChart, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import type {
@@ -16,7 +16,6 @@ type Props = {
   exposures: OverviewExposure[];
   positions: OverviewPosition[];
   asOf: string | null;
-  totalDecisionStories: number;
 };
 
 /**
@@ -121,7 +120,6 @@ export function OverviewSidebar({
   exposures,
   positions,
   asOf,
-  totalDecisionStories,
 }: Props) {
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null);
   const [selectedExposure, setSelectedExposure] = useState<string | null>(null);
@@ -242,33 +240,5 @@ export function OverviewSidebar({
         )}
       </section>
     </aside>
-  );
-}
-
-function PortfolioSparkline({ points }: { points: OverviewPoint[] }) {
-  if (points.length === 0) return <p className="overview-chart-detail-empty">No observations.</p>;
-  const min = Math.min(...points.map((point) => point.actual));
-  const max = Math.max(...points.map((point) => point.actual));
-  const span = max - min || 1;
-  return (
-    <div className="overview-spark">
-      {points.map((point) => {
-        const height = Math.max(8, ((point.actual - min) / span) * 48);
-        return (
-          <button
-            type="button"
-            key={`${point.date}-${point.time}`}
-            className="overview-spark-bar-wrap"
-            title={`${point.date} · ${point.actual.toLocaleString()}`}
-          >
-            <span
-              className={`overview-spark-bar ${point.decision ? "decision-day" : ""}`}
-              style={{ height: `${height}px` }}
-            />
-            <span className="overview-spark-label">{point.date.slice(5)}</span>
-          </button>
-        );
-      })}
-    </div>
   );
 }

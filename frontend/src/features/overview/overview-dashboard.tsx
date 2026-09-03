@@ -63,7 +63,6 @@ export function OverviewDashboard({ overview, range }: { overview: Overview; ran
         exposures={view.exposures}
         positions={view.positions}
         asOf={overview.asOf ?? null}
-        totalDecisionStories={view.decisions.length}
       />
 
       <OverviewTicker />
