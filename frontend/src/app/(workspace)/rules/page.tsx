@@ -1,4 +1,4 @@
-import { ArrowDownWideNarrow, GaugeCircle, Gavel, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowDownWideNarrow, GaugeCircle, Gavel, LockKeyhole } from "lucide-react";
 import { Suspense } from "react";
 
 import { PageHeader, StateBadge } from "@/components/workspace/workspace-ui";

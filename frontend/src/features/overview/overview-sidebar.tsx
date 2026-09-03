@@ -241,37 +241,6 @@ export function OverviewSidebar({
           </div>
         )}
       </section>
-
-      <section className="overview-panel overview-snapshot-panel">
-        <SectionHeading
-          icon={Layers3}
-          title="Snapshot"
-          description="Most recent portfolio measurements for this period."
-        />
-        <div className="overview-stats-grid overview-nums">
-          <div>
-            <div className="overview-stat-val">${latest?.actual.toLocaleString() ?? "—"}</div>
-            <div className="overview-stat-lbl">Active Portfolio equity</div>
-          </div>
-          <div>
-            <div
-              className={`overview-stat-val ${periodChange >= 0 ? "overview-pos" : "overview-neg"}`}
-            >
-              {periodChange >= 0 ? "+" : ""}
-              {periodChange.toFixed(1)}%
-            </div>
-            <div className="overview-stat-lbl">Period change</div>
-          </div>
-          <div>
-            <div className="overview-stat-val">{totalDecisionStories}</div>
-            <div className="overview-stat-lbl">Decision stories</div>
-          </div>
-        </div>
-        <div className="overview-snapshot-spark-wrap">
-          <div className="overview-snapshot-spark-label">Active Portfolio observations</div>
-          <PortfolioSparkline points={points} />
-        </div>
-      </section>
     </aside>
   );
 }

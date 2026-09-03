@@ -191,7 +191,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
 
   return (
     <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl sm:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="overview-chart-head">
             <SectionHeading
@@ -205,7 +205,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
           </div>
 
           <div
-            className="overview-chart-plot mt-4 min-h-72 w-full flex-1 [&_*:focus]:outline-none sm:min-h-80"
+            className="overview-chart-plot mt-4 min-h-72 w-full [&_*:focus]:outline-none sm:min-h-80"
             role="img"
             aria-label="Active Portfolio, alternative, and benchmark equity paths over the selected date range, with the gap between the portfolio and the best alternative shaded"
           >
@@ -345,10 +345,7 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
           </div>
         </div>
 
-        <aside
-          className="flex shrink-0 flex-col rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/8 to-white/3 p-4 shadow-[0_12px_40px_-8px_rgba(84,125,131,0.25)] lg:w-72"
-          aria-label="Selected point detail"
-        >
+        <aside className="flex shrink-0 flex-col lg:w-72" aria-label="Selected point detail">
           {defaultSelected && (
             <ChartDetailPanel point={defaultSelected.point} onClose={() => onSelect(null)} />
           )}
