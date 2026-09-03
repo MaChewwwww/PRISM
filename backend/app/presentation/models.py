@@ -296,12 +296,25 @@ class Activity(PresentationModel):
     provenance: Provenance = Provenance.ILLUSTRATIVE_FIXTURE
 
 
+class OrderReceipt(PresentationModel):
+    """Sanitised paper-order receipt surfaced on the portfolio page."""
+
+    occurred_at: datetime
+    symbol: str
+    side: str  # "entry" | "exit"
+    quantity: str  # e.g. "2 contracts" or "—"
+    fill_price: str  # average fill price string or "—"
+    status: str  # "filled" | "partial" | "rejected" | "pending" | "error"
+    strategy: str  # human label derived from legs_json, e.g. "Put Credit Spread"
+
+
 class Portfolio(PresentationModel):
     points: list[ChartPoint]
     positions: list[Position]
     activities: list[Activity]
     exposure: list[ExposureItem]
     operational_evidence: list[OperationalEvidence] = Field(default_factory=list)
+    orders: list[OrderReceipt] = Field(default_factory=list)
 
 
 class OutcomeCount(PresentationModel):

@@ -5891,6 +5891,52 @@
         "title": "OptionType",
         "type": "string"
       },
+      "OrderReceipt": {
+        "additionalProperties": false,
+        "description": "Sanitised paper-order receipt surfaced on the portfolio page.",
+        "properties": {
+          "fillPrice": {
+            "title": "Fillprice",
+            "type": "string"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "occurredAt",
+          "symbol",
+          "side",
+          "quantity",
+          "fillPrice",
+          "status",
+          "strategy"
+        ],
+        "title": "OrderReceipt",
+        "type": "object"
+      },
       "OutcomeCount": {
         "additionalProperties": false,
         "properties": {
@@ -6005,6 +6051,13 @@
               "$ref": "#/components/schemas/OperationalEvidence"
             },
             "title": "Operationalevidence",
+            "type": "array"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/OrderReceipt"
+            },
+            "title": "Orders",
             "type": "array"
           },
           "points": {
