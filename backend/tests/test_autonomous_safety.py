@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -9,21 +11,28 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.autonomous.audit import build_evaluation_root
-from app.autonomous.models import AutonomousCycleModel, OptionIvObservationModel
+from app.autonomous.models import (
+    AutonomousCycleModel,
+    OptionIvObservationModel,
+    PortfolioSnapshotModel,
+)
 from app.autonomous.worker import AutonomousWorker, CandidateResearchOutcome
 from app.contracts.models import (
+    ExecutionStatus,
     ExitPolicy,
     OptionLeg,
     OptionSide,
     OptionStrategy,
     OptionType,
+    ReasonCode,
     RiskAssessment,
     StrategyKind,
     TradeProposal,
     TradeVerdict,
 )
 from app.core.config import Settings
-from app.market.option_selection import select_option_strategy
+from app.execution.models import ExecutionReceiptModel
+from app.market.option_selection import OptionSelectionError, select_option_strategy
 from app.rules.evaluator import authorize_proposal
 from app.rules.registry import ProfileParameters
 
@@ -90,6 +99,14 @@ def test_option_selection_rejects_stale_quotes() -> None:
         raise AssertionError("stale quote must not produce a strategy")
 
 
+def test_cycle_schedule_skips_missed_ticks_without_a_catch_up_burst() -> None:
+    interval_seconds = 300
+
+    assert AutonomousWorker._advance_cycle_due(None, 100.0, interval_seconds) == 400.0
+    assert AutonomousWorker._advance_cycle_due(100.0, 250.0, interval_seconds) == 400.0
+    assert AutonomousWorker._advance_cycle_due(100.0, 700.0, interval_seconds) == 1000.0
+
+
 def test_option_selection_accepts_quotes_during_cycle() -> None:
     now = datetime(2026, 8, 30, 13, 30, tzinfo=UTC)
     contracts = [
@@ -121,7 +138,7 @@ def test_option_selection_accepts_quotes_during_cycle() -> None:
     assert strategy.legs[0].symbol == "NVDA270910C00100000"
 
 
-def test_option_selection_debit_spread_fallback_to_long_leg() -> None:
+def test_option_selection_debit_spread_rejects_when_no_valid_short_leg() -> None:
     now = datetime(2026, 8, 30, 13, 30, tzinfo=UTC)
     contracts = [
         {
@@ -141,19 +158,241 @@ def test_option_selection_debit_spread_fallback_to_long_leg() -> None:
             "quote_timestamp": now + timedelta(seconds=5),
         }
     }
-    # When debit_spread is requested but only 1 strike is available,
-    # it gracefully falls back to long single leg.
-    strategy = select_option_strategy(
-        contracts,
-        quotes,
-        underlying_price=Decimal("500"),
-        direction="bullish",
-        structure="debit_spread",
-        now=now,
+    with pytest.raises(OptionSelectionError):
+        select_option_strategy(
+            contracts,
+            quotes,
+            underlying_price=Decimal("500"),
+            direction="bullish",
+            structure="debit_spread",
+            now=now,
+        )
+
+
+def test_cash_reserve_uses_five_percent_of_current_equity() -> None:
+    assert AutonomousWorker._cash_reserve_ok(
+        cash=Decimal("95000"),
+        order_cost=Decimal("2000"),
+        portfolio_value=Decimal("100000"),
+        cash_buffer_pct=Decimal("5"),
     )
-    assert strategy.kind == StrategyKind.LONG_CALL
-    assert len(strategy.legs) == 1
-    assert strategy.legs[0].symbol == "MSFT270910C00500000"
+    assert not AutonomousWorker._cash_reserve_ok(
+        cash=Decimal("6500"),
+        order_cost=Decimal("2000"),
+        portfolio_value=Decimal("100000"),
+        cash_buffer_pct=Decimal("5"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_position_metadata_accepts_quote_newer_than_cycle_start() -> None:
+    worker = AutonomousWorker(Settings(_env_file=None))
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    portfolio = {
+        "positions": [
+            {
+                "symbol": "NVDA260909C00220000",
+                "underlying": "NVDA",
+                "asset_class": "us_option",
+                "qty": "1",
+                "market_value": "410",
+                "avg_entry_price": "4.10",
+                "position_values_complete": True,
+            }
+        ]
+    }
+    gateway = MagicMock()
+    gateway.get_option_chain.return_value = {
+        "NVDA260909C00220000": {
+            "delta": "0.53",
+            "vega": "0.14",
+            "iv": "0.40",
+            "quote_timestamp": now + timedelta(milliseconds=800),
+        }
+    }
+
+    refreshed = await worker._refresh_position_metadata(gateway, portfolio, now)
+
+    assert refreshed["positions"][0]["quote_age_seconds"] == "0"
+    assert refreshed["positions"][0]["metadata_complete"] is True
+    assert refreshed["positions_metadata_complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_persist_portfolio_snapshot_serializes_datetime_values_cleanly() -> None:
+    worker = AutonomousWorker(Settings(_env_file=None))
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    portfolio = {
+        "observed_at": now.isoformat(),
+        "account_verified": True,
+        "supported_options_level": 3,
+        "positions": [
+            {
+                "symbol": "NVDA260909C00220000",
+                "underlying": "NVDA",
+                "asset_class": "us_option",
+                "qty": "1",
+                "market_value": "410",
+                "avg_entry_price": "4.10",
+                "position_values_complete": True,
+                "provider_quote_timestamp": now + timedelta(milliseconds=500),
+                "quote_timestamp": (now + timedelta(milliseconds=500)).isoformat(),
+            }
+        ],
+    }
+    session = AsyncMock()
+    persisted_snapshots: list[PortfolioSnapshotModel] = []
+    session.add = MagicMock(side_effect=lambda model: persisted_snapshots.append(model))
+    session.flush = AsyncMock()
+
+    digest = await worker._persist_portfolio_snapshot(session, portfolio)
+
+    assert digest
+    assert len(persisted_snapshots) == 1
+    snapshot = persisted_snapshots[0]
+    assert isinstance(snapshot, PortfolioSnapshotModel)
+    assert snapshot.snapshot_digest == digest
+    parsed_payload = json.loads(snapshot.payload_json)
+    assert parsed_payload["account_verified"] is True
+    assert len(parsed_payload["positions"]) == 1
+    assert parsed_payload["positions"][0]["symbol"] == "NVDA260909C00220000"
+    assert "provider_quote_timestamp" in parsed_payload["positions"][0]
+
+
+def test_position_quotes_extracts_from_datetime_and_iso_string() -> None:
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    positions = [
+        {
+            "symbol": "NVDA260909C00220000",
+            "bid": "4.00",
+            "ask": "4.20",
+            "price_increment": "0.01",
+            "provider_quote_timestamp": now,
+        },
+        {
+            "symbol": "NVDA260909C00225000",
+            "bid": "2.00",
+            "ask": "2.10",
+            "price_increment": "0.01",
+            "quote_timestamp": now.isoformat(),
+        },
+        {
+            "symbol": "INVALID",
+            "bid": "1.00",
+            "ask": "1.10",
+            "quote_timestamp": "not-a-timestamp",
+        },
+    ]
+    quotes = AutonomousWorker._position_quotes(positions)
+    assert "NVDA260909C00220000" in quotes
+    assert quotes["NVDA260909C00220000"]["quote_timestamp"] == now
+    assert "NVDA260909C00225000" in quotes
+    assert quotes["NVDA260909C00225000"]["quote_timestamp"] == now
+    assert "INVALID" not in quotes
+
+
+@pytest.mark.asyncio
+async def test_run_forever_skips_pre_market_cycle_records(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> FixedDatetime:
+            return cls(2026, 9, 1, 13, 0, tzinfo=UTC)
+
+    settings = Settings(
+        _env_file=None,
+        environment="production",
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="2.0.0",
+        autonomous_trading_enabled=True,
+        autonomous_trading_start_at="2026-08-31T13:30:00Z",
+        autonomous_trading_end_at="2026-09-03T20:00:00Z",
+        alpaca_api_key="paper-key",
+        alpaca_secret_key="paper-secret",
+        auth_password="production-password",
+        auth_secret_key="x" * 32,
+    )
+    worker = AutonomousWorker(settings)
+    stop_event = asyncio.Event()
+    worker.run_cycle = AsyncMock()
+    worker._market_is_open = MagicMock(return_value=False)
+
+    async def stop_after_wait(stop_event: asyncio.Event, seconds: int) -> None:
+        stop_event.set()
+
+    worker._wait = stop_after_wait
+    monkeypatch.setattr("app.autonomous.worker.datetime", FixedDatetime)
+
+    await worker.run_forever(stop_event)
+
+    worker.run_cycle.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_includes_submitted_receipts(monkeypatch: pytest.MonkeyPatch) -> None:
+    receipt = ExecutionReceiptModel(
+        id=str(uuid4()),
+        trace_id=str(uuid4()),
+        proposal_id=str(uuid4()),
+        client_order_id="sf-test",
+        payload_digest="a" * 64,
+        status="submitted",
+        filled_quantity=Decimal("0"),
+        created_at=datetime(2026, 8, 31, 14, 0, tzinfo=UTC),
+    )
+    result = MagicMock()
+    result.scalars.return_value = [receipt]
+    session = AsyncMock()
+    session.execute.return_value = result
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    class FakeGateway:
+        async def reconcile_async(self, persisted_receipt: Any, repository: Any) -> Any:
+            assert persisted_receipt.client_order_id == "sf-test"
+            persisted_receipt.status = ExecutionStatus.FILLED
+            return persisted_receipt
+
+    monkeypatch.setattr("app.autonomous.worker.AlpacaCliExecutionGateway", lambda *_: FakeGateway())
+
+    await AutonomousWorker(Settings(_env_file=None))._reconcile_unfinished(session)
+
+    assert session.add.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_reconcile_exit_receipts_marks_absent_positions_filled() -> None:
+    worker = AutonomousWorker(Settings(_env_file=None))
+    now = datetime(2026, 8, 31, 14, 0, tzinfo=UTC)
+    exit_receipt = ExecutionReceiptModel(
+        id=str(uuid4()),
+        trace_id=str(uuid4()),
+        proposal_id=str(uuid4()),
+        symbol="NVDA260909C00220000",
+        operation="exit",
+        status="submitted",
+        requested_quantity=Decimal("1"),
+        exit_reason="dte_threshold",
+        client_order_id="sf-exit-test",
+        payload_digest="a" * 64,
+        created_at=now - timedelta(minutes=10),
+    )
+    result = MagicMock()
+    result.scalars.return_value = [exit_receipt]
+    session = AsyncMock()
+    session.execute.return_value = result
+    session.get = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    positions = [{"symbol": "NVDA260909C00225000"}]
+    await worker._reconcile_exit_receipts(session, positions, now)
+
+    assert exit_receipt.status == "filled"
+    assert exit_receipt.filled_quantity == Decimal("1")
+    assert exit_receipt.reconciled_at == now
+    assert session.add.call_count == 1
 
 
 def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> None:
@@ -170,12 +409,97 @@ def test_authorization_rejects_missing_evidence_and_preserves_rule_trace() -> No
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     decision = authorize_proposal(proposal, risk, settings, inputs={})
     assert decision.outcome == "REJECT"
     assert [rule.priority for rule in decision.rule_trace] == ["P0", "P1", "P2", "P3", "P4", "P5"]
     assert decision.allowed_order_payload is None
+
+
+def test_p2_reason_codes_identify_only_the_failed_risk_predicate() -> None:
+    proposal = _proposal()
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="2.0.0",
+    )
+    decision = authorize_proposal(
+        proposal,
+        None,
+        settings,
+        inputs={
+            "market_regime": "normal",
+            "iv_rank_available": True,
+            "iv_rank": "25",
+        },
+    )
+
+    p2 = next(rule for rule in decision.rule_trace if rule.priority == "P2")
+
+    assert p2.reason_codes == [ReasonCode.RISK_ASSESSMENT_MISSING]
+
+
+def test_p4_reason_codes_identify_each_failed_edge_predicate() -> None:
+    proposal = _proposal()
+    risk = RiskAssessment(
+        trace_id=proposal.trace_id,
+        proposal_id=proposal.id,
+        verdict="acceptable",
+        max_loss=Decimal("1"),
+        findings=[],
+        data_fresh=True,
+    )
+    settings = Settings(
+        _env_file=None,
+        execution_enabled=True,
+        execution_kill_switch=False,
+        active_ruleset_version="2.0.0",
+    )
+    decision = authorize_proposal(
+        proposal,
+        risk,
+        settings,
+        inputs={
+            "market_fresh": True,
+            "analog_count": 30,
+            "fundamentals_sourced": True,
+            "account_verified": True,
+            "open_positions": 0,
+            "buying_power_ok": True,
+            "cash_buffer_ok": True,
+            "concentration_ok": True,
+            "position_size_ok": True,
+            "aggregate_risk_ok": True,
+            "portfolio_controls_complete": True,
+            "sector_concentration_ok": True,
+            "cluster_concentration_ok": True,
+            "greeks_risk_ok": True,
+            "expiration_concentration_ok": True,
+            "market_open": True,
+            "iv_rank_available": True,
+            "iv_rank": "25",
+            "market_regime": "normal",
+            "portfolio_risk_state": "normal",
+            "quote_age_seconds": 1,
+            "spread_pct": "5",
+            "within_entry_window": True,
+            "before_force_flatten": True,
+            "opportunity_score": "77",
+            "net_ev_r": "0.10",
+            "reward_risk_ratio": "1.40",
+            "supported_options_level": 2,
+        },
+    )
+
+    p4 = next(rule for rule in decision.rule_trace if rule.priority == "P4")
+
+    assert p4.reason_codes == [
+        ReasonCode.OPPORTUNITY_SCORE_BELOW_FLOOR,
+        ReasonCode.EXPECTED_VALUE_BELOW_FLOOR,
+        ReasonCode.REWARD_RISK_BELOW_FLOOR,
+    ]
 
 
 def test_evaluation_root_is_immutable_and_lineage_bound() -> None:
@@ -190,7 +514,7 @@ def test_evaluation_root_is_immutable_and_lineage_bound() -> None:
         outcome="NO_TRADE",
         evidence={"analog_count": 1},
     )
-    assert first.is_immutable is True
+    assert first.is_immutable
     assert first.root_digest != second.root_digest
 
 
@@ -208,7 +532,7 @@ def test_balanced_profile_threshold_is_78() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
@@ -259,7 +583,7 @@ def test_persisted_profile_parameters_remain_bounded_by_the_same_rule_engine() -
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
@@ -294,8 +618,6 @@ def test_persisted_profile_parameters_remain_bounded_by_the_same_rule_engine() -
     conservative = ProfileParameters(
         target_position_size_pct=Decimal("1.50"),
         opportunity_score_threshold=Decimal("85"),
-        take_profit_pct=Decimal("75"),
-        stop_loss_pct=Decimal("50"),
     )
     decision = authorize_proposal(
         proposal,
@@ -326,7 +648,7 @@ def test_missing_operational_controls_fail_closed_even_at_threshold() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     decision = authorize_proposal(
         proposal,
@@ -376,7 +698,7 @@ def test_high_iv_rank_requires_a_debit_spread() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,
@@ -422,7 +744,7 @@ async def test_record_captures_structured_candidate_rejections() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
         shadowfund_enabled=False,
     )
     worker = AutonomousWorker(settings)
@@ -555,8 +877,6 @@ def test_authorization_uses_fresh_timestamp_to_prevent_expiry() -> None:
         limit_price=Decimal("4.00"),
     )
     proposal.exit_policy = ExitPolicy(
-        take_profit_pct=Decimal("75.0"),
-        stop_loss_pct=Decimal("50.0"),
         dte_threshold=7,
         max_hold_days=4,
     )
@@ -572,7 +892,7 @@ def test_authorization_uses_fresh_timestamp_to_prevent_expiry() -> None:
         _env_file=None,
         execution_enabled=True,
         execution_kill_switch=False,
-        active_ruleset_version="1.0.0",
+        active_ruleset_version="2.0.0",
     )
     inputs = {
         "market_fresh": True,

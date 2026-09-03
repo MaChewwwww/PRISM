@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import subprocess
@@ -46,6 +47,27 @@ class RecordingRunner:
         if isinstance(result, BaseException):
             raise result
         return result
+
+
+class AsyncInMemoryReceiptRepository:
+    def __init__(self) -> None:
+        self.receipts: dict[str, Any] = {}
+
+    async def save(self, receipt: Any) -> None:
+        self.receipts[receipt.client_order_id] = receipt.model_copy(deep=True)
+
+    async def find_by_client_order_id(self, client_order_id: str) -> Any | None:
+        return self.receipts.get(client_order_id)
+
+    async def find_by_payload_digest(self, payload_digest: str) -> Any | None:
+        return next(
+            (
+                receipt
+                for receipt in self.receipts.values()
+                if receipt.payload_digest == payload_digest
+            ),
+            None,
+        )
 
 
 def build_proposal(kind: StrategyKind = StrategyKind.LONG_CALL) -> TradeProposal:
@@ -263,6 +285,82 @@ def test_broker_rejection_is_not_reported_as_submitted() -> None:
     receipt = gateway.submit(proposal, build_decision(proposal))
     assert receipt.status.value == "rejected"
     assert receipt.error_code == "broker_rejected"
+
+
+def test_position_close_persists_an_exit_receipt_without_sending_internal_client_id() -> None:
+    runner = RecordingRunner([CommandResult(0, '{"id":"close-1","status":"accepted"}', "")])
+    repository = AsyncInMemoryReceiptRepository()
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, None)  # type: ignore[arg-type]
+
+    receipt = asyncio.run(
+        gateway.close_position_async(
+            "nvda260909c00220000",
+            trace_id=uuid4(),
+            exit_reason="pnl_threshold",
+            requested_quantity=Decimal("1"),
+            repository=repository,
+        )
+    )
+
+    argv, body, _, _ = runner.calls[0]
+    assert argv[1:] == ["api", "DELETE", "/v2/positions/NVDA260909C00220000"]
+    assert body == ""
+    assert receipt.operation.value == "exit"
+    assert receipt.proposal_id is None
+    assert receipt.symbol == "NVDA260909C00220000"
+    assert receipt.exit_reason.value == "pnl_threshold"
+    assert receipt.status.value == "submitted"
+    assert receipt.broker_order_id == "close-1"
+    assert receipt.client_order_id not in " ".join(argv)
+
+    second = asyncio.run(
+        gateway.close_position_async(
+            "NVDA260909C00220000",
+            trace_id=uuid4(),
+            exit_reason="pnl_threshold",
+            requested_quantity=Decimal("1"),
+            repository=repository,
+        )
+    )
+    assert second.client_order_id == receipt.client_order_id
+    assert len(runner.calls) == 1
+
+
+def test_close_position_async_retries_after_failure() -> None:
+    runner = RecordingRunner(
+        [
+            CommandResult(1, "", "transient error"),
+            CommandResult(0, '{"id":"close-2","status":"accepted"}', ""),
+        ]
+    )
+    gateway = AlpacaCliExecutionGateway(execution_settings(), runner, InMemoryReceiptRepository())
+    repository = AsyncInMemoryReceiptRepository()
+
+    first = asyncio.run(
+        gateway.close_position_async(
+            "NVDA260909C00225000",
+            trace_id=uuid4(),
+            exit_reason="dte_threshold",
+            requested_quantity=Decimal("4"),
+            repository=repository,
+        )
+    )
+    assert first.status.value == "failed"
+    assert first.error_code == "alpaca_cli_exit_1"
+    assert len(runner.calls) == 1
+
+    second = asyncio.run(
+        gateway.close_position_async(
+            "NVDA260909C00225000",
+            trace_id=uuid4(),
+            exit_reason="dte_threshold",
+            requested_quantity=Decimal("4"),
+            repository=repository,
+        )
+    )
+    assert second.status.value == "submitted"
+    assert second.broker_order_id == "close-2"
+    assert len(runner.calls) == 2
 
 
 def test_frs_009_autonomous_trading_window_blocks_out_of_window_authorization() -> None:

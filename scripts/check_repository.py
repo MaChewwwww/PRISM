@@ -77,8 +77,10 @@ def _check_governance(failures: list[str]) -> None:
     registry_path = ROOT / "backend" / "app" / "rules" / "authorized_baseline.v1.json"
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
     expected = {
-        "take_profit_default_pct": "75.00",
-        "stop_loss_pct": "50.00",
+        "profit_arm_pct": "20.00",
+        "profit_trailing_giveback_points": "10.00",
+        "hard_take_profit_pct": "40.00",
+        "hard_stop_loss_pct": "50.00",
         "data_freshness_seconds": 30,
         "balanced_opportunity_score": "78",
         "max_hold_default_days": 14,
@@ -88,7 +90,7 @@ def _check_governance(failures: list[str]) -> None:
         if registry["parameters"].get(key) != value:
             failures.append(f"Authorized registry mismatch for {key}: expected {value}")
     if (
-        registry.get("version") != "1.0.0"
+        registry.get("version") != "2.0.0"
         or registry.get("default_profile") != "balanced"
     ):
         failures.append("Authorized registry identity/default profile drifted")

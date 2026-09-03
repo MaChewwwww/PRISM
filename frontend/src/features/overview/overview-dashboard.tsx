@@ -63,7 +63,6 @@ export function OverviewDashboard({ overview, range }: { overview: Overview; ran
         exposures={view.exposures}
         positions={view.positions}
         asOf={overview.asOf ?? null}
-        totalDecisionStories={view.decisions.length}
       />
 
       <OverviewTicker />
@@ -85,7 +84,7 @@ function OverviewRecommendations({ recommendations }: { recommendations: string[
             <ShieldCheck size={14} />
           </span>
           <div>
-            <h3>This period&rsquo;s recommendations</h3>
+            <h3>This Period&rsquo;s Recommendations</h3>
             <p>Bounded post-analysis suggestions awaiting manual review.</p>
           </div>
         </div>

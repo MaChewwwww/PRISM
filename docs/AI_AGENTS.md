@@ -30,7 +30,7 @@ Specialist work may be concurrent where inputs are independent, but synthesis co
 | Rules Engine | Deterministic | Evaluate typed rules as `PASS`, `MODIFY`, or `FAIL`; produce aggregate `APPROVE`, `REJECT`, or `MODIFIED_PENDING_ACCEPTANCE`. |
 | Execution | Deterministic integration | Recheck immutable bindings and changing state, then translate only a current `APPROVE` into an Alpaca paper order. MLeg position intents and paper-only CLI translation are implemented; submission remains gated. |
 | ShadowFund | Deterministic evaluation | Persist a session for every terminal decision and value cash, 0.5x virtual sizing, contrarian, and Agent 7 alternative branches from timestamped bid/ask observations. It is non-executable and fails closed to incomplete data. |
-| Post-Analysis | Asynchronous, bounded | Post-Analysis runs automatically after Friday market close, after production official scoring/force-flatten, or upon completed staging backtest. The `PostAnalysisAgent` synthesizes weekly execution and ShadowFund counterfactual evidence to propose bounded profile recommendations (`target_position_size_pct`, `opportunity_score_threshold`, `take_profit_pct`, `stop_loss_pct`). The deterministic profile service validates the batch and applies automatic calibration if configured or leaves drafts for manual review; neither changes execution authority. |
+| Post-Analysis | Asynchronous, bounded | Post-Analysis runs automatically after Friday market close, after production official scoring/force-flatten, or upon completed staging backtest. The `PostAnalysisAgent` synthesizes weekly execution and ShadowFund counterfactual evidence to propose bounded profile recommendations (`target_position_size_pct`, `opportunity_score_threshold`). Exit-policy calibration remains manual until complete ShadowFund evidence exists; neither path changes execution authority. |
 
 Agent 7's optional ShadowFund intent is strict structured research evidence: direction, supported structure, and rationale only. It cannot contain a contract, strike, price, quantity, or order instruction; deterministic code selects an eligible virtual contract or records an incomplete branch.
 
@@ -38,13 +38,13 @@ Agent 7's optional ShadowFund intent is strict structured research evidence: dir
 
 Each AI output includes schema version, trace ID, source record IDs, observed/generated times, agent/model/prompt versions, evidence references, confidence, uncertainty, limitations, and terminal state. The system records concise rationale, not hidden chain-of-thought.
 
-The Trading Decision Agent's `TradeProposal` binds the research record and market snapshot, selects only supported paper option structures, declares realistic expected value and reward/risk, and includes an `ExitPolicy`. The active Balanced exit defaults are 75% take-profit, fixed 50% stop-loss, 7 DTE, and a 14-day baseline holding limit; the hackathon operating override is four trading days.
+The Trading Decision Agent's `TradeProposal` binds the research record and market snapshot, selects only supported paper option structures, declares realistic expected value and reward/risk, and includes an `ExitPolicy`. Active Balanced exits follow calibrated ExitPolicyV2: +20% profit arm, 10 percentage point trailing giveback, +40% hard take-profit, fixed -50% stop-loss, 2-cycle thesis invalidation, 390-minute stagnation stop, 7 DTE, and a 14-day baseline holding limit; the hackathon operating override is four trading days.
 
 During the BA-authorized hackathon window, Trading Decision must not propose a new entry after Wednesday Sep 2, 2026 16:00 ET. The effective hold ends at the EOD Thursday Sep 3 total-equity scoring point, when all positions are force-flattened; Friday Sep 4 09:30 ET is only the outer window boundary. Sep-3-expiring contracts cannot be carried into settlement.
 
 ## Research and opportunity score
 
-The Market Reaction/Mispricing stage may emit an opportunity score from 0 through 100, but score alone is never permission. The absolute floor is 75; Balanced requires at least 84, Conservative 90, and Aggressive 80. A proposal must independently pass realistic net EV of at least +0.15R, reward/risk of at least 1.5:1, portfolio-risk, freshness, liquidity, and execution-quality gates.
+The Market Reaction/Mispricing stage may emit an opportunity score from 0 through 100, but score alone is never permission. The absolute floor is 75; the active baseline profiles require Balanced 78, Conservative 85, and Aggressive 75. A proposal must independently pass realistic net EV of at least +0.15R, reward/risk of at least 1.5:1, portfolio-risk, freshness, liquidity, and execution-quality gates.
 
 ## Regime and structure guidance
 

@@ -19,6 +19,7 @@ from app.core.database import check_database, get_db_session
 from app.execution.cli_gateway import verify_cli_capabilities
 from app.monitoring.routes import router as monitoring_router
 from app.observability.routes import router as observability_router
+from app.presentation.compat_routes import router as presentation_compat_router
 from app.profiles.routes import router as profiles_router
 from app.research.routes import router as research_router
 
@@ -29,6 +30,7 @@ router.include_router(research_router)
 router.include_router(profiles_router)
 router.include_router(observability_router)
 router.include_router(monitoring_router)
+router.include_router(presentation_compat_router)
 
 
 def cli_status(settings: Settings) -> tuple[bool, str | None]:

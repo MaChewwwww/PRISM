@@ -1,6 +1,6 @@
 # PRISM business rules
 
-Revision: `2026-08-30 / autonomous-paper-parity-v4`
+Revision: `2026-09-02 / performance-calibration-v2`
 
 This document is the human-readable mirror of `backend/app/rules/authorized_baseline.v1.json`. The JSON registry is the only machine-readable numerical source. Changes require a new ruleset/profile version and synchronized contracts, tests, and documentation.
 
@@ -16,7 +16,7 @@ This document is the human-readable mirror of `backend/app/rules/authorized_base
 
 ## Active baseline parameter register
 
-Ruleset: `prism-authorized-baseline@1.0.0`; lifecycle: `active`; effective from `2026-08-29T00:00:00Z`; open-ended until superseded; default profile: `balanced`.
+Ruleset: `prism-authorized-baseline@2.0.0`; lifecycle: `active`; effective from `2026-08-29T00:00:00Z`; open-ended until superseded; default profile: `balanced`.
 
 | Parameter | Authorized value |
 | --- | ---: |
@@ -37,9 +37,10 @@ Ruleset: `prism-authorized-baseline@1.0.0`; lifecycle: `active`; effective from 
 | Opportunity score | 75 absolute floor; Balanced 78 |
 | Net expected value | +0.15R minimum after material execution costs |
 | Realistic reward/risk | 1.50:1 minimum |
-| Balanced take-profit | 75.00% of initial debit |
-| Take-profit authorized range | 75.00% through 100.00% |
-| Stop-loss | fixed 50.00% of initial debit |
+| Profit arm / trailing giveback / hard profit | +20.00% / 10 percentage points / +40.00% of initial strategy debit |
+| Hard stop-loss | fixed -50.00% of initial strategy debit |
+| Thesis invalidation | 2 completed failing deterministic-score cycles; or confirmed opposite signal |
+| Stagnation time stop | 390 regular-session minutes if MFE is below +10.00% |
 | DTE exit | 7 days default; authorized range 2 through 14 days |
 | Baseline maximum hold | 14 days; authorized range 3 through 45 days |
 | Hackathon maximum hold override | 4 trading days |
@@ -71,19 +72,19 @@ Every entry therefore has at least one full Thursday session of runway. The EV a
 
 Autonomous paper execution is a production-only operational opt-in, not a replacement for this ruleset. `AUTONOMOUS_TRADING_ENABLED` defaults to `false`; in production, enabling it requires `EXECUTION_ENABLED=true`, an active ruleset, complete Alpaca paper credentials, and a UTC `AUTONOMOUS_TRADING_START_AT`/`AUTONOMOUS_TRADING_END_AT` pair. Production intervals must remain within the authorized hackathon trading start and force-flatten deadline. Staging rejects autonomous trading configuration and validates the system only through an explicitly enabled, non-executing historical backtest. Neither path may bypass paper mode, the kill switch, or mandatory rules.
 
-ShadowFund does not alter BA numerical thresholds. It applies the existing quote freshness, bid/ask spread, option economics, take-profit, stop-loss, DTE, and four-trading-day scoring controls to virtual-only branches. A missing historical/live observation is `DATA_UNAVAILABLE` / `INCOMPLETE`, never a simulated fill.
+ShadowFund does not alter BA numerical thresholds. It compares the legacy +75%/-50%, simple +30%/-50%, and adaptive 20/10/40 policies only where complete entry, path, and exit quotes exist. A missing historical/live observation is `DATA_UNAVAILABLE` / `INCOMPLETE`, never a simulated fill.
 
 The production worker uses a 5-minute (300-second) cadence, seven-symbol allowlist, six-position cap, session advisory lock, mandatory exit checks, and durable kill switch. It does not manufacture evidence or orders; unavailable analog coverage, sourced fundamentals, stale data, incomplete quotes/Greeks, unavailable portfolio/regime controls, or an unverified deployment produce `NO_TRADE`. IV rank resolves from a current provider rank when present, otherwise durable observations, configured-provider observations, historical option-bar inversion when available, and the current option-chain observation. The effective minimum is reduced to the observations actually available; the older insufficient-history-only rejection is not reinstated. Existing OCC option positions are enriched from the live chain before sector/cluster/Greek/expiry checks. Historical analog returns are converted to option intrinsic payoffs and charged observed NBBO slippage and a deterministic spread-derived fill probability before the EV gate.
 
 ## Standard AI Profiles
 
-| Profile | Target allocation | Opportunity threshold | Take-profit | Stop-loss |
+| Profile | Target allocation | Opportunity threshold |
 | --- | ---: | ---: | ---: | ---: |
-| Conservative | 1.50% | 85 | 75.00% | 50.00% fixed |
-| Balanced | 2.00% | 78 | 75.00% | 50.00% fixed |
-| Aggressive | 2.50% | 75 | 100.00% | 50.00% fixed |
+| Conservative | 1.50% | 85 |
+| Balanced | 2.00% | 78 |
+| Aggressive | 2.50% | 75 |
 
-Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 through 95; take-profit 75.00% through 100.00%; stop-loss exactly 50.00%.
+Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 through 95. ExitPolicyV2 is ruleset-owned and is never profile-tunable.
 
 ## Deterministic priorities
 
@@ -94,7 +95,7 @@ Profile bounds are: allocation 1.50% through 2.50%; opportunity threshold 75 thr
 | P2 | Risk, instrument, and regime | Require a fresh acceptable AI risk assessment, permit only supported option structures and verified permissions, restrict VOLATILE to 1:1 debit spreads, and block CRISIS new risk. |
 | P3 | Freshness and execution quality | Reject evidence older than 30 seconds and spreads wider than 10% of premium; validate active contracts and required snapshots. |
 | P4 | Opportunity and economics | Require score, net EV, and realistic reward/risk gates independently. |
-| P5 | Exit and payload completeness | Require bounded take-profit, fixed stop-loss, DTE/holding controls, active ruleset identity, and an exact executable payload. |
+| P5 | Exit and payload completeness | Require ExitPolicyV2, strategy-level executable marking, DTE/holding controls, active ruleset identity, and an exact executable payload. |
 
 `MODIFY` is valid only where a safe, deterministic revision can be described, such as reducing size to a concentration cap. A proposal that cannot be safely revised is `FAIL`. Aggregate modification state is `MODIFIED_PENDING_ACCEPTANCE`, never approval.
 
@@ -121,7 +122,7 @@ Only long calls, long puts, and two-leg 1:1 long call/put debit spreads are in t
 
 ## Exit behavior
 
-Every position requires deterministic profit, loss, DTE, time, and thesis-invalidation exits. Balanced take-profit is 75%; the fixed stop-loss is 50%. The rules engine validates the policy before authorization, and future monitoring must apply mandatory exits independently of AI availability.
+Every position requires deterministic profit, loss, DTE, time, and thesis-invalidation exits under ExitPolicyV2. The calibrated adaptive profit policy arms at +20.00% return, trails by 10.00 percentage points of giveback from strategy MFE, and takes hard profit at +40.00%; the fixed stop-loss is -50.00% of initial strategy debit. Exits also trigger upon 2 completed thesis-invalidation cycles, stagnation time-stop (390 regular-session minutes if MFE < +10.00%), DTE threshold (7 days default), or hackathon max hold (4 trading days). The rules engine validates the policy before authorization, and autonomous monitoring applies mandatory exits independently of AI availability.
 
 ## Deliberately unresolved
 

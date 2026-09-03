@@ -22,7 +22,7 @@ Runtime models live in `backend/app/contracts` and `backend/app/presentation`. `
 
 The BA registry is `backend/app/rules/authorized_baseline.v1.json`. Typed contracts cover ruleset identity, lifecycle, effective period, parameters, profile identity and compatibility, authorized profile ranges, rule priority, typed reason codes, rule traces, market regime, portfolio risk, and authorization bindings.
 
-`ExitPolicy` requires a take-profit from 75% through 100%, a fixed 50% stop-loss, a DTE threshold from 2 through 14 days, and a holding limit from 3 through 45 days. The active Balanced defaults are 75% take-profit, 50% stop-loss, 7 DTE, and 14 days. The four-trading-day hackathon override is a separate active operating constraint.
+`ExitPolicy` specifies adaptive strategy profit arming (`profit_arm_pct`, default 20.0%), trailing giveback points (`profit_trailing_giveback_points`, default 10.0), hard take-profit (`hard_take_profit_pct`, default 40.0%), fixed stop-loss (`hard_stop_loss_pct`, 50.0%), thesis failure cycles (`thesis_failure_cycles`, default 2), stagnation time-stop (`time_stop_trading_minutes`, default 390 regular-session minutes with `minimum_mfe_pct` 10.0%), DTE threshold (`dte_threshold`, 2 through 14 days, default 7), and maximum hold days (`max_hold_days`, 3 through 45 days, default 14). The four-trading-day hackathon override is a separate active operating constraint.
 
 The governance read model also exposes the registry-backed hackathon window as UTC timestamps: trading start, new-entry cutoff, official scoring point, force-flatten deadline, and outer boundary. `scoring_basis` is the closed value `total_account_equity`; the effective maximum hold is four trading days bounded by the scoring point.
 
@@ -66,6 +66,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/monitoring/portfolio` | Recorded portfolio and exit-check freshness | Yes |
 | GET | `/api/v1/monitoring/alternatives` | ShadowFund alternative collection | Yes |
 | GET | `/api/v1/monitoring/alternatives/{session_id}` | ShadowFund alternative detail | Yes |
+| GET | `/api/v1/presentation/alternatives` | Documented compatibility projection of recorded ShadowFund alternatives | Yes |
 | GET | `/api/v1/monitoring/news` | Recorded news-analysis collection | Yes |
 | GET | `/api/v1/monitoring/agents` | Recorded model-usage projection | Yes |
 | GET | `/api/v1/monitoring/agents/{agent_id}` | Recorded model-operation detail | Yes |
@@ -74,7 +75,7 @@ Only `APPROVE` may continue toward execution. `MODIFIED_PENDING_ACCEPTANCE` carr
 | GET | `/api/v1/profiles/governance` | Active persisted profile and authenticated operator calibration preference | Yes |
 | PUT | `/api/v1/profiles/calibration-preference` | Select manual or automatic calibration preference | Yes |
 | POST | `/api/v1/profiles/activate-post-analysis` | Manually activate a complete, validated Post-Analysis batch | Yes |
-| GET | `/api/v1/llm-usage/summary` | Aggregated provider-reported LLM tokens and optional estimated cost | Yes |
+| GET | `/api/v1/llm-usage/summary` | UTC-range-bounded aggregated provider-reported LLM tokens and optional estimated cost | Yes |
 | GET | `/api/v1/market-tracker` | **Planned, deferred** normalized bars, watchlist, and activity markers | Yes |
 | GET | `/openapi.json` | OpenAPI paths and schemas | No |
 
@@ -92,9 +93,22 @@ filter by symbol and authorization outcome, and executions by receipt status.
 explicit empty state before the first successful account snapshot. Its values
 are normalized decimal strings. The endpoints omit broker and client order IDs,
 account identifiers, raw provider payloads, raw broker messages, credentials,
-and hidden reasoning. Recorded ShadowFund alternatives remain available only
-through `/presentation/alternatives` and retain their existing provenance
-labels and non-executable semantics.
+and hidden reasoning. Execution receipts have an `operation` of `entry` or
+`exit`; position-level exits have a normalized `symbol`, an explicit `exit_reason`
+(`pnl_threshold`, `max_hold_days`, `dte_threshold`, or
+`hackathon_force_flatten`), and may have no `proposal_id`. A close request is
+reported as `submitted` until broker response or position reconciliation proves
+the close, so the API never infers a fill from a delete request alone. Cycle
+reads expose sanitized `exit_checks` so the triggering predicate remains visible
+without exposing provider payloads. Recorded ShadowFund alternatives remain
+available through the documented `/presentation/alternatives` compatibility
+projection and the `/monitoring/alternatives` read model. Both retain their
+existing provenance labels and non-executable semantics.
+
+Deterministic P2 and P4 rule traces emit reason codes from the predicates that
+actually failed. For example, a positive EV below the authorized floor is
+`EXPECTED_VALUE_BELOW_FLOOR`, while a negative EV is
+`NEGATIVE_EXPECTED_VALUE`; the trace does not include unrelated possible causes.
 
 ## Presentation metadata and provenance
 

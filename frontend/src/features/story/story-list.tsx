@@ -19,7 +19,7 @@ import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDateTime, storyDecisionLabel } from "@/features/story/formatters";
 import type { StorySummary } from "@/features/story/monitoring-api";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 /** Lowercased haystack of the searchable fields for a decision story. */
 function storyHaystack(story: StorySummary): string {
@@ -254,6 +254,13 @@ export function StoryList({
     setPage(1);
   }
 
+  function goToPage(next: number) {
+    setPage(next);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   return (
     <>
       {/* Toolbar row: heading (left), search + range picker (right) */}
@@ -317,7 +324,7 @@ export function StoryList({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => goToPage(Math.max(1, safePage - 1))}
                   disabled={safePage <= 1}
                   className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -325,7 +332,7 @@ export function StoryList({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
                   disabled={safePage >= totalPages}
                   className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] disabled:cursor-not-allowed disabled:opacity-40"
                 >

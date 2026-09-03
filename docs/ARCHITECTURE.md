@@ -83,7 +83,7 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | Boundary | Responsibility | Current state |
 | --- | --- | --- |
 | `contracts` | Typed proposal, risk, governance, authorization, execution, profile, and audit records | Implemented skeleton |
-| `rules` | Versioned BA registry and deterministic policy boundary | Registry, P0-P5 evaluator, Balanced threshold 84, and typed traces implemented |
+| `rules` | Versioned BA registry and deterministic policy boundary | Registry, P0-P5 evaluator, active-profile thresholds, and predicate-specific typed traces implemented |
 | `research` | Provider-normalized evidence and structured research | Seven specialist workflows, SEC-sourced fundamentals, historical analog option-payoff EV, IV-rank history, and strict freshness/provenance gates |
 | `monitoring` | Authenticated read-only operator projections | Durable audit, research, portfolio, authorization, receipt, profile, registry, and ShadowFund records; no fixture fallback |
 | `proposal` | Trading Decision proposal synthesis | Canonical digest-bound proposals persisted by the autonomous worker; the public research endpoint remains `NO_TRADE` without complete binding |
@@ -91,7 +91,7 @@ The frontend receives neither Alpaca nor LLM credentials and never calls Alpaca 
 | `market` | Alpaca market/news adapter | Account/portfolio, stock bars, active contracts, fresh chain quotes/Greeks, and news |
 | `backtest` | Staging historical replay | Point-in-time stock/news/SEC evidence, entitled historical option contracts/NBBO, virtual authorization, deterministic five-minute positions, and run artifacts; never imports execution |
 | `portfolio` | Durable snapshots and exposure calculations | OCC/chain-enriched account snapshots persisted per cycle with six-position, cash, ticker/sector/cluster, Greek, and expiry concentration gates |
-| `execution` | Final paper checks, translation, idempotency, reconciliation | Durable PostgreSQL receipts, client-order idempotency, restart reconciliation, and paper-only CLI submission |
+| `execution` | Final paper checks, translation, idempotency, reconciliation | Durable PostgreSQL entry and position-exit receipts, client-order idempotency, position-absence reconciliation, restart reconciliation, and paper-only CLI submission |
 | `shadowfund` | Immutable counterfactual branches and evaluation | Non-executable session/branch/observation/valuation roots, virtual marking, and persisted presentation projection |
 | `audit` | Append-oriented decision and execution events | Alembic audit-root tables and cycle emissions implemented; full event projector deferred |
 

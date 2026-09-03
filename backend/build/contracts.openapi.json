@@ -117,36 +117,6 @@
             "format": "decimal-string",
             "title": "Opportunity Score Threshold"
           },
-          "stop_loss_pct": {
-            "anyOf": [
-              {
-                "maximum": 50.0,
-                "minimum": 50.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Stop Loss Pct"
-          },
-          "take_profit_pct": {
-            "anyOf": [
-              {
-                "maximum": 100.0,
-                "minimum": 75.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Take Profit Pct"
-          },
           "target_position_size_pct": {
             "anyOf": [
               {
@@ -165,9 +135,7 @@
         },
         "required": [
           "target_position_size_pct",
-          "opportunity_score_threshold",
-          "take_profit_pct",
-          "stop_loss_pct"
+          "opportunity_score_threshold"
         ],
         "title": "AIProfileParameters",
         "type": "object"
@@ -1652,6 +1620,13 @@
             ],
             "title": "Completed At"
           },
+          "exit_checks": {
+            "items": {
+              "$ref": "#/components/schemas/AutonomousExitCheck"
+            },
+            "title": "Exit Checks",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1694,6 +1669,7 @@
           "outcome",
           "symbols",
           "reason",
+          "exit_checks",
           "worker_version"
         ],
         "title": "AutonomousCycleRead",
@@ -1859,6 +1835,23 @@
             ],
             "title": "Error Code"
           },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pnl_threshold",
+                  "max_hold_days",
+                  "dte_threshold",
+                  "hackathon_force_flatten"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Reason"
+          },
           "filled_average_price": {
             "anyOf": [
               {
@@ -1881,10 +1874,25 @@
             "title": "Id",
             "type": "string"
           },
-          "proposal_id": {
-            "format": "uuid",
-            "title": "Proposal Id",
+          "operation": {
+            "enum": [
+              "entry",
+              "exit"
+            ],
+            "title": "Operation",
             "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
           },
           "reconciled_at": {
             "anyOf": [
@@ -1897,6 +1905,18 @@
               }
             ],
             "title": "Reconciled At"
+          },
+          "requested_quantity": {
+            "anyOf": [
+              {
+                "format": "decimal-string",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Quantity"
           },
           "status": {
             "enum": [
@@ -1922,6 +1942,17 @@
             ],
             "title": "Submitted At"
           },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
           "trace_id": {
             "format": "uuid",
             "title": "Trace Id",
@@ -1931,12 +1962,49 @@
         "required": [
           "id",
           "trace_id",
-          "proposal_id",
+          "operation",
           "status",
           "filled_quantity",
           "created_at"
         ],
         "title": "AutonomousExecutionRead",
+        "type": "object"
+      },
+      "AutonomousExitCheck": {
+        "additionalProperties": false,
+        "description": "Safe evidence for a mandatory position-exit decision.",
+        "properties": {
+          "reason": {
+            "enum": [
+              "pnl_threshold",
+              "max_hold_days",
+              "dte_threshold",
+              "no_exit_condition"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "exit",
+              "hold",
+              "exit_failed",
+              "exit_pending"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "result",
+          "reason"
+        ],
+        "title": "AutonomousExitCheck",
         "type": "object"
       },
       "AutonomousPortfolioLatest": {
@@ -3157,6 +3225,49 @@
         "title": "EvidenceItem",
         "type": "object"
       },
+      "ExecutionLegState": {
+        "additionalProperties": false,
+        "properties": {
+          "position_intent": {
+            "enum": [
+              "buy_to_open",
+              "buy_to_close",
+              "sell_to_open",
+              "sell_to_close"
+            ],
+            "title": "Position Intent",
+            "type": "string"
+          },
+          "ratio_qty": {
+            "minimum": 1,
+            "title": "Ratio Qty",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionStatus"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "ratio_qty",
+          "position_intent",
+          "status"
+        ],
+        "title": "ExecutionLegState",
+        "type": "object"
+      },
+      "ExecutionOperation": {
+        "enum": [
+          "entry",
+          "exit"
+        ],
+        "title": "ExecutionOperation",
+        "type": "string"
+      },
       "ExecutionReceipt": {
         "additionalProperties": false,
         "properties": {
@@ -3205,6 +3316,17 @@
             "default": null,
             "title": "Error Message"
           },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExitReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "filled_average_price": {
             "anyOf": [
               {
@@ -3245,15 +3367,34 @@
             "title": "Id",
             "type": "string"
           },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionLegState"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/ExecutionOperation",
+            "default": "entry"
+          },
           "payload_digest": {
             "pattern": "^[a-f0-9]{64}$",
             "title": "Payload Digest",
             "type": "string"
           },
           "proposal_id": {
-            "format": "uuid",
-            "title": "Proposal Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Proposal Id"
           },
           "reconciled_at": {
             "anyOf": [
@@ -3268,6 +3409,27 @@
             "default": null,
             "title": "Reconciled At"
           },
+          "requested_quantity": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "format": "decimal-string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Quantity"
+          },
           "schema_version": {
             "const": "1.0",
             "default": "1.0",
@@ -3276,6 +3438,19 @@
           },
           "status": {
             "$ref": "#/components/schemas/ExecutionStatus"
+          },
+          "strategy_position_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Strategy Position Id"
           },
           "submitted_at": {
             "anyOf": [
@@ -3290,6 +3465,18 @@
             "default": null,
             "title": "Submitted At"
           },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Symbol"
+          },
           "trace_id": {
             "format": "uuid",
             "title": "Trace Id",
@@ -3298,7 +3485,6 @@
         },
         "required": [
           "trace_id",
-          "proposal_id",
           "client_order_id",
           "payload_digest",
           "status"
@@ -3328,14 +3514,7 @@
             "title": "Dte Threshold",
             "type": "integer"
           },
-          "max_hold_days": {
-            "default": 14,
-            "maximum": 45,
-            "minimum": 3,
-            "title": "Max Hold Days",
-            "type": "integer"
-          },
-          "stop_loss_pct": {
+          "hard_stop_loss_pct": {
             "anyOf": [
               {
                 "maximum": 50.0,
@@ -3349,13 +3528,12 @@
             ],
             "default": "50.0",
             "format": "decimal-string",
-            "title": "Stop Loss Pct"
+            "title": "Hard Stop Loss Pct"
           },
-          "take_profit_pct": {
+          "hard_take_profit_pct": {
             "anyOf": [
               {
-                "maximum": 100.0,
-                "minimum": 75.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -3363,13 +3541,93 @@
                 "type": "string"
               }
             ],
-            "default": "75.0",
+            "default": "40.0",
             "format": "decimal-string",
-            "title": "Take Profit Pct"
+            "title": "Hard Take Profit Pct"
+          },
+          "max_hold_days": {
+            "default": 14,
+            "maximum": 45,
+            "minimum": 3,
+            "title": "Max Hold Days",
+            "type": "integer"
+          },
+          "minimum_mfe_pct": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "10.0",
+            "format": "decimal-string",
+            "title": "Minimum Mfe Pct"
+          },
+          "profit_arm_pct": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "20.0",
+            "format": "decimal-string",
+            "title": "Profit Arm Pct"
+          },
+          "profit_trailing_giveback_points": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "10.0",
+            "format": "decimal-string",
+            "title": "Profit Trailing Giveback Points"
+          },
+          "thesis_failure_cycles": {
+            "default": 2,
+            "minimum": 1,
+            "title": "Thesis Failure Cycles",
+            "type": "integer"
+          },
+          "time_stop_trading_minutes": {
+            "default": 390,
+            "minimum": 1,
+            "title": "Time Stop Trading Minutes",
+            "type": "integer"
           }
         },
         "title": "ExitPolicy",
         "type": "object"
+      },
+      "ExitReason": {
+        "enum": [
+          "pnl_threshold",
+          "hard_stop_loss",
+          "opposite_direction",
+          "thesis_invalidated",
+          "trailing_profit",
+          "hard_take_profit",
+          "stagnation_time_stop",
+          "max_hold_days",
+          "dte_threshold",
+          "hackathon_force_flatten"
+        ],
+        "title": "ExitReason",
+        "type": "string"
       },
       "ExposureItem": {
         "additionalProperties": false,
@@ -4363,6 +4621,32 @@
           "prompt_version": {
             "title": "Prompt Version",
             "type": "string"
+          },
+          "provider_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider Observed At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Published At"
           },
           "rationale": {
             "title": "Rationale",
@@ -6091,16 +6375,6 @@
             "title": "Opportunity Score Threshold",
             "type": "string"
           },
-          "stop_loss_pct": {
-            "format": "decimal-string",
-            "title": "Stop Loss Pct",
-            "type": "string"
-          },
-          "take_profit_pct": {
-            "format": "decimal-string",
-            "title": "Take Profit Pct",
-            "type": "string"
-          },
           "target_position_size_pct": {
             "format": "decimal-string",
             "title": "Target Position Size Pct",
@@ -6109,9 +6383,7 @@
         },
         "required": [
           "target_position_size_pct",
-          "opportunity_score_threshold",
-          "take_profit_pct",
-          "stop_loss_pct"
+          "opportunity_score_threshold"
         ],
         "title": "ProfileParameters",
         "type": "object"
@@ -6501,7 +6773,16 @@
           "TICKER_CONCENTRATION_BREACH",
           "HIGH_IV_SINGLE_LEG_PROHIBITED",
           "RISK_LIMIT_BREACH",
+          "RISK_ASSESSMENT_MISSING",
+          "RISK_ASSESSMENT_REJECTED",
+          "RISK_DATA_STALE",
           "LIQUIDITY_LIMIT_BREACH",
+          "MARKET_REGIME_BLOCKED",
+          "IV_RANK_LIMIT_BREACH",
+          "INVALID_STRATEGY",
+          "ECONOMICS_MISMATCH",
+          "OPPORTUNITY_SCORE_BELOW_FLOOR",
+          "EXPECTED_VALUE_BELOW_FLOOR",
           "NEGATIVE_EXPECTED_VALUE",
           "REWARD_RISK_BELOW_FLOOR",
           "PAYLOAD_MISMATCH",
@@ -6575,6 +6856,32 @@
             "default": "50.0",
             "format": "decimal-string",
             "title": "Analog Similarity Score"
+          },
+          "calculation_window_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Calculation Window End"
+          },
+          "calculation_window_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Calculation Window Start"
           },
           "catalyst_decay_factor": {
             "anyOf": [
@@ -6659,6 +6966,19 @@
             "default": "0.0",
             "format": "decimal-string",
             "title": "Event Age Hours"
+          },
+          "event_published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Event Published At"
           },
           "evidence": {
             "items": {
@@ -6810,6 +7130,11 @@
             "title": "Limitations",
             "type": "array"
           },
+          "methodology_version": {
+            "default": "reaction_event_aligned_v2",
+            "title": "Methodology Version",
+            "type": "string"
+          },
           "opportunity_score": {
             "anyOf": [
               {
@@ -6853,6 +7178,19 @@
             ],
             "default": null,
             "title": "Options Implied Move Pct"
+          },
+          "provider_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider Observed At"
           },
           "reaction_gap_pct": {
             "anyOf": [
@@ -7924,6 +8262,49 @@
             "title": "Analog Count",
             "type": "integer"
           },
+          "bearish_opportunity_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Bearish Opportunity Score"
+          },
+          "bullish_opportunity_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "format": "decimal-string",
+            "title": "Bullish Opportunity Score"
+          },
+          "catalyst_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Catalyst Digest"
+          },
           "composite_opportunity_score": {
             "anyOf": [
               {
@@ -8022,19 +8403,6 @@
             "title": "Key Risks",
             "type": "array"
           },
-          "net_ev_r": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Net Ev R"
-          },
           "options_only_constraint_acknowledged": {
             "default": true,
             "title": "Options Only Constraint Acknowledged",
@@ -8058,23 +8426,15 @@
           "recommended_structure": {
             "$ref": "#/components/schemas/OptionStructure"
           },
-          "reward_risk_ratio": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "format": "decimal-string",
-            "title": "Reward Risk Ratio"
-          },
           "schema_version": {
             "const": "1.0",
             "default": "1.0",
             "title": "Schema Version",
+            "type": "string"
+          },
+          "scoring_methodology_version": {
+            "default": "directional_composite_v2",
+            "title": "Scoring Methodology Version",
             "type": "string"
           },
           "shadow_alternative_intent": {
@@ -8137,8 +8497,8 @@
           "direction",
           "recommended_structure",
           "composite_opportunity_score",
-          "net_ev_r",
-          "reward_risk_ratio",
+          "bullish_opportunity_score",
+          "bearish_opportunity_score",
           "confidence_score",
           "current_price",
           "exit_policy",
@@ -8161,6 +8521,19 @@
       "TradeProposal": {
         "additionalProperties": false,
         "properties": {
+          "catalyst_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Catalyst Digest"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -8242,6 +8615,19 @@
           "symbol": {
             "title": "Symbol",
             "type": "string"
+          },
+          "thesis_key": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Thesis Key"
           },
           "trace_id": {
             "format": "uuid",
@@ -10299,6 +10685,92 @@
         "summary": "Weekly Summary",
         "tags": [
           "monitoring"
+        ]
+      }
+    },
+    "/api/v1/presentation/alternatives": {
+      "get": {
+        "description": "Project recorded ShadowFund sessions through the documented read model.",
+        "operationId": "alternatives_api_v1_presentation_alternatives_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "prism_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prism Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEnvelope_AlternativeCollection_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alternatives",
+        "tags": [
+          "presentation"
         ]
       }
     },

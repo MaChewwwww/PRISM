@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import math
 import re
 from contextlib import suppress
 from dataclasses import dataclass
@@ -26,15 +27,28 @@ from app.autonomous.models import (
     ReconciliationEventModel,
     ResearchBundleModel,
     RiskAssessmentModel,
+    StrategyLifecycleEventModel,
+    StrategyPositionModel,
     TradeProposalModel,
+)
+from app.autonomous.strategy_lifecycle import (
+    StrategyMarkUnavailable,
+    evaluate_adaptive_exit,
+    executable_liquidation_value,
+    regular_session_minutes_elapsed,
+    strategy_return_pct,
 )
 from app.contracts.models import (
     AuthorizationOutcome,
+    ExecutionStatus,
     ExitPolicy,
+    ExitReason,
     MarketRegime,
     OptionPayoffEconomics,
+    OptionStrategy,
     PortfolioRiskState,
     ShadowCandidate,
+    StrategyKind,
     TradeProposal,
     TradeVerdict,
 )
@@ -68,6 +82,7 @@ from app.research.iv_rank import (
     compute_iv_rank,
     infer_iv_observations,
 )
+from app.research.models import TradeDecisionModel
 from app.research.post_analysis import (
     POST_ANALYSIS_AGENT_VERSION,
     PostAnalysisAgent,
@@ -76,7 +91,7 @@ from app.research.post_analysis import (
 )
 from app.research.risk_agent import RiskManagementAgent
 from app.research.sec_fundamentals import SecFundamentalsUnavailable, fetch_sec_company_financials
-from app.rules.evaluator import authorize_proposal, input_digest
+from app.rules.evaluator import _json_value, authorize_proposal, input_digest
 from app.rules.registry import get_authorized_ruleset
 from app.shadowfund.models import ShadowPostAnalysisBatchModel, ShadowSessionModel
 from app.shadowfund.service import ShadowFundService
@@ -84,7 +99,7 @@ from app.shadowfund.service import ShadowFundService
 logger = logging.getLogger(__name__)
 
 AUTONOMOUS_SYMBOLS = ("NVDA", "TSLA", "AAPL", "MSFT", "AMD", "GOOGL", "AMZN")
-WORKER_VERSION = "production-parity-v3"
+WORKER_VERSION = "performance-calibration-v4"
 
 
 @dataclass(frozen=True)
@@ -155,8 +170,31 @@ class AutonomousWorker:
         self._last_iv_rank_resolution: dict[str, Any] = {}
         self._last_iv_rank_evidence: dict[str, Any] = {}
 
+    @staticmethod
+    def _advance_cycle_due(
+        next_cycle_due: float | None,
+        completed_at: float,
+        interval_seconds: int,
+    ) -> float:
+        """Advance a fixed-rate schedule without creating a catch-up burst.
+
+        The worker must not overlap autonomous cycles. If one cycle runs past
+        one or more scheduled ticks, the missed ticks are skipped and the next
+        due time remains on the original cadence grid.
+        """
+
+        if next_cycle_due is None:
+            return completed_at + interval_seconds
+        next_due = next_cycle_due + interval_seconds
+        while next_due <= completed_at:
+            next_due += interval_seconds
+        return next_due
+
     async def run_forever(self, stop_event: asyncio.Event) -> None:
         flatten_attempted = False
+        next_cycle_due: float | None = None
+        loop = asyncio.get_running_loop()
+        interval_seconds = self.settings.autonomous_scan_interval_seconds
         while not stop_event.is_set():
             now = datetime.now(UTC)
             in_window = self.settings.autonomous_trading_window_active(now)
@@ -169,15 +207,46 @@ class AutonomousWorker:
                 or (environment_end is not None and now >= environment_end)
             )
             if in_window or (flatten_due and not flatten_attempted):
+                # The configured autonomous interval spans the hackathon, not
+                # each regular trading session. Do not create a durable cycle,
+                # portfolio snapshot, or ShadowFund no-trade session until the
+                # broker confirms that the regular market is open. Force-flatten
+                # remains independent of this probe at the authorized boundary.
+                if not flatten_due and not await asyncio.to_thread(
+                    self._market_is_open, AlpacaPyGateway(self.settings)
+                ):
+                    next_cycle_due = None
+                    await self._wait(stop_event, min(interval_seconds, 60))
+                    continue
+                cycle_started = loop.time()
+                if next_cycle_due is None:
+                    next_cycle_due = cycle_started
                 try:
                     outcome = await self.run_cycle(now=now)
                 except Exception:
                     logger.exception("Autonomous cycle failed closed")
                     outcome = "FAILED"
+                cycle_completed = loop.time()
+                cycle_duration = cycle_completed - cycle_started
+                if cycle_duration >= interval_seconds:
+                    logger.warning(
+                        "Autonomous cycle exceeded configured interval: "
+                        "duration=%.3fs interval=%ss outcome=%s",
+                        cycle_duration,
+                        interval_seconds,
+                        outcome,
+                    )
                 if flatten_due and outcome == "FLATTENED":
                     flatten_attempted = True
-                await self._wait(stop_event, self.settings.autonomous_scan_interval_seconds)
+                next_cycle_due = self._advance_cycle_due(
+                    next_cycle_due,
+                    cycle_completed,
+                    interval_seconds,
+                )
+                wait_seconds = max(0, math.ceil(next_cycle_due - cycle_completed))
+                await self._wait(stop_event, wait_seconds)
             else:
+                next_cycle_due = None
                 try:
                     async for session in get_db_session():
                         if await self._acquire_cycle_lock(session):
@@ -185,9 +254,7 @@ class AutonomousWorker:
                             await session.commit()
                 except Exception:
                     logger.exception("Weekly post-analysis check failed closed")
-                await self._wait(
-                    stop_event, min(self.settings.autonomous_scan_interval_seconds, 60)
-                )
+                await self._wait(stop_event, min(interval_seconds, 60))
 
     async def _wait(self, stop_event: asyncio.Event, seconds: int) -> None:
         try:
@@ -228,10 +295,6 @@ class AutonomousWorker:
                 )
                 await session.commit()
                 return "FAILED"
-            if kill_switch_active:
-                await self._record(session, now, "NO_TRADE", "Kill switch active")
-                await session.commit()
-                return "NO_TRADE"
             try:
                 gateway = AlpacaPyGateway(self.settings)
                 if self.settings.shadowfund_enabled:
@@ -249,14 +312,17 @@ class AutonomousWorker:
                 portfolio = await self._refresh_position_metadata(gateway, portfolio, now)
                 await self._persist_portfolio_snapshot(session, portfolio)
                 if flatten_due:
-                    if not await self._force_flatten(positions):
+                    if not await self._force_flatten(session, portfolio["positions"], now):
                         await self._record(session, now, "FAILED", "Force-flatten command failed")
                         await session.commit()
                         return "FAILED"
                     await self._record(session, now, "NO_TRADE", "Hackathon force-flatten executed")
                     await session.commit()
                     return "FLATTENED"
-                exits_ok, exited_symbols, exit_checks = await self._manage_exits(positions, now)
+                await self._reconcile_exit_receipts(session, positions, now)
+                exits_ok, exited_symbols, exit_checks = await self._manage_exits(
+                    session, portfolio["positions"], now, include_score_evidence=False
+                )
                 if not exits_ok:
                     await self._record(
                         session,
@@ -267,6 +333,16 @@ class AutonomousWorker:
                     )
                     await session.commit()
                     return "FAILED"
+                if any(check["result"] == "exit_pending" for check in exit_checks):
+                    await self._record(
+                        session,
+                        now,
+                        "NO_TRADE",
+                        "Mandatory position exit pending reconciliation",
+                        evidence={"position_exit_checks": exit_checks},
+                    )
+                    await session.commit()
+                    return "NO_TRADE"
                 if exited_symbols:
                     positions = [
                         position
@@ -276,6 +352,19 @@ class AutonomousWorker:
                     portfolio = self._portfolio_snapshot(account, positions, now)
                     portfolio = await self._refresh_position_metadata(gateway, portfolio, now)
                     await self._persist_portfolio_snapshot(session, portfolio)
+
+                # The kill switch gates new risk only. Reconciliation,
+                # mandatory exits, and force-flatten above remain active.
+                if kill_switch_active:
+                    await self._record(
+                        session,
+                        now,
+                        "NO_TRADE",
+                        "Kill switch active for new entries",
+                        evidence={"position_exit_checks": exit_checks},
+                    )
+                    await session.commit()
+                    return "NO_TRADE"
 
                 # Profile resolution is database-backed and fails closed with the
                 # cycle if its bounded, auditable state cannot be proven.
@@ -304,8 +393,46 @@ class AutonomousWorker:
                             code,
                             reason_msg,
                         )
+                # A completed research pass can advance deterministic thesis
+                # invalidation exactly once per newly persisted score record.
+                thesis_ok, thesis_exited, thesis_checks = await self._manage_exits(
+                    session, portfolio["positions"], now, include_score_evidence=True
+                )
+                exit_checks = thesis_checks
+                if not thesis_ok:
+                    await self._record(
+                        session,
+                        now,
+                        "FAILED",
+                        "Thesis-driven position exit failed",
+                        evidence={"position_exit_checks": thesis_checks},
+                    )
+                    await session.commit()
+                    return "FAILED"
+                if thesis_exited or any(
+                    check["result"] in {"exit", "exit_pending"} for check in thesis_checks
+                ):
+                    await self._record(
+                        session,
+                        now,
+                        "NO_TRADE",
+                        "Strategy exit took priority over new entries",
+                        evidence={"position_exit_checks": thesis_checks},
+                    )
+                    await session.commit()
+                    return "NO_TRADE"
+
                 candidates.sort(
-                    key=lambda item: _decimal(item[2].get("opportunity_score")), reverse=True
+                    key=lambda item: (
+                        _decimal(item[2].get("net_ev_r")),
+                        _decimal(item[2].get("reward_risk_ratio")),
+                        -_decimal(
+                            item[0].option_economics.premium_per_contract
+                            if item[0].option_economics is not None
+                            else "999999"
+                        ),
+                    ),
+                    reverse=True,
                 )
 
                 if not candidates:
@@ -332,7 +459,7 @@ class AutonomousWorker:
                     await session.commit()
                     return "NO_TRADE"
 
-                open_positions = len(positions)
+                open_positions = await self._strategy_position_count(session, positions)
                 if open_positions >= self.settings.autonomous_max_open_positions:
                     await self._record(
                         session,
@@ -438,6 +565,7 @@ class AutonomousWorker:
                         SqlAlchemyReceiptRepository(session),
                         kill_switch_active=kill_switch_active,
                     )
+                    await self._persist_strategy_position(session, proposal, receipt, now)
                     if (
                         shadow_session_id is not None
                         and receipt.status.value == "filled"
@@ -536,23 +664,29 @@ class AutonomousWorker:
                         f"Actionable direction required; received {report.direction.value}"
                     ),
                 )
-            # AI proposes an exit policy, but profile-owned take-profit and
-            # fixed stop values are bound deterministically before a proposal
-            # can be persisted or authorized.
+            # Exit policy v2 is ruleset-owned; profiles cannot tune it.
+            rules = get_authorized_ruleset().parameters
             exit_policy = ExitPolicy(
-                take_profit_pct=active_profile.parameters.take_profit_pct,
-                stop_loss_pct=active_profile.parameters.stop_loss_pct,
+                profit_arm_pct=rules.profit_arm_pct,
+                profit_trailing_giveback_points=rules.profit_trailing_giveback_points,
+                hard_take_profit_pct=rules.hard_take_profit_pct,
+                hard_stop_loss_pct=rules.hard_stop_loss_pct,
+                thesis_failure_cycles=rules.thesis_failure_cycles,
+                time_stop_trading_minutes=rules.time_stop_trading_minutes,
+                minimum_mfe_pct=rules.minimum_mfe_pct,
                 dte_threshold=report.exit_policy.dte_threshold,
                 max_hold_days=report.exit_policy.max_hold_days,
             )
             direction: Literal["bullish", "bearish"] = (
                 "bullish" if report.direction.value == "bullish" else "bearish"
             )
-            analog = compute_historical_analogs(bars, direction=direction, now=now)
-            structure: Literal["long", "debit_spread"] = (
-                "long"
-                if report.recommended_structure.value in {"long_call", "long_put"}
-                else "debit_spread"
+            horizon_bars = self._remaining_holding_sessions(now, exit_policy)
+            analog = compute_historical_analogs(
+                bars,
+                direction=direction,
+                now=now,
+                horizon_bars=horizon_bars,
+                event_category="recorded_catalyst",
             )
             min_expiry = now.date() + timedelta(days=exit_policy.dte_threshold)
             contracts = await asyncio.to_thread(
@@ -609,17 +743,31 @@ class AutonomousWorker:
                     ),
                 )
 
-            candidate_strategies = select_candidate_option_strategies(
-                contracts,
-                quotes,
-                underlying_price=report.current_price,
-                direction=direction,
-                structure=structure,
-                now=now,
-                exit_dte_threshold=exit_policy.dte_threshold,
-                force_flatten_at=get_authorized_ruleset().parameters.hackathon_window.force_flatten_by,
-                max_candidates=5,
+            regime = self._market_regime(report)
+            requested_structures: tuple[Literal["long", "debit_spread"], ...] = (
+                ("debit_spread",) if regime is MarketRegime.VOLATILE else ("long", "debit_spread")
             )
+            candidate_strategies = []
+            for requested_structure in requested_structures:
+                try:
+                    candidate_strategies.extend(
+                        select_candidate_option_strategies(
+                            contracts,
+                            quotes,
+                            underlying_price=report.current_price,
+                            direction=direction,
+                            structure=requested_structure,
+                            now=now,
+                            exit_dte_threshold=exit_policy.dte_threshold,
+                            force_flatten_at=rules.hackathon_window.force_flatten_by,
+                            pricing="entry_touch",
+                            max_candidates=None,
+                        )
+                    )
+                except OptionSelectionError:
+                    continue
+            if not candidate_strategies:
+                raise OptionSelectionError("No supported option structures are executable")
             evaluated: list[tuple[Any, HistoricalAnalogSummary]] = []
             candidate_evidence: list[dict[str, Any]] = []
             for candidate_strat in candidate_strategies:
@@ -656,19 +804,57 @@ class AutonomousWorker:
                     "No candidate option strategy could produce valid payoff economics"
                 )
 
-            # Sort candidate strategies by:
-            # 1. Meets authorized Net EV floor of 0.15R (True before False)
-            # 2. Net EV (descending)
-            # 3. Reward-to-Risk ratio (descending)
+            # Deterministic cross-structure ranking: edge, reward/risk, fill
+            # probability, then lower premium as the capital-efficiency tie-break.
             evaluated.sort(
                 key=lambda item: (
-                    item[1].net_ev_r >= Decimal("0.15"),
+                    item[1].net_ev_r >= rules.minimum_net_ev_r,
                     item[1].net_ev_r,
                     item[1].reward_risk_ratio or Decimal("0"),
+                    item[1].fill_probability or Decimal("0"),
+                    -(item[1].premium_per_contract or Decimal("0")),
                 ),
                 reverse=True,
             )
             strategy, option_economics = evaluated[0]
+            catalyst_digest = (
+                report.catalyst_digest
+                or hashlib.sha256(f"{symbol}:unsourced-catalyst".encode()).hexdigest()
+            )
+            thesis_key = hashlib.sha256(
+                json.dumps(
+                    {
+                        "underlying": symbol,
+                        "direction": direction,
+                        "catalyst_digest": catalyst_digest,
+                        "expiration": strategy.legs[0].expiration,
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+            prior_thesis = await session.scalar(
+                select(StrategyPositionModel.id)
+                .where(StrategyPositionModel.thesis_key == thesis_key)
+                .limit(1)
+            )
+            if prior_thesis is not None:
+                return CandidateResearchOutcome(
+                    rejection_code="DUPLICATE_THESIS",
+                    rejection_reason="This catalyst thesis has already been traded",
+                )
+            quantity = self._proposal_quantity(
+                option_economics,
+                portfolio,
+                active_profile,
+                market_regime=regime,
+                underlying=symbol,
+            )
+            if quantity < 1:
+                return CandidateResearchOutcome(
+                    rejection_code="POSITION_SIZE_UNAVAILABLE",
+                    rejection_reason="Governed risk budget cannot support one contract",
+                )
             iv_rank_by_leg, _iv_observations = await self._resolve_iv_rank(
                 session, gateway, symbol, strategy, quotes, bars, now
             )
@@ -704,7 +890,7 @@ class AutonomousWorker:
                 "research_report_id": str(report.id),
                 "symbol": symbol,
                 "strategy": strategy.model_dump(mode="json"),
-                "quantity": 1,
+                "quantity": quantity,
                 "rationale": report.synthesis_rationale,
                 "exit_policy": exit_policy.model_dump(mode="json"),
                 "shadow_candidates": [
@@ -737,6 +923,8 @@ class AutonomousWorker:
             }
             bundle_digest = input_digest(bundle_payload)
             payload["research_bundle_digest"] = bundle_digest
+            payload["catalyst_digest"] = catalyst_digest
+            payload["thesis_key"] = thesis_key
             proposal_digest = hashlib.sha256(
                 json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
             ).hexdigest()
@@ -745,12 +933,14 @@ class AutonomousWorker:
                 research_report_id=report.id,
                 symbol=symbol,
                 strategy=strategy,
-                quantity=1,
+                quantity=quantity,
                 rationale=report.synthesis_rationale,
                 exit_policy=exit_policy,
                 shadow_candidates=shadow_candidates,
                 option_economics=proposal_economics,
                 research_bundle_digest=bundle_digest,
+                catalyst_digest=catalyst_digest,
+                thesis_key=thesis_key,
                 proposal_digest=proposal_digest,
             )
             context = self._authorization_inputs(
@@ -761,6 +951,7 @@ class AutonomousWorker:
                 now,
                 quotes,
                 financials,
+                quantity=quantity,
                 iv_rank_by_leg=iv_rank_by_leg,
                 profile=active_profile,
             )
@@ -1309,15 +1500,21 @@ class AutonomousWorker:
             quote = by_underlying[underlying].get(str(position.get("symbol", "")))
             if quote is not None:
                 qty = _decimal(position.get("qty"))
+                position["bid"] = str(quote.get("bid"))
+                position["ask"] = str(quote.get("ask"))
+                position["price_increment"] = str(quote.get("price_increment", "0.01"))
                 position["delta"] = str(_decimal(quote.get("delta")) * qty)
                 position["vega"] = str(_decimal(quote.get("vega")) * qty)
                 position["iv"] = str(quote.get("iv"))
                 position["quote_timestamp"] = _timestamp_iso(quote.get("quote_timestamp"))
+                position["provider_quote_timestamp"] = quote.get("quote_timestamp")
                 position["metadata_source"] = "alpaca_position+alpaca_option_chain"
                 quote_timestamp = quote.get("quote_timestamp")
                 if isinstance(quote_timestamp, datetime) and quote_timestamp.tzinfo is not None:
+                    # ``now`` is captured before the chain request, so a valid
+                    # provider quote may be fractionally newer than the cycle.
                     position["quote_age_seconds"] = str(
-                        (now - quote_timestamp.astimezone(UTC)).total_seconds()
+                        max(0, (now - quote_timestamp.astimezone(UTC)).total_seconds())
                     )
             try:
                 parsed_position = parse_instrument(str(position.get("symbol", "")))
@@ -1331,7 +1528,6 @@ class AutonomousWorker:
                 and isinstance(position.get("delta"), str)
                 and isinstance(position.get("vega"), str)
                 and position.get("quote_timestamp") is not None
-                and _decimal(position.get("quote_age_seconds"), Decimal("999999")) >= 0
                 and _decimal(position.get("quote_age_seconds"), Decimal("999999"))
                 <= Decimal(str(get_authorized_ruleset().parameters.data_freshness_seconds))
             )
@@ -1352,7 +1548,7 @@ class AutonomousWorker:
                 account_verified=bool(portfolio["account_verified"]),
                 supported_options_level=portfolio["supported_options_level"],
                 snapshot_digest=digest,
-                payload_json=json.dumps(portfolio, sort_keys=True),
+                payload_json=json.dumps(_json_value(portfolio), default=str, sort_keys=True),
             )
         )
         await session.flush()
@@ -1368,6 +1564,7 @@ class AutonomousWorker:
         quotes: dict[str, dict[str, Any]],
         financials: Any,
         *,
+        quantity: int = 1,
         iv_rank_by_leg: dict[str, Decimal] | None = None,
         profile: ActiveProfile,
     ) -> dict[str, Any]:
@@ -1399,10 +1596,16 @@ class AutonomousWorker:
         portfolio_digest = input_digest(portfolio)
         cash = _decimal(portfolio.get("cash"))
         buying_power = _decimal(portfolio.get("buying_power"))
-        order_cost = strategy.limit_price * Decimal("100")
+        order_cost = strategy.limit_price * Decimal("100") * Decimal(quantity)
         rules = get_authorized_ruleset().parameters
-        cash_buffer_ok = cash - order_cost >= _decimal(rules.starting_capital_usd) * (
-            Decimal("1") - _decimal(rules.cash_buffer_pct) / Decimal("100")
+        # The rule is a minimum cash reserve, not a cap that reserves the
+        # complement of the baseline account value. Use current equity so the
+        # control remains correct after gains, losses, or an account reset.
+        cash_buffer_ok = self._cash_reserve_ok(
+            cash=cash,
+            order_cost=order_cost,
+            portfolio_value=_decimal(portfolio.get("portfolio_value")),
+            cash_buffer_pct=_decimal(rules.cash_buffer_pct),
         )
         quote_ages: list[Decimal] = []
         spreads: list[Decimal] = []
@@ -1469,7 +1672,9 @@ class AutonomousWorker:
             ),
             Decimal("0"),
         )
-        planned_risk = analog.max_loss_per_contract or order_cost
+        planned_risk = (
+            analog.max_loss_per_contract or strategy.limit_price * Decimal("100")
+        ) * Decimal(quantity)
         profile_target_cap = (
             risk_base * profile.parameters.target_position_size_pct / Decimal("100")
         )
@@ -1564,6 +1769,7 @@ class AutonomousWorker:
                 * (Decimal("1") if leg.side.value == "buy" else Decimal("-1"))
                 * report.current_price
                 * Decimal("100")
+                * Decimal(quantity)
                 * Decimal("0.01")
                 for leg in strategy.legs
             ),
@@ -1574,13 +1780,14 @@ class AutonomousWorker:
                 _decimal(quotes.get(leg.symbol, {}).get("vega"))
                 * (Decimal("1") if leg.side.value == "buy" else Decimal("-1"))
                 * Decimal("100")
+                * Decimal(quantity)
                 * Decimal("0.01")
                 for leg in strategy.legs
             ),
             Decimal("0"),
         )
         greek_budget = equity * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100")
-        greeks_risk_ok = bool(
+        greeks_risk_ok = (
             portfolio_controls_complete
             and all(
                 value.is_finite()
@@ -1661,6 +1868,94 @@ class AutonomousWorker:
         return max(Decimal("0"), (starting - equity) / starting * Decimal("100"))
 
     @staticmethod
+    def _cash_reserve_ok(
+        *,
+        cash: Decimal,
+        order_cost: Decimal,
+        portfolio_value: Decimal,
+        cash_buffer_pct: Decimal,
+    ) -> bool:
+        """Check the BA minimum cash reserve against current equity."""
+        if portfolio_value <= 0 or cash_buffer_pct < 0:
+            return False
+        required_reserve = portfolio_value * cash_buffer_pct / Decimal("100")
+        return cash - order_cost >= required_reserve
+
+    @staticmethod
+    def _remaining_holding_sessions(now: datetime, exit_policy: ExitPolicy) -> int:
+        force_date = get_authorized_ruleset().parameters.hackathon_window.force_flatten_by.date()
+        cursor = now.date()
+        sessions = 0
+        while cursor <= force_date:
+            if cursor.weekday() < 5:
+                sessions += 1
+            cursor += timedelta(days=1)
+        return max(1, min(exit_policy.max_hold_days, sessions))
+
+    @staticmethod
+    def _proposal_quantity(
+        economics: HistoricalAnalogSummary,
+        portfolio: dict[str, Any],
+        profile: ActiveProfile,
+        *,
+        market_regime: MarketRegime,
+        underlying: str,
+    ) -> int:
+        rules = get_authorized_ruleset().parameters
+        equity = _decimal(portfolio.get("portfolio_value"))
+        max_loss = economics.max_loss_per_contract or Decimal("0")
+        premium = economics.premium_per_contract or Decimal("0")
+        if equity <= 0 or max_loss <= 0 or premium <= 0:
+            return 0
+        risk_pct = (
+            rules.volatile_risk_per_trade_pct
+            if market_regime is MarketRegime.VOLATILE
+            else rules.max_risk_per_trade_pct
+        )
+        existing_risk = sum(
+            (
+                abs(_decimal(item.get("max_loss_per_contract", item.get("market_value"))))
+                for item in portfolio.get("positions", [])
+            ),
+            Decimal("0"),
+        )
+        ticker_exposure = sum(
+            (
+                abs(_decimal(item.get("market_value")))
+                for item in portfolio.get("positions", [])
+                if str(item.get("underlying", "")).upper() == underlying.upper()
+            ),
+            Decimal("0"),
+        )
+        risk_budget = equity * _decimal(risk_pct) / Decimal("100")
+        allocation_budget = equity * profile.parameters.target_position_size_pct / Decimal("100")
+        aggregate_remaining = max(
+            Decimal("0"),
+            equity * _decimal(rules.aggregate_hard_stop_risk_pct) / Decimal("100") - existing_risk,
+        )
+        ticker_remaining = max(
+            Decimal("0"),
+            equity * _decimal(rules.ticker_concentration_pct) / Decimal("100") - ticker_exposure,
+        )
+        cash_remaining = max(
+            Decimal("0"),
+            _decimal(portfolio.get("cash"))
+            - equity * _decimal(rules.cash_buffer_pct) / Decimal("100"),
+        )
+        buying_power = max(Decimal("0"), _decimal(portfolio.get("buying_power")))
+        risk_contracts = min(risk_budget, aggregate_remaining) // max_loss
+        cost_contracts = (
+            min(
+                allocation_budget,
+                ticker_remaining,
+                cash_remaining,
+                buying_power,
+            )
+            // premium
+        )
+        return max(0, int(min(risk_contracts, cost_contracts)))
+
+    @staticmethod
     def _market_regime(report: Any) -> MarketRegime:
         # Macro climate is the only persisted regime proxy in the decision
         # contract.  Derive a conservative deterministic regime rather than
@@ -1734,88 +2029,678 @@ class AutonomousWorker:
         )
         await session.flush()
 
-    async def _force_flatten(self, positions: list[Any]) -> bool:
-        runner = SubprocessRunner()
-        gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
+    async def _force_flatten(
+        self, session: AsyncSession, positions: list[Any], now: datetime
+    ) -> bool:
+        """Flatten durable strategies first, then legacy legs short-first."""
+
+        gateway = AlpacaCliExecutionGateway(self.settings, SubprocessRunner(), None)  # type: ignore[arg-type]
+        repository = SqlAlchemyReceiptRepository(session)
+        current_symbols = {
+            str(_field(position, "symbol", default="")).upper() for position in positions
+        }
+        tracked_symbols: set[str] = set()
         success = True
-        for position in positions:
-            symbol = str(_field(position, "symbol", default=""))
-            if symbol:
-                result = await asyncio.to_thread(
-                    runner.run,
-                    [self.settings.alpaca_cli_path, "api", "DELETE", f"/v2/positions/{symbol}"],
-                    "",
-                    gateway._command_environment(),
-                    self.settings.alpaca_request_timeout_seconds,
+        strategies = list(
+            (
+                await session.scalars(
+                    select(StrategyPositionModel).where(
+                        StrategyPositionModel.status.in_(["open", "entry_pending", "exiting"])
+                    )
                 )
-                success = success and result.returncode == 0
+            ).all()
+        )
+        quotes = self._position_quotes(positions)
+        for row in strategies:
+            strategy = OptionStrategy.model_validate_json(row.strategy_json)
+            leg_symbols = {leg.symbol.upper() for leg in strategy.legs}
+            tracked_symbols.update(leg_symbols)
+            if not leg_symbols.intersection(current_symbols):
+                await self._close_strategy_record(
+                    session, row, now, "force_flatten_position_absent"
+                )
+                continue
+            if row.parent_exit_receipt_id is not None:
+                continue
+            row.exit_latched_reason = ExitReason.HACKATHON_FORCE_FLATTEN.value
+            row.exit_latched_at = row.exit_latched_at or now
+            if len(strategy.legs) == 2:
+                try:
+                    liquidation = executable_liquidation_value(
+                        strategy,
+                        quotes,
+                        now=now,
+                        max_quote_age_seconds=get_authorized_ruleset().parameters.data_freshness_seconds,
+                    )
+                except StrategyMarkUnavailable:
+                    success = False
+                    continue
+                receipt = await gateway.close_strategy_async(
+                    strategy,
+                    strategy_position_id=UUID(row.id),
+                    trace_id=uuid4(),
+                    exit_reason=ExitReason.HACKATHON_FORCE_FLATTEN,
+                    requested_quantity=Decimal(row.quantity),
+                    limit_price=self._round_strategy_credit(liquidation, strategy, quotes),
+                    repository=repository,
+                )
+            else:
+                leg = strategy.legs[0]
+                receipt = await gateway.close_position_async(
+                    leg.symbol,
+                    trace_id=uuid4(),
+                    exit_reason=ExitReason.HACKATHON_FORCE_FLATTEN,
+                    requested_quantity=Decimal(row.quantity * leg.ratio_qty),
+                    repository=repository,
+                )
+            await self._bind_exit_receipt(session, row, receipt, now)
+            success = success and receipt.status.value in {
+                "pending",
+                "submitted",
+                "reconciling",
+                "filled",
+            }
+
+        legacy = [
+            position
+            for position in positions
+            if str(_field(position, "symbol", default="")).upper() not in tracked_symbols
+        ]
+        # A legacy spread has no trustworthy parent record. Submit closes for
+        # shorts only; a later cycle confirms their absence before any longs.
+        legacy_shorts = [p for p in legacy if _decimal(_field(p, "qty", default="0")) < 0]
+        legacy_targets = legacy_shorts or [
+            p for p in legacy if _decimal(_field(p, "qty", default="0")) > 0
+        ]
+        for position in legacy_targets:
+            symbol = str(_field(position, "symbol", default=""))
+            if not symbol:
+                continue
+            receipt = await gateway.close_position_async(
+                symbol,
+                trace_id=uuid4(),
+                exit_reason=ExitReason.HACKATHON_FORCE_FLATTEN,
+                requested_quantity=self._position_quantity(position),
+                repository=repository,
+            )
+            success = success and receipt.status.value in {
+                "pending",
+                "submitted",
+                "reconciling",
+                "filled",
+            }
         return success
 
     async def _manage_exits(
-        self, positions: list[Any], now: datetime
+        self,
+        session: AsyncSession,
+        positions: list[Any],
+        now: datetime,
+        *,
+        include_score_evidence: bool,
     ) -> tuple[bool, set[str], list[dict[str, str]]]:
-        """Apply mandatory paper exits before evaluating any new entry.
+        """Mark complete strategies and apply ExitPolicyV2 before new risk."""
 
-        Alpaca positions expose unrealized P/L as a decimal fraction.  OCC
-        symbols expose expiration in YYMMDD; positions that do not contain
-        either field are left untouched and are handled by force-flatten.
-        Unknown values never trigger a speculative close.
-        """
-        symbols: set[str] = set()
+        rules = get_authorized_ruleset().parameters
+        gateway = AlpacaCliExecutionGateway(self.settings, SubprocessRunner(), None)  # type: ignore[arg-type]
+        repository = SqlAlchemyReceiptRepository(session)
+        position_by_symbol = {
+            str(_field(position, "symbol", default="")).upper(): position for position in positions
+        }
+        quotes = self._position_quotes(positions)
+        strategy_rows = list(
+            (
+                await session.scalars(
+                    select(StrategyPositionModel).where(
+                        StrategyPositionModel.status.in_(["open", "entry_pending", "exiting"])
+                    )
+                )
+            ).all()
+        )
+        tracked_symbols: set[str] = set()
+        exited_symbols: set[str] = set()
         checks: list[dict[str, str]] = []
-        max_hold_days = get_authorized_ruleset().parameters.hackathon_max_hold_trading_days
+        for row in strategy_rows:
+            strategy = OptionStrategy.model_validate_json(row.strategy_json)
+            leg_symbols = {leg.symbol.upper() for leg in strategy.legs}
+            tracked_symbols.update(leg_symbols)
+            label = row.underlying
+            present = leg_symbols.intersection(position_by_symbol)
+            if row.status == "entry_pending" and not present:
+                checks.append({"symbol": label, "result": "hold", "reason": "entry_pending"})
+                continue
+            if row.status == "exiting" or row.parent_exit_receipt_id is not None:
+                checks.append(
+                    {
+                        "symbol": label,
+                        "result": "exit_pending",
+                        "reason": row.exit_latched_reason or "latched",
+                    }
+                )
+                continue
+            if not present:
+                await self._close_strategy_record(session, row, now, "position_absent")
+                exited_symbols.update(leg_symbols)
+                checks.append({"symbol": label, "result": "exit", "reason": "position_absent"})
+                continue
+            try:
+                liquidation = executable_liquidation_value(
+                    strategy,
+                    quotes,
+                    now=now,
+                    max_quote_age_seconds=rules.data_freshness_seconds,
+                )
+                current_return = strategy_return_pct(_decimal(row.entry_debit), liquidation)
+            except StrategyMarkUnavailable:
+                checks.append(
+                    {"symbol": label, "result": "hold", "reason": "strategy_mark_unavailable"}
+                )
+                continue
+
+            original_score: Decimal | None = None
+            opposite_score: Decimal | None = None
+            fresh_score = False
+            score_record: TradeDecisionModel | None = None
+            if include_score_evidence:
+                score_record = await session.scalar(
+                    select(TradeDecisionModel)
+                    .where(
+                        TradeDecisionModel.symbol == row.underlying,
+                        TradeDecisionModel.created_at
+                        > (row.last_score_evidence_at or row.opened_at),
+                    )
+                    .order_by(TradeDecisionModel.created_at.desc())
+                    .limit(1)
+                )
+                if score_record is not None and score_record.id != row.last_score_evidence_id:
+                    fresh_score = True
+                    if row.direction == "bullish":
+                        original_score = _decimal(score_record.bullish_opportunity_score)
+                        opposite_score = _decimal(score_record.bearish_opportunity_score)
+                    else:
+                        original_score = _decimal(score_record.bearish_opportunity_score)
+                        opposite_score = _decimal(score_record.bullish_opportunity_score)
+
+            try:
+                expiration = datetime.fromisoformat(strategy.legs[0].expiration).date()
+                dte_days: int | None = (expiration - now.date()).days
+            except ValueError:
+                dte_days = None
+            policy = ExitPolicy.model_validate_json(row.exit_policy_json)
+            evaluation = evaluate_adaptive_exit(
+                policy,
+                current_return_pct=current_return,
+                prior_mfe_pct=_decimal(row.mfe_pct),
+                profit_armed=row.profit_armed_at is not None,
+                prior_score_failure_count=row.score_failure_count,
+                original_direction_score=original_score,
+                opposite_direction_score=opposite_score,
+                score_floor=rules.balanced_opportunity_score,
+                fresh_direction_evidence=fresh_score,
+                trading_minutes_elapsed=regular_session_minutes_elapsed(row.opened_at, now),
+                dte_days=dte_days,
+                force_flatten_due=now >= rules.hackathon_window.force_flatten_by,
+            )
+            row.last_liquidation_value = liquidation
+            row.current_return_pct = evaluation.current_return_pct
+            row.mfe_pct = evaluation.mfe_pct
+            row.score_failure_count = evaluation.score_failure_count
+            row.last_marked_at = now
+            if evaluation.profit_armed and row.profit_armed_at is None:
+                row.profit_armed_at = now
+            if fresh_score and score_record is not None:
+                row.last_score_evidence_at = score_record.created_at
+                row.last_score_evidence_id = score_record.id
+            await self._record_strategy_event(
+                session,
+                row,
+                now,
+                "strategy_marked",
+                {
+                    "liquidation_value": str(liquidation),
+                    "current_return_pct": str(evaluation.current_return_pct),
+                    "mfe_pct": str(evaluation.mfe_pct),
+                    "profit_armed": evaluation.profit_armed,
+                    "score_failure_count": evaluation.score_failure_count,
+                    "score_evidence_id": score_record.id if fresh_score and score_record else None,
+                },
+            )
+            if evaluation.exit_reason is None:
+                checks.append({"symbol": label, "result": "hold", "reason": "no_exit_condition"})
+                continue
+
+            row.exit_latched_reason = evaluation.exit_reason.value
+            row.exit_latched_at = now
+            await self._record_strategy_event(
+                session,
+                row,
+                now,
+                "exit_latched",
+                {"reason": evaluation.exit_reason.value},
+            )
+            if len(strategy.legs) == 2:
+                receipt = await gateway.close_strategy_async(
+                    strategy,
+                    strategy_position_id=UUID(row.id),
+                    trace_id=uuid4(),
+                    exit_reason=evaluation.exit_reason,
+                    requested_quantity=Decimal(row.quantity),
+                    limit_price=self._round_strategy_credit(liquidation, strategy, quotes),
+                    repository=repository,
+                )
+            else:
+                leg = strategy.legs[0]
+                receipt = await gateway.close_position_async(
+                    leg.symbol,
+                    trace_id=uuid4(),
+                    exit_reason=evaluation.exit_reason,
+                    requested_quantity=Decimal(row.quantity * leg.ratio_qty),
+                    repository=repository,
+                )
+            await self._bind_exit_receipt(session, row, receipt, now)
+            if receipt.status is ExecutionStatus.FILLED:
+                exited_symbols.update(leg_symbols)
+                checks.append(
+                    {"symbol": label, "result": "exit", "reason": evaluation.exit_reason.value}
+                )
+            elif receipt.status in {
+                ExecutionStatus.PENDING,
+                ExecutionStatus.SUBMITTED,
+                ExecutionStatus.RECONCILING,
+            }:
+                checks.append(
+                    {
+                        "symbol": label,
+                        "result": "exit_pending",
+                        "reason": evaluation.exit_reason.value,
+                    }
+                )
+            else:
+                checks.append(
+                    {
+                        "symbol": label,
+                        "result": "exit_failed",
+                        "reason": evaluation.exit_reason.value,
+                    }
+                )
+                return False, exited_symbols, checks
+
+        legacy = [
+            position
+            for position in positions
+            if str(_field(position, "symbol", default="")).upper() not in tracked_symbols
+        ]
+        legacy_ok, legacy_exited, legacy_checks = await self._manage_legacy_exits(
+            session, legacy, now, gateway, repository
+        )
+        checks.extend(legacy_checks)
+        exited_symbols.update(legacy_exited)
+        return legacy_ok, exited_symbols, checks
+
+    @staticmethod
+    def _position_quotes(positions: list[Any]) -> dict[str, dict[str, Any]]:
+        quotes: dict[str, dict[str, Any]] = {}
         for position in positions:
-            symbol = str(_field(position, "symbol", default=""))
-            plpc_raw = _field(position, "unrealized_plpc", default=None)
-            plpc = _decimal(plpc_raw, Decimal("NaN")) if plpc_raw is not None else Decimal("NaN")
-            if plpc.is_finite() and (plpc >= Decimal("0.75") or plpc <= Decimal("-0.50")):
-                symbols.add(symbol)
-                checks.append({"symbol": symbol, "result": "exit", "reason": "pnl_threshold"})
+            symbol = str(_field(position, "symbol", default="")).upper()
+            timestamp = _field(position, "provider_quote_timestamp", default=None)
+            if not isinstance(timestamp, datetime):
+                iso_timestamp = _field(position, "quote_timestamp", default=None)
+                if isinstance(iso_timestamp, str):
+                    try:
+                        timestamp = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
+                    except ValueError:
+                        timestamp = None
+            if not symbol or not isinstance(timestamp, datetime):
                 continue
-            opened_at = _field(position, "opened_at", "created_at", default=None)
-            if (
-                isinstance(opened_at, datetime)
-                and opened_at.tzinfo is not None
-                and (now - opened_at.astimezone(UTC)).days >= max_hold_days
-            ):
-                symbols.add(symbol)
-                checks.append({"symbol": symbol, "result": "exit", "reason": "max_hold_days"})
-                continue
+            quotes[symbol] = {
+                "bid": _field(position, "bid", default=None),
+                "ask": _field(position, "ask", default=None),
+                "price_increment": _field(position, "price_increment", default="0.01"),
+                "quote_timestamp": timestamp,
+            }
+        return quotes
+
+    @staticmethod
+    def _round_strategy_credit(
+        liquidation: Decimal,
+        strategy: OptionStrategy,
+        quotes: dict[str, dict[str, Any]],
+    ) -> Decimal:
+        increments = [
+            _decimal(quotes.get(leg.symbol, {}).get("price_increment"), Decimal("0.01"))
+            for leg in strategy.legs
+        ]
+        increment = max((value for value in increments if value > 0), default=Decimal("0.01"))
+        rounded = (liquidation // increment) * increment
+        return max(increment, rounded)
+
+    async def _record_strategy_event(
+        self,
+        session: AsyncSession,
+        row: StrategyPositionModel,
+        observed_at: datetime,
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> None:
+        encoded = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
+        session.add(
+            StrategyLifecycleEventModel(
+                id=str(uuid4()),
+                strategy_position_id=row.id,
+                observed_at=observed_at,
+                event_type=event_type,
+                payload_digest=hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+                payload_json=encoded,
+            )
+        )
+        await session.flush()
+
+    async def _close_strategy_record(
+        self,
+        session: AsyncSession,
+        row: StrategyPositionModel,
+        now: datetime,
+        confirmation: str,
+    ) -> None:
+        if row.status == "closed":
+            return
+        row.status = "closed"
+        row.closed_at = now
+        await self._record_strategy_event(
+            session,
+            row,
+            now,
+            "strategy_closed",
+            {"confirmation": confirmation, "exit_reason": row.exit_latched_reason},
+        )
+
+    async def _bind_exit_receipt(
+        self,
+        session: AsyncSession,
+        row: StrategyPositionModel,
+        receipt: Any,
+        now: datetime,
+    ) -> None:
+        receipt_row = await session.scalar(
+            select(ExecutionReceiptModel).where(
+                ExecutionReceiptModel.client_order_id == receipt.client_order_id
+            )
+        )
+        row.parent_exit_receipt_id = receipt_row.id if receipt_row is not None else None
+        if receipt.status is ExecutionStatus.FILLED:
+            await self._close_strategy_record(session, row, now, "broker_filled")
+        else:
+            row.status = "exiting"
+            await self._record_strategy_event(
+                session,
+                row,
+                now,
+                "exit_submitted",
+                {
+                    "client_order_id": receipt.client_order_id,
+                    "receipt_status": receipt.status.value,
+                    "exit_reason": row.exit_latched_reason,
+                },
+            )
+
+    async def _manage_legacy_exits(
+        self,
+        session: AsyncSession,
+        positions: list[Any],
+        now: datetime,
+        gateway: AlpacaCliExecutionGateway,
+        repository: SqlAlchemyReceiptRepository,
+    ) -> tuple[bool, set[str], list[dict[str, str]]]:
+        """Exit ungrouped positions without inventing spread P&L."""
+
+        rules = get_authorized_ruleset().parameters
+        targets: list[tuple[Any, ExitReason]] = []
+        checks: list[dict[str, str]] = []
+        for position in positions:
+            symbol = str(_field(position, "symbol", default="")).upper()
+            reason: ExitReason | None = None
             match = re.search(r"(\d{6})[CP]", symbol)
             if match:
                 try:
                     expiry = datetime.strptime(match.group(1), "%y%m%d").date()
                 except ValueError:
                     expiry = None
-                if expiry is not None and (expiry - now.date()).days <= 7:
-                    symbols.add(symbol)
-                    checks.append({"symbol": symbol, "result": "exit", "reason": "dte_threshold"})
-                    continue
-            checks.append({"symbol": symbol, "result": "hold", "reason": "no_exit_condition"})
-        if not symbols:
-            return True, set(), checks
-        runner = SubprocessRunner()
-        gateway = AlpacaCliExecutionGateway(self.settings, runner, None)  # type: ignore[arg-type]
-        for symbol in sorted(symbols):
-            result = await asyncio.to_thread(
-                runner.run,
-                [self.settings.alpaca_cli_path, "api", "DELETE", f"/v2/positions/{symbol}"],
-                "",
-                gateway._command_environment(),
-                self.settings.alpaca_request_timeout_seconds,
+                if (
+                    expiry is not None
+                    and (expiry - now.date()).days <= rules.dte_threshold_default_days
+                ):
+                    reason = ExitReason.DTE_THRESHOLD
+            opened_at = _field(position, "opened_at", "created_at", default=None)
+            if (
+                reason is None
+                and isinstance(opened_at, datetime)
+                and opened_at.tzinfo is not None
+                and regular_session_minutes_elapsed(opened_at, now)
+                >= rules.hackathon_max_hold_trading_days * 390
+            ):
+                reason = ExitReason.MAX_HOLD_DAYS
+            if reason is None:
+                checks.append({"symbol": symbol, "result": "hold", "reason": "legacy_no_safe_exit"})
+            else:
+                targets.append((position, reason))
+
+        short_targets = [
+            item for item in targets if _decimal(_field(item[0], "qty", default="0")) < 0
+        ]
+        if short_targets:
+            deferred = {str(_field(item[0], "symbol", default="")).upper() for item in targets}
+            deferred.difference_update(
+                str(_field(item[0], "symbol", default="")).upper() for item in short_targets
             )
-            if result.returncode != 0:
-                for check in checks:
-                    if check["symbol"] == symbol:
-                        check["result"] = "exit_failed"
-                return False, symbols, checks
-        return True, symbols, checks
+            checks.extend(
+                {"symbol": symbol, "result": "hold", "reason": "legacy_short_close_first"}
+                for symbol in sorted(deferred)
+            )
+            targets = short_targets
+
+        exited: set[str] = set()
+        for position, reason in targets:
+            symbol = str(_field(position, "symbol", default="")).upper()
+            active = await session.scalar(
+                select(ExecutionReceiptModel.id)
+                .where(
+                    ExecutionReceiptModel.operation == "exit",
+                    ExecutionReceiptModel.symbol == symbol,
+                    ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"]),
+                )
+                .limit(1)
+            )
+            if active is not None:
+                checks.append({"symbol": symbol, "result": "exit_pending", "reason": reason.value})
+                continue
+            receipt = await gateway.close_position_async(
+                symbol,
+                trace_id=uuid4(),
+                exit_reason=reason,
+                requested_quantity=self._position_quantity(position),
+                repository=repository,
+            )
+            if receipt.status is ExecutionStatus.FILLED:
+                exited.add(symbol)
+                checks.append({"symbol": symbol, "result": "exit", "reason": reason.value})
+            elif receipt.status in {
+                ExecutionStatus.PENDING,
+                ExecutionStatus.SUBMITTED,
+                ExecutionStatus.RECONCILING,
+            }:
+                checks.append({"symbol": symbol, "result": "exit_pending", "reason": reason.value})
+            else:
+                checks.append({"symbol": symbol, "result": "exit_failed", "reason": reason.value})
+                return False, exited, checks
+        return True, exited, checks
+
+    async def _persist_strategy_position(
+        self,
+        session: AsyncSession,
+        proposal: TradeProposal,
+        receipt: Any,
+        now: datetime,
+    ) -> None:
+        if receipt.status not in {
+            ExecutionStatus.PENDING,
+            ExecutionStatus.SUBMITTED,
+            ExecutionStatus.RECONCILING,
+            ExecutionStatus.FILLED,
+        }:
+            return
+        row = await session.scalar(
+            select(StrategyPositionModel).where(
+                StrategyPositionModel.proposal_id == str(proposal.id)
+            )
+        )
+        entry_debit = receipt.filled_average_price or proposal.strategy.limit_price
+        opened_at = receipt.reconciled_at or receipt.submitted_at or now
+        if row is None:
+            row = StrategyPositionModel(
+                id=str(uuid4()),
+                proposal_id=str(proposal.id),
+                thesis_key=proposal.thesis_key or proposal.proposal_digest,
+                catalyst_digest=proposal.catalyst_digest or proposal.proposal_digest,
+                underlying=proposal.symbol,
+                direction=(
+                    "bullish"
+                    if proposal.strategy.kind
+                    in {StrategyKind.LONG_CALL, StrategyKind.CALL_DEBIT_SPREAD}
+                    else "bearish"
+                ),
+                strategy_kind=proposal.strategy.kind.value,
+                strategy_json=proposal.strategy.model_dump_json(),
+                exit_policy_json=proposal.exit_policy.model_dump_json(),
+                quantity=proposal.quantity,
+                entry_debit=entry_debit,
+                opened_at=opened_at,
+                status="open" if receipt.status is ExecutionStatus.FILLED else "entry_pending",
+                mfe_pct=Decimal("0"),
+                score_failure_count=0,
+            )
+            session.add(row)
+            await session.flush()
+            await self._record_strategy_event(
+                session,
+                row,
+                now,
+                "strategy_created",
+                {
+                    "entry_debit": str(entry_debit),
+                    "quantity": proposal.quantity,
+                    "entry_receipt_status": receipt.status.value,
+                },
+            )
+        elif receipt.status is ExecutionStatus.FILLED:
+            row.status = "open"
+            row.entry_debit = entry_debit
+            row.opened_at = opened_at
+
+        receipt.strategy_position_id = UUID(row.id)
+        receipt.legs = [
+            {
+                "symbol": leg.symbol,
+                "ratio_qty": leg.ratio_qty,
+                "position_intent": leg.position_intent or "buy_to_open",
+                "status": receipt.status,
+            }
+            for leg in proposal.strategy.legs
+        ]
+        # Validate the per-leg state through the public contract before it is persisted.
+        from app.contracts.models import ExecutionLegState
+
+        receipt.legs = [ExecutionLegState.model_validate(item) for item in receipt.legs]
+        await SqlAlchemyReceiptRepository(session).save(receipt)
+
+    async def _strategy_position_count(self, session: AsyncSession, positions: list[Any]) -> int:
+        rows = list(
+            (
+                await session.scalars(
+                    select(StrategyPositionModel).where(
+                        StrategyPositionModel.status.in_(["open", "entry_pending", "exiting"])
+                    )
+                )
+            ).all()
+        )
+        tracked = {
+            leg.symbol.upper()
+            for row in rows
+            for leg in OptionStrategy.model_validate_json(row.strategy_json).legs
+        }
+        legacy_count = sum(
+            1
+            for position in positions
+            if str(_field(position, "symbol", default="")).upper() not in tracked
+        )
+        return len(rows) + legacy_count
+
+    @staticmethod
+    def _position_quantity(position: Any) -> Decimal | None:
+        quantity = _finite_decimal(_field(position, "qty", "quantity", default=None))
+        if quantity is None:
+            return None
+        return abs(quantity)
+
+    async def _reconcile_exit_receipts(
+        self, session: AsyncSession, positions: list[Any], now: datetime
+    ) -> None:
+        """Mark a submitted position close filled only after the position disappears."""
+        current_symbols = {
+            str(_field(position, "symbol", default="")).upper() for position in positions
+        }
+        result = await session.execute(
+            select(ExecutionReceiptModel).where(
+                ExecutionReceiptModel.operation == "exit",
+                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"]),
+            )
+        )
+        for row in result.scalars():
+            strategy_row: StrategyPositionModel | None = None
+            if row.strategy_position_id:
+                strategy_row = await session.get(StrategyPositionModel, row.strategy_position_id)
+                if strategy_row is None:
+                    continue
+                strategy = OptionStrategy.model_validate_json(strategy_row.strategy_json)
+                if any(leg.symbol.upper() in current_symbols for leg in strategy.legs):
+                    continue
+            elif not row.symbol or row.symbol.upper() in current_symbols:
+                continue
+            previous_status = row.status
+            row.status = "filled"
+            row.filled_quantity = row.requested_quantity or row.filled_quantity
+            row.error_code = None
+            row.error_message = None
+            row.reconciled_at = now
+            session.add(
+                ReconciliationEventModel(
+                    id=str(uuid4()),
+                    receipt_id=row.id,
+                    transition=f"{previous_status}->filled",
+                    observed_at=now,
+                    payload_json=json.dumps(
+                        {
+                            "operation": "exit",
+                            "symbol": row.symbol,
+                            "exit_reason": row.exit_reason,
+                            "confirmation": "position_absent",
+                        },
+                        default=str,
+                        sort_keys=True,
+                    ),
+                )
+            )
+            if strategy_row is not None:
+                await self._close_strategy_record(
+                    session, strategy_row, now, "all_strategy_legs_absent"
+                )
+        await session.flush()
 
     async def _reconcile_unfinished(self, session: AsyncSession) -> None:
         """Resolve pending submissions by persisted client order ID on restart."""
         result = await session.execute(
             select(ExecutionReceiptModel).where(
-                ExecutionReceiptModel.status.in_(["pending", "reconciling"])
+                ExecutionReceiptModel.operation == "entry",
+                ExecutionReceiptModel.status.in_(["pending", "submitted", "reconciling"]),
             )
         )
         rows = list(result.scalars())
@@ -1827,11 +2712,42 @@ class AutonomousWorker:
             receipt = repository._to_contract(row)
             previous_status = receipt.status.value
             await executor.reconcile_async(receipt, repository)
+            strategy_row = await session.scalar(
+                select(StrategyPositionModel).where(
+                    StrategyPositionModel.proposal_id == str(row.proposal_id)
+                )
+            )
+            if strategy_row is not None:
+                if receipt.status is ExecutionStatus.FILLED:
+                    strategy_row.status = "open"
+                    strategy_row.entry_debit = (
+                        receipt.filled_average_price or strategy_row.entry_debit
+                    )
+                    strategy_row.opened_at = receipt.reconciled_at or datetime.now(UTC)
+                    await self._record_strategy_event(
+                        session,
+                        strategy_row,
+                        datetime.now(UTC),
+                        "entry_reconciled_filled",
+                        {"client_order_id": receipt.client_order_id},
+                    )
+                elif receipt.status in {ExecutionStatus.REJECTED, ExecutionStatus.FAILED}:
+                    strategy_row.status = "entry_failed"
+                    await self._record_strategy_event(
+                        session,
+                        strategy_row,
+                        datetime.now(UTC),
+                        "entry_reconciled_failed",
+                        {
+                            "client_order_id": receipt.client_order_id,
+                            "status": receipt.status.value,
+                        },
+                    )
             if receipt.status.value != previous_status or receipt.error_code:
                 session.add(
                     ReconciliationEventModel(
                         id=str(uuid4()),
-                        receipt_id=str(row.id),
+                        receipt_id=row.id,
                         transition=f"{previous_status}->{receipt.status.value}",
                         observed_at=datetime.now(UTC),
                         payload_json=json.dumps(
@@ -1840,6 +2756,7 @@ class AutonomousWorker:
                                 "broker_order_id": receipt.broker_order_id,
                                 "error_code": receipt.error_code,
                             },
+                            default=str,
                             sort_keys=True,
                         ),
                     )
@@ -1871,6 +2788,16 @@ class AutonomousWorker:
         root_evidence: dict[str, Any] = {"symbols": AUTONOMOUS_SYMBOLS, "reason": reason}
         if evidence:
             root_evidence.update(evidence)
+        exit_checks = evidence.get("position_exit_checks", []) if evidence else []
+        safe_exit_checks = [
+            {
+                "symbol": str(item.get("symbol", "UNKNOWN")).upper(),
+                "result": str(item.get("result", "hold")),
+                "reason": str(item.get("reason", "no_exit_condition")),
+            }
+            for item in exit_checks
+            if isinstance(item, dict)
+        ]
         root = build_evaluation_root(
             trace_id=uuid4(),
             outcome=outcome,
@@ -1884,6 +2811,7 @@ class AutonomousWorker:
                 outcome=outcome,
                 symbols_json=json.dumps(AUTONOMOUS_SYMBOLS),
                 reason=reason,
+                exit_checks_json=json.dumps(safe_exit_checks, default=str, sort_keys=True),
                 worker_version=WORKER_VERSION,
             )
         )

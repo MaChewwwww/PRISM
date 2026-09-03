@@ -199,8 +199,8 @@ async def test_decision_agent_synthesize_mocked() -> None:
     assert len(proposal.contradictions) == 1
     assert proposal.options_only_constraint_acknowledged is True
     assert "Semiconductor" in proposal.portfolio_fit
-    assert proposal.exit_policy.take_profit_pct == Decimal("75.0")
-    assert proposal.exit_policy.stop_loss_pct == Decimal("50.0")
+    assert proposal.exit_policy.profit_arm_pct == Decimal("20.0")
+    assert proposal.exit_policy.hard_take_profit_pct == Decimal("40.0")
     assert proposal.exit_policy.dte_threshold == 7
     assert proposal.exit_policy.max_hold_days == 14
 

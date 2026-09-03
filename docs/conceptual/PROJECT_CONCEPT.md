@@ -147,7 +147,7 @@ The workspace is authenticated, uses a consistent UTC date range, supports respo
 
 ## Authorized operating guardrails
 
-The active ruleset is `prism-authorized-baseline@1.0.0`, with Balanced as the default AI Profile. The machine-readable source is `backend/app/rules/authorized_baseline.v1.json`.
+The active ruleset is `prism-authorized-baseline@2.0.0`, with Balanced as the default AI Profile. The machine-readable source is `backend/app/rules/authorized_baseline.v1.json`.
 
 | Area | Authorized guardrail |
 | --- | --- |

@@ -75,7 +75,7 @@ def select_candidate_option_strategies(
     exit_dte_threshold: int = 7,
     force_flatten_at: datetime | None = None,
     pricing: Literal["midpoint", "entry_touch"] = "midpoint",
-    max_candidates: int = 5,
+    max_candidates: int | None = 5,
 ) -> list[OptionStrategy]:
     """Select candidate option strategies across near-the-money strikes
     for the earliest valid expiration.
@@ -144,7 +144,7 @@ def select_candidate_option_strategies(
     expiration = min(item[0] for item in candidates)
     same_expiration = [item for item in candidates if item[0] == expiration]
     sorted_items = sorted(same_expiration, key=lambda item: abs(item[1] - underlying_price))
-    selected_items = sorted_items[:max_candidates]
+    selected_items = sorted_items if max_candidates is None else sorted_items[:max_candidates]
 
     strategies: list[OptionStrategy] = []
     kind = (
@@ -177,12 +177,6 @@ def select_candidate_option_strategies(
             short_pool = [item for item in same_expiration if item[1] < long_strike]
 
         if not short_pool:
-            fallback_kind = (
-                StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
-            )
-            strategies.append(
-                OptionStrategy(kind=fallback_kind, legs=[long_leg], limit_price=long_price)
-            )
             continue
 
         short_item = min(short_pool, key=lambda item: abs(item[1] - long_strike))
@@ -199,12 +193,6 @@ def select_candidate_option_strategies(
             debit = long_price - short_price
 
         if debit <= 0:
-            fallback_kind = (
-                StrategyKind.LONG_CALL if option_type == OptionType.CALL else StrategyKind.LONG_PUT
-            )
-            strategies.append(
-                OptionStrategy(kind=fallback_kind, legs=[long_leg], limit_price=long_price)
-            )
             continue
 
         short_leg = OptionLeg(
@@ -218,6 +206,8 @@ def select_candidate_option_strategies(
         )
         strategies.append(OptionStrategy(kind=kind, legs=[long_leg, short_leg], limit_price=debit))
 
+    if not strategies:
+        raise OptionSelectionError("No option strategy satisfies the requested structure")
     return strategies
 
 

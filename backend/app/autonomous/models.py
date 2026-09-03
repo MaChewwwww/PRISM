@@ -39,6 +39,7 @@ class AutonomousCycleModel(Base):
     )
     symbols_json: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    exit_checks_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     worker_version: Mapped[str] = mapped_column(String(32), nullable=False)
 
 
@@ -149,4 +150,49 @@ class ReconciliationEventModel(Base):
     receipt_id: Mapped[str] = mapped_column(String(36), nullable=False)
     transition: Mapped[str] = mapped_column(String(40), nullable=False)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class StrategyPositionModel(Base):
+    """Durable parent strategy used for marking, deduplication, and atomic exits."""
+
+    __tablename__ = "strategy_positions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)
+    thesis_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    catalyst_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    underlying: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    strategy_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    strategy_json: Mapped[str] = mapped_column(Text, nullable=False)
+    exit_policy_json: Mapped[str] = mapped_column(Text, nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    entry_debit: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    last_liquidation_value: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    current_return_pct: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    mfe_pct: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=Decimal("0"))
+    profit_armed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    score_failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_score_evidence_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_score_evidence_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    exit_latched_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    exit_latched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    parent_exit_receipt_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    last_marked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StrategyLifecycleEventModel(Base):
+    __tablename__ = "strategy_lifecycle_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    strategy_position_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)

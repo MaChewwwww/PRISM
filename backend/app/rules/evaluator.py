@@ -80,6 +80,67 @@ def _rule(
     )
 
 
+def _p2_reason_codes(
+    *,
+    risk: RiskAssessment | None,
+    strategy_valid: bool,
+    regime_ok: bool,
+    iv_rank_ok: bool,
+    economics_bound: bool,
+) -> list[ReasonCode]:
+    """Return only predicates that actually failed in the P2 gate."""
+    reasons: list[ReasonCode] = []
+    if risk is None:
+        reasons.append(ReasonCode.RISK_ASSESSMENT_MISSING)
+    else:
+        if risk.verdict is not RiskVerdict.ACCEPTABLE:
+            reasons.append(ReasonCode.RISK_ASSESSMENT_REJECTED)
+        if not risk.data_fresh:
+            reasons.append(ReasonCode.RISK_DATA_STALE)
+    if not strategy_valid:
+        reasons.append(ReasonCode.INVALID_STRATEGY)
+    if not regime_ok:
+        reasons.append(ReasonCode.MARKET_REGIME_BLOCKED)
+    if not iv_rank_ok:
+        reasons.append(ReasonCode.IV_RANK_LIMIT_BREACH)
+    if not economics_bound:
+        reasons.append(ReasonCode.ECONOMICS_MISMATCH)
+    return reasons
+
+
+def _p4_reason_codes(
+    *,
+    opportunity_score: Decimal,
+    opportunity_threshold: Decimal,
+    net_ev: Decimal,
+    minimum_net_ev: Decimal,
+    reward_risk_ratio: Decimal,
+    minimum_reward_risk: Decimal,
+    market_regime: MarketRegime | None,
+    strategy_leg_count: int,
+    economics_bound: bool,
+) -> list[ReasonCode]:
+    """Return one reason code for each independently failed P4 predicate."""
+    reasons: list[ReasonCode] = []
+    if opportunity_score < opportunity_threshold:
+        reasons.append(ReasonCode.OPPORTUNITY_SCORE_BELOW_FLOOR)
+    if net_ev < minimum_net_ev:
+        reasons.append(
+            ReasonCode.NEGATIVE_EXPECTED_VALUE
+            if net_ev < 0
+            else ReasonCode.EXPECTED_VALUE_BELOW_FLOOR
+        )
+    if reward_risk_ratio < minimum_reward_risk:
+        reasons.append(ReasonCode.REWARD_RISK_BELOW_FLOOR)
+    if market_regime is MarketRegime.CRISIS or (
+        market_regime is MarketRegime.VOLATILE and strategy_leg_count != 2
+    ):
+        reasons.append(ReasonCode.MARKET_REGIME_BLOCKED)
+    if not economics_bound:
+        reasons.append(ReasonCode.ECONOMICS_MISMATCH)
+    return reasons
+
+
 def authorize_proposal(
     proposal: TradeProposal,
     risk: RiskAssessment | None,
@@ -231,9 +292,13 @@ def authorize_proposal(
             RulePriority.P2,
             "P2-RISK-AND-INSTRUMENT",
             risk_ok and strategy_valid and regime_ok and iv_rank_ok and economics_bound,
-            []
-            if risk_ok and strategy_valid and regime_ok and iv_rank_ok and economics_bound
-            else [ReasonCode.RISK_LIMIT_BREACH, ReasonCode.UNSUPPORTED_INSTRUMENT],
+            _p2_reason_codes(
+                risk=risk,
+                strategy_valid=strategy_valid,
+                regime_ok=regime_ok,
+                iv_rank_ok=iv_rank_ok,
+                economics_bound=economics_bound,
+            ),
             "Fresh AI risk, supported structures, and non-crisis regimes are required.",
             snapshot,
         )
@@ -284,28 +349,30 @@ def authorize_proposal(
                 and (market_regime != MarketRegime.VOLATILE or len(proposal.strategy.legs) == 2)
                 and economics_bound
             ),
-            []
-            if bool(
-                _decimal_input(inputs, "opportunity_score", "0")
-                >= profile.opportunity_score_threshold
-                and _decimal_input(inputs, "net_ev_r", "-1") >= params.minimum_net_ev_r
-                and _decimal_input(inputs, "reward_risk_ratio", "0")
-                >= params.minimum_reward_risk_ratio
-                and market_regime != MarketRegime.CRISIS
-                and (market_regime != MarketRegime.VOLATILE or len(proposal.strategy.legs) == 2)
-                and economics_bound
-            )
-            else [ReasonCode.NEGATIVE_EXPECTED_VALUE, ReasonCode.REWARD_RISK_BELOW_FLOOR],
-            "Balanced profile requires opportunity score 84, EV 0.15R, and reward/risk 1.50.",
+            _p4_reason_codes(
+                opportunity_score=_decimal_input(inputs, "opportunity_score", "0"),
+                opportunity_threshold=profile.opportunity_score_threshold,
+                net_ev=_decimal_input(inputs, "net_ev_r", "-1"),
+                minimum_net_ev=params.minimum_net_ev_r,
+                reward_risk_ratio=_decimal_input(inputs, "reward_risk_ratio", "0"),
+                minimum_reward_risk=params.minimum_reward_risk_ratio,
+                market_regime=market_regime,
+                strategy_leg_count=len(proposal.strategy.legs),
+                economics_bound=economics_bound,
+            ),
+            "The active profile opportunity score, EV, and reward/risk thresholds must pass.",
             snapshot,
         )
     )
     exit_policy = proposal.exit_policy
     exit_valid = (
-        exit_policy.take_profit_pct == profile.take_profit_pct
-        and exit_policy.stop_loss_pct == profile.stop_loss_pct
-        and params.take_profit_min_pct <= exit_policy.take_profit_pct <= params.take_profit_max_pct
-        and exit_policy.stop_loss_pct == params.stop_loss_pct
+        exit_policy.profit_arm_pct == params.profit_arm_pct
+        and exit_policy.profit_trailing_giveback_points == params.profit_trailing_giveback_points
+        and exit_policy.hard_take_profit_pct == params.hard_take_profit_pct
+        and exit_policy.hard_stop_loss_pct == params.hard_stop_loss_pct
+        and exit_policy.thesis_failure_cycles == params.thesis_failure_cycles
+        and exit_policy.time_stop_trading_minutes == params.time_stop_trading_minutes
+        and exit_policy.minimum_mfe_pct == params.minimum_mfe_pct
         and params.dte_threshold_min_days
         <= exit_policy.dte_threshold
         <= params.dte_threshold_max_days
@@ -326,7 +393,7 @@ def authorize_proposal(
             []
             if strategy_valid and exit_valid and settings.active_ruleset_version == ruleset.version
             else [ReasonCode.PAYLOAD_MISMATCH],
-            "Profile-bound exit policy, active ruleset, and option payload must validate exactly.",
+            "Ruleset-bound adaptive exit policy and option payload must validate exactly.",
             snapshot,
         )
     )

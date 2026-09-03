@@ -23,6 +23,7 @@ from app.api.models import (
     AutonomousDecisionRead,
     AutonomousExecutionCollection,
     AutonomousExecutionRead,
+    AutonomousExitCheck,
     AutonomousPortfolioLatest,
     AutonomousPortfolioSnapshot,
     AutonomousPositionRead,
@@ -41,6 +42,7 @@ AuthorizationOutcomeValue = Literal["APPROVE", "REJECT", "MODIFIED_PENDING_ACCEP
 ExecutionReceiptStatus = Literal[
     "pending", "submitted", "reconciling", "rejected", "filled", "failed"
 ]
+ExecutionOperationValue = Literal["entry", "exit"]
 
 
 def _uuid(value: str) -> UUID:
@@ -75,6 +77,34 @@ def cycle_read(row: AutonomousCycleModel) -> AutonomousCycleRead:
     except (TypeError, json.JSONDecodeError):
         decoded_symbols = []
     symbols = [str(symbol).upper() for symbol in decoded_symbols if isinstance(symbol, str)]
+    exit_checks: list[AutonomousExitCheck] = []
+    try:
+        raw_exit_checks = getattr(row, "exit_checks_json", None)
+        decoded_exit_checks = json.loads(raw_exit_checks) if raw_exit_checks else []
+    except (TypeError, json.JSONDecodeError):
+        decoded_exit_checks = []
+    if isinstance(decoded_exit_checks, list):
+        for item in decoded_exit_checks:
+            if not isinstance(item, dict):
+                continue
+            result = item.get("result")
+            reason = item.get("reason")
+            if result not in {"exit", "hold", "exit_failed", "exit_pending"}:
+                continue
+            if reason not in {
+                "pnl_threshold",
+                "max_hold_days",
+                "dte_threshold",
+                "no_exit_condition",
+            }:
+                continue
+            exit_checks.append(
+                AutonomousExitCheck(
+                    symbol=str(item.get("symbol", "UNKNOWN")).upper(),
+                    result=result,
+                    reason=reason,
+                )
+            )
     return AutonomousCycleRead(
         id=_uuid(row.id),
         started_at=_utc(row.started_at),
@@ -82,6 +112,7 @@ def cycle_read(row: AutonomousCycleModel) -> AutonomousCycleRead:
         outcome=row.outcome,
         symbols=symbols,
         reason=row.reason,
+        exit_checks=exit_checks,
         worker_version=row.worker_version,
     )
 
@@ -142,7 +173,11 @@ def execution_read(row: ExecutionReceiptModel) -> AutonomousExecutionRead:
     return AutonomousExecutionRead(
         id=_uuid(row.id),
         trace_id=_uuid(row.trace_id),
-        proposal_id=_uuid(row.proposal_id),
+        proposal_id=_uuid(row.proposal_id) if row.proposal_id else None,
+        operation=cast(ExecutionOperationValue, getattr(row, "operation", "entry")),
+        symbol=getattr(row, "symbol", None),
+        exit_reason=getattr(row, "exit_reason", None),
+        requested_quantity=getattr(row, "requested_quantity", None),
         status=cast(ExecutionReceiptStatus, row.status),
         filled_quantity=row.filled_quantity,
         filled_average_price=row.filled_average_price,

@@ -395,6 +395,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/presentation/alternatives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alternatives
+         * @description Project recorded ShadowFund sessions through the documented read model.
+         */
+        get: operations["alternatives_api_v1_presentation_alternatives_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/profiles/activate-post-analysis": {
         parameters: {
             query?: never;
@@ -684,16 +704,6 @@ export interface components {
              * Format: decimal-string
              */
             opportunity_score_threshold: number | string;
-            /**
-             * Stop Loss Pct
-             * Format: decimal-string
-             */
-            stop_loss_pct: number | string;
-            /**
-             * Take Profit Pct
-             * Format: decimal-string
-             */
-            take_profit_pct: number | string;
             /**
              * Target Position Size Pct
              * Format: decimal-string
@@ -1258,6 +1268,8 @@ export interface components {
         AutonomousCycleRead: {
             /** Completed At */
             completed_at: string | null;
+            /** Exit Checks */
+            exit_checks: components["schemas"]["AutonomousExitCheck"][];
             /**
              * Id
              * Format: uuid
@@ -1352,6 +1364,8 @@ export interface components {
             created_at: string;
             /** Error Code */
             error_code?: string | null;
+            /** Exit Reason */
+            exit_reason?: ("pnl_threshold" | "max_hold_days" | "dte_threshold" | "hackathon_force_flatten") | null;
             /** Filled Average Price */
             filled_average_price?: string | null;
             /**
@@ -1365,12 +1379,16 @@ export interface components {
              */
             id: string;
             /**
-             * Proposal Id
-             * Format: uuid
+             * Operation
+             * @enum {string}
              */
-            proposal_id: string;
+            operation: "entry" | "exit";
+            /** Proposal Id */
+            proposal_id?: string | null;
             /** Reconciled At */
             reconciled_at?: string | null;
+            /** Requested Quantity */
+            requested_quantity?: string | null;
             /**
              * Status
              * @enum {string}
@@ -1378,11 +1396,31 @@ export interface components {
             status: "pending" | "submitted" | "reconciling" | "rejected" | "filled" | "failed";
             /** Submitted At */
             submitted_at?: string | null;
+            /** Symbol */
+            symbol?: string | null;
             /**
              * Trace Id
              * Format: uuid
              */
             trace_id: string;
+        };
+        /**
+         * AutonomousExitCheck
+         * @description Safe evidence for a mandatory position-exit decision.
+         */
+        AutonomousExitCheck: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "pnl_threshold" | "max_hold_days" | "dte_threshold" | "no_exit_condition";
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "exit" | "hold" | "exit_failed" | "exit_pending";
+            /** Symbol */
+            symbol: string;
         };
         /** AutonomousPortfolioLatest */
         AutonomousPortfolioLatest: {
@@ -1817,6 +1855,24 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /** ExecutionLegState */
+        ExecutionLegState: {
+            /**
+             * Position Intent
+             * @enum {string}
+             */
+            position_intent: "buy_to_open" | "buy_to_close" | "sell_to_open" | "sell_to_close";
+            /** Ratio Qty */
+            ratio_qty: number;
+            status: components["schemas"]["ExecutionStatus"];
+            /** Symbol */
+            symbol: string;
+        };
+        /**
+         * ExecutionOperation
+         * @enum {string}
+         */
+        ExecutionOperation: "entry" | "exit";
         /** ExecutionReceipt */
         ExecutionReceipt: {
             /**
@@ -1841,6 +1897,8 @@ export interface components {
              * @default null
              */
             error_message: string | null;
+            /** @default null */
+            exit_reason: components["schemas"]["ExitReason"] | null;
             /**
              * Filled Average Price
              * @default null
@@ -1857,18 +1915,27 @@ export interface components {
              * Format: uuid
              */
             id?: string;
+            /** Legs */
+            legs?: components["schemas"]["ExecutionLegState"][];
+            /** @default entry */
+            operation: components["schemas"]["ExecutionOperation"];
             /** Payload Digest */
             payload_digest: string;
             /**
              * Proposal Id
-             * Format: uuid
+             * @default null
              */
-            proposal_id: string;
+            proposal_id: string | null;
             /**
              * Reconciled At
              * @default null
              */
             reconciled_at: string | null;
+            /**
+             * Requested Quantity
+             * @default null
+             */
+            requested_quantity: (number | string) | null;
             /**
              * Schema Version
              * @default 1.0
@@ -1877,10 +1944,20 @@ export interface components {
             schema_version: "1.0";
             status: components["schemas"]["ExecutionStatus"];
             /**
+             * Strategy Position Id
+             * @default null
+             */
+            strategy_position_id: string | null;
+            /**
              * Submitted At
              * @default null
              */
             submitted_at: string | null;
+            /**
+             * Symbol
+             * @default null
+             */
+            symbol: string | null;
             /**
              * Trace Id
              * Format: uuid
@@ -1900,23 +1977,56 @@ export interface components {
              */
             dte_threshold: number;
             /**
+             * Hard Stop Loss Pct
+             * Format: decimal-string
+             * @default 50.0
+             */
+            hard_stop_loss_pct: number | string;
+            /**
+             * Hard Take Profit Pct
+             * Format: decimal-string
+             * @default 40.0
+             */
+            hard_take_profit_pct: number | string;
+            /**
              * Max Hold Days
              * @default 14
              */
             max_hold_days: number;
             /**
-             * Stop Loss Pct
+             * Minimum Mfe Pct
              * Format: decimal-string
-             * @default 50.0
+             * @default 10.0
              */
-            stop_loss_pct: number | string;
+            minimum_mfe_pct: number | string;
             /**
-             * Take Profit Pct
+             * Profit Arm Pct
              * Format: decimal-string
-             * @default 75.0
+             * @default 20.0
              */
-            take_profit_pct: number | string;
+            profit_arm_pct: number | string;
+            /**
+             * Profit Trailing Giveback Points
+             * Format: decimal-string
+             * @default 10.0
+             */
+            profit_trailing_giveback_points: number | string;
+            /**
+             * Thesis Failure Cycles
+             * @default 2
+             */
+            thesis_failure_cycles: number;
+            /**
+             * Time Stop Trading Minutes
+             * @default 390
+             */
+            time_stop_trading_minutes: number;
         };
+        /**
+         * ExitReason
+         * @enum {string}
+         */
+        ExitReason: "pnl_threshold" | "hard_stop_loss" | "opposite_direction" | "thesis_invalidated" | "trailing_profit" | "hard_take_profit" | "stagnation_time_stop" | "max_hold_days" | "dte_threshold" | "hackathon_force_flatten";
         /** ExposureItem */
         ExposureItem: {
             /** Label */
@@ -2417,6 +2527,16 @@ export interface components {
             model_name: string;
             /** Prompt Version */
             prompt_version: string;
+            /**
+             * Provider Observed At
+             * @default null
+             */
+            provider_observed_at: string | null;
+            /**
+             * Published At
+             * @default null
+             */
+            published_at: string | null;
             /** Rationale */
             rationale: string;
             /** Raw Digest */
@@ -3128,16 +3248,6 @@ export interface components {
              */
             opportunity_score_threshold: string;
             /**
-             * Stop Loss Pct
-             * Format: decimal-string
-             */
-            stop_loss_pct: string;
-            /**
-             * Take Profit Pct
-             * Format: decimal-string
-             */
-            take_profit_pct: string;
-            /**
              * Target Position Size Pct
              * Format: decimal-string
              */
@@ -3365,7 +3475,7 @@ export interface components {
          * ReasonCode
          * @enum {string}
          */
-        ReasonCode: "RULESET_NOT_CONFIGURED" | "STALE_DATA" | "OUTSIDE_TRADING_WINDOW" | "HACKATHON_ENTRY_CUTOFF" | "HACKATHON_FORCE_FLATTEN" | "HACKATHON_SCORING_WINDOW" | "EXPIRY_ASSIGNMENT_RISK" | "DRAWDOWN_CAUTION" | "DRAWDOWN_DEFENSIVE" | "DRAWDOWN_HALT" | "CASH_BUFFER_BREACH" | "TICKER_CONCENTRATION_BREACH" | "HIGH_IV_SINGLE_LEG_PROHIBITED" | "RISK_LIMIT_BREACH" | "LIQUIDITY_LIMIT_BREACH" | "NEGATIVE_EXPECTED_VALUE" | "REWARD_RISK_BELOW_FLOOR" | "PAYLOAD_MISMATCH" | "PROFILE_OUT_OF_BOUNDS" | "UNSUPPORTED_INSTRUMENT";
+        ReasonCode: "RULESET_NOT_CONFIGURED" | "STALE_DATA" | "OUTSIDE_TRADING_WINDOW" | "HACKATHON_ENTRY_CUTOFF" | "HACKATHON_FORCE_FLATTEN" | "HACKATHON_SCORING_WINDOW" | "EXPIRY_ASSIGNMENT_RISK" | "DRAWDOWN_CAUTION" | "DRAWDOWN_DEFENSIVE" | "DRAWDOWN_HALT" | "CASH_BUFFER_BREACH" | "TICKER_CONCENTRATION_BREACH" | "HIGH_IV_SINGLE_LEG_PROHIBITED" | "RISK_LIMIT_BREACH" | "RISK_ASSESSMENT_MISSING" | "RISK_ASSESSMENT_REJECTED" | "RISK_DATA_STALE" | "LIQUIDITY_LIMIT_BREACH" | "MARKET_REGIME_BLOCKED" | "IV_RANK_LIMIT_BREACH" | "INVALID_STRATEGY" | "ECONOMICS_MISMATCH" | "OPPORTUNITY_SCORE_BELOW_FLOOR" | "EXPECTED_VALUE_BELOW_FLOOR" | "NEGATIVE_EXPECTED_VALUE" | "REWARD_RISK_BELOW_FLOOR" | "PAYLOAD_MISMATCH" | "PROFILE_OUT_OF_BOUNDS" | "UNSUPPORTED_INSTRUMENT";
         /**
          * RecommendationState
          * @enum {string}
@@ -3394,6 +3504,16 @@ export interface components {
              * @default 50.0
              */
             analog_similarity_score: number | string;
+            /**
+             * Calculation Window End
+             * @default null
+             */
+            calculation_window_end: string | null;
+            /**
+             * Calculation Window Start
+             * @default null
+             */
+            calculation_window_start: string | null;
             /**
              * Catalyst Decay Factor
              * Format: decimal-string
@@ -3425,6 +3545,11 @@ export interface components {
              * @default 0.0
              */
             event_age_hours: number | string;
+            /**
+             * Event Published At
+             * @default null
+             */
+            event_published_at: string | null;
             /** Evidence */
             evidence: components["schemas"]["EvidenceItem"][];
             /**
@@ -3467,6 +3592,11 @@ export interface components {
             /** Limitations */
             limitations?: string[];
             /**
+             * Methodology Version
+             * @default reaction_event_aligned_v2
+             */
+            methodology_version: string;
+            /**
              * Opportunity Score
              * @default null
              */
@@ -3476,6 +3606,11 @@ export interface components {
              * @default null
              */
             options_implied_move_pct: (number | string) | null;
+            /**
+             * Provider Observed At
+             * @default null
+             */
+            provider_observed_at: string | null;
             /**
              * Reaction Gap Pct
              * @default null
@@ -3946,6 +4081,21 @@ export interface components {
              */
             analog_count: number;
             /**
+             * Bearish Opportunity Score
+             * Format: decimal-string
+             */
+            bearish_opportunity_score: number | string;
+            /**
+             * Bullish Opportunity Score
+             * Format: decimal-string
+             */
+            bullish_opportunity_score: number | string;
+            /**
+             * Catalyst Digest
+             * @default null
+             */
+            catalyst_digest: string | null;
+            /**
              * Composite Opportunity Score
              * Format: decimal-string
              */
@@ -3986,11 +4136,6 @@ export interface components {
             /** Key Risks */
             key_risks?: string[];
             /**
-             * Net Ev R
-             * Format: decimal-string
-             */
-            net_ev_r: number | string;
-            /**
              * Options Only Constraint Acknowledged
              * @default true
              */
@@ -4008,16 +4153,16 @@ export interface components {
             provenance: "live_research" | "historical_simulation" | "illustrative_fixture";
             recommended_structure: components["schemas"]["OptionStructure"];
             /**
-             * Reward Risk Ratio
-             * Format: decimal-string
-             */
-            reward_risk_ratio: number | string;
-            /**
              * Schema Version
              * @default 1.0
              * @constant
              */
             schema_version: "1.0";
+            /**
+             * Scoring Methodology Version
+             * @default directional_composite_v2
+             */
+            scoring_methodology_version: string;
             /** @default null */
             shadow_alternative_intent: components["schemas"]["ShadowAlternativeIntent"] | null;
             specialist_scores: components["schemas"]["SpecialistScores"];
@@ -4044,6 +4189,11 @@ export interface components {
         TradeDirection: "bullish" | "bearish" | "neutral";
         /** TradeProposal */
         TradeProposal: {
+            /**
+             * Catalyst Digest
+             * @default null
+             */
+            catalyst_digest: string | null;
             /**
              * Created At
              * Format: date-time
@@ -4089,6 +4239,11 @@ export interface components {
             strategy: components["schemas"]["OptionStrategy"];
             /** Symbol */
             symbol: string;
+            /**
+             * Thesis Key
+             * @default null
+             */
+            thesis_key: string | null;
             /**
              * Trace Id
              * Format: uuid
@@ -4961,6 +5116,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationEnvelope_WeeklySummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alternatives_api_v1_presentation_alternatives_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                prism_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationEnvelope_AlternativeCollection_"];
                 };
             };
             /** @description Validation Error */

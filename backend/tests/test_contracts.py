@@ -215,27 +215,31 @@ def test_frs_027_exit_policy_validation() -> None:
     from app.contracts import ExitPolicy
 
     policy = ExitPolicy()
-    assert policy.take_profit_pct == Decimal("75.0")
-    assert policy.stop_loss_pct == Decimal("50.0")
+    assert policy.profit_arm_pct == Decimal("20.0")
+    assert policy.profit_trailing_giveback_points == Decimal("10.0")
+    assert policy.hard_take_profit_pct == Decimal("40.0")
+    assert policy.hard_stop_loss_pct == Decimal("50.0")
     assert policy.dte_threshold == 7
     assert policy.max_hold_days == 14
 
     custom_policy = ExitPolicy(
-        take_profit_pct=Decimal("85.0"),
-        stop_loss_pct=Decimal("50.0"),
+        profit_arm_pct=Decimal("25.0"),
+        profit_trailing_giveback_points=Decimal("12.0"),
+        hard_take_profit_pct=Decimal("45.0"),
+        hard_stop_loss_pct=Decimal("50.0"),
         dte_threshold=5,
         max_hold_days=10,
     )
-    assert custom_policy.take_profit_pct == Decimal("85.0")
-    assert custom_policy.stop_loss_pct == Decimal("50.0")
+    assert custom_policy.profit_arm_pct == Decimal("25.0")
+    assert custom_policy.hard_take_profit_pct == Decimal("45.0")
     assert custom_policy.dte_threshold == 5
     assert custom_policy.max_hold_days == 10
 
     # Values outside the BA-authorized bounds fail.
     with pytest.raises(ValidationError):
-        ExitPolicy(take_profit_pct=Decimal("74.9"))
+        ExitPolicy(profit_arm_pct=Decimal("40"), hard_take_profit_pct=Decimal("40"))
     with pytest.raises(ValidationError):
-        ExitPolicy(stop_loss_pct=Decimal("49.9"))
+        ExitPolicy(hard_stop_loss_pct=Decimal("49.9"))
 
     # DTE threshold below the authorized two-day floor fails.
     with pytest.raises(ValidationError):
@@ -597,17 +601,12 @@ def test_trade_decision_report_enriched_fields() -> None:
         direction=TradeDirection.BULLISH,
         recommended_structure=OptionStructure.BULL_CALL_SPREAD,
         composite_opportunity_score=Decimal("86.5"),
-        net_ev_r=Decimal("0.42"),
-        reward_risk_ratio=Decimal("2.10"),
+        bullish_opportunity_score=Decimal("86.5"),
+        bearish_opportunity_score=Decimal("13.5"),
         confidence_score=Decimal("88.0"),
         current_price=Decimal("225.50"),
         target_price=Decimal("240.00"),
-        exit_policy=ExitPolicy(
-            take_profit_pct=Decimal("75.0"),
-            stop_loss_pct=Decimal("50.0"),
-            dte_threshold=7,
-            max_hold_days=14,
-        ),
+        exit_policy=ExitPolicy(dte_threshold=7, max_hold_days=14),
         specialist_scores=SpecialistScores(
             reaction_opportunity_score=Decimal("85.0"),
             quant_momentum_score=Decimal("88.0"),

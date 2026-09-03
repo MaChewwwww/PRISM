@@ -84,6 +84,11 @@ class ResearchReport(ContractBase):
     event_age_hours: DecimalString = Decimal("0.0")
     catalyst_decay_factor: DecimalString = Decimal("1.0")
     catalyst_decay_status: CatalystDecayStatus = CatalystDecayStatus.FRESH_CATALYST
+    event_published_at: datetime | None = None
+    provider_observed_at: datetime | None = None
+    calculation_window_start: datetime | None = None
+    calculation_window_end: datetime | None = None
+    methodology_version: str = "reaction_event_aligned_v2"
 
 
 class OptionSide(StrEnum):
@@ -132,10 +137,23 @@ class OptionStrategy(BaseModel):
 
 class ExitPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    take_profit_pct: DecimalString = Field(default=Decimal("75.0"), ge=75, le=100)
-    stop_loss_pct: DecimalString = Field(default=Decimal("50.0"), ge=50, le=50)
+    profit_arm_pct: DecimalString = Field(default=Decimal("20.0"), ge=0)
+    profit_trailing_giveback_points: DecimalString = Field(default=Decimal("10.0"), gt=0)
+    hard_take_profit_pct: DecimalString = Field(default=Decimal("40.0"), gt=0)
+    hard_stop_loss_pct: DecimalString = Field(default=Decimal("50.0"), ge=50, le=50)
+    thesis_failure_cycles: int = Field(default=2, ge=1)
+    time_stop_trading_minutes: int = Field(default=390, ge=1)
+    minimum_mfe_pct: DecimalString = Field(default=Decimal("10.0"), ge=0)
     dte_threshold: int = Field(default=7, ge=2, le=14)
     max_hold_days: int = Field(default=14, ge=3, le=45)
+
+    @model_validator(mode="after")
+    def validate_adaptive_profit_policy(self) -> ExitPolicy:
+        if self.profit_arm_pct >= self.hard_take_profit_pct:
+            raise ValueError("profit arm must be below hard take-profit")
+        if self.profit_trailing_giveback_points >= self.profit_arm_pct:
+            raise ValueError("trailing giveback must be below profit arm")
+        return self
 
 
 class ShadowCandidate(BaseModel):
@@ -173,6 +191,8 @@ class TradeProposal(ContractBase):
     shadow_candidates: list[ShadowCandidate] = Field(default_factory=list)
     option_economics: OptionPayoffEconomics | None = None
     research_bundle_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    catalyst_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    thesis_key: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     proposal_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
@@ -220,7 +240,16 @@ class ReasonCode(StrEnum):
     TICKER_CONCENTRATION_BREACH = "TICKER_CONCENTRATION_BREACH"
     HIGH_IV_SINGLE_LEG_PROHIBITED = "HIGH_IV_SINGLE_LEG_PROHIBITED"
     RISK_LIMIT_BREACH = "RISK_LIMIT_BREACH"
+    RISK_ASSESSMENT_MISSING = "RISK_ASSESSMENT_MISSING"
+    RISK_ASSESSMENT_REJECTED = "RISK_ASSESSMENT_REJECTED"
+    RISK_DATA_STALE = "RISK_DATA_STALE"
     LIQUIDITY_LIMIT_BREACH = "LIQUIDITY_LIMIT_BREACH"
+    MARKET_REGIME_BLOCKED = "MARKET_REGIME_BLOCKED"
+    IV_RANK_LIMIT_BREACH = "IV_RANK_LIMIT_BREACH"
+    INVALID_STRATEGY = "INVALID_STRATEGY"
+    ECONOMICS_MISMATCH = "ECONOMICS_MISMATCH"
+    OPPORTUNITY_SCORE_BELOW_FLOOR = "OPPORTUNITY_SCORE_BELOW_FLOOR"
+    EXPECTED_VALUE_BELOW_FLOOR = "EXPECTED_VALUE_BELOW_FLOOR"
     NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
     REWARD_RISK_BELOW_FLOOR = "REWARD_RISK_BELOW_FLOOR"
     PAYLOAD_MISMATCH = "PAYLOAD_MISMATCH"
@@ -317,12 +346,47 @@ class ExecutionStatus(StrEnum):
     FAILED = "failed"
 
 
+class ExecutionOperation(StrEnum):
+    ENTRY = "entry"
+    EXIT = "exit"
+
+
+class ExitReason(StrEnum):
+    PNL_THRESHOLD = "pnl_threshold"
+    HARD_STOP_LOSS = "hard_stop_loss"
+    OPPOSITE_DIRECTION = "opposite_direction"
+    THESIS_INVALIDATED = "thesis_invalidated"
+    TRAILING_PROFIT = "trailing_profit"
+    HARD_TAKE_PROFIT = "hard_take_profit"
+    STAGNATION_TIME_STOP = "stagnation_time_stop"
+    MAX_HOLD_DAYS = "max_hold_days"
+    DTE_THRESHOLD = "dte_threshold"
+    HACKATHON_FORCE_FLATTEN = "hackathon_force_flatten"
+
+
+class ExecutionLegState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str
+    ratio_qty: int = Field(ge=1)
+    position_intent: Literal["buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"]
+    status: ExecutionStatus
+
+
 class ExecutionReceipt(ContractBase):
-    proposal_id: UUID
+    # Mandatory exits are position-level actions and therefore have no
+    # proposal/authorization binding. Entry receipts retain their proposal ID.
+    proposal_id: UUID | None = None
     client_order_id: str
     broker_order_id: str | None = None
     payload_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
     status: ExecutionStatus
+    operation: ExecutionOperation = ExecutionOperation.ENTRY
+    symbol: str | None = None
+    exit_reason: ExitReason | None = None
+    requested_quantity: DecimalString | None = None
+    strategy_position_id: UUID | None = None
+    legs: list[ExecutionLegState] = Field(default_factory=list)
     filled_quantity: DecimalString = Decimal("0")
     filled_average_price: DecimalString | None = None
     error_code: str | None = None
@@ -390,8 +454,6 @@ class AIProfileParameters(BaseModel):
 
     target_position_size_pct: DecimalString = Field(ge=Decimal("1.5"), le=Decimal("2.5"))
     opportunity_score_threshold: DecimalString = Field(ge=75, le=95)
-    take_profit_pct: DecimalString = Field(ge=75, le=100)
-    stop_loss_pct: DecimalString = Field(ge=50, le=50)
 
 
 class AIProfile(ContractBase):
@@ -522,6 +584,8 @@ class LLMEventAnalysis(ContractBase):
     source: str = "unknown"
     source_confidence: DecimalString = Field(default=Decimal("50.0"), ge=0, le=100)
     event_age_seconds: int = Field(default=0, ge=0)
+    published_at: datetime | None = None
+    provider_observed_at: datetime | None = None
     event_category: NewsEventCategory = NewsEventCategory.OTHER
     event_type: str = "other"
     catalyst_materiality: CatalystMateriality = CatalystMateriality.MEDIUM
@@ -919,8 +983,8 @@ class TradeDecisionReport(ContractBase):
     direction: TradeDirection
     recommended_structure: OptionStructure
     composite_opportunity_score: DecimalString = Field(ge=0, le=100)
-    net_ev_r: DecimalString
-    reward_risk_ratio: DecimalString
+    bullish_opportunity_score: DecimalString = Field(ge=0, le=100)
+    bearish_opportunity_score: DecimalString = Field(ge=0, le=100)
     confidence_score: DecimalString = Field(ge=0, le=100)
     current_price: DecimalString = Field(ge=0)
     target_price: DecimalString | None = None
@@ -939,6 +1003,8 @@ class TradeDecisionReport(ContractBase):
     )
     evidence_freshness_seconds: int | None = Field(default=None, ge=0)
     analog_count: int = Field(default=0, ge=0)
+    catalyst_digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    scoring_methodology_version: str = "directional_composite_v2"
 
 
 class NoTradeDecision(ContractBase):

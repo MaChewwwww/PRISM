@@ -12,7 +12,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Literal, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from sqlalchemy import select
@@ -61,20 +61,18 @@ class ProfileGovernanceService:
     async def get_preference(
         self, session: AsyncSession, operator_id: str
     ) -> CalibrationPreferenceModel:
+        """Return the persisted preference or a non-persistent manual default."""
+
         preference = await session.get(CalibrationPreferenceModel, operator_id)
         if preference is not None:
             return preference
-        now = datetime.now(UTC)
-        preference = CalibrationPreferenceModel(
+        return CalibrationPreferenceModel(
             operator_id=operator_id,
-            mode="automatic",
-            updated_at=now,
-            updated_by="registry-seed",
-            automatic_opt_in=True,
+            mode="manual",
+            updated_at=datetime.now(UTC),
+            updated_by="non-persistent-default",
+            automatic_opt_in=False,
         )
-        session.add(preference)
-        await session.flush()
-        return preference
 
     async def set_preference(
         self, session: AsyncSession, *, operator_id: str, mode: CalibrationMode
@@ -85,6 +83,7 @@ class ProfileGovernanceService:
         preference.automatic_opt_in = mode == "automatic"
         preference.updated_at = now
         preference.updated_by = operator_id
+        session.add(preference)
         await self._audit(
             session,
             actor=operator_id,
@@ -102,21 +101,30 @@ class ProfileGovernanceService:
             .limit(1)
         )
         if row is None:
-            row = await self._seed_baseline(session)
+            ruleset = get_authorized_ruleset()
+            key = ruleset.default_profile
+            return ActiveProfile(
+                id=uuid5(NAMESPACE_URL, f"{ruleset.ruleset_id}:{key}:2"),
+                profile_key=key,
+                version=2,
+                parameters=ruleset.profiles[key],
+                activation_mode="manual",
+            )
         try:
             ruleset = get_authorized_ruleset()
             if row.ruleset_id != ruleset.ruleset_id or row.ruleset_version != ruleset.version:
                 raise ProfileGovernanceError(
                     "Active profile is incompatible with the active ruleset"
                 )
-            key = row.profile_key
-            if key not in {"conservative", "balanced", "aggressive"}:
+            raw_key = row.profile_key
+            if raw_key not in {"conservative", "balanced", "aggressive"}:
                 raise ProfileGovernanceError("Active profile key is not authorized")
+            key = cast(Literal["conservative", "balanced", "aggressive"], raw_key)
             parameters = _parse_parameters(row.parameters_json)
             self._validate_bounds(parameters)
             return ActiveProfile(
                 id=UUID(row.id),
-                profile_key=key,  # type: ignore[arg-type]
+                profile_key=key,
                 version=row.version,
                 parameters=parameters,
                 activation_mode=row.activation_mode,  # type: ignore[arg-type]
@@ -264,44 +272,6 @@ class ProfileGovernanceService:
         return await self.activate_post_analysis_batch(
             session, batch_id=batch_id, actor=operator_id, mode="automatic"
         )
-
-    async def _seed_baseline(self, session: AsyncSession) -> AIProfileModel:
-        ruleset = get_authorized_ruleset()
-        now = datetime.now(UTC)
-        key = ruleset.default_profile
-        parameters = ruleset.profiles[key]
-        payload = {
-            "seed": "authorized_registry",
-            "profile_key": key,
-            "version": 1,
-            "ruleset": f"{ruleset.ruleset_id}@{ruleset.version}",
-            "parameters": parameters.model_dump(mode="json"),
-        }
-        row = AIProfileModel(
-            id=str(uuid5(NAMESPACE_URL, f"{ruleset.ruleset_id}:{key}:1")),
-            profile_key=key,
-            version=1,
-            status="active",
-            ruleset_id=ruleset.ruleset_id,
-            ruleset_version=ruleset.version,
-            activation_mode="manual",
-            created_at=now,
-            effective_at=now,
-            activated_by="registry-seed",
-            source_batch_id=None,
-            parameters_json=_serialize_parameters(parameters),
-            input_digest=_digest(payload),
-        )
-        session.add(row)
-        await session.flush()
-        await self._audit(
-            session,
-            actor="registry-seed",
-            event_type="BASELINE_PROFILE_SEEDED",
-            aggregate_id=row.id,
-            payload=payload,
-        )
-        return row
 
     @staticmethod
     def _validate_bounds(parameters: ProfileParameters) -> None:

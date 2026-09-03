@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Overview dashboard styles (PRISM Overview screen).
  *
  * Feature-scoped, NOT reusable: these classes only style the Overview
@@ -39,6 +39,7 @@
     "header header"
     "main   side"
     "ticker ticker";
+  align-items: start;
   min-height: calc(100vh - 1.5rem);
   height: auto;
   min-height: 0;
@@ -1137,7 +1138,7 @@
 
 /* ---- Overview restructure additions ---- */
 
-/* Chart gets the most room; decisions compact; recommendations fill the rest. */
+/* Chart and recommendations size around their actual content; decisions compact. */
 .overview-main {
   display: flex;
   flex-direction: column;
@@ -1145,11 +1146,11 @@
 }
 .overview-main .overview-chart-panel,
 .overview-main > div:first-child {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
 }
 .overview-recos-panel {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
 }
 

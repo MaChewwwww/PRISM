@@ -27,8 +27,9 @@ def test_authorized_ruleset_matches_balanced_day_one_baseline() -> None:
     assert ruleset.status == "active"
     assert str(ruleset.profiles["balanced"].target_position_size_pct) == "2.00"
     assert str(ruleset.profiles["balanced"].opportunity_score_threshold) == "78"
-    assert str(ruleset.profiles["balanced"].take_profit_pct) == "75.00"
-    assert str(ruleset.profiles["balanced"].stop_loss_pct) == "50.00"
+    assert str(ruleset.parameters.profit_arm_pct) == "20.00"
+    assert str(ruleset.parameters.hard_take_profit_pct) == "40.00"
+    assert str(ruleset.parameters.hard_stop_loss_pct) == "50.00"
 
 
 def test_authorization_summary_uses_recorded_shadow_symbol_when_proposal_is_missing() -> None:
@@ -45,15 +46,19 @@ def test_authorization_summary_uses_recorded_shadow_symbol_when_proposal_is_miss
     assert "proposal payload unavailable" in summary.summary
 
 
-def test_monitoring_routes_require_authentication_and_presentation_routes_are_absent() -> None:
+def test_monitoring_and_presentation_alternatives_routes_require_authentication() -> None:
     settings = Settings(_env_file=None)
     app.dependency_overrides[get_settings] = lambda: settings
     with TestClient(app) as client:
         response = client.get("/api/v1/monitoring/overview", params={"from": FROM, "to": TO})
         assert response.status_code == 401
+        presentation_unauthenticated = client.get(
+            "/api/v1/presentation/alternatives", params={"from": FROM, "to": TO}
+        )
+        assert presentation_unauthenticated.status_code == 401
         _login(client, settings)
-        removed = client.get("/api/v1/presentation/overview", params={"from": FROM, "to": TO})
-        assert removed.status_code == 404
+        alternatives = client.get("/api/v1/presentation/alternatives")
+        assert alternatives.status_code == 422
     app.dependency_overrides.clear()
 
 

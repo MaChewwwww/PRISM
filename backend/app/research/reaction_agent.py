@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import math
+from contextlib import suppress
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Literal
@@ -152,6 +153,9 @@ def compute_reaction_metrics(
     expected_reaction_pct: Decimal | float | None = None,
     event_age_seconds: int = 0,
     event_category: NewsEventCategory = NewsEventCategory.OTHER,
+    event_published_at: datetime | None = None,
+    current_market_price: Decimal | None = None,
+    current_market_observed_at: datetime | None = None,
 ) -> dict[str, Any]:
     """Deterministically compute reaction gap, direction-adjusted gap, analogs, and decay."""
     exp_dec = (
@@ -190,10 +194,53 @@ def compute_reaction_metrics(
             "catalyst_decay_status": decay_status,
         }
 
-    pre_price = Decimal(str(bars[0]["close"]))
+    normalized_bars: list[dict[str, Any]] = []
+    for bar in bars:
+        timestamp = bar.get("timestamp")
+        if isinstance(timestamp, str):
+            with suppress(ValueError):
+                timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        if (
+            isinstance(timestamp, datetime)
+            and timestamp.tzinfo is not None
+            and bar.get("close") is not None
+        ):
+            normalized_bars.append({**bar, "timestamp": timestamp.astimezone(UTC)})
+    normalized_bars.sort(key=lambda bar: bar["timestamp"])
+    if not normalized_bars:
+        raise ValueError("timestamped market bars are required for reaction analysis")
+    event_timestamp = (
+        event_published_at.astimezone(UTC)
+        if event_published_at is not None and event_published_at.tzinfo is not None
+        else None
+    )
+    has_event_timestamp = event_timestamp is not None
+    event_at = (
+        event_timestamp if has_event_timestamp else normalized_bars[-1]["timestamp"].astimezone(UTC)
+    )
+    pre_event_bars = (
+        [bar for bar in normalized_bars if bar["timestamp"].astimezone(UTC) < event_at]
+        if has_event_timestamp
+        else [normalized_bars[0]]
+    )
+    if not pre_event_bars:
+        raise ValueError("no point-in-time pre-event market bar is available")
+    baseline_bar = pre_event_bars[-1]
+    pre_price = Decimal(str(baseline_bar["close"]))
     if pre_price <= 0:
         raise ValueError("market bar close must be positive")
-    current_price = Decimal(str(bars[-1]["close"]))
+    current_price = (
+        current_market_price
+        if current_market_price is not None
+        else Decimal(str(normalized_bars[-1]["close"]))
+    )
+    if current_price <= 0:
+        raise ValueError("current market price must be positive")
+    calculation_end = (
+        current_market_observed_at.astimezone(UTC)
+        if current_market_observed_at is not None and current_market_observed_at.tzinfo is not None
+        else normalized_bars[-1]["timestamp"].astimezone(UTC)
+    )
 
     actual_reaction = ((current_price - pre_price) / pre_price) * Decimal("100.0")
 
@@ -250,6 +297,11 @@ def compute_reaction_metrics(
         "event_age_hours": age_hours,
         "catalyst_decay_factor": decay_factor,
         "catalyst_decay_status": decay_status,
+        "event_published_at": event_at,
+        "provider_observed_at": calculation_end,
+        "calculation_window_start": baseline_bar["timestamp"].astimezone(UTC),
+        "calculation_window_end": calculation_end,
+        "methodology_version": "reaction_event_aligned_v2",
     }
 
 
@@ -274,6 +326,9 @@ class MarketReactionAgent:
         strict: bool = False,
         evaluation_at: datetime | None = None,
         market_observed_at: datetime | None = None,
+        event_published_at: datetime | None = None,
+        current_market_price: Decimal | None = None,
+        provider_observed_at: datetime | None = None,
     ) -> ResearchReport:
         """Evaluate the market reaction and produce a formal ResearchReport contract."""
         active_model = self.llm_gateway._settings.llm_model or "default"
@@ -351,6 +406,14 @@ class MarketReactionAgent:
                         catalyst_decay_factor=getattr(cached, "catalyst_decay_factor", None)
                         or Decimal("1.0"),
                         catalyst_decay_status=decay_status,
+                        event_published_at=getattr(cached, "event_published_at", None),
+                        provider_observed_at=getattr(cached, "provider_observed_at", None),
+                        calculation_window_start=getattr(cached, "calculation_window_start", None),
+                        calculation_window_end=getattr(cached, "calculation_window_end", None),
+                        methodology_version=(
+                            getattr(cached, "methodology_version", None)
+                            or "reaction_event_aligned_v2"
+                        ),
                     )
             except Exception:
                 logger.warning("Market reaction cache read failed for symbol=%s", symbol)
@@ -361,6 +424,9 @@ class MarketReactionAgent:
             expected_reaction_pct=expected_reaction_pct,
             event_age_seconds=event_age_seconds,
             event_category=event_category,
+            event_published_at=event_published_at,
+            current_market_price=current_market_price,
+            current_market_observed_at=market_observed_at,
         )
 
         prompt = (
@@ -429,14 +495,14 @@ class MarketReactionAgent:
                     f"{metrics['volume_ratio']}x volume surge "
                     f"(adj gap: {metrics['direction_adjusted_gap_pct']}%)"
                 ),
-                observed_at=now_utc,
-                received_at=now_utc,
+                observed_at=metrics["calculation_window_end"],
+                received_at=provider_observed_at or now_utc,
             ),
             EvidenceItem(
                 source="news_catalyst",
                 summary=catalyst_summary[:200],
-                observed_at=now_utc,
-                received_at=now_utc,
+                observed_at=metrics["event_published_at"],
+                received_at=provider_observed_at or now_utc,
             ),
         ]
         for summary_text in parsed.evidence_summaries:
@@ -484,6 +550,11 @@ class MarketReactionAgent:
             event_age_hours=metrics["event_age_hours"],
             catalyst_decay_factor=metrics["catalyst_decay_factor"],
             catalyst_decay_status=metrics["catalyst_decay_status"],
+            event_published_at=metrics["event_published_at"],
+            provider_observed_at=provider_observed_at or now_utc,
+            calculation_window_start=metrics["calculation_window_start"],
+            calculation_window_end=metrics["calculation_window_end"],
+            methodology_version=metrics["methodology_version"],
         )
 
         # Write to PostgreSQL DB cache
@@ -528,6 +599,11 @@ class MarketReactionAgent:
                 event_age_hours=metrics["event_age_hours"],
                 catalyst_decay_factor=metrics["catalyst_decay_factor"],
                 catalyst_decay_status=metrics["catalyst_decay_status"].value,
+                event_published_at=metrics["event_published_at"],
+                provider_observed_at=provider_observed_at or now_utc,
+                calculation_window_start=metrics["calculation_window_start"],
+                calculation_window_end=metrics["calculation_window_end"],
+                methodology_version=metrics["methodology_version"],
                 model_name=completion.model,
                 raw_digest=completion.raw_digest,
             )

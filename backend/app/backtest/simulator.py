@@ -226,6 +226,13 @@ class DeterministicOptionSimulator:
                 horizon_at=window.force_flatten_at,
                 exit_policy_json=exit_policy_json,
                 thesis_invalidated_at=thesis_invalidated_at,
+                prior_mfe_pct=(
+                    best_pnl
+                    / (entry_price * Decimal("100") * allocation_multiplier * quantity)
+                    * Decimal("100")
+                    if entry_price > 0 and allocation_multiplier > 0 and quantity > 0
+                    else Decimal("0")
+                ),
             )
             valuation = SimulationValuation(
                 observed_at=observed_at,
@@ -312,6 +319,7 @@ class DeterministicOptionSimulator:
         exit_policy_json: str | None,
         entry_at: datetime | None = None,
         thesis_invalidated_at: datetime | None = None,
+        prior_mfe_pct: Decimal = Decimal("0"),
     ) -> str | None:
         if horizon_at is not None and observed_at >= horizon_at:
             return "HORIZON_CLOSE"
@@ -320,10 +328,25 @@ class DeterministicOptionSimulator:
         try:
             policy = json.loads(exit_policy_json or "{}")
             pct = (mark - entry_price) / entry_price * Decimal("100")
-            if pct >= Decimal(str(policy.get("take_profit_pct", "75"))):
-                return "TAKE_PROFIT"
-            if pct <= -Decimal(str(policy.get("stop_loss_pct", "50"))):
-                return "STOP_LOSS"
+            if "hard_take_profit_pct" in policy:
+                mfe_pct = max(prior_mfe_pct, pct)
+                if pct <= -Decimal(str(policy.get("hard_stop_loss_pct", "50"))):
+                    return "HARD_STOP_LOSS"
+                if thesis_invalidated_at is not None and observed_at >= thesis_invalidated_at:
+                    return "THESIS_INVALIDATION"
+                if mfe_pct >= Decimal(
+                    str(policy.get("profit_arm_pct", "20"))
+                ) and pct <= mfe_pct - Decimal(
+                    str(policy.get("profit_trailing_giveback_points", "10"))
+                ):
+                    return "TRAILING_PROFIT"
+                if pct >= Decimal(str(policy.get("hard_take_profit_pct", "40"))):
+                    return "HARD_TAKE_PROFIT"
+            else:
+                if pct >= Decimal(str(policy.get("take_profit_pct", "75"))):
+                    return "TAKE_PROFIT"
+                if pct <= -Decimal(str(policy.get("stop_loss_pct", "50"))):
+                    return "STOP_LOSS"
             if thesis_invalidated_at is not None and observed_at >= thesis_invalidated_at:
                 return "THESIS_INVALIDATION"
             expiry = min(date.fromisoformat(leg.expiration) for leg in strategy.legs)

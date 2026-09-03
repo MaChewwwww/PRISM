@@ -97,6 +97,21 @@ def compute_event_age_seconds(created_at: Any, now: datetime | None = None) -> i
     return 0
 
 
+def normalize_event_timestamp(created_at: Any) -> datetime | None:
+    if isinstance(created_at, datetime):
+        value = created_at if created_at.tzinfo else created_at.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+    if isinstance(created_at, str):
+        try:
+            value = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+    return None
+
+
 class NewsAnalysisLLMOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -205,6 +220,8 @@ class NewsIntelligenceAgent:
 
         source_confidence = compute_source_confidence(source_raw)
         event_age_seconds = compute_event_age_seconds(created_at_raw, now=evaluation_at)
+        published_at = normalize_event_timestamp(created_at_raw)
+        provider_observed_at = (evaluation_at or datetime.now(UTC)).astimezone(UTC)
 
         # Get LLM configuration to search cache by (article_id, model_name)
         active_model = self.llm_gateway._settings.llm_model or "default"
@@ -258,6 +275,11 @@ class NewsIntelligenceAgent:
                         source=cached_model.source or source_raw,
                         source_confidence=Decimal(str(cached_model.source_confidence)),
                         event_age_seconds=event_age_seconds,
+                        published_at=getattr(cached_model, "published_at", None) or published_at,
+                        provider_observed_at=(
+                            getattr(cached_model, "provider_observed_at", None)
+                            or provider_observed_at
+                        ),
                         event_category=(
                             NewsEventCategory(cached_model.event_category)
                             if cached_model.event_category in NewsEventCategory._value2member_map_
@@ -338,6 +360,8 @@ class NewsIntelligenceAgent:
             source=source_raw,
             source_confidence=source_confidence,
             event_age_seconds=event_age_seconds,
+            published_at=published_at,
+            provider_observed_at=provider_observed_at,
             event_category=parsed_output.event_category,
             event_type=parsed_output.event_category.value,
             catalyst_materiality=parsed_output.catalyst_materiality,
@@ -386,6 +410,8 @@ class NewsIntelligenceAgent:
                     source=analysis_contract.source,
                     source_confidence=Decimal(str(analysis_contract.source_confidence)),
                     event_age_seconds=analysis_contract.event_age_seconds,
+                    published_at=analysis_contract.published_at,
+                    provider_observed_at=analysis_contract.provider_observed_at,
                     event_category=analysis_contract.event_category.value,
                     event_type=analysis_contract.event_type,
                     catalyst_materiality=analysis_contract.catalyst_materiality.value,
