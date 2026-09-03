@@ -20,7 +20,6 @@ import { notFound } from "next/navigation";
 import { AgentPerspectiveChain } from "@/features/story/agent-perspective-chain";
 import { StoryBranchChart } from "@/features/story/story-branch-chart";
 import { StoryCatalystChart } from "@/features/story/story-catalyst-chart";
-import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDateTime, formatTokens, storyDecisionLabel } from "@/features/story/formatters";
 import { getStory, type StoryDetail } from "@/features/story/monitoring-api";
 
@@ -139,7 +138,6 @@ export default async function StoryDetailPage({
               {story.category}
             </span>
           </h1>
-          <StateBadge state={story.ruleResult === "MODIFY" ? "MODIFY" : story.outcome} />
         </div>
 
         {/* Analytical title kept as a secondary line */}
@@ -151,8 +149,6 @@ export default async function StoryDetailPage({
           <time dateTime={story.occurredAt}>{formatKickerTimestamp(story.occurredAt)}</time>
         </div>
 
-        <p className="mt-4 max-w-3xl text-[14px] leading-relaxed text-[#CBD5E1]">{story.summary}</p>
-
         <div className="mt-4 border-l-2 border-[#547D83] pl-3 text-[13px] leading-relaxed text-[#94A3B8]">
           <span className="font-semibold text-[#B2D8DC]">Key takeaway</span> &mdash; {story.lesson}
         </div>
@@ -163,7 +159,7 @@ export default async function StoryDetailPage({
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            Rule Result
+            Governance Status
           </dt>
           <dd className={`mt-2 font-mono text-2xl font-semibold tabular-nums ${ruleTone}`}>
             {story.ruleResult}
@@ -171,7 +167,7 @@ export default async function StoryDetailPage({
         </div>
         <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            Chosen Outcome
+            Active P&L
           </dt>
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#00D084]">
             {story.chosenPathImpact}
@@ -179,7 +175,7 @@ export default async function StoryDetailPage({
         </div>
         <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-5 backdrop-blur-xl transition-all duration-200 hover:border-[#547D83]/40 hover:shadow-[0_0_24px_rgba(84,125,131,0.35)]">
           <dt className="font-mono text-[11px] uppercase tracking-[0.09em] text-[#64748B]">
-            Best Shadow Path
+            Best Shadow P&L
           </dt>
           <dd className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#818CF8]">
             {story.bestAlternativeImpact}
@@ -206,10 +202,10 @@ export default async function StoryDetailPage({
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
                 <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
               </span>
-              Catalyst &amp; Market Reaction Gap
+              Actual vs. Expected Catalyst Reaction
             </h2>
             <p className="mt-1 text-[12px] text-[#64748B]">
-              Observed vs analog expectation over the event window.
+              Realized price action versus modeled historical analogs across the event window.
             </p>
           </div>
 
@@ -261,8 +257,7 @@ export default async function StoryDetailPage({
                 Autonomous Agent Perspective Chain
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                Seven specialists evaluated independently. The vetted candidate action is presented
-                in the Proposal section below.
+                Seven specialists analyzed the catalyst and converged on a proposal.
               </p>
             </div>
 
@@ -279,11 +274,10 @@ export default async function StoryDetailPage({
                 <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
                   <FileText className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
-                Proposal
+                Trading Agent Proposal
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                The structured candidate trade the Trading Decision Agent submitted to governance
-                &mdash; before any rule was applied.
+                The Trading Decision Agent’s proposed trade
               </p>
             </div>
 
@@ -303,7 +297,7 @@ export default async function StoryDetailPage({
                 Risk AI Critique
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                The adversarial challenge raised before deterministic authorization.
+                Risk AI’s challenge to the proposed trade.
               </p>
             </div>
 
@@ -340,7 +334,7 @@ export default async function StoryDetailPage({
                   </ul>
                 ) : (
                   <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
-                    No evidence references were recorded for this critique.
+                    No evidence references were recorded.
                   </p>
                 )}
               </div>
@@ -370,8 +364,7 @@ export default async function StoryDetailPage({
                   Deterministic Governance Gate
                 </h2>
                 <p className="mt-1 max-w-3xl text-[12px] text-[#64748B]">
-                  Evaluates the exact candidate payload against hard safety constraints, grouped by
-                  priority tier.
+                  Checks the proposed trade against strict safety rules.
                 </p>
               </div>
 
@@ -472,11 +465,10 @@ export default async function StoryDetailPage({
                 <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[#547D83]/30 bg-[#547D83]/15 text-[#B2D8DC]">
                   <FileCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
-                Paper Execution Outcome
+                Trade Outcome
               </h2>
               <p className="mt-1 text-[12px] text-[#64748B]">
-                What actually happened after governance &mdash; the final governed result, not the
-                proposal.
+                The final result after governance and rule checks.
               </p>
             </div>
 
@@ -526,32 +518,6 @@ export default async function StoryDetailPage({
               </div>
             </div>
           </section>
-
-          <section aria-labelledby="operational-evidence" className="space-y-5">
-            <div className="border-b border-white/8 pb-4">
-              <h2
-                id="operational-evidence"
-                className="text-lg font-semibold tracking-tight text-[#F8FAFC]"
-              >
-                Operational Evidence
-              </h2>
-              <p className="mt-1 text-[12px] text-[#64748B]">
-                IV source/count, strike selection, profile version, and freshness from the recorded
-                decision.
-              </p>
-            </div>
-            <dl className="divide-y divide-white/8 rounded-xl border border-white/8 bg-white/3">
-              {(story.operationalEvidence ?? []).map((item) => (
-                <div key={item.label} className="grid gap-2 p-4 sm:grid-cols-[13rem_1fr_auto]">
-                  <dt className="text-sm text-[#CBD5E1]">{item.label}</dt>
-                  <dd className="break-all font-mono text-xs text-[#94A3B8]">{item.value}</dd>
-                  <dd className="state-badge h-fit" data-state={item.status}>
-                    {item.status}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
         </div>
 
         {/* SECTION 08 — ShadowFund Counterfactual Matrix & Lessons */}
@@ -566,7 +532,9 @@ export default async function StoryDetailPage({
               </span>
               ShadowFund Counterfactual Matrix &amp; Lessons
             </h2>
-            <p className="mt-1 text-[12px] text-[#64748B]">What every branch would have done.</p>
+            <p className="mt-1 text-[12px] text-[#64748B]">
+              See what each agent branch would have done.
+            </p>
           </div>
 
           <StoryBranchChart data={story.marketPath} />
@@ -645,12 +613,16 @@ const CANONICAL_STAGES = [
   {
     key: "catalyst",
     title: "Catalyst",
-    detail: "Earnings print classified, reaction gap measured.",
+    detail: "Signal captured, classified, and reaction potential measured.",
   },
   { key: "research", title: "Research", detail: "7 specialist agents evaluated independently." },
-  { key: "proposal", title: "Proposal", detail: "Bounded call spread synthesized from consensus." },
+  { key: "proposal", title: "Proposal", detail: "Perspectives combined into a bounded strategy." },
   { key: "risk", title: "Risk", detail: "Risk AI challenge raised and logged." },
-  { key: "rules", title: "Rules", detail: "Governance gate evaluated the exact payload." },
+  {
+    key: "rules",
+    title: "Rules",
+    detail: "Deterministic governance rules enforced the final boundary.",
+  },
 ] as const;
 
 // Raw node ids the API emits, grouped to each canonical stage.
@@ -775,12 +747,12 @@ function DecisionPipeline({ nodes }: { nodes: DecisionNode[] }) {
     <div className="rounded-xl border border-white/8 border-t-white/16 bg-linear-to-b from-white/6 to-white/2 p-6 backdrop-blur-xl sm:p-8">
       <ol className="flex flex-col gap-8 sm:flex-row sm:items-start sm:gap-0">
         {stages.map((stage, index) => (
-          <li key={stage.id} className="flex flex-1 items-start">
+          <li key={stage.id} className="flex flex-1 basis-0 items-start">
             <PipelineNode stage={stage} />
             {index < stages.length - 1 && (
               <span
                 aria-hidden="true"
-                className="mt-[1.05rem] hidden h-px flex-1 sm:block"
+                className="mt-[1.05rem] hidden h-px w-6 shrink-0 sm:block"
                 style={{ background: "rgba(255,255,255,0.1)" }}
               />
             )}

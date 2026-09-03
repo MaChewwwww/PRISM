@@ -31,8 +31,8 @@ export default async function RulesPage() {
     <>
       <PageHeader
         eyebrow="Active governance"
-        title="Ruleset and AI Profile Boundaries"
-        description="Inspect the BA-authorized ruleset and the active Balanced profile. This surface is read-only and creates no execution authority."
+        title="Rules & AI Profile"
+        description="See the rules and profile guiding decisions."
       >
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[#00D084]/30 bg-[#00D084]/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#00D084]">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Fails closed
@@ -65,7 +65,7 @@ export default async function RulesPage() {
           id="hard-controls"
           icon={LockKeyhole}
           title="Deterministic Controls"
-          subtitle="Locked and governed. AI Profiles and Post-Analysis cannot weaken these BA-authorized or platform-level boundaries."
+          subtitle="Rules that remain enforced across all AI profiles."
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <ul className="space-y-2">
@@ -96,7 +96,7 @@ export default async function RulesPage() {
           id="active-profile"
           icon={Gavel}
           title="Active Balanced Profile"
-          subtitle={`Ruleset ${governance.rulesetId}@${governance.rulesetVersion}. Values may vary only inside the approved bounds.`}
+          subtitle={"AI settings within approved limits"}
         />
         <div className={`${SECTION_CARD} overflow-x-auto`}>
           <table className="w-full min-w-[44rem] border-collapse text-left">
@@ -152,8 +152,8 @@ export default async function RulesPage() {
         <SectionHeading
           id="sizing-resolution"
           icon={ArrowDownWideNarrow}
-          title="How Final Position Size Is Resolved"
-          subtitle="Your Tier 2 target is only the starting preference; any Tier 1 cap can reduce it."
+          title="Final Position Size"
+          subtitle="See how the final position size is determined."
         />
         <div className={`${SECTION_CARD} p-5 sm:p-6`}>
           <p className="text-[13px] leading-relaxed text-[#CBD5E1]">
@@ -177,8 +177,8 @@ export default async function RulesPage() {
         <SectionHeading
           id="rule-semantics"
           icon={GaugeCircle}
-          title="Decision Vocabulary"
-          subtitle="Individual rule outcomes and aggregate authorization outcomes are intentionally separate."
+          title="Decision Terms"
+          subtitle="Understand individual rule checks and final authorization."
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {(

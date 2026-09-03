@@ -18,7 +18,7 @@ describe("authentication proxy", () => {
     const response = proxy(request);
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("http://localhost/");
+    expect(response.headers.get("location")).toBe("http://localhost/dashboard");
   });
 
   it("FRS-019 allows authentication APIs and static assets through", () => {

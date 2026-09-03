@@ -34,11 +34,23 @@ export type OverviewExposure = {
   pct: number;
 };
 
+export type OverviewPosition = {
+  symbol: string;
+  /** Market value of the position (Position.value). */
+  value: string;
+  /** Unrealized P&L (Position.pnl). */
+  pnl: string;
+  allocation: string;
+};
+
 export type OverviewViewModel = {
   points: OverviewPoint[];
   decisions: OverviewDecision[];
   outcomes: OverviewOutcome[];
   exposures: OverviewExposure[];
+  positions: OverviewPosition[];
+  /** Cash reserve as a percentage of equity, when the projection reports it. */
+  cashReservePct: number | null;
   recommendations: string[];
 };
 
@@ -96,14 +108,16 @@ function toPoint(point: ChartPoint, byDate: Map<string, OverviewDecision>): Over
 }
 
 export function adaptOverview(overview: Overview): OverviewViewModel {
-  const byDate = decisionByDate(overview.stories);
+  // Hide retrospective "Day 1 decision" reconstructions from the decision feed.
+  const stories = overview.stories.filter((story) => story.outcome !== "retrospective");
+  const byDate = decisionByDate(stories);
   const points = overview.portfolio.points
     .map((point) => toPoint(point, byDate))
     .filter((point): point is OverviewPoint => point !== null);
 
   return {
     points,
-    decisions: overview.stories.map(toDecision),
+    decisions: stories.map(toDecision),
     outcomes: overview.outcomes.map((outcome) => ({
       label: outcome.label.replaceAll("_", " "),
       count: Number(outcome.value) || 0,
@@ -113,6 +127,17 @@ export function adaptOverview(overview: Overview): OverviewViewModel {
       label: exposure.label.replace(/^Illustrative\s+/i, ""),
       pct: numeric(exposure.value),
     })),
+    positions: overview.portfolio.positions.map((position) => ({
+      symbol: position.symbol,
+      value: position.value,
+      pnl: position.pnl,
+      allocation: position.allocation,
+    })),
+    cashReservePct:
+      overview.portfolio.exposure
+        .filter((item) => item.label.toLowerCase().includes("cash"))
+        .map((item) => numeric(item.value))
+        .at(0) ?? null,
     recommendations: overview.recommendations,
   };
 }

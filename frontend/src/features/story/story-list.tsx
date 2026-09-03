@@ -3,6 +3,8 @@
 import {
   AlertTriangle,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   CircleDot,
   Diamond,
   type LucideIcon,
@@ -16,6 +18,8 @@ import { useMemo, useState } from "react";
 import { StateBadge } from "@/components/workspace/workspace-ui";
 import { formatDateTime, storyDecisionLabel } from "@/features/story/formatters";
 import type { StorySummary } from "@/features/story/monitoring-api";
+
+const PAGE_SIZE = 10;
 
 /** Lowercased haystack of the searchable fields for a decision story. */
 function storyHaystack(story: StorySummary): string {
@@ -229,6 +233,7 @@ export function StoryList({
   rangeControl?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -239,6 +244,15 @@ export function StoryList({
       return terms.every((term) => haystack.includes(term));
     });
   }, [query, stories]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setPage(1);
+  }
 
   return (
     <>
@@ -254,7 +268,7 @@ export function StoryList({
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateQuery(event.target.value)}
               placeholder="Search decision, company, date, time"
               aria-label="Search decision stories"
               className="w-full rounded-md border border-white/8 bg-white/2 py-2 pl-9 pr-9 text-[13px] text-[#F8FAFC] outline-none transition-colors placeholder:text-[#64748B] focus-visible:border-[#547D83]/50 focus-visible:ring-2 focus-visible:ring-[#547D83]/40"
@@ -262,7 +276,7 @@ export function StoryList({
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery("")}
+                onClick={() => updateQuery("")}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[#64748B] outline-none transition-colors hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83]"
               >
@@ -285,11 +299,42 @@ export function StoryList({
           <span>Try a different company, date, or time.</span>
         </div>
       ) : (
-        <ol className="grid list-none gap-5 p-0">
-          {filtered.map((story) => (
-            <StoryCard key={story.id} story={story} />
-          ))}
-        </ol>
+        <>
+          <ol className="grid list-none gap-5 p-0">
+            {pageItems.map((story) => (
+              <StoryCard key={story.id} story={story} />
+            ))}
+          </ol>
+
+          {filtered.length > PAGE_SIZE && (
+            <nav
+              className="mt-5 flex items-center justify-between gap-3"
+              aria-label="Decision stories pagination"
+            >
+              <span className="font-mono text-[11px] text-[#64748B]">
+                Page {safePage} of {totalPages} · {filtered.length} decisions
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" /> Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#CBD5E1] outline-none transition-colors hover:border-[#547D83]/40 hover:text-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#547D83] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            </nav>
+          )}
+        </>
       )}
     </>
   );

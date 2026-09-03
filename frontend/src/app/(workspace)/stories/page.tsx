@@ -14,14 +14,15 @@ export default async function StoriesPage({
   const values = await searchParams;
   const range = readDateRange(values);
   const collection = await listStories(range);
-  const stories = collection.stories;
+  // Hide retrospective "Day 1 decision" reconstructions from the feed.
+  const stories = collection.stories.filter((story) => story.outcome !== "retrospective");
 
   return (
     <>
       <PageHeader
-        eyebrow="Decision log"
+        eyebrow="Portfolio Log"
         title="Decision Stories"
-        description="A scannable feed of the narrative takeaway and the counterfactual impact behind every call the agent stack made."
+        description="Market catalysts, agent consensus, and counterfactuals."
       />
 
       <section aria-labelledby="story-feed" className="mt-6">
@@ -39,10 +40,7 @@ export default async function StoriesPage({
                 </span>
                 Decision Feed
               </h2>
-              <p className="mt-1 text-[12px] text-[#64748B]">
-                {stories.length} recorded {stories.length === 1 ? "decision" : "decisions"} in this
-                range.
-              </p>
+              <p className="mt-1 text-[12px] text-[#64748B]">Recent autonomous trade activity</p>
             </div>
           }
         />

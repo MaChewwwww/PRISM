@@ -130,10 +130,53 @@ export function OverviewChart({ points, selected, onSelect }: OverviewChartProps
           <SectionHeading
             icon={TrendingUp}
             title="Active Portfolio path"
-            description="Equity performance vs. alternative and benchmark strategies."
+            description="Equity Performance vs. Alternative and Benchmark Strategies."
           />
         </div>
-        <p className="overview-chart-detail-empty">No portfolio observations in this date range.</p>
+
+        {/* Empty state: a ghost chart so it reads as "a graph will render here". */}
+        <div
+          className="overview-chart-plot overview-chart-empty mt-4 min-h-72 w-full sm:min-h-80"
+          role="img"
+          aria-label="Active Portfolio path awaiting recorded observations"
+        >
+          <svg
+            className="overview-chart-svg"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            {[0, 25, 50, 75, 100].map((line) => (
+              <line
+                key={line}
+                x1={0}
+                y1={line}
+                x2={100}
+                y2={line}
+                className="overview-chart-gridline"
+              />
+            ))}
+            {/* Muted ghost line + soft area, animated shimmer */}
+            <polygon
+              points="0,72 16,60 32,66 48,48 64,54 80,38 100,44 100,100 0,100"
+              className="overview-chart-empty-area"
+            />
+            <polyline
+              points="0,72 16,60 32,66 48,48 64,54 80,38 100,44"
+              className="overview-chart-empty-line"
+            />
+          </svg>
+          <div className="overview-chart-empty-overlay">
+            <span className="overview-chart-empty-badge">
+              <TrendingUp size={13} aria-hidden="true" />
+              Awaiting observations
+            </span>
+            <p>
+              No portfolio observations in this date range yet. The equity path will render here
+              once data is recorded.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

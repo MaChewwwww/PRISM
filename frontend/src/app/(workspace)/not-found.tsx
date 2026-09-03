@@ -9,7 +9,7 @@ export default function WorkspaceNotFound() {
         title="Story not found"
         detail="No recorded monitoring data exists for this identifier."
       />
-      <Link className="detail-link return-link" href="/">
+      <Link className="detail-link return-link" href="/dashboard">
         Return to overview
       </Link>
     </>

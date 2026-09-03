@@ -64,7 +64,10 @@ async function apiGet<T>(path: string, query?: Record<string, string | undefined
 }
 
 export async function loadDashboard(range: DateRange) {
-  return (await apiGet<OverviewEnvelope>("/monitoring/overview", apiRangeQuery(range))).data;
+  const envelope = await apiGet<OverviewEnvelope>("/monitoring/overview", apiRangeQuery(range));
+  // Keep the server's as-of/generated timestamp beside the projection so the
+  // Overview can show an honest "Checked at (UTC)" instead of a client clock.
+  return { ...envelope.data, asOf: envelope.meta.asOf };
 }
 
 export async function listStories(
