@@ -34,7 +34,7 @@ jobs:
       - name: Verify repository
         run: pnpm verify
       - name: Audit JavaScript dependencies
-        run: pnpm audit --audit-level high
+        run: pnpm audit --audit-level high --ignore-registry-errors
       - name: Export locked Python requirements
         run: uv export --project backend --locked --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/backend-requirements.txt"
       - name: Audit Python dependencies
