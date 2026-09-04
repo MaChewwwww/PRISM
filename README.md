@@ -210,17 +210,17 @@ All trading decisions are evaluated against the versioned, machine-readable para
 
 During the official hackathon evaluation window (Aug 31 – Sep 3, 2026), PRISM operated autonomously on its production cloud environment, executing 5-minute evaluation cycles across its allowlisted universe (`NVDA`, `AAPL`, `MSFT`, `GOOGL`, `AMZN`, `TSLA`, `AMD`).
 
-Ahead of the authorized **Wednesday Sep 2, 16:00 ET new-entry cutoff**, PRISM's autonomous lifecycle engine safely harvested profitable positions, liquidated open risk into cash, and protected capital ahead of the final scoring freeze:
+Ahead of the authorized **Wednesday Sep 2, 16:00 ET new-entry cutoff**, PRISM's autonomous lifecycle engine safely harvested profitable positions, liquidated open risk into cash, and protected capital. On **Thursday Sep 3 (Day 4)**, PRISM enforced terminal window-boundary governance—operating in liquidation-only mode, rejecting all new entries, and concluding the hackathon with a terminal force-flatten cycle at 20:07 UTC:
 
 | Metric | Verified Live Result | Operational Standard |
 | :--- | :---: | :--- |
 | **Starting Capital Baseline** | **$100,000.00 USD** | Institutional sizing reference baseline |
-| **Current Portfolio Equity** | **$100,151.71 USD** | **Net positive return (+0.15% overall)** across hackathon volatility |
-| **Final Session (Day 3) P&L** | **+$964.67 (+0.97%)** | Profit harvested via adaptive exits and automated flatting |
-| **Peak Portfolio Drawdown** | **< 1.00%** | Zero margin calls; flawless capital preservation priority |
-| **Open Risk at Entry Freeze** | **$0.00 (100% Cash)** | Zero unhedged overnight risk; 100% liquid cash ($100,151.71) |
-| **Autonomous Scan Uptime** | **100% Continuity** | Continuous 5-minute (300s) autonomous evaluation cycles |
-| **Deterministic Governance** | **100% Compliance** | 0 rule bypasses, 0 unauthorized orders, 0 credential leaks |
+| **Official Ending Equity** | **$100,151.34 USD** | **Net positive return (+0.151% overall)** across hackathon volatility |
+| **Cumulative Net Profit** | **+$151.34 USD** | Profitable campaign locked in 100% cash |
+| **Peak Portfolio Drawdown** | **-0.835%** | Trough on Day 2 ($99,165.41), fully recovered on Day 3 morning |
+| **Terminal Market Risk** | **$0.00 (100% Cash)** | Zero open positions; 100% liquid cash ($100,151.34) |
+| **Total Autonomous Cycles** | **262 Cycles** | 100% pipeline uptime (127 in-market, 135 off-market) |
+| **Deterministic Governance** | **100% Compliance** | 138 authorizations evaluated; >85% filtered; 0 unauthorized orders |
 
 ### Resilient Market Architecture & Adaptive Mechanics
 
@@ -327,7 +327,8 @@ For in-depth architectural specifications and governance registers, explore the 
 - 🔒 **[Security & Safety Controls](docs/SECURITY.md)** — Paper-only invariants, credential boundaries, and fail-closed gates.
 - 🎨 **[Design System](docs/DESIGN.md)** — Dark Cyber-Crystalline tokens, specular glass hierarchy, and accessibility standards.
 - 🔄 **[CI/CD & Promotion Runbook](docs/CI_CD.md)** — Governed Git branching flow, branch policy, and deployment automation.
-- 📈 **[Performance Calibration Review Addendum](docs/reports/DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md)** — Real-world calibration evidence and ExitPolicyV2 derivation.
+- 📈 **[Performance Calibration Review Addendum](docs/reports/DAY_1_2_PERFORMANCE_CALIBRATION_REVIEW.md)** — Real-world 4-day calibration evidence and ExitPolicyV2 derivation.
+- 📋 **[Daily Operations Reports (Days 1–4)](docs/reports/)** — Audited production post-mortems for [Day 1](docs/reports/DAY_1_OPERATIONS_AND_PERFORMANCE_REPORT.md), [Day 2](docs/reports/DAY_2_OPERATIONS_AND_PERFORMANCE_REPORT.md), [Day 3](docs/reports/DAY_3_OPERATIONS_AND_PERFORMANCE_REPORT.md), and [Day 4](docs/reports/DAY_4_OPERATIONS_AND_PERFORMANCE_REPORT.md).
 
 ---
 
