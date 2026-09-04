@@ -16,26 +16,16 @@ interface RevealProps {
  */
 export function Reveal({ children, as: Tag = "div", delay, className }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
-  const [visible, setVisible] = useState(false);
+
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (typeof IntersectionObserver === "undefined") return true;
+    return false;
+  });
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
-
-    // If IntersectionObserver is unavailable, just show the content.
-    if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      return;
-    }
-
-    // Reveal immediately if the element is already within the viewport at mount
-    // (e.g. sections high on the page before the observer's first callback).
-    const rect = node.getBoundingClientRect();
-    const vh = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.top < vh && rect.bottom > 0) {
-      setVisible(true);
-      return;
-    }
+    if (!node || visible) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -49,7 +39,7 @@ export function Reveal({ children, as: Tag = "div", delay, className }: RevealPr
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [visible]);
 
   return (
     <Tag
@@ -63,3 +53,4 @@ export function Reveal({ children, as: Tag = "div", delay, className }: RevealPr
     </Tag>
   );
 }
+
