@@ -1,24 +1,30 @@
+import { GitBranch, Layers, Radar, ShieldCheck } from "lucide-react";
+
 import { Reveal } from "@/features/landing/reveal";
 import { SectionBackground } from "@/features/landing/section-background";
 
 // Spectral perspective accents (DESIGN.md Section 3.3).
 const FEATURES = [
   {
+    icon: Radar,
     accent: "#38BDF8",
     title: "Seven Specialist AI Perspectives",
     body: "News, Quantitative, Industry, SEC Fundamental, Macro, Reaction, and Decision agents independently analyze every market event with strict provenance.",
   },
   {
+    icon: ShieldCheck,
     accent: "#547D83",
     title: "Adversarial Risk & Deterministic Gate",
     body: "AI produces proposals; deterministic P0–P5 code authorizes execution. Concentration limits, positive EV checks, and stop-losses fail closed.",
   },
   {
+    icon: GitBranch,
     accent: "#818CF8",
     title: "ShadowFund Counterfactual Engine",
     body: "Simulates Cash, 0.5x Sizing, Contrarian, and Specialist alternatives concurrently on identical live market data without risking capital.",
   },
   {
+    icon: Layers,
     accent: "#10B981",
     title: "Deep Alpaca Ecosystem Integration",
     body: "Powered by alpaca-py for live option chains and isolated Alpaca CLI order mutation over JSON stdin with durable cryptographic receipts.",
@@ -62,12 +68,17 @@ export function Overview() {
                 style={{ background: feature.accent }}
               />
 
-              {/* Empty glass icon tile */}
+              {/* Glass icon tile */}
               <span
                 aria-hidden="true"
                 className="grid h-11 w-11 place-items-center rounded-md border border-white/10 border-t-white/20 bg-white/[0.04] backdrop-blur-xl transition-transform duration-500 ease-[var(--ease-glass)] group-hover:-translate-y-0.5 group-hover:scale-105"
-                style={{ boxShadow: `inset 0 0 0 1px ${feature.accent}22` }}
-              />
+                style={{
+                  boxShadow: `inset 0 0 0 1px ${feature.accent}33`,
+                  color: feature.accent,
+                }}
+              >
+                <feature.icon className="h-5 w-5" strokeWidth={1.75} />
+              </span>
 
               <h3 className="mt-10 text-[16px] font-semibold tracking-tight text-[var(--color-text)]">
                 {feature.title}
