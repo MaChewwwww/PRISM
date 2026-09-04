@@ -16,11 +16,16 @@ interface RevealProps {
  */
 export function Reveal({ children, as: Tag = "div", delay, className }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
-  const [visible, setVisible] = useState(false);
+
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (typeof IntersectionObserver === "undefined") return true;
+    return false;
+  });
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
+    if (!node || visible) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -34,7 +39,7 @@ export function Reveal({ children, as: Tag = "div", delay, className }: RevealPr
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [visible]);
 
   return (
     <Tag
