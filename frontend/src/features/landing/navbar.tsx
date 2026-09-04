@@ -18,8 +18,10 @@ export function Navbar() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -38,37 +40,43 @@ export function Navbar() {
             : "shadow-[0_8px_32px_-16px_rgba(0,0,0,0.5)]",
         )}
       >
+        {/* LEFT: Logo + PRISM */}
         <a href="#top" className="flex items-center gap-2">
           <Image
             src="/logo.png"
             alt="PRISM"
-            width={28}
-            height={28}
+            width={32}
+            height={32}
             priority
             className="h-7 w-7 object-contain"
           />
+
           <span className="font-display text-lg tracking-tight text-[var(--color-text)]">
             PRISM
           </span>
         </a>
 
-        <ul className="hidden items-center gap-1 md:flex">
-          {LINKS.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                className="group relative rounded-full px-4 py-2 text-sm text-[var(--color-text-muted)] transition-colors duration-300 hover:text-[var(--color-text)]"
-              >
-                {link.label}
-                <span className="pointer-events-none absolute inset-x-4 -bottom-0.5 h-px scale-x-0 bg-[var(--color-ice)] transition-transform duration-300 ease-[var(--ease-glass)] group-hover:scale-x-100" />
-              </a>
-            </li>
-          ))}
-        </ul>
+        {/* RIGHT: Navigation Links + Login */}
+        <div className="flex items-center gap-4">
+          <ul className="hidden items-center gap-1 md:flex">
+            {LINKS.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  className="group relative rounded-full px-4 py-2 text-base text-[var(--color-text-muted)] transition-colors duration-300 hover:text-[var(--color-text)]"
+                >
+                  {link.label}
 
-        <Link href="/login" className={buttonClasses("glass", "px-5 py-2 text-xs md:text-sm")}>
-          Log In
-        </Link>
+                  <span className="pointer-events-none absolute inset-x-4 -bottom-0.5 h-px scale-x-0 bg-[var(--color-ice)] transition-transform duration-300 ease-[var(--ease-glass)] group-hover:scale-x-100" />
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <Link href="/login" className={buttonClasses("glass", "px-5 py-2 text-sm md:text-base")}>
+            Log In
+          </Link>
+        </div>
       </nav>
     </header>
   );

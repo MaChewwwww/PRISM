@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import "@/app/globals.css";
 import Link from "next/link";
 
 import { buttonClasses } from "@/features/landing/button-classes";
@@ -32,7 +33,7 @@ export function Hero() {
       {/* ---- Animated ambient background ---- */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         {/* Perspective grid floor — visible teal with GPU-accelerated transform */}
-        <div className="absolute inset-x-0 bottom-0 h-[62%] [perspective:640px]">
+        <div className="absolute -inset-x-[25%] bottom-0 h-[62%] [perspective:640px]">
           <div
             className="absolute inset-0 origin-bottom animate-drift will-change-transform"
             style={{
@@ -62,7 +63,7 @@ export function Hero() {
       </div>
 
       <div className="relative mx-auto grid w-full max-w-[1500px] flex-1 grid-cols-1 items-center gap-6 px-6 sm:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-14">
-        <div className="relative z-10">
+        <div className="relative z-10 -translate-y-3">
           <h1
             className="text-shine font-display text-[clamp(4rem,12vw,9rem)] leading-[0.86] tracking-tight"
             style={{ filter: "drop-shadow(0 0 80px rgba(84,125,131,0.35))" }}
@@ -71,19 +72,19 @@ export function Hero() {
           </h1>
 
           <p
-            className="mt-5 w-fit animate-rise-slow rounded-full border border-white/10 border-t-white/20 bg-white/[0.05] px-5 py-2 text-sm text-[var(--color-text)] backdrop-blur-xl"
+            className="mt-5 w-fit animate-rise-slow text-[23px] text-[var(--color-text)]"
             style={{ animationDelay: "0.1s" }}
           >
-            One Signal. Multiple Perspectives. Better Decisions.
+            One Signal. <span className="text-[var(--primary)]">Multiple Perspectives.</span> Better
+            Decisions.
           </p>
 
           <p
-            className="mt-6 max-w-xl animate-rise-slow text-balance text-base leading-relaxed text-[var(--color-text-muted)] sm:text-lg"
+            className="mt-6 max-w-xl animate-rise-slow text-balance text-[20px] leading-relaxed text-[var(--color-text-muted)] sm:text-base"
             style={{ animationDelay: "0.18s" }}
           >
-            Autonomous multi-agent options trading platform. Seven AI perspectives debate market
-            catalysts, an adversarial risk critic stress-tests each trade, and deterministic
-            mathematical rules authorize paper execution on Alpaca.
+            Autonomous multi-agent trading that analyzes catalysts, stress-tests strategies and
+            governs execution.
           </p>
 
           <div
@@ -94,7 +95,7 @@ export function Hero() {
               href="/login"
               className={buttonClasses(
                 "glass",
-                "min-w-[13rem] overflow-hidden px-8 py-3.5 text-base",
+                "min-w-[13rem] overflow-hidden px-5 py-2.5 text-base",
               )}
             >
               <span>Explore Platform</span>

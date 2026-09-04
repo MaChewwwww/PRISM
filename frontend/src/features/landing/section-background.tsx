@@ -1,21 +1,31 @@
 /**
  * Shared animated backdrop for landing sections: a visible teal grid plus a
  * couple of drifting aurora blobs. Purely decorative (aria-hidden).
+ *
+ * Pass `grid={false}` to hide the teal wireframe grid for a specific section.
  */
-export function SectionBackground({ variant = "a" }: { variant?: "a" | "b" }) {
+export function SectionBackground({
+  variant = "a",
+  grid = true,
+}: {
+  variant?: "a" | "b";
+  grid?: boolean;
+}) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       {/* Static visible grid */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, rgba(84,125,131,0.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(84,125,131,0.16) 1px, transparent 1px)",
-          backgroundSize: "58px 58px",
-          maskImage: "radial-gradient(ellipse at center, black 30%, transparent 85%)",
-          WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 85%)",
-        }}
-      />
+      {grid ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(84,125,131,0.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(84,125,131,0.16) 1px, transparent 1px)",
+            backgroundSize: "58px 58px",
+            maskImage: "radial-gradient(ellipse at center, black 30%, transparent 85%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 85%)",
+          }}
+        />
+      ) : null}
       {/* Drifting aurora glows (optimized with radial gradient to avoid GPU blur overhead) */}
       {variant === "a" ? (
         <>
