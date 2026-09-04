@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import "@/app/globals.css"
+import "@/app/globals.css";
 import Link from "next/link";
 
 import { buttonClasses } from "@/features/landing/button-classes";
@@ -75,18 +75,16 @@ export function Hero() {
             className="mt-5 w-fit animate-rise-slow text-[23px] text-[var(--color-text)]"
             style={{ animationDelay: "0.1s" }}
           >
-            One Signal.{" "}
-            <span className="text-[var(--primary)]">
-              Multiple Perspectives.
-            </span>{" "}
-            Better Decisions.
+            One Signal. <span className="text-[var(--primary)]">Multiple Perspectives.</span> Better
+            Decisions.
           </p>
 
           <p
             className="mt-6 max-w-xl animate-rise-slow text-balance text-[20px] leading-relaxed text-[var(--color-text-muted)] sm:text-base"
             style={{ animationDelay: "0.18s" }}
           >
-            Autonomous multi-agent trading that analyzes catalysts, stress-tests strategies and governs execution.
+            Autonomous multi-agent trading that analyzes catalysts, stress-tests strategies and
+            governs execution.
           </p>
 
           <div

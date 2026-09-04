@@ -53,4 +53,3 @@ export function Reveal({ children, as: Tag = "div", delay, className }: RevealPr
     </Tag>
   );
 }
-

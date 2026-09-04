@@ -17,8 +17,7 @@ export function Footer() {
               backgroundImage:
                 "linear-gradient(to right, rgba(84,125,131,0.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(84,125,131,0.35) 1px, transparent 1px)",
               backgroundSize: "56px 56px",
-              maskImage:
-                "radial-gradient(ellipse 70% 80% at 50% 50%, black 20%, transparent 80%)",
+              maskImage: "radial-gradient(ellipse 70% 80% at 50% 50%, black 20%, transparent 80%)",
               WebkitMaskImage:
                 "radial-gradient(ellipse 70% 80% at 50% 50%, black 20%, transparent 80%)",
             }}
@@ -36,11 +35,14 @@ export function Footer() {
           <span className="text-[var(--color-text-muted)]">more than one dimension.</span>
         </h2>
         <p className="mt-4 text-base text-[var(--color-text-muted)] md:text-lg">
-          One signal. <span className="text-[var(--primary)]">Multiple perspectives.</span>{" "}
-          Clearer decisions.
+          One signal. <span className="text-[var(--primary)]">Multiple perspectives.</span> Clearer
+          decisions.
         </p>
         <div className="mt-8 flex justify-center">
-          <Link href="/login" className={buttonClasses("solid", "min-w-[11rem] px-7 py-3 text-base")}>
+          <Link
+            href="/login"
+            className={buttonClasses("solid", "min-w-[11rem] px-7 py-3 text-base")}
+          >
             <span>Sign Up</span>
             <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>

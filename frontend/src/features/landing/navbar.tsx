@@ -73,13 +73,7 @@ export function Navbar() {
             ))}
           </ul>
 
-          <Link
-            href="/login"
-            className={buttonClasses(
-              "glass",
-              "px-5 py-2 text-sm md:text-base",
-            )}
-          >
+          <Link href="/login" className={buttonClasses("glass", "px-5 py-2 text-sm md:text-base")}>
             Log In
           </Link>
         </div>

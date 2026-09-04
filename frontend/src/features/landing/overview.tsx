@@ -36,13 +36,13 @@ export function Overview() {
             What PRISM does
           </p>
           <h2 className="mt-4 font-display text-4xl leading-[1.12] tracking-tight text-[var(--color-text)] md:text-[3.25rem]">
-            One Signal.{" "}
-            <span className="text-[var(--primary)]">Multiple Perspectives.</span>{" "}
-            Better Decisions.
+            One Signal. <span className="text-[var(--primary)]">Multiple Perspectives.</span> Better
+            Decisions.
           </h2>
           <p className="mx-auto mt-6 max-w-8xl text-balance text-lg leading-relaxed text-[var(--color-text-muted)]">
             A breaking headline isn&rsquo;t a trade thesis. PRISM turns real-time catalysts into
-            autonomous, multi-agent, risk-tested, <br/>mathematically authorized paper trades.
+            autonomous, multi-agent, risk-tested, <br />
+            mathematically authorized paper trades.
           </p>
         </Reveal>
 
