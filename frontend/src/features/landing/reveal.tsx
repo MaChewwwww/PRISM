@@ -22,6 +22,21 @@ export function Reveal({ children, as: Tag = "div", delay, className }: RevealPr
     const node = ref.current;
     if (!node) return;
 
+    // If IntersectionObserver is unavailable, just show the content.
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+
+    // Reveal immediately if the element is already within the viewport at mount
+    // (e.g. sections high on the page before the observer's first callback).
+    const rect = node.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.top < vh && rect.bottom > 0) {
+      setVisible(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
